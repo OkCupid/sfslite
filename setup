@@ -79,6 +79,10 @@ if test "${LIBTOOLIZE+set}" != "set"; then
     fi
 fi
 
+if test "${ACLOCAL+set}" != "set"; then
+    ACLOCAL=aclocal
+fi
+
 for file in acinclude.m4; do
     if test ! -f $file -a -f ../$file; then
 	echo "+ ln -f -s ../$file $file"
@@ -113,7 +117,7 @@ fi
 set -x
 chmod +x setup
 $LIBTOOLIZE $LTI_ARGS
-aclocal
+$ACLOCAL
 autoheader
 automake $AM_ARGS
 $AUTOCONF
