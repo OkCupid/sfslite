@@ -194,7 +194,8 @@ void
 suio::makeuiocbs ()
 {
   while (!uiocbs.empty () && uiocbs.front ().nbytes <= nrembytes) {
-    (*uiocbs.pop_front ().cb) ();
+    callback<void>::ref cb = uiocbs.pop_front ().cb;
+    (*cb) ();
   }
 }
 
