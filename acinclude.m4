@@ -1638,3 +1638,33 @@ AC_SUBST(sfstagdir)
 AC_SUBST(sfstag)
 AM_CONDITIONAL(DO_BIN_INSTALL, test "$sfs_no_bin_install" != "yes")
 ])
+
+dnl
+dnl AC_PROG_INSTALL_C
+dnl
+dnl  checks for install -C; uses it instead of install -c
+dnl
+AC_DEFUN(AC_PROG_INSTALL_C,
+[
+AC_PROG_INSTALL
+AC_CACHE_CHECK(for install -C, ac_cv_path_install_c,
+[
+echo $INSTALL | grep -e '/install -c' >/dev/null
+if [ test $? -eq 0 ]
+then
+   INSTALL_C=`echo $INSTALL | sed -e 's/install -c/install -C/' `
+   TMP1=`mktemp -t cfg-install`
+   TMP2=`mktemp -t cfg-install`
+   echo "foobar city" > $TMP1
+   $INSTALL_C $TMP1 $TMP2
+   diff $TMP1 $TMP2 > /dev/null 2>&1
+   if test $? -eq 0 
+   then
+	INSTALL=$INSTALL_C
+	AC_SUBST($INSTALL)
+   fi
+   rm -f $TMP1 $TMP2 > /dev/null 2>&1
+fi
+ac_cv_path_install_c=$INSTALL
+])
+])
