@@ -1497,13 +1497,26 @@ AC_DEFUN(SFS_TAG,
 [AC_ARG_WITH(tag,
 --with-tag=TAG	    	Specify a custom SFS build tag)
 AC_ARG_WITH(mode,
---with-mode=[debug|lite]   Specify a build mode for SFS)
+--with-mode=MODE        Specify a build mode for SFS (debug|shared|shdbg|lite))
 if test "${with_tag+set}" = "set" -a "$with_tag" != "no"; then
 	sfstag=$with_tag
 	sfs_no_bin_install=yes
 fi
 case $with_mode in
 	"debug" )
+		DEBUG=-g
+		CXXDEBUG=-g
+		sfstag=$with_mode
+		with_dmalloc=yes
+		sfs_no_bin_install=yes
+		;;
+	"shared" )
+		sfstag=$with_mode
+		enable_shared=yes
+		;;
+	"shdbg"  )
+		sfstag=$with_mode
+		enable_shared=yes
 		DEBUG=-g
 		CXXDEBUG=-g
 		sfstag=$with_mode
