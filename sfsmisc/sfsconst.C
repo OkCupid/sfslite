@@ -465,8 +465,11 @@ setbool (bool *bp)
 }
 
 void
-rndkbd ()
+rndkbd (const str &msg)
 {
+  if (msg)
+    warnx << msg << "\n";
+
   warnx << "\nI need secret bits with which to"
     " seed the random number generator.\n"
     "Please type some random or unguessable text until you hear a beep:\n";

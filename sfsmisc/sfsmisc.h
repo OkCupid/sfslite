@@ -101,6 +101,6 @@ template<> struct equals<vec<str> > {
 /* pathexpand.C */
 int path2sch (str path, str *sch);
 
-void rndkbd ();
+void rndkbd (const str &msg = NULL);
 
 #endif /* _SFSMISC_H_ */
