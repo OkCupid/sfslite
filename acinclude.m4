@@ -1506,6 +1506,7 @@ fi
 case $with_mode in
 	"debug" )
 		DEBUG=-g
+		CXXDEBUG=-g
 		sfstag=$with_mode
 		with_dmalloc=yes
 		sfs_no_bin_install=yes
