@@ -24,6 +24,14 @@
 
 #ifndef _ASYNC_ASYNC_H_
 #define _ASYNC_ASYNC_H_ 1
+#include <sys/types.h>
+
+#if 0
+#ifdef FD_SETSIZE
+# undef FD_SETSIZE
+# define FD_SETSIZE 4096
+#endif
+#endif
 
 #include "amisc.h"
 #include "init.h"
@@ -44,6 +52,9 @@ timecb_t *delaycb (time_t sec, u_int32_t nsec, cbv cb);
 void timecb_remove (timecb_t *);
 lazycb_t *lazycb (time_t min_interval, cbv cb);
 void lazycb_remove (lazycb_t *lazy);
+
+void enable_clock_gettime ();
+void disable_clock_gettime ();
 
 inline timecb_t *
 timecb (time_t tm, cbv cb)
