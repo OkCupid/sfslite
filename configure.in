@@ -495,6 +495,7 @@ AC_ARG_WITH(sfsgroup,
 dnl
 dnl BEGIN sfslite change
 dnl
+SFS_MMAP
 AC_OUTPUT(Makefile async/Makefile rpcc/Makefile arpc/Makefile
 	crypt/Makefile sfsmisc/Makefile libsfs/Makefile)
 

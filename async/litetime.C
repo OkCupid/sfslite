@@ -99,12 +99,20 @@ mmap_clock_t::init ()
     warn ("%s: cannot fstat file: %m\n", file.cstr ());
     return false;
   }
-  if (sb.st_size < mmp_sz) {
+
+  // on Linux, sb.st_size is signed
+  if (int (sb.st_size) < int (mmp_sz)) {
     warn << file << ": short file; aborting\n";
     return false; 
   }
 
-  tmp = mmap (NULL, mmp_sz, PROT_READ, MAP_NOSYNC|MAP_SHARED, fd, 0); 
+  u_int opts = MAP_SHARED;
+#ifdef HAVE_MAP_NOSYNC
+  opts |= MAP_NOSYNC;
+#endif
+
+  tmp = mmap (NULL, mmp_sz, PROT_READ, opts , fd, 0); 
+
   if (tmp == MAP_FAILED) {
     warn ("%s: mmap clock mmap failed: %m\n", file.cstr ());
     return false;

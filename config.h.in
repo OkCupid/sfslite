@@ -3,7 +3,7 @@
 /* Define if last argument of authunix_create is a gid_t *. */
 #undef AUTHUNIX_GID_T
 
-/* Define if you must run "df -k" to get BSD-formatted output */
+/* Define if you must run \"df -k\" to get BSD-formatted output */
 #undef DF_NEEDS_DASH_K
 
 /* Define if compiling with dmalloc. */
@@ -51,6 +51,9 @@
 
 /* Define if your kernel has the Arla file system's XFS device */
 #undef HAVE_DEV_XFS
+
+/* Define to 1 if you have the <dlfcn.h> header file. */
+#undef HAVE_DLFCN_H
 
 /* Define if the first element of a grouplist is the effective gid */
 #undef HAVE_EGID_IN_GROUPLIST
@@ -103,11 +106,11 @@
 /* Define to 1 if you have the <libutil.h> header file. */
 #undef HAVE_LIBUTIL_H
 
-/* Define to 1 if you have the <linux/nfs2.h> header file. */
-#undef HAVE_LINUX_NFS2_H
-
 /* Define to 1 if you have the <login_cap.h> header file. */
 #undef HAVE_LOGIN_CAP_H
+
+/* Define if the MAP_NOSYNC option for mmap is available */
+#undef HAVE_MAP_NOSYNC
 
 /* Define to 1 if you have the `memcpy' function. */
 #undef HAVE_MEMCPY
@@ -123,45 +126,6 @@
 
 /* Define if you have mpz_xor in your GMP library. */
 #undef HAVE_MPZ_XOR
-
-/* If the nfs_arg addr field is a netbuf pointer */
-#undef HAVE_NFSARG_ADDR_NETBUF
-
-/* The addr field of nfs_arg is a pointer */
-#undef HAVE_NFSARG_ADDR_PTR
-
-/* The hostname field of nfs_arg is an array */
-#undef HAVE_NFSARG_HOSTNAME_ARRAY
-
-/* Define if the nfs_args structure has a addrlen field. */
-#undef HAVE_NFSMNT_ADDRLEN
-
-/* Define if the nfs_args structure has a fd field. */
-#undef HAVE_NFSMNT_FD
-
-/* Define if the nfs_args structure has a fh field. */
-#undef HAVE_NFSMNT_FH
-
-/* Define if the nfs_args structure has a fhsize field. */
-#undef HAVE_NFSMNT_FHSIZE
-
-/* Define if the nfs_args structure has a old_root field. */
-#undef HAVE_NFSMNT_OLD_ROOT
-
-/* Define if the nfs_args structure has a proto field. */
-#undef HAVE_NFSMNT_PROTO
-
-/* Define if the nfs_args structure has a root field. */
-#undef HAVE_NFSMNT_ROOT
-
-/* Define if the nfs_args structure has a sotype field. */
-#undef HAVE_NFSMNT_SOTYPE
-
-/* Define to 1 if you have the <nfs/nfsproto.h> header file. */
-#undef HAVE_NFS_NFSPROTO_H
-
-/* If the system supports NFS 3 */
-#undef HAVE_NFS_V3
 
 /* Define if off_t is 64 bits wide. */
 #undef HAVE_OFF_T_64
@@ -232,9 +196,6 @@
 /* Define if system headers declare a struct sockaddr_storage type. */
 #undef HAVE_STRUCT_SOCKADDR_STORAGE
 
-/* The the fh field of the nfs_arg structure points to an SVR4 nfs_fh3 */
-#undef HAVE_SVR4_FH3
-
 /* Define to 1 if you have the <sys/file.h> header file. */
 #undef HAVE_SYS_FILE_H
 
@@ -243,9 +204,6 @@
 
 /* Define to 1 if you have the <sys/mkdev.h> header file. */
 #undef HAVE_SYS_MKDEV_H
-
-/* Define to 1 if you have the <sys/mntent.h> header file. */
-#undef HAVE_SYS_MNTENT_H
 
 /* Define to 1 if you have the <sys/rusage.h> header file. */
 #undef HAVE_SYS_RUSAGE_H
@@ -274,17 +232,8 @@
 /* Define to 1 if you have the <time.h> header file. */
 #undef HAVE_TIME_H
 
-/* Define to 1 if you have the <tiuser.h> header file. */
-#undef HAVE_TIUSER_H
-
-/* Define to 1 if you have the `umount2' function. */
-#undef HAVE_UMOUNT2
-
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
-
-/* Define to 1 if you have the `unmount' function. */
-#undef HAVE_UNMOUNT
 
 /* Define to 1 if you have the `unsetenv' function. */
 #undef HAVE_UNSETENV
@@ -312,9 +261,6 @@
 
 /* Define if system headers declare a u_long type. */
 #undef HAVE_U_LONG
-
-/* Define to 1 if you have the `vfsmount' function. */
-#undef HAVE_VFSMOUNT
 
 /* Define if select can take file descriptors >= FD_SETSIZE */
 #undef HAVE_WIDE_SELECT
@@ -360,18 +306,6 @@
 
 /* Define if system headers do not declare mkstemp. */
 #undef NEED_MKSTEMP_DECL
-
-/* The nfs_args structure is in <nfsclient/nfs.h> */
-#undef NEED_NFSCLIENT_NFS_H
-
-/* The nfs_args structure is in <nfs/nfsmount.h> */
-#undef NEED_NFS_MOUNT_H
-
-/* The nfs_args structure is in <nfs/nfsmount.h */
-#undef NEED_NFS_NFSMOUNT_H
-
-/* The nfs_args structure is in <nfs/nfs.h> */
-#undef NEED_NFS_NFS_H
 
 /* Define if system headers do not declare pread. */
 #undef NEED_PREAD_DECL
@@ -490,9 +424,6 @@
 /* Define to 1 if your <sys/time.h> declares `struct tm'. */
 #undef TM_IN_SYS_TIME
 
-/* Define if the unmount system call has 2 arguments. */
-#undef UNMOUNT_FLAGS
-
 /* Define if utmp must be managed with BSD-style ttyent functions */
 #undef USE_TTYENT
 
@@ -516,9 +447,11 @@
 /* Define to `int' if <sys/types.h> doesn't define. */
 #undef gid_t
 
-/* Define as `__inline' if that's what the C compiler calls it, or to nothing
-   if it is not supported. */
+/* Define to `__inline__' or `__inline' if that's what the C compiler
+   calls it, or to nothing if 'inline' is not supported under any name.  */
+#ifndef __cplusplus
 #undef inline
+#endif
 
 /* Define to `long' if <sys/types.h> does not define. */
 #undef off_t

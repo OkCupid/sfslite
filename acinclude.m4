@@ -1640,6 +1640,25 @@ AM_CONDITIONAL(DO_BIN_INSTALL, test "$sfs_no_bin_install" != "yes")
 ])
 
 dnl
+dnl SFS_MMAP
+dnl
+dnl  check MMAP options 
+dnl
+AC_DEFUN(SFS_MMAP,
+[AC_CACHE_CHECK(for MAP_NOSYNC option, sfs_map_nosync_opt,
+[AC_TRY_COMPILE([
+#include <sys/mman.h>
+], [
+int i = MAP_NOSYNC;
+], sfs_map_nosync_opt=yes, sfs_map_nosync_opt=no)
+])
+if test "$sfs_map_nosync_opt" = yes; then
+	AC_DEFINE(HAVE_MAP_NOSYNC, 1,
+	     Define if the MAP_NOSYNC option for mmap is available)
+fi
+])
+
+dnl
 dnl AC_PROG_INSTALL_C
 dnl
 dnl  checks for install -C; uses it instead of install -c
@@ -1653,10 +1672,13 @@ echo $INSTALL | grep -e '/install -c' >/dev/null
 if [ test $? -eq 0 ]
 then
    INSTALL_C=`echo $INSTALL | sed -e 's/install -c/install -C/' `
-   TMP1=`mktemp -t cfg-install`
-   TMP2=`mktemp -t cfg-install`
+   TMP1=/tmp/tmp.sfslite1
+   TMP2=/tmp/tmp.sfslite2
+   if test -f $TMP2; then
+	rm -f $TMP2
+   fi
    echo "foobar city" > $TMP1
-   $INSTALL_C $TMP1 $TMP2
+   $INSTALL_C $TMP1 $TMP2 > /dev/null 2>&1
    diff $TMP1 $TMP2 > /dev/null 2>&1
    if test $? -eq 0 
    then
