@@ -45,13 +45,13 @@ ignore_clnt_stat (clnt_stat)
 {
 }
 
-#ifdef WRAP_DEBUG
-aclnt_cb aclnt_cb_null (_wrap ("ignore_clnt_stat", "", 
+#ifndef WRAP_DEBUG
+aclnt_cb aclnt_cb_null (_wrap ("ignore_clnt_stat", ""
 			       "void ignore_clnt_stat (clnt_stat)",
-			       __FL__, ignore_clnt_stat));
+			       ignore_clnt_stat));
 #else
 aclnt_cb aclnt_cb_null (wrap (ignore_clnt_stat));
-#endif
+#endif /* WRAP_DEBUG */
 
 INITFN (aclnt_init);
 
@@ -73,7 +73,8 @@ callbase::~callbase ()
   c->calls.remove (this);
   if (tmo)
     timecb_remove (tmo);
-  c->xi->xidtab.remove (this);
+  if (c->xi->xidtab[xid] == this)
+    c->xi->xidtab.remove (this);
   tmo = reinterpret_cast<timecb_t *> (0xc5c5c5c5); // XXX - debugging
 }
 
@@ -275,7 +276,7 @@ aclnt::stop ()
     rpccb_msgbuf *rb;
     for (rb = static_cast<rpccb_msgbuf *> (calls.first); rb;
          rb = static_cast<rpccb_msgbuf *> (calls.next (rb))) {
-      assert (xi->xidtab[rb->xid]);
+      assert (xi->xidtab[rb->xid] == rb);
       xi->xidtab.remove (rb);
     }
   }
@@ -625,7 +626,8 @@ aclnt::alloc (ref<axprt> x, const rpc_program &pr, const sockaddr *d,
 void
 aclnt_resumable::fail ()
 {
-  if (!((*failcb) ()))		// may be called multiple times
+  ref<aclnt> hold = mkref (this);
+  if (!(failcb && (*failcb) ()))    // may be called multiple times
     aclnt::fail ();
 }
 

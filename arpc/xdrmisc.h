@@ -167,8 +167,13 @@ extern const char __xdr_zero_bytes[4];
 inline bool
 xdr_putpadbytes (XDR *xdrs, const void *p, size_t n)
 {
-  return XDR_PUTBYTES (xdrs, static_cast<char *> (const_cast<void *> (p)), n)
-    && XDR_PUTBYTES (xdrs, const_cast<char *> (__xdr_zero_bytes), -n & 3);
+  if (n) {
+    if (!XDR_PUTBYTES (xdrs, static_cast<char *> (const_cast<void *> (p)), n))
+      return false;
+    if (size_t nn = -n & 3)
+      return XDR_PUTBYTES (xdrs, const_cast<char *> (__xdr_zero_bytes), nn);
+  }
+  return true;
 }
 inline bool
 xdr_getpadbytes (XDR *xdrs, void *p, size_t n)

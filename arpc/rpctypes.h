@@ -533,7 +533,8 @@ rpc_traverse (rpc_clear_t &, rpc_ptr<T> &obj)
 template<class T> inline bool
 rpc_traverse (rpc_wipe_t &t, rpc_ptr<T> &obj)
 {
-  rpc_traverse (t, *obj);
+  if (obj)
+    rpc_traverse (t, *obj);
   obj.clear ();
   return true;
 }
@@ -547,7 +548,7 @@ template<class T, size_t n> inline bool
 rpc_traverse (rpc_wipe_t &t, rpc_vec<T, n> &obj)
 {
   for (typename rpc_vec<T, n>::elm_t *p = obj.base (); p < obj.lim (); p++)
-    rpc_traverse (*t, *p);
+    rpc_traverse (t, *p);
   obj.setsize (0);
   return true;
 }

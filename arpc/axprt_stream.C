@@ -121,7 +121,7 @@ axprt_stream::fail ()
   fd = -1;
   if (!destroyed) {
     ref<axprt> hold (mkref (this)); // Don't let this be freed under us
-    if (cb)
+    if (cb && !ingetpkt)
       (*cb) (NULL, -1, NULL);
     out->clear ();
   }
@@ -342,7 +342,11 @@ axprt_stream::callgetpkt ()
   char *cp = pktbuf, *eom = pktbuf + pktlen;
   while (cb && getpkt (&cp, eom))
     ;
-  if (!ateof ()) {
+  if (ateof ()) {
+    if (cb)
+      (*cb) (NULL, -1, NULL);
+  }
+  else {
     if (cp != pktbuf)
       memmove (pktbuf, cp, eom - cp);
     pktlen -= cp - pktbuf;

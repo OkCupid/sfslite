@@ -240,6 +240,7 @@ protected:
   virtual bool handle_err (clnt_stat) { fail (); return true; }
 
 public:
+  void setfailcb (callback<bool>::ptr cb) { failcb = cb; }
   bool pre_resume (ref<axprt> newxprt);
   void post_resume ();
   bool resume (ref<axprt> newxprt);
