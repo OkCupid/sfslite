@@ -340,8 +340,10 @@ fi
 AC_SUBST(sfslibdir)
 AC_SUBST(sfslibdirp)
 if test -z "$sfsincludedir"; then
-	sfsincludedir='${pkgincludedir}-${VERSION}'
+	sfsincludedirp='${pkgincludedir}-${VERSION}'
+	sfsincludedir='${pkgincludedir}-${VERSION}${sfstagdir}'
 fi
+AC_SUBST(sfsincludedirp)
 AC_SUBST(sfsincludedir)
 sfsexecdir="$sfslibdir"
 AC_SUBST(sfsexecdir)

@@ -1498,7 +1498,7 @@ AC_DEFUN(SFS_TAG,
 [AC_ARG_WITH(tag,
 --with-tag=TAG	    	Specify a custom SFS build tag)
 AC_ARG_WITH(mode,
---with-mode=[debug|optmz]   Specify a build mode for SFS)
+--with-mode=[debug|lite]   Specify a build mode for SFS)
 if test "${with_tag+set}" = "set" -a "$with_tag" != "no"; then
 	sfstag=$with_tag
 	sfs_no_bin_install=yes
@@ -1511,7 +1511,8 @@ case $with_mode in
 		with_dmalloc=yes
 		sfs_no_bin_install=yes
 		;;
-	"optmz" ) ;;
+	"lite" )
+		sfstag=lite
 esac
 
 if test "${sfstag+set}" = "set" ; then

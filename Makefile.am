@@ -47,12 +47,12 @@ dist-hook:
 	cd $(distdir) && chmod -x setup
 
 install-data-local:
-	-src=$(DESTDIR)$(sfsincludedir); dst=$(DESTDIR)$(pkgincludedir); \
+	-src=$(DESTDIR)$(sfsincludedirp); dst=$(DESTDIR)$(pkgincludedir); \
 	rm -f $$dst; \
 	if test "`dirname $$src`" = "`dirname $$dst`"; then \
 		ln -s "`basename $$src`" $$dst; \
 	else \
-		ln -s $(sfsincludedir) $$dst; \
+		ln -s $(sfsincludedirp) $$dst; \
 	fi
 
 install-exec-local:
