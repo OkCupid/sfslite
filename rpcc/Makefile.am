@@ -31,8 +31,10 @@ parse.cc: parse.yy
 	case "$(YACC)" in					\
 	*bison*)						\
 		sed -e 's/union yyalloc/struct yyalloc/g'	\
-			< y.tab.c > $(srcdir)/parse.cc ;	\
-		rm -f y.tab.c					\
+			< y.tab.c > y2.tab.c ;			\
+		sed -e 's/__attribute__ \(\(.*\)\)//'		\
+			< y2.tab.c > $(srcdir)/parse.cc ;	\
+		rm -f y.tab.c y2.tab.c				\
 		;;						\
 	*)							\
 		mv -f y.tab.c $(srcdir)/parse.cc		\
@@ -50,8 +52,8 @@ parse.o: parse.cc parse.h
 # Note: certain versions of bison put __attribute__((unused)) after
 # unused goto labels, which doesn't agree well with gcc 3.2.1.
 # If you have problems, try the next line instead of the following one.
-#	$(CXXCOMPILE) $(CXXNOERR) -D'__attribute__(x)=' -c $(srcdir)/parse.cc
-	$(CXXCOMPILE) $(CXXNOERR) -c $(srcdir)/parse.cc
+	$(CXXCOMPILE) $(CXXNOERR) -D'__attribute__(x)=' -c $(srcdir)/parse.cc
+#	$(CXXCOMPILE) $(CXXNOERR) -c $(srcdir)/parse.cc
 
 scan.o: parse.o scan.cc parse.h
 	$(CXXCOMPILE) $(CXXNOERR) -c $(srcdir)/scan.cc
