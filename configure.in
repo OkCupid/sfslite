@@ -8,8 +8,14 @@ AM_INIT_AUTOMAKE(sfslite,0.8pre)
 dnl AC_INIT(sfs,0.7.2)
 dnl AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER(config.h)
-AC_PROG_LIBTOOL
-AC_PROG_RANLIB
+
+dnl
+dnl begin SFS lite change
+dnl
+SFS_TAG
+dnl
+dnl End SFS lite change
+dnl
 
 AC_SUBST(LDEPS)
 AC_SUBST(LDADD)
@@ -121,8 +127,9 @@ if test "$enable_shlib" = no; then
 fi
 # XXX - next line seems to be required for some autoconf/-make/libtool versions
 test -z "$target" && target=NONE
-dnl AC_DISABLE_SHARED
-dnl AM_PROG_LIBTOOL
+AC_DISABLE_SHARED
+dnl AC_PROG_LIBTOOL
+AM_PROG_LIBTOOL
 AM_CONDITIONAL(STATIC, test "$enable_shared" != yes)
 
 AC_SUBST(MALLOCK)
@@ -273,7 +280,7 @@ SFS_DMALLOC
 SFS_CHECK_XDR
 SFS_CHECK_WIDE_SELECT
 SFS_PUTENV_COPY
-dnl SFS_CHECK_NFSMNT
+SFS_CHECK_NFSMNT
 SFS_CHECK_SA_LEN
 SFS_CHECK_FDPASS
 SFS_CHECK_SOCK_BUF
@@ -372,7 +379,6 @@ dnl
 dnl BEGIN sfslite changes
 dnl
 dnl Auxilliary executables go in sfsexecdi
-SFS_TAG
 if test -z "$sfslibdir"; then
 	sfslibdirp='${pkglibdir}-${VERSION}'
 	sfslibdir='${pkglibdir}-${VERSION}${sfstagdir}'
