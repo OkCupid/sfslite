@@ -1510,10 +1510,25 @@ case $with_mode in
 		with_dmalloc=yes
 		sfs_no_bin_install=yes
 		;;
+
+	"std" )
+		sfstag=$with_mode
+		DEBUG=-g
+		CXXDEBUG=-g
+		;;
+
 	"shared" )
 		sfstag=$with_mode
 		enable_shared=yes
+		DEBUG=-g
+		CXXDEBUG=-g
 		;;
+
+	"shopt" )
+		sfstag=$with_mode
+		enable_shared=yes
+		;;
+
 	"shdbg"  )
 		sfstag=$with_mode
 		enable_shared=yes
@@ -1523,9 +1538,15 @@ case $with_mode in
 		with_dmalloc=yes
 		sfs_no_bin_install=yes
 		;;
+
+	"optmz")
+		sfstag=lite
+		;;
+
 	"lite" )
 		sfstag=lite
 		;;
+
 	*)
 		if test "${with_mode+set}" = "set" ; then
 			AC_MSG_ERROR([Unrecognized SFS build mode])

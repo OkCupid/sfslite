@@ -2,6 +2,12 @@
 
 CFG=cfg
 
+if [ -f $CFG -a ! -w $CFG ]
+then
+    echo "Not writing over cfg because it's read only."
+    exit 1
+fi
+
 if [ -f $CFG ]
 then
     rm $CFG
