@@ -108,6 +108,22 @@ __suio_check (const char *file, int line, struct suio *uio,
   }
 }
 
+#define xxmalloc xmalloc
+
+#else /* !DMALLOC */
+
+void *
+xxmalloc (size_t n)
+{
+  void *r = malloc (n);
+  if (!r) {
+    const char msg[] = "malloc failed\n";
+    write (2, msg, sizeof (msg) - 1);
+    abort ();
+  }
+  return r;
+}
+
 #endif /* DMALLOC */
 
 static inline void
@@ -171,7 +187,7 @@ __suio_alloc (const char *file, int line)
 {
   struct suio *uio;
 #ifndef DMALLOC
-  uio = (struct suio *) xmalloc (sizeof (*uio));
+  uio = (struct suio *) xxmalloc (sizeof (*uio));
 #else /* DMALLOC */
   uio = (struct suio *) _xmalloc_leap (file, line, sizeof (*uio));
 #endif /* DMALLOC */
@@ -272,7 +288,7 @@ __suio_flatten (const struct suio *uio, const char *file, int line)
   struct iovec *iovp = uio->uio_iov;
   struct iovec *lastiov = uio->uio_iov + uio->uio_iovcnt;
 #ifndef DMALLOC
-  char *buf = (char *) xmalloc (uio->uio_resid);
+  char *buf = (char *) xxmalloc (uio->uio_resid);
 #else /* DMALLOC */
   char *buf = (char *) _xmalloc_leap (file, line, uio->uio_resid);
 #endif /* DMALLOC */
@@ -297,7 +313,7 @@ __suio_newbuf (struct suio *uio)
     uio->uio_defbfree = 0;
   }
   else
-    b = (struct s_buf *) xmalloc (sizeof (*b));
+    b = (struct s_buf *) xxmalloc (sizeof (*b));
   uio->uio_bufp->b_next = b;
   uio->uio_bufp = b;
   uio->uio_dp = b->b_data;
@@ -322,7 +338,7 @@ __suio_newiov (struct suio *uio)
     return;
   }
   n = 2 * (n + uio->uio_iovmax);  /* Allocate twice the number of old slots */
-  newiov = (struct iovec *) xmalloc (n * sizeof (struct iovec));
+  newiov = (struct iovec *) xxmalloc (n * sizeof (struct iovec));
   memcpy (newiov, uio->uio_iov, uio->uio_iovcnt * sizeof (struct iovec));
   if (uio->uio_memalloced)
     xfree (uio->uio_mem);
@@ -338,7 +354,7 @@ __suio_copy (struct suio *uio, const char *data, u_int len)
   u_int n;
 
   if (len > SBUFSIZ) {
-    dp = (char *) xmalloc (len);
+    dp = (char *) xxmalloc (len);
     memcpy (dp, data, len);
     __suio_addiov (uio, dp, len);
     suio_callfree (uio, dp);
@@ -439,7 +455,7 @@ suio_copyv (struct suio *uio, const struct iovec *iov, int cnt, u_int skip)
 
   if (!size)
     return;
-  buf = (char *) xmalloc (size);
+  buf = (char *) xxmalloc (size);
   cp = buf + size;
 
   while (iovp-- > iov && iovp->iov_len <= n) {

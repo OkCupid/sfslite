@@ -154,6 +154,11 @@ extern void suio_cat (struct suio *, const struct suio *);
 extern void suio_move (struct suio *, struct suio *);
 extern void suio_copyv (struct suio *, const struct iovec *, int, u_int);
 extern int suio_output (struct suio *, int, int);
+#ifndef DMALLOC
+extern void *xxmalloc (size_t);
+#else /* DMALLOC */
+# define xxmalloc xmalloc
+#endif /* DMALLOC */
 
 static inline void
 __suio_addiov (struct suio *uio, const void *data, u_int len)
@@ -249,7 +254,7 @@ suio_clear (struct suio *uio)
 static inline void
 suio_callback (struct suio *uio, void (*fn) (void *), void *arg)
 {
-  struct iovcb *cb = (struct iovcb *) xmalloc (sizeof (*cb));
+  struct iovcb *cb = (struct iovcb *) xxmalloc (sizeof (*cb));
   cb->cb_niov = uio->uio_nremiov + uio->uio_iovcnt;
   cb->cb_fn = fn;
   cb->cb_arg = arg;

@@ -9,7 +9,7 @@ dnl
 ARPCGEN = $(top_builddir)/uvfs/arpcgen/arpcgen
 SVCDIR = $(top_srcdir)/svc
 
-if HAVE_PAM
+if USE_AUTH_HELPER
 AUTH_HELPER = auth_helper
 endif
 
@@ -62,7 +62,9 @@ suidprotect.c:
 authunixint.c:
 	$(LN_S) $(top_srcdir)/arpc/authunixint.c authunixint.c
 
-EXTRA_DIST = Makefile.am.m4 .cvsignore
+EXTRA_DIST = Makefile.am.m4 .cvsignore \
+	auth_helper_common.c auth_helper_pam.c auth_helper_bsd.c
+
 libsfs_a_SOURCES = rpcmk_sources \
 rwfd.c suidprotect.c authunixint.c \
 devcon.c hashtab.c sfsops.c sfspaths.c srpc.c xdr_misc.c suio.c
@@ -71,7 +73,7 @@ DEPEND_ON_MAKEFILE = devgetcon.o sfspaths.o
 $(DEPEND_ON_MAKEFILE): Makefile
 
 include_HEADERS = sfs.h
-sfsinclude_HEADERS = sfs-internal.h
+sfsinclude_HEADERS = sfs-internal.h auth_helper.h
 noinst_HEADERS = hashtab.h queue.h suio.h xdr_suio.h
 
 suidconnect_SOURCES = suidconnect.c
@@ -80,10 +82,13 @@ suidconnect_LDADD = libsfs.a
 pathinfo_SOURCES = pathinfo.c
 pathinfo_LDADD = libsfs.a
 
-if HAVE_PAM
-auth_helper_SOURCES = auth_helper_pam.c
-auth_helper_LDADD = libsfs.a $(LIBPAM)
-endif
+auth_helper_SOURCES = auth_helper.c auth_helper_common.c
+auth_helper_LDADD = libsfs.a $(AUTH_HELPER_LIB)
+
+# Ugh... this is the only way I could get automake to work
+auth_helper.c: $(srcdir)/$(AUTH_HELPER_STYLE) Makefile
+	@rm -f $@
+	$(LN_S) $(srcdir)/$(AUTH_HELPER_STYLE) $@
 
 tst_SOURCES = tst.c
 tst_LDADD = libsfs.a
@@ -99,7 +104,8 @@ install-exec-hook:
 	-chgrp @sfsgroup@ $(DESTDIR)$(sfsexecdir)/suidconnect \
 	   && chmod 2555 $(DESTDIR)$(sfsexecdir)/suidconnect
 
-CLEANFILES = core *.core *~ *.rpo rpcmk_built authunixint.c rwfd.c
+CLEANFILES = core *.core *~ *.rpo rpcmk_built \
+	authunixint.c rwfd.c auth_helper.c
 MAINTAINERCLEANFILES = Makefile.in Makefile.am
 
 $(srcdir)/Makefile.am: $(srcdir)/Makefile.am.m4
