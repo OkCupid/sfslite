@@ -102,9 +102,9 @@ public:
   conftab_str (const str &n, str *d, bool c = false) 
     : conftab_el (n), dest (d), cnfcb (NULL), scb (NULL), check (c) {}
   conftab_str (const str &n, confcb c)
-    : conftab_el (n), dest (NULL), cnfcb (c), scb (NULL) {}
+    : conftab_el (n), dest (NULL), cnfcb (c), scb (NULL), check (false) {}
   conftab_str (cbs c, const str &n) // XXX: reverse order to disambiguate
-    : conftab_el (n), dest (NULL), cnfcb (NULL), scb (c) {}
+    : conftab_el (n), dest (NULL), cnfcb (NULL), scb (c), check (false) {}
 
   bool convert (const vec<str> &v, const str &l, bool *e);
   bool inbounds () { return true; }
