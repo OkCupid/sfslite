@@ -31,8 +31,11 @@
 # define SFSUSER "sfs"
 #endif /* !SFSUSER */
 
+
 uid_t sfs_uid;
 gid_t sfs_gid;
+u_int32_t sfs_release = 9999;
+u_int16_t sfs_defport = 4;
 uid_t nobody_uid = (uid_t) -1;
 gid_t nobody_gid = (gid_t) -1;
 u_int32_t sfs_resvgid_start;	// First reserved gid
