@@ -856,7 +856,7 @@ Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
 --with-tag=TAG	    	Specify a custom SFS build tag
---with-mode=debug|optmz   Specify a build mode for SFS
+--with-mode=debug|lite   Specify a build mode for SFS
   --with-gnu-ld           assume the C compiler uses GNU ld default=no
 --with-dmalloc            use debugging malloc from www.dmalloc.com
 			  (set MAX_FILE_LEN to 1024 when installing)
@@ -1591,11 +1591,13 @@ fi
 case $with_mode in
 	"debug" )
 		DEBUG=-g
+		CXXDEBUG=-g
 		sfstag=$with_mode
 		with_dmalloc=yes
 		sfs_no_bin_install=yes
 		;;
-	"optmz" ) ;;
+	"lite" )
+		sfstag=lite
 esac
 
 if test "${sfstag+set}" = "set" ; then
@@ -4126,7 +4128,7 @@ test x"$silent" = xyes && libtool_flags="$libtool_flags --silent"
 case "$lt_target" in
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 4129 "configure"' > conftest.$ac_ext
+  echo '#line 4131 "configure"' > conftest.$ac_ext
   if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -11521,7 +11523,7 @@ if test "${with_dmalloc+set}" = set; then
 test "$pref" = NONE && pref=$ac_default_prefix
 test "$withval" = yes && withval="${pref}"
 test "$withval" || withval="${pref}"
-test "{$with_dmalloc+set" = "set" && withval="${pref}"
+test "${with_dmalloc+set}" = "set" && withval="${pref}"
 using_dmalloc=no
 if test "$withval" != no; then
 
@@ -14770,8 +14772,10 @@ fi
 
 
 if test -z "$sfsincludedir"; then
-	sfsincludedir='${pkgincludedir}-${VERSION}'
+	sfsincludedirp='${pkgincludedir}-${VERSION}'
+	sfsincludedir='${pkgincludedir}-${VERSION}${sfstagdir}'
 fi
+
 
 sfsexecdir="$sfslibdir"
 
@@ -15618,6 +15622,7 @@ s,@LIBSFSRODB@,$LIBSFSRODB,;t t
 s,@LIBSFSMISC@,$LIBSFSMISC,;t t
 s,@sfslibdir@,$sfslibdir,;t t
 s,@sfslibdirp@,$sfslibdirp,;t t
+s,@sfsincludedirp@,$sfsincludedirp,;t t
 s,@sfsincludedir@,$sfsincludedir,;t t
 s,@sfsexecdir@,$sfsexecdir,;t t
 s,@sfsbindir@,$sfsbindir,;t t

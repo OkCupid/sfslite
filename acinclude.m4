@@ -1139,7 +1139,6 @@ pref=$prefix
 test "$pref" = NONE && pref=$ac_default_prefix
 test "$withval" = yes && withval="${pref}"
 test "$withval" || withval="${pref}"
-test "{$with_dmalloc+set" = "set" && withval="${pref}"
 using_dmalloc=no
 if test "$withval" != no; then
 	AC_DEFINE(DMALLOC, 1, Define if compiling with dmalloc. )
@@ -1513,6 +1512,12 @@ case $with_mode in
 		;;
 	"lite" )
 		sfstag=lite
+		;;
+	*)
+		if test "${with_mode+set}" = "set" ; then
+			AC_MSG_ERROR([Unrecognized SFS build mode])
+		fi
+		;;
 esac
 
 if test "${sfstag+set}" = "set" ; then
