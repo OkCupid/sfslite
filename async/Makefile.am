@@ -11,7 +11,11 @@
 sfslib_LTLIBRARIES = libasync.la
 LIBASYNC = libasync.la
 noinst_PROGRAMS = dftables
-sfsexec_PROGRAMS = aiod
+sfsexec_PROGRAMS = aiod mmcd
+
+mmcd_SOURCES = clock_gettime.c mmcd.c
+mmcd_LDADD = 
+mmcd_DEPENDENCIES =
 
 libasync_la_SOURCES = \
 arandom.c clock_gettime.c flock.c rwfd.c stktrace.c suidprotect.c \
@@ -20,7 +24,8 @@ aerr.C aio.C aios.C arena.C armor.C bbuddy.C cbuf.C convertint.C	\
 core.C daemonize.C dns.C dnsparse.C err.C fdwait.C ident.C ifchg.C	\
 ihash.C itree.C lockfile.C malloc.C msb.C myaddrs.C myname.C		\
 parseopt.C pipe2str.C refcnt.C rxx.C sigio.C socket.C spawn.C str.C	\
-str2file.C straux.C suio++.C suio_vuprintf.C tcpconnect.C
+str2file.C straux.C suio++.C suio_vuprintf.C tcpconnect.C               \
+litetime.C
 
 aiod_SOURCES = aiod.C
 if STATIC
@@ -36,7 +41,7 @@ aiod.h aiod_prot.h aios.h amisc.h arena.h array.h async.h backoff.h	\
 bbuddy.h bitvec.h callback.h cbuf.h dns.h dnsimpl.h dnsparse.h err.h	\
 fdlim.h ihash.h init.h itree.h keyfunc.h list.h msb.h opnew.h		\
 parseopt.h pcre.h qhash.h refcnt.h rxx.h serial.h stllike.h str.h	\
-suio++.h sysconf.h union.h vatmpl.h vec.h rwfd.h
+suio++.h sysconf.h union.h vatmpl.h vec.h rwfd.h litetime.h
 
 noinst_HEADERS = internal.h
 

@@ -93,18 +93,25 @@ axprt_unix::dowritev (int cnt)
 {
   if (fdsendq.empty ())
     return out->output (fd, cnt);
-
+  
   static timeval ztv;
-  if (!fdwait (fd, selwrite, &ztv))
+  if (!fdwait (fd, selwrite, &ztv)) {
+    // XXX debug
+    //warn << "sfs-debug: had to wait on sending FD\n";
     return 0;
+  }
+
 
   if (cnt < 0)
     cnt = out->iovcnt ();
   if (cnt > UIO_MAXIOV)
     cnt = UIO_MAXIOV;
   ssize_t n = writevfd (fd, out->iov (), cnt, fdsendq.front ().fd);
-  if (n < 0)
+  if (n < 0) {
+    // XXX - debug
+    //warn ("sfs-debug: writevfd returned error %d: %m\n", n);
     return errno == EAGAIN ? 0 : -1;
+  }
   fdsendq.pop_front ();
   out->rembytes (n);
   return 1;

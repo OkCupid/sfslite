@@ -26,6 +26,7 @@
 #include "ihash.h"
 #include "itree.h"
 #include "list.h"
+#include "litetime.h"
 
 #include <typeinfo>
 
@@ -34,7 +35,6 @@ int fd_set_bytes;		// Size in bytes of a [wide] fd_set
 int maxfd;
 bool amain_panic;
 static int nselfd;
-bool clock_gettime_disabled = false;
 
 timespec tsnow;
 const time_t &timenow = tsnow.tv_sec;
@@ -120,18 +120,6 @@ chldcb_check ()
   chldcb_check_last = timenow;
 }
 
-static int
-my_clock_gettime (int id, struct timespec *tp)
-{
-  if (clock_gettime_disabled) {
-    tsnow.tv_nsec ++;
-    *tp = tsnow;
-    return 0;
-  } else {
-    return clock_gettime (CLOCK_REALTIME, tp);
-  }
-}
-
 timecb_t *
 timecb (const timespec &ts, cbv cb)
 {
@@ -145,7 +133,7 @@ timecb_t *
 delaycb (time_t sec, u_int32_t nsec, cbv cb)
 {
   timespec ts;
-  my_clock_gettime (CLOCK_REALTIME, &ts);
+  my_clock_gettime (&ts);
   ts.tv_sec += sec;
   ts.tv_nsec += nsec;
   if (ts.tv_nsec >= 1000000000) {
@@ -172,7 +160,7 @@ timecb_remove (timecb_t *to)
 void
 timecb_check ()
 {
-  my_clock_gettime (CLOCK_REALTIME, &tsnow);
+  my_clock_gettime (&tsnow);
   timecb_t *tp, *ntp;
 
   for (tp = timecbs.first (); tp && tp->ts <= tsnow;
@@ -187,7 +175,7 @@ timecb_check ()
   if (!(tp = timecbs.first ()))
     selwait.tv_sec = 86400;
   else {
-    my_clock_gettime (CLOCK_REALTIME, &tsnow);
+    my_clock_gettime (&tsnow);
     if (tp->ts < tsnow)
       selwait.tv_sec = 0;
     else if (tp->ts.tv_nsec >= tsnow.tv_nsec) {
@@ -226,7 +214,7 @@ fdcb_check (void)
   int n = select (nselfd, fdspt[0], fdspt[1], NULL, &selwait);
   if (n < 0 && errno != EINTR)
     panic ("select: %m\n");
-  my_clock_gettime (CLOCK_REALTIME, &tsnow);
+  my_clock_gettime (&tsnow);
   if (sigdocheck)
     sigcb_check ();
   for (int fd = 0; fd < maxfd && n > 0; fd++)
@@ -315,7 +303,7 @@ lazycb_remove (lazycb_t *lazy)
 void
 lazycb_check ()
 {
-  my_clock_gettime (CLOCK_REALTIME, &tsnow);
+  my_clock_gettime (&tsnow);
  restart:
   lazycb_removed = false;
   for (lazycb_t *lazy = lazylist->first; lazy; lazy = lazylist->next (lazy)) {
@@ -465,39 +453,3 @@ async_init::stop ()
   err_flush ();
 }
 
-static void 
-clock_set_timer ()
-{
-  struct itimerval val;
-  val.it_value.tv_sec = 0;
-  val.it_value.tv_usec = 10000; // 10 milliseconds
-  val.it_interval.tv_sec = 0;
-  val.it_interval.tv_usec = 10000; // 10 milliseconds
-
-  setitimer (ITIMER_REAL, &val, 0);
-}
-
-static void
-clock_timer_event ()
-{
-  clock_gettime (CLOCK_REALTIME, &tsnow);
-}
-
-void
-disable_clock_gettime ()
-{
-  warn << "*unstable: disabling clock_gettime\n";
-  clock_timer_event ();
-  sigcb (SIGALRM, wrap (clock_timer_event));
-  clock_gettime_disabled = true;
-  clock_set_timer ();
-}
-
-void
-enable_clock_gettime ()
-{
-  struct itimerval val;
-  memset (&val, 0, sizeof (val));
-  setitimer (ITIMER_REAL, &val, 0);
-  clock_gettime_disabled = false;
-}

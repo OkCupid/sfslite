@@ -35,8 +35,10 @@
 
 #include "amisc.h"
 #include "init.h"
+#include "litetime.h"
 
 /* core.C */
+
 struct timecb_t;
 struct lazycb_t;
 extern timespec tsnow;
@@ -53,8 +55,6 @@ void timecb_remove (timecb_t *);
 lazycb_t *lazycb (time_t min_interval, cbv cb);
 void lazycb_remove (lazycb_t *lazy);
 
-void enable_clock_gettime ();
-void disable_clock_gettime ();
 
 inline timecb_t *
 timecb (time_t tm, cbv cb)
@@ -67,6 +67,7 @@ delaycb (time_t tm, cbv cb)
 {
   return delaycb (tm, 0, cb);
 }
+
 
 /* aerr.C */
 void err_init ();
