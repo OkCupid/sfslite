@@ -43,14 +43,19 @@ enum { maxsobufsize = 0x05000 }; /* 16K + header */
 #endif /* !SFS_ALLOW_LARGE_BUFFER */
 int sndbufsize = maxsobufsize;
 int rcvbufsize = maxsobufsize;
-INITFN(setbufsizes);
+static in_addr bindaddr;
+INITFN(init_env);
 static void
-setbufsizes ()
+init_env ()
 {
-  if (char *p = getenv ("SNDBUFSIZE"))
+  if (char *p = safegetenv ("SNDBUFSIZE"))
     sndbufsize = atoi (p);
-  if (char *p = getenv ("RCVBUFSIZE"))
+  if (char *p = safegetenv ("RCVBUFSIZE"))
     rcvbufsize = atoi (p);
+
+  char *p = safegetenv ("BINDADDR");
+  if (!p || inet_aton (p, &bindaddr) <= 0)
+    bindaddr.s_addr = htonl (INADDR_ANY);
 }
 
 
@@ -66,29 +71,47 @@ inetsocket_resvport (int type, u_int32_t addr)
   bzero (&sin, sizeof (sin));
   sin.sin_family = AF_INET;
   sin.sin_port = htons (0);
-  sin.sin_addr.s_addr = htonl (addr);
+  if (addr == INADDR_ANY)
+    sin.sin_addr = bindaddr;
+  else
+    sin.sin_addr.s_addr = htonl (addr);
   if ((s = socket (AF_INET, type, 0)) < 0)
     return (-1);
 
   /* Don't bother if we aren't root */
   if (geteuid ()) {
+  again0:
     if (bind (s, (struct sockaddr *) &sin, sizeof (sin)) >= 0)
       return s;
+    if (errno == EADDRNOTAVAIL && sin.sin_addr.s_addr != htonl (addr)) {
+      sin.sin_addr.s_addr = htonl (addr);
+      goto again0;
+    }
     close (s);
     return -1;
   }
 #ifdef HAVE_BINDRESVPORT
+ again1:
   if (bindresvport (s, &sin) >= 0) {
     inetsocket_lastport = ntohs (sin.sin_port);
-    return (s);
+    return s;
+  }
+  if (errno == EADDRNOTAVAIL && sin.sin_addr.s_addr != htonl (addr)) {
+    sin.sin_addr.s_addr = htonl (addr);
+    goto again1;
   }
 #else /* !HAVE_BINDRESVPORT */
   for (inetsocket_lastport = IPPORT_RESERVED - 1;
        inetsocket_lastport > IPPORT_RESERVED/2;
        inetsocket_lastport--) {
+  again2:
     sin.sin_port = htons (inetsocket_lastport);
     if (bind (s, (struct sockaddr *) &sin, sizeof (sin)) >= 0)
       return (s);
+    if (errno == EADDRNOTAVAIL && sin.sin_addr.s_addr != htonl (addr)) {
+      sin.sin_addr.s_addr = htonl (addr);
+      goto again2;
+    }
     if (errno != EADDRINUSE)
       break;
   }
@@ -111,20 +134,26 @@ inetsocket (int type, u_int16_t port, u_int32_t addr)
   bzero (&sin, sizeof (sin));
   sin.sin_family = AF_INET;
   sin.sin_port = htons (port);
-  sin.sin_addr.s_addr = htonl (addr);
+  if (addr == INADDR_ANY)
+    sin.sin_addr = bindaddr;
+  else
+    sin.sin_addr.s_addr = htonl (addr);
   if ((s = socket (AF_INET, type, 0)) < 0)
     return -1;
 
   sn = sizeof (n);
+  n = 1;
   /* Avoid those annoying TIME_WAITs for TCP */
-  if (port && getsockopt (s, SOL_SOCKET, SO_TYPE, (char *)&n, &sn) >= 0
-      && n == SOCK_STREAM) {
-    n = 1;
-    if (setsockopt (s, SOL_SOCKET, SO_REUSEADDR, (char *)&n, sizeof (n)) < 0)
-      fatal ("inetsocket: SO_REUSEADDR: %s\n", strerror (errno));
-  }
+  if (port && type == SOCK_STREAM
+      && setsockopt (s, SOL_SOCKET, SO_REUSEADDR, (char *) &n, sizeof (n)) < 0)
+    fatal ("inetsocket: SO_REUSEADDR: %s\n", strerror (errno));
+ again:
   if (bind (s, (struct sockaddr *) &sin, sizeof (sin)) >= 0)
     return s;
+  if (errno == EADDRNOTAVAIL && sin.sin_addr.s_addr != htonl (addr)) {
+    sin.sin_addr.s_addr = htonl (addr);
+    goto again;
+  }
   close (s);
   return -1;
 }

@@ -382,6 +382,10 @@ typedef char *iovbase_t;
 #define socklen_t int
 #endif /* HAVE_SOCKLEN_T */
 
+#ifndef HAVE_STRUCT_SOCKADDR_STORAGE
+#define sockaddr_storage sockaddr
+#endif /* !HAVE_STRUCT_SOCKADDR_STORAGE */
+
 #ifndef HAVE_TIMESPEC
 struct timespec {
   time_t tv_sec;
@@ -518,6 +522,7 @@ int strncasecmp (const char *, const char *, int);
 
 extern void panic (const char *msg, ...)
      __attribute__ ((noreturn, format (printf, 1, 2)));
+
 
 #define MALLOCRESV 16		/* Best to allocate 2^n - MALLOCRESV bytes */
 

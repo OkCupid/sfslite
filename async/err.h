@@ -81,4 +81,27 @@ public:
 #define fatal fatalobj (int (::warnobj::fatalflag))
 #define panic fatalobj (int (::warnobj::panicflag)) ("%s\n", __BACKTRACE__)
 
+struct traceobj : public strbuf {
+  int current_level;
+  const char *prefix;
+  const bool dotime;
+  bool doprint;
+
+  traceobj (int current_level, const char *prefix = "", bool dotime = false)
+    : current_level (current_level), prefix (prefix), dotime (dotime) {}
+  ~traceobj ();
+  void init ();
+
+  const traceobj &operator() (int threshold = 0);
+  const traceobj &operator() (int threshold, const char *fmt, ...)
+    __attribute__ ((format (printf, 3, 4)));
+};
+
+#undef assert
+#define assert(e)						\
+  do {								\
+    if (!(e))							\
+      panic ("assertion \"%s\" failed at %s\n", #e, __FL__);	\
+  } while (0)
+
 #endif /* !_ASYNC_ERR_H_ */

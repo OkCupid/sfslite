@@ -52,7 +52,8 @@ public:
 
   str lookup (str &hostname);
   ptr<sfsagent_auth_res> auth (sfsagent_authinit_arg &arg);
-  ptr<sfsagent_rex_res> rex (str &pathname, bool forwardagent);
+  ptr<sfsagent_rex_res> rex (str dest, str schost, bool forwardagent,
+                             bool agentconnect, bool resumable);
   bool isagentrunning ();
 };
 

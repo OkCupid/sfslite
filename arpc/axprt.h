@@ -31,7 +31,7 @@ protected:
   xhinfo *xhip;
   ptr<axprt> x; // contained axprt
   axprt (bool r, bool c, size_t ss = 0)
-    : xhip (NULL), x(NULL), reliable (r), connected (c), socksize (ss) {}
+    : xhip (NULL), x (NULL), reliable (r), connected (c), socksize (ss) {}
 
 public:
   enum { defps = 0x10400 };
@@ -47,6 +47,8 @@ public:
   virtual void setwcb (cbv cb) { (*cb) (); }
   virtual void setrcb (recvcb_t) = 0;
   virtual bool ateof () { return false; }
+  virtual u_int64_t get_raw_bytes_sent () const { return 0; }
+  virtual int sndbufsize () const { return 0; }
 
   void send (const void *data, size_t len, const sockaddr *dest) {
     iovec iov = {(char *) data, len};
@@ -82,6 +84,7 @@ class axprt_stream : public axprt {
   bool destroyed;
   bool ingetpkt;
   vec<u_int64_t> syncpts;
+  int sndbufsz;
 
 protected:
   const size_t pktsize;
@@ -95,6 +98,8 @@ protected:
 
   struct suio *out;
   bool wcbset;
+  
+  u_int64_t raw_bytes_sent;
 
   void wrsync ();
   void sendbreak (cbv::ptr);
@@ -108,7 +113,6 @@ protected:
   void input ();
   void callgetpkt ();
   void output ();
-
 
   axprt_stream (int fd, size_t ps, size_t bufsize = 0);
   virtual ~axprt_stream ();
@@ -124,9 +128,12 @@ public:
   void setrcb (recvcb_t);
   void setwcb (cbv);
 
+  u_int64_t get_raw_bytes_sent () const { return raw_bytes_sent; }
+  int sndbufsize () const { return sndbufsz; }
+
   static ref<axprt_stream> alloc (int f, size_t ps = defps)
     { return New refcounted<axprt_stream> (f, ps); }
-  
+
   unsigned long bytes_sent;
   unsigned long bytes_recv;
 };
@@ -206,4 +213,3 @@ struct hashfn<const ref<axprt> > {
   hash_t operator () (axprt *p) const { return (u_int) p; }
 };
 #endif
-

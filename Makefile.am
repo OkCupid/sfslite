@@ -7,18 +7,16 @@ else
 ADB = adb
 endif
 
+#
+# sfslite change
+#
 SUBDIRS = async rpcc arpc crypt sfsmisc
-
-# async rpcc arpc crypt svc etc uvfs libsfs sfsmisc doc \
-# 	nfsmounter sfscd sfsrwcd agent \
-# 	sfssd sfsrwsd sfsauthd tests rex \
-# 	$(ADB) sfsrodb sfsrosd sfsrocd sfsusrv sfsaclsd
 
 
 noinst_HEADERS = nfsconf.h
 
 EXTRA_DIST = setup autoconf.sed .cvsignore STANDARDS \
-	INSTALL.darwin README.0.7-upgrade sfsauthd/upgradedb.pl
+	INSTALL.darwin INSTALL.macos README.0.7-upgrade sfsauthd/upgradedb.pl
 
 CLEANFILES = core *.core *~
 

@@ -145,6 +145,54 @@ fatalobj::~fatalobj ()
 }
 #endif /* !fatalobj */
 
+static const char *
+tracetime ()
+{
+  timespec ts;
+  clock_gettime (CLOCK_REALTIME, &ts);
+  static str buf;
+  buf = strbuf ("%d.%06d", int (ts.tv_sec), int (ts.tv_nsec/1000));
+  return buf;
+}
+
+void
+traceobj::init ()
+{
+  if (progname)
+    cat (progname).cat (": ");
+  cat (prefix);
+  if (dotime)
+    cat (tracetime ()).cat (" ");
+}
+
+traceobj::~traceobj ()
+{
+  if (doprint)
+    _err_output (uio, 0);
+}
+
+const traceobj &
+traceobj::operator() (const int threshold)
+{
+  doprint = current_level >= threshold;
+  if (doprint)
+    init ();
+  return *this;
+}
+
+const traceobj &
+traceobj::operator() (const int threshold, const char *fmt, ...)
+{
+  doprint = current_level >= threshold;
+  if (doprint) {
+    init ();
+    va_list ap;
+    va_start (ap, fmt);
+    vfmt (fmt, ap);
+    va_end (ap);
+  }
+  return *this;
+}
 
 /*
  *  Traditional functions

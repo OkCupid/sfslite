@@ -106,6 +106,11 @@ public:
 
   void start (T *p) { insert (p, 0); }
 
+  void keeptrying (T *p) {
+    assert ((p->*field).qno >= maxsend);
+    insert (p, maxsend - 1);
+  }
+
   void remove (T *p) {
     if ((p->*field).qno < maxsend) {
       if ((p->*field).next)

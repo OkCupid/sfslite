@@ -116,7 +116,7 @@ void
 unsetenv (const char *name)
 {
   int len = strlen (name);
-  char **ep = environ;
+  char **ep;
   for (ep = environ;; ep++) {
     if (!*ep)
       return;

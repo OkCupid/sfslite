@@ -37,6 +37,7 @@ extern u_int32_t (*next_xid) ();
 
 class callbase {
   friend class aclnt;
+  friend class aclnt_resumable;
 
   virtual bool checksrc (const sockaddr *) const;
   virtual clnt_stat decodemsg (const char *, size_t) = 0;
@@ -52,10 +53,12 @@ protected:
 
 public:
   const u_int32_t xid;
-  list_entry<callbase> clink;	// Per-client list of calls
+  u_int64_t offset;  // Byte offset (in the underlying transport) of
+                     // the end of this message
+  tailq_entry<callbase> clink;	// Per-client queue of calls
   ihash_entry<callbase> hlink;	// Link in XID hash table
 
-  void timeout (time_t duration);
+  void timeout (time_t sec, long nsec = 0);
   void cancel () { delete this; }
   virtual void finish (clnt_stat) = 0;
 };
@@ -65,8 +68,8 @@ protected:
   rpccb (ref<aclnt>, u_int32_t, aclnt_cb, void *, xdrproc_t, const sockaddr *);
   virtual ~rpccb () {}
 
-  u_int32_t getxid (xdrsuio &x);
-  u_int32_t getxid (char *, size_t);
+  static u_int32_t getxid (ref<aclnt> c, xdrsuio &x);
+  static u_int32_t getxid (ref<aclnt> c, char *, size_t);
 
 public:
   aclnt_cb cb;
@@ -89,7 +92,7 @@ protected:
   }
   rpccb_msgbuf (ref<aclnt> c, char *buf, size_t len, aclnt_cb cb,
 		void *out, xdrproc_t outproc, const sockaddr *d)
-    : rpccb (c, getxid (buf, len), cb, out, outproc, d),
+    : rpccb (c, getxid (c, buf, len), cb, out, outproc, d),
       msgbuf (buf), msglen (len) {}
   ~rpccb_msgbuf () { xfree (msgbuf); }
 
@@ -97,6 +100,13 @@ public:
   void *msgbuf;
   size_t msglen;
   void xmit (int retry = 0);
+};
+
+class rpccb_msgbuf_xmit : public rpccb_msgbuf {
+public:
+  rpccb_msgbuf_xmit (ref<aclnt> c, xdrsuio &x, aclnt_cb cb,
+                     void *out, xdrproc_t outproc, const sockaddr *d)
+    : rpccb_msgbuf (c, x, cb, out, outproc, d) { xmit (0); }
 };
 
 class rpccb_unreliable : public rpccb_msgbuf {
@@ -116,22 +126,25 @@ public:
 
 template<class T> callbase *
 callbase_alloc (ref<aclnt> c, xdrsuio &x, aclnt_cb cb,
-			       void *out, xdrproc_t outproc, sockaddr *d)
+    		void *out, xdrproc_t outproc, sockaddr *d)
 {
   return New T (c, x, cb, out, outproc, d);
 }
 
 class aclnt : public virtual refcount {
   friend class callbase;
-  list<callbase, &callbase::clink> calls;
 
 public:
-  const ref<xhinfo> xi;
+  ptr<xhinfo> xi;
   const rpc_program &rp;
 
 private:
   cbv::ptr eofcb;
   sockaddr *dest;
+  bool stopped;
+
+  cbv::ptr send_hook;
+  cbv::ptr recv_hook;
 
   aclnt (const axprt &);
   const aclnt &operator= (const aclnt &);
@@ -142,12 +155,25 @@ protected:
   aclnt (const ref<xhinfo> &x, const rpc_program &rp);
   ~aclnt ();
 
+  tailq<callbase, &callbase::clink> calls;
+  virtual bool forget_call (aclnt_cb);
+  virtual void fail ();
+  virtual bool handle_err (clnt_stat) { return false; }
+
 public:
   list_entry<aclnt> xhlink;
   const ref<axprt> &xprt () const;
   typedef callbase *(*rpccb_alloc_t) (ref<aclnt>, xdrsuio &, aclnt_cb,
 				      void *, xdrproc_t, sockaddr *);
   rpccb_alloc_t rpccb_alloc;
+
+  bool calls_outstanding () { return calls.first; }
+
+  void start ();
+  void stop ();
+
+  virtual bool xi_ateof_fail ();
+  virtual bool xi_xh_ateof_fail ();
 
   static void dispatch (ref<xhinfo>, const char *, ssize_t, const sockaddr *);
   static bool marshal_call (xdrsuio &, AUTH *auth, u_int32_t progno,
@@ -164,27 +190,62 @@ public:
 		  xdrproc_t inproc = NULL, xdrproc_t outproc = NULL,
 		  u_int32_t progno = 0, u_int32_t versno = 0,
 		  sockaddr *d = NULL);
-  callbase *timedcall (time_t duration,
+  callbase *timedcall (time_t sec, long nsec,
 		       u_int32_t procno, const void *in, void *out, aclnt_cb,
 		       AUTH *auth = NULL,
 		       xdrproc_t inproc = NULL, xdrproc_t outproc = NULL,
 		       u_int32_t progno = 0, u_int32_t versno = 0,
 		       sockaddr *d = NULL);
+  callbase *timedcall (time_t sec, u_int32_t procno, const void *in, void *out,
+		       aclnt_cb cb, AUTH *auth = NULL,
+		       xdrproc_t inproc = NULL, xdrproc_t outproc = NULL,
+		       u_int32_t progno = 0, u_int32_t versno = 0,
+		       sockaddr *d = NULL) {
+    return timedcall (sec, 0, procno, in, out, cb, auth,
+		      inproc, outproc, progno, versno, d);
+  }
   clnt_stat scall (u_int32_t procno, const void *in, void *out,
 		   AUTH *auth = NULL,
 		   xdrproc_t inproc = NULL, xdrproc_t outproc = NULL,
 		   u_int32_t progno = 0, u_int32_t versno = 0,
 		   sockaddr *d = NULL, time_t duration = 0);
 
-  callbase *rawcall (const char *msg, size_t len,
-		     aclntraw_cb, sockaddr *dest);
+  callbase *rawcall (const char *msg, size_t len, aclntraw_cb, sockaddr *dest);
 
   void seteofcb (cbv::ptr);
+
+  void set_send_hook (cbv::ptr cb) { send_hook = cb; }
+  void set_recv_hook (cbv::ptr cb) { recv_hook = cb; }
 
   static ptr<aclnt> alloc (ref<axprt> x, const rpc_program &pr,
 			   const sockaddr *d = NULL,
 			   rpccb_alloc_t ra = NULL);
 };
+
+class aclnt_resumable : public aclnt {
+private:
+  callback<bool>::ptr failcb;
+
+protected:
+  aclnt_resumable (const ref<xhinfo> &x, const rpc_program &p,
+                   callback<bool>::ptr failcb)
+    : aclnt (x, p), failcb (failcb) {}
+  virtual bool xi_ateof_fail ();
+  virtual bool xi_xh_ateof_fail ();
+  virtual bool forget_call (aclnt_cb) { return false; }
+  virtual void fail ();
+  virtual bool handle_err (clnt_stat) { fail (); return true; }
+
+public:
+  bool pre_resume (ref<axprt> newxprt);
+  void post_resume ();
+  bool resume (ref<axprt> newxprt);
+
+  static ptr<aclnt_resumable> alloc (ref<axprt>, const rpc_program &,
+                                     callback<bool>::ref);
+};
+
+ptr<aclnt> aclnt_alloc (ref<axprt>, const rpc_program &, bool);
 
 void aclntudp_create (const char *host, int port, const rpc_program &rp,
 		      aclntalloc_cb cb);

@@ -61,9 +61,11 @@ template<class K, class V, class H = hashfn<K>, class E = equals<K>,
 	= &qhash_slot<K,V>::link>
 class qhash
   : public ihash_core<qhash_slot<K, V>, kludge> {
+public:
   typedef qhash_slot<K, V> slot;
   typedef ihash_core<slot, kludge> core;
 
+private:
   const E eq;
   const H hash;
 
@@ -144,9 +146,11 @@ template<class K, class H = hashfn<K>, class E = equals<K>,
 	= &qhash_slot<K, void>::link>
 class bhash // <K, void, H, E, kludge>
   : public ihash_core<qhash_slot<K, void>, kludge> {
+public:
   typedef qhash_slot<K, void> slot;
   typedef ihash_core<slot, kludge> core;
 
+private:
   const E eq;
   const H hash;
 

@@ -73,7 +73,8 @@ public:
 
 template<class T, size_t N = 0> class vec : public vec_base<T, N> {
 protected:
-  typedef typename vec_base<T, N>::elm_t elm_t;
+  typedef vec_base<T, N> base_t;
+  typedef typename base_t::elm_t elm_t;
   void move (elm_t *dst) {
     if (dst == firstp)
       return;

@@ -2,7 +2,7 @@
 
 /*
  *
- * Copyright (C) 1998 David Mazieres (dm@uun.org)
+ * Copyright (C) 1998-2003 David Mazieres (dm@uun.org)
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -29,7 +29,6 @@
 #include "dnsparse.h"
 #include "arena.h"
 #include "vec.h"
-#include "qhash.h"
 
 extern "C" {
 #ifdef NEED_DN_SKIPNAME_DECL
@@ -61,6 +60,113 @@ dn_skipname (const u_char *icp, const u_char *eom)
   return cp > eom ? -1 : cp - icp;
 }
 #endif
+
+dnstcppkt::dnstcppkt ()
+  : inbufsize (2048 - MALLOCRESV), inbufpos (0), inbufused (0),
+    inbuf (static_cast<u_char *> (xmalloc (inbufsize)))
+{
+}
+
+dnstcppkt::~dnstcppkt ()
+{
+  xfree (inbuf);
+}
+
+void
+dnstcppkt::compact ()
+{
+  if (inbufused > 0) {
+    if (inbufpos > inbufused)
+      memmove (inbuf, inbuf + inbufused, inbufpos - inbufused);
+    inbufpos -= inbufused;
+    inbufused = 0;
+  }
+}
+
+void
+dnstcppkt::reset ()
+{
+  inbufused = inbufpos = 0;
+  outbuf.clear ();
+}
+
+int
+dnstcppkt::input (int fd)
+{
+  compact ();
+  u_int sz = pktsize ();
+  if (sz > inbufsize) {
+    inbufsize = sz;
+    inbuf = static_cast<u_char *> (xrealloc (inbuf, inbufsize));
+  }
+  if (inbufpos < sz) {
+    int n = read (fd, inbuf + inbufpos, inbufsize - inbufpos);
+    if (n > 0)
+      inbufpos += n;
+    else if (!n || errno != EAGAIN)
+      return -1;
+  }
+  return inbufpos >= pktsize ();
+}
+
+int
+dnstcppkt::output (int fd)
+{
+  if (outbuf.resid () && outbuf.output (fd) < 0)
+    return -1;
+  return !outbuf.resid ();
+}
+
+bool
+dnstcppkt::getpkt (u_char **pp, size_t *sp)
+{
+  u_int sz = pktsize ();
+  if (sz > inbufpos - inbufused)
+    return false;
+  *pp = inbuf + inbufused + 2;
+  *sp = sz - 2;
+  inbufused += sz;
+  return true;
+}
+
+void
+dnstcppkt::putpkt (const u_char *pkt, size_t size)
+{
+  assert (size < 0x10000);
+  u_int16_t rawsz = htons (size);
+  outbuf.copy (&rawsz, 2);
+  outbuf.copy (pkt, size);
+}
+
+
+char *
+nameset::store (str s)
+{
+  char *const zero = NULL;
+  if (u_int *pp = name2pos[s])
+    return zero + *pp;
+  name2pos.insert (s, pos);
+  char *ret = zero + pos;
+  pos += s.len () + 1;
+  return ret;
+}
+
+char *
+nameset::lookup (str s) const
+{
+  char *const zero = NULL;
+  const u_int *pp = name2pos[s];
+  assert (pp);
+  return zero + *pp;
+}
+
+void
+nameset::put (char *dst) const
+{
+  const map_t::slot *s;
+  for (s = name2pos.first (); s; s = name2pos.next (s))
+    memcpy (dst + s->value, s->key.cstr (), s->key.len () + 1);
+}
 
 dnsparse::dnsparse (const u_char *buf, size_t len, bool answer)
   : buf (buf), eom (buf + len),
@@ -144,6 +250,7 @@ dnsparse::rrparse (const u_char **cpp, resrec *rrp)
     break;
   case T_NS:
   case T_CNAME:
+  case T_DNAME:
   case T_PTR:
     if ((n = dn_expand (buf, eom, cp, rrp->rr_cname,
 			sizeof (rrp->rr_cname))) < 0)
@@ -203,6 +310,71 @@ dnsparse::rrparse (const u_char **cpp, resrec *rrp)
   assert (cp == e);
   *cpp = cp;
   return true;
+}
+
+bool
+dnsparse::skipnrecs (const u_char **cpp, u_int nrec)
+{
+  const u_char *cp = *cpp;
+  while (nrec-- > 0) {
+    int n = dn_skipname (cp, eom);
+    cp += n;
+    if (n < 0 || cp + 10 > eom)
+      return false;
+    cp += 8;
+    u_int16_t rdlen;
+    GETSHORT (rdlen, cp);
+    if (rdlen > eom - cp)
+      return false;
+    cp += rdlen;
+  }
+  *cpp = cp;
+  return true;
+}
+
+bool
+dnsparse::gethints (vec<addrhint> *hv, const nameset &nset)
+{
+  const u_char *cp = getanp ();
+  if (!cp || !skipnrecs (&cp, ancount + nscount)) {
+    error = ARERR_BADRESP;
+    return false;
+  }
+  for (u_int i = 0; i < arcount; i++) {
+    resrec rr;
+    if (!rrparse (&cp, &rr)) {
+      error = ARERR_BADRESP;
+      return false;
+    }
+    if (rr.rr_class != C_IN || !nset.present (rr.rr_name))
+      continue;
+    if (rr.rr_type == T_A) {
+      addrhint &ah = hv->push_back ();
+      ah.h_name = nset.lookup (rr.rr_name);
+      ah.h_addrtype = AF_INET;
+      ah.h_length = 4;
+      memcpy (ah.h_address, &rr.rr_a, sizeof (rr.rr_a));
+      bzero (ah.h_address + sizeof (rr.rr_a),
+	     sizeof (ah.h_address) - sizeof (rr.rr_a));
+    }
+  }
+  return true;
+}
+
+addrhint **
+dnsparse::puthints (char *dst, const vec<addrhint> &hv, char *namebase)
+{
+  addrhint **pvp = reinterpret_cast<addrhint **> (dst);
+  addrhint *hvp = reinterpret_cast<addrhint *> (&pvp[hv.size () + 1]);
+  u_int i = hv.size ();
+  pvp[i] = NULL;
+  assert ((void *) &hvp[i] == namebase);
+  while (i-- > 0) {
+    pvp[i] = &hvp[i];
+    hvp[i] = hv[i];
+    hvp[i].h_name = nameset::xlat (namebase, hvp[i].h_name);
+  }
+  return pvp;
 }
 
 /* Takes the response from an DNS query, and turns it into a
@@ -295,16 +467,14 @@ ptr<mxlist>
 dnsparse::tomxlist ()
 {
   const u_char *cp = getanp ();
-  arena a;
-  char *name = NULL;
-  int n_chars = 0;
+  nameset nset;
+  str name;
+  char *nameptr = NULL;
 
   if (!cp)
     return NULL;
 
-  u_int nmx = 0;
-  mxrec *mxes = (mxrec *) a.alloc ((1 + ancount) * sizeof (*mxes));
-
+  vec<mxrec> mxes;
   for (u_int i = 0; i < ancount; i++) {
     resrec rr;
     if (!rrparse (&cp, &rr)) {
@@ -313,52 +483,52 @@ dnsparse::tomxlist ()
     }
     if (rr.rr_class == C_IN && rr.rr_type == T_MX) {
       u_int16_t pr = rr.rr_mx.mx_pref;
-      u_int mxi;
 
-      if (!name)
-	name = a.strdup (rr.rr_name);
+      if (!name) {
+	name = rr.rr_name;
+	nameptr = nset.store (name);
+      }
       else if (strcasecmp (name, rr.rr_name))
 	continue;
 
-      for (mxi = 0; mxi < nmx && strcasecmp (rr.rr_mx.mx_exch,
-					     mxes[mxi].name); mxi++)
+      char *xp = nset.store (rr.rr_mx.mx_exch);
+      mxrec *mp;
+      for (mp = mxes.base (); mp < mxes.lim () && mp->name != xp; mp++)
 	;
-      if (mxi < nmx) {
-	if (pr < mxes[mxi].pref)
-	  mxes[mxi].pref = pr;
+      if (mp < mxes.lim ()) {
+	if (pr < mp->pref)
+	  mp->pref = pr;
       }
       else {
-	n_chars += strlen (rr.rr_mx.mx_exch) + 1;
-	mxes[nmx].pref = pr;
-	mxes[nmx].name = a.strdup (rr.rr_mx.mx_exch);
-	nmx++;
+	mxes.push_back ().pref = pr;
+	mxes.back ().name = xp;
       }
     }
   }
-  if (nmx == 0) {
+  if (mxes.empty ()) {
     error = ARERR_NXREC;
     return NULL;
   }
-  else if (nmx > 1)
-    qsort (mxes, nmx, sizeof (*mxes), mxrec_cmp);
+  else if (mxes.size () > 1)
+    qsort (mxes.base (), mxes.size (), sizeof (mxes[0]), mxrec_cmp);
 
-  n_chars += strlen (name) + 1;
+  
+  vec<addrhint> hints;
+  if (!gethints (&hints, nset))
+    return NULL;
 
   ref <mxlist> mxl = refcounted<mxlist, vsize>::alloc
-    (offsetof (mxlist, m_mxes[nmx]) + n_chars);
-  mxrec *mxrecs = mxl->m_mxes;
-  char *np = (char *) &mxrecs[nmx];
-
-  mxl->m_nmx = nmx;
-  mxl->m_name = np;
-  strcpy (np, name);
-  np += strlen (np) + 1;
-
-  for (u_int i = 0; i < nmx; i++) {
-    mxrecs[i].pref = mxes[i].pref;
-    mxrecs[i].name = np;
-    strcpy (np, mxes[i].name);
-    np += strlen (np) + 1;
+    (offsetof (mxlist, m_mxes[mxes.size ()])
+     + hintsize (hints.size ()) + nset.size ());
+  char *hintp = reinterpret_cast<char *> (&mxl->m_mxes[mxes.size ()]);
+  char *namebase = hintp + hintsize (hints.size ());
+  nset.put (namebase);
+  mxl->m_name = nset.xlat (namebase, nameptr);
+  mxl->m_hints = puthints (hintp, hints, namebase);
+  mxl->m_nmx = mxes.size ();
+  for (u_int i = 0; i < mxl->m_nmx; i++) {
+    mxl->m_mxes[i].pref = mxes[i].pref;
+    mxl->m_mxes[i].name = nset.xlat (namebase, mxes[i].name);
   }
 
   return mxl;
@@ -432,17 +602,14 @@ ptr<srvlist>
 dnsparse::tosrvlist ()
 {
   const u_char *cp = getanp ();
-  arena a;
-  int n_chars = 0;
-  char *name = NULL;
-  srvrec *recs;
+  nameset nset;
+  str name;
+  char *nameptr = NULL;
 
   if (!cp)
     return NULL;
 
-  u_int nsrvs = 0;
-  recs = (srvrec *) a.alloc ((1 + ancount) * sizeof (*recs));
-
+  vec<srvrec> recs;
   for (u_int i = 0; i < ancount; i++) {
     resrec rr;
     if (!rrparse (&cp, &rr)) {
@@ -452,47 +619,53 @@ dnsparse::tosrvlist ()
     if (rr.rr_class != C_IN || rr.rr_type != T_SRV)
       continue;
     if (!name) {
-      name = a.strdup (rr.rr_name);
-      n_chars += strlen (name) + 1;
+      name = rr.rr_name;
+      nameptr = nset.store (name);
     }
     else if (strcasecmp (name, rr.rr_name))
       continue;
 
-#if 1
-    for (u_int i = 0; i < nsrvs; i++)
+    char *tp = nset.store (rr.rr_srv.srv_target);
+    for (int i = recs.size (); i-- > 0;)
       if (recs[i].prio == rr.rr_srv.srv_prio
 	  && recs[i].port == rr.rr_srv.srv_port
-	  && !strcasecmp (recs[i].name, rr.rr_srv.srv_target)) {
+	  && tp == recs[i].name) {
 	rr.rr_srv.srv_weight += recs[i].weight;
 	continue;
       }
-#endif
 
-    srvrec &sr = recs[nsrvs++];
+    srvrec &sr = recs.push_back ();
     sr.prio = rr.rr_srv.srv_prio;
     sr.weight = rr.rr_srv.srv_weight;
     sr.port = rr.rr_srv.srv_port;
-    sr.name = a.strdup (rr.rr_srv.srv_target);
-    n_chars += strlen (sr.name) + 1;
+    sr.name = tp;
   }
 
-  srvrec_randomize (recs, recs + nsrvs);
+  if (!name) {
+    error = ARERR_NXREC;
+    return NULL;
+  }
+
+  vec<addrhint> hints;
+  if (!gethints (&hints, nset))
+    return NULL;
+
+  srvrec_randomize (recs.base (), recs.lim ());
 
   ref<srvlist> s = refcounted<srvlist, vsize>::alloc
-    (offsetof (srvlist, s_srvs[nsrvs]) + n_chars);
-  s->s_nsrv = nsrvs;
-  char *np = reinterpret_cast<char *> (&s->s_srvs[nsrvs]);
-  s->s_name = np;
-  strcpy (np, name);
-  np += strlen (np) + 1;
+    (offsetof (srvlist, s_srvs[recs.size ()])
+     + hintsize (hints.size ()) + nset.size ());
+
+  char *hintp = reinterpret_cast<char *> (&s->s_srvs[recs.size ()]);
+  char *namebase = hintp + hintsize (hints.size ());
+  nset.put (namebase);
+  s->s_name = nset.xlat (namebase, nameptr);
+  s->s_hints = puthints (hintp, hints, namebase);
+  s->s_nsrv = recs.size ();
 
   for (u_int i = 0; i < s->s_nsrv; i++) {
-    s->s_srvs[i].prio = recs[i].prio;
-    s->s_srvs[i].weight = recs[i].weight;
-    s->s_srvs[i].port = recs[i].port;
-    s->s_srvs[i].name = np;
-    strcpy (np, recs[i].name);
-    np += strlen (np) + 1;
+    s->s_srvs[i] = recs[i];
+    s->s_srvs[i].name = nset.xlat (namebase, s->s_srvs[i].name);
   }
   
   return s;
@@ -525,6 +698,15 @@ printaddrs (const char *msg, ptr<hostent> h, int dns_errno)
 }
 
 void
+printhints (addrhint **hpp)
+{
+  for (; *hpp; hpp++)
+    if ((*hpp)->h_addrtype == AF_INET)
+      printf ("    (hint:  %s %s)\n", (*hpp)->h_name,
+	      inet_ntoa (*(in_addr *) (*hpp)->h_address));
+}
+
+void
 printmxlist (const char *msg, ptr<mxlist> m, int dns_errno)
 {
   int i;
@@ -533,13 +715,14 @@ printmxlist (const char *msg, ptr<mxlist> m, int dns_errno)
     printf ("%s (mxlist):\n", msg);
 
   if (!m) {
-    printf ("   Error: %s\n", dns_strerror (dns_errno));
+    printf ("    Error: %s\n", dns_strerror (dns_errno));
     return;
   }
 
-  printf ("    Name: %s\n", m->m_name);
+  printf ("     Name: %s\n", m->m_name);
   for (i = 0; i < m->m_nmx; i++)
-    printf ("      MX: %3d %s\n", m->m_mxes[i].pref, m->m_mxes[i].name);
+    printf ("       MX: %3d %s\n", m->m_mxes[i].pref, m->m_mxes[i].name);
+  printhints (m->m_hints);
 }
 
 void
@@ -559,5 +742,6 @@ printsrvlist (const char *msg, ptr<srvlist> s, int dns_errno)
   for (i = 0; i < s->s_nsrv; i++)
     printf ("     SRV: %3d %3d %3d %s\n", s->s_srvs[i].prio,
 	    s->s_srvs[i].weight, s->s_srvs[i].port, s->s_srvs[i].name);
+  printhints (s->s_hints);
 }
 #endif

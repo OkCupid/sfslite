@@ -34,20 +34,11 @@ bool aclnttime (getenv ("ACLNT_TIME"));
 enum { aclnttrace = 0, aclnttime = 0 };
 #endif /* !MAINTAINER */
 
+#define trace (traceobj (aclnttrace, "ACLNT_TRACE: ", aclnttime))
+
+
 AUTH *auth_none;
 static tmoq<rpccb_unreliable, &rpccb_unreliable::tlink> rpctoq;
-
-static inline const char *
-tracetime ()
-{
-  static str buf (""); 
-  if (aclnttime) {
-    timespec ts;
-    clock_gettime (CLOCK_REALTIME, &ts);
-    buf = strbuf (" %d.%06d", int (ts.tv_sec), int (ts.tv_nsec/1000));
-  }
-  return buf;
-}
 
 static void
 ignore_clnt_stat (clnt_stat)
@@ -64,15 +55,15 @@ aclnt_init ()
 }
 
 callbase::callbase (ref<aclnt> c, u_int32_t xid, const sockaddr *d)
-  : c (c), dest (d), tmo (NULL), xid (xid)
+  : c (c), dest (d), tmo (NULL), xid (xid), offset (0)
 {
-  c->calls.insert_head (this);
+  c->calls.insert_tail (this);
   c->xi->xidtab.insert (this);
 }
 
 callbase::~callbase ()
 {
-  callbase *XXX_gcc296_bug __attribute__ ((unused)) = c->calls.remove (this);
+  c->calls.remove (this);
   if (tmo)
     timecb_remove (tmo);
   c->xi->xidtab.remove (this);
@@ -88,15 +79,10 @@ callbase::checksrc (const sockaddr *src) const
 }
 
 void
-callbase::timeout (time_t duration)
+callbase::timeout (time_t sec, long nsec)
 {
-  if (tmo)
-    panic ("timeout already set (%p)\n"
-	   "  rpccb type: %s\n\n"
-	   "*** PLEASE REPORT THIS PROBLEM TO sfs-dev@pdos.lcs.mit.edu ***\n",
-	   tmo, typeid (*this).name ());
-  if (timecb_t *t = timecb (time (NULL) + duration,
-			    wrap (this, &callbase::expire)))
+  assert (!tmo);
+  if (timecb_t *t = delaycb (sec, nsec, wrap (this, &callbase::expire)))
     tmo = t;
 }
 
@@ -119,11 +105,13 @@ rpccb::rpccb (ref<aclnt> c, u_int32_t xid, aclnt_cb cb,
 
 rpccb::rpccb (ref<aclnt> c, xdrsuio &x, aclnt_cb cb,
 	      void *out, xdrproc_t outproc, const sockaddr *d, bool doxmit)
-  : callbase (c, getxid (x), d), cb (cb), outmem (out), outxdr (outproc)
+  : callbase (c, getxid (c, x), d), cb (cb), outmem (out), outxdr (outproc)
 {
   assert (!tmo);
-  if (doxmit)
+  if (doxmit && !c->xi->ateof ()) {
     c->xprt ()->sendv (x.iov (), x.iovcnt (), d);
+    offset = c->xprt ()->get_raw_bytes_sent ();
+  }
   if (tmo && !c->xprt ()->reliable) {
     panic ("transport callback added timeout (%p)\n"
 	   "   xprt type: %s\n  rpccb type: %s\n\n"
@@ -142,7 +130,7 @@ rpccb::finish (clnt_stat stat)
 }
 
 u_int32_t
-rpccb::getxid (xdrsuio &x)
+rpccb::getxid (ref<aclnt> c, xdrsuio &x)
 {
   assert (x.iovcnt () > 0);
   assert (x.iov ()[0].iov_len >= 4);
@@ -153,7 +141,7 @@ rpccb::getxid (xdrsuio &x)
 }
 
 u_int32_t
-rpccb::getxid (char *buf, size_t len)
+rpccb::getxid (ref<aclnt> c, char *buf, size_t len)
 {
   assert (len >= 4);
   u_int32_t *xidp = reinterpret_cast<u_int32_t *> (buf);
@@ -190,11 +178,12 @@ rpccb::decodemsg (const char *msg, size_t len)
 void
 rpccb_msgbuf::xmit (int retry)
 {
-  if (aclnttrace >= 2 && retry > 0) {
-    warn ("ACLNT_TRACE:%s retransmit #%d x=%x\n", tracetime (), retry,
-	  *reinterpret_cast<u_int32_t *> (msgbuf));
+  if (!c->xi->ateof ()) {
+    if (retry > 0)
+      trace (2, "retransmit #%d x=%x\n", retry,
+                *reinterpret_cast<u_int32_t *> (msgbuf));
+    c->xprt ()->send (msgbuf, msglen, dest);
   }
-  c->xprt ()->send (msgbuf, msglen, dest);
 }
 
 rpccb_unreliable::rpccb_unreliable (ref<aclnt> c, xdrsuio &x,
@@ -226,16 +215,51 @@ rpccb_unreliable::~rpccb_unreliable ()
 }
 
 aclnt::aclnt (const ref<xhinfo> &x, const rpc_program &p)
-  : xi (x), rp (p), eofcb (NULL)
+  : xi (x), rp (p), eofcb (NULL), stopped (true),
+    send_hook (NULL), recv_hook (NULL)
 {
-  xi->clist.insert_head (this);
+  start ();
 }
 
 aclnt::~aclnt ()
 {
   assert (!calls.first);
-  aclnt *XXX_gcc296_bug __attribute__ ((unused)) = xi->clist.remove (this);
+  stop ();
   xfree (dest);
+}
+
+void
+aclnt::start ()
+{
+  if (stopped) {
+    stopped = false;
+
+    xi->clist.insert_head (this);
+
+    rpccb_msgbuf *rb;
+    for (rb = static_cast<rpccb_msgbuf *> (calls.first); rb;
+         rb = static_cast<rpccb_msgbuf *> (calls.next (rb))) {
+      assert (!xi->xidtab[rb->xid]);
+      xi->xidtab.insert (rb);
+    }
+  }
+}
+
+void
+aclnt::stop ()
+{
+  if (!stopped) {
+    stopped = true;
+
+    aclnt *XXX_gcc296_bug __attribute__ ((unused)) = xi->clist.remove (this);
+    // also needed for gcc 3.0.2 on RedHat 7.3
+
+    rpccb_msgbuf *rb;
+    for (rb = static_cast<rpccb_msgbuf *> (calls.first); rb;
+         rb = static_cast<rpccb_msgbuf *> (calls.next (rb))) {
+      xi->xidtab.remove (rb);
+    }
+  }
 }
 
 const ref<axprt> &
@@ -288,31 +312,27 @@ printreply (aclnt_cb cb, str name, void *res,
 			       const char *, const char *),
 	    clnt_stat err)
 {
-  if (aclnttrace >= 3) {
-    if (err)
-      warn << "ACLNT_TRACE:" << tracetime () 
-	   << " reply " << name << ": " << err << "\n";
-    else if (aclnttrace >= 4) {
-      warn << "ACLNT_TRACE:" << tracetime ()
-	   << " reply " << name << "\n";
-      if (aclnttrace >= 5 && print_res)
-	print_res (res, NULL, aclnttrace - 4, "REPLY", "");
-    }
+  if (err)
+    trace (3) << "reply " << name << ": " << err << "\n";
+  else {
+    trace (4) << "reply " << name << "\n";
+    if (aclnttrace >= 5 && print_res)
+      print_res (res, NULL, aclnttrace - 4, "REPLY", "");
   }
   (*cb) (err);
 }
 
-bool aclnt::init_call (xdrsuio &x,
-		       u_int32_t procno, const void *in, void *out,
-		       aclnt_cb &cb, AUTH *auth,
-		       xdrproc_t inproc, xdrproc_t outproc,
-		       u_int32_t progno, u_int32_t versno)
+bool
+aclnt::init_call (xdrsuio &x,
+	          u_int32_t procno, const void *in, void *out,
+	          aclnt_cb &cb, AUTH *auth,
+	          xdrproc_t inproc, xdrproc_t outproc,
+	          u_int32_t progno, u_int32_t versno)
 {
-  if (xi->ateof ()) {
+  if (xi_ateof_fail ()) {
     (*cb) (RPC_CANTSEND);
     return false;
   }
-
   if (!auth)
     auth = auth_none;
   if (!progno) {
@@ -336,7 +356,7 @@ bool aclnt::init_call (xdrsuio &x,
   }
   assert (x.iov ()[0].iov_len >= 4);
   u_int32_t &xid = *reinterpret_cast<u_int32_t *> (x.iov ()[0].iov_base);
-  if (!xi->xh->reliable || cb != aclnt_cb_null)
+  if (!forget_call (cb))
     xid = genxid (xi);
 
   if (aclnttrace >= 2) {
@@ -351,7 +371,7 @@ bool aclnt::init_call (xdrsuio &x,
       name = strbuf ("prog %d vers %d proc %d x=%x",
 		     progno, versno, procno, xid);
     }
-    warn << "ACLNT_TRACE:" << tracetime () << " call " << name << "\n";
+    trace () << "call " << name << "\n";
     if (aclnttrace >= 5 && rtp && rtp->xdr_arg == inproc && rtp->print_arg)
       rtp->print_arg (in, NULL, aclnttrace - 4, "ARGS", "");
     if (aclnttrace >= 3 && cb != aclnt_cb_null)
@@ -378,24 +398,39 @@ aclnt::call (u_int32_t procno, const void *in, void *out,
     outproc = rp.tbl[procno].xdr_res;
   if (!d)
     d = dest;
-  if (xi->xh->reliable && cb == aclnt_cb_null) {
-    /* If we don't care about the reply, then don't bother keeping
-     * state around.  We use the reserved XID 0 for these calls, so
-     * that we don't accidentally recycle the XID of a call whose
-     * state we threw away. */
-    xi->xh->sendv (x.iov (), x.iovcnt (), d);
+
+  if (send_hook)
+    send_hook ();
+
+  if (forget_call (cb)) {
+    if (!xi->ateof ())
+      xi->xh->sendv (x.iov (), x.iovcnt (), d);
     return NULL;
   }
   else {
     callbase *ret = (*rpccb_alloc) (mkref (this), x, cb, out, outproc, d);
-    if (xi->xh->ateof ())
+    if (xi_xh_ateof_fail ())
       return NULL;
     return ret;
   }
 }
 
+bool aclnt::xi_ateof_fail () { return xi->ateof (); }
+bool aclnt::xi_xh_ateof_fail () { return xi->xh->ateof (); }
+
+bool
+aclnt::forget_call (aclnt_cb cb)
+{
+  /* If we don't care about the reply, then don't bother keeping
+   * state around.  We use the reserved XID 0 for these calls, so
+   * that we don't accidentally recycle the XID of a call whose
+   * state we threw away. */
+  return xi->xh->reliable && cb == aclnt_cb_null;
+}
+
 callbase *
-aclnt::timedcall (time_t duration, u_int32_t procno, const void *in, void *out,
+aclnt::timedcall (time_t sec, long nsec,
+		  u_int32_t procno, const void *in, void *out,
 		  aclnt_cb cb,
 		  AUTH *auth,
 		  xdrproc_t inproc, xdrproc_t outproc,
@@ -405,7 +440,7 @@ aclnt::timedcall (time_t duration, u_int32_t procno, const void *in, void *out,
   callbase *cbase = call (procno, in, out, cb, auth, inproc,
 			  outproc, progno, versno, d);
   if (cbase)
-    cbase->timeout (duration);
+    cbase->timeout (sec, nsec);
   return cbase;
 }
 
@@ -500,15 +535,20 @@ aclnt::seteof (ref<xhinfo> xi)
   ptr<aclnt> c;
   if (xi->xh->connected)
     for (c = aclnt_mkptr (xi->clist.first); c;
-	 c = aclnt_mkptr (xi->clist.next (c))) {
-      callbase *rb, *nrb;
-      for (rb = c->calls.first; rb; rb = nrb) {
-	nrb = c->calls.next (rb);
-	rb->finish (RPC_CANTRECV);
-      }
-      if (c->eofcb)
-	(*c->eofcb) ();
-    }
+	 c = aclnt_mkptr (xi->clist.next (c)))
+      c->fail ();
+}
+
+void
+aclnt::fail ()
+{
+  callbase *rb, *nrb;
+  for (rb = calls.first; rb; rb = nrb) {
+    nrb = calls.next (rb);
+    rb->finish (RPC_CANTRECV);
+  }
+  if (eofcb)
+    (*eofcb) ();
 }
 
 void
@@ -523,10 +563,22 @@ aclnt::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
   u_int32_t xid;
   memcpy (&xid, msg, sizeof (xid));
   callbase *rp = xi->xidtab[xid];
-  if (!rp || !rp->checksrc (src))
+  if (!rp || !rp->checksrc (src)) {
+    trace (2, "dropping %s x=%x\n",
+	   rp ? "reply with bad source address" : "unrecognized reply", xid);
     return;
+  }
 
-  rp->finish (rp->decodemsg (msg, len));
+  clnt_stat err = rp->decodemsg (msg, len);
+
+  if (!err) {
+    if (rp->c->recv_hook)
+      rp->c->recv_hook ();
+    xi->max_acked_offset = max (xi->max_acked_offset, rp->offset);
+  }
+
+  if (!err || (err && !rp->c->handle_err (err)))
+    rp->finish (err);
 }
 
 ptr<aclnt>
@@ -549,5 +601,79 @@ aclnt::alloc (ref<axprt> x, const rpc_program &pr, const sockaddr *d,
     c->rpccb_alloc = callbase_alloc<rpccb>;
   else
     c->rpccb_alloc = callbase_alloc<rpccb_unreliable>;
+  return c;
+}
+
+
+/* aclnt_resumable */
+
+void
+aclnt_resumable::fail ()
+{
+  if (!((*failcb) ()))  // may be called multiple times
+    aclnt::fail ();
+}
+
+bool
+aclnt_resumable::xi_ateof_fail ()
+{
+  if (xi->ateof ())
+    fail ();
+  return false;
+}
+
+bool
+aclnt_resumable::xi_xh_ateof_fail ()
+{
+  if (xi->xh->ateof ())
+    fail ();
+  return false;
+}
+
+bool
+aclnt_resumable::resume (ref<axprt> newxprt)
+{
+  if (!pre_resume (newxprt))
+    return false;
+  post_resume ();
+  return true;
+}
+
+bool
+aclnt_resumable::pre_resume (ref<axprt> newxprt)
+{
+  assert (newxprt->reliable);
+  ptr<xhinfo> newxi = xhinfo::lookup (newxprt);
+  if (!newxi)
+    return false;
+
+  stop ();
+  xi = newxi;
+  start ();
+  return true;
+}
+
+void
+aclnt_resumable::post_resume ()
+{
+  rpccb_msgbuf *rb;
+  for (rb = static_cast<rpccb_msgbuf *> (calls.first); rb;
+       rb = static_cast<rpccb_msgbuf *> (calls.next (rb))) {
+    rb->offset = 0;  // we don't know whether the reply will be to the
+                     // original call or to this replay
+    rb->xmit (1);
+  }
+}
+
+ptr<aclnt_resumable>
+aclnt_resumable::alloc (ref<axprt> x, const rpc_program &pr,
+                        callback<bool>::ref failcb)
+{
+  assert (x->reliable);
+  ptr<xhinfo> xi = xhinfo::lookup (x);
+  if (!xi)
+    return NULL;
+  ref<aclnt_resumable> c = New refcounted<aclnt_resumable> (xi, pr, failcb);
+  c->rpccb_alloc = callbase_alloc<rpccb_msgbuf_xmit>;
   return c;
 }

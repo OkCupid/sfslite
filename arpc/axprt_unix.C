@@ -29,15 +29,6 @@ bool axprt_unix_spawn_connected;
 #endif /* MAINTAINER */
 pid_t axprt_unix_spawn_pid;
 
-//
-// MK Unauthorized Comment:
-//
-// Special hack;  take the next packet out of the stream, and send it
-// along with the file descriptor.  x->pktbuf is not going to be garbage
-// collected because we're still in the callback. so this packet is
-// being read twice -- once by sfssd, and once by sfsrwsd.  here is
-// where it's being duplicated.
-//
 void
 axprt_unix::clone (ref<axprt_clone> x)
 {

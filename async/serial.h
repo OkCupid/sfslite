@@ -31,6 +31,21 @@ bool str2file (str file, str s, int perm = 0666, bool excl = false);
 str file2str (str file);
 
 static inline void
+putshort (void *_dp, u_int16_t val)
+{
+  u_char *dp = static_cast<u_char *> (_dp);
+  dp[0] = val >> 8;
+  dp[1] = val;
+}
+
+static inline u_int16_t
+getshort (const void *_dp)
+{
+  const u_char *dp = static_cast<const u_char *> (_dp);
+  return dp[0] << 8 | dp[1];
+}
+
+static inline void
 putint (void *_dp, u_int32_t val)
 {
   u_char *dp = static_cast<u_char *> (_dp);

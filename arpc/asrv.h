@@ -35,7 +35,9 @@ struct progvers {
 
 class svccb {
   friend class asrv;
+  friend class asrv_replay;
   friend class asrv_unreliable;
+  friend class asrv_resumable;
   friend class auto_ptr<svccb>;
 
   rpc_msg msg;			// RPC message
@@ -46,10 +48,12 @@ class svccb {
   sockaddr *addr;		// Address to reply to
   size_t addrlen;		// Length of address (for comparing)
 
+  void *resdat;			// Unmarshaled result (if convenient)
+
   void *res;			// fields for replay cache
   size_t reslen;
 
-  void *resdat;			// Unmarshaled result (if convenient)
+  u_int64_t offset;             // Byte offset in underlying transport
 
   svccb (const svccb &);	// No copying
   const svccb &operator= (const svccb &);
@@ -117,10 +121,12 @@ protected:
 private:
   asrv_cb::ptr cb;
 
+  cbv::ptr recv_hook;
+
   static void seteof (ref<xhinfo>, const sockaddr *);
 
 protected:
-  const ref<xhinfo> xi;
+  ptr<xhinfo> xi;
 
   asrv (ref<xhinfo>, const rpc_program &, asrv_cb::ptr);
   virtual ~asrv ();
@@ -132,30 +138,61 @@ public:
   ihash_entry<asrv> xhlink;
   const ref<axprt> &xprt () const;
 
+  void start ();
+  void stop ();
+
   void setcb (asrv_cb::ptr c);
   bool hascb () { return cb; }
+
+  void set_recv_hook (cbv::ptr cb) { recv_hook = cb; }
+
   static void dispatch (ref<xhinfo>, const char *, ssize_t, const sockaddr *);
   static ptr<asrv> alloc (ref<axprt>, const rpc_program &,
 			  asrv_cb::ptr = NULL);
 };
 
-class asrv_unreliable : public asrv {
+class asrv_replay : public asrv {
+protected:
   u_int rsize;
-  const u_int maxrsize;
-
   tailq<svccb, &svccb::qlink> rq;
   shash<svccb, &svccb::hlink> rtab;
 
   void delsbp (svccb *);
 
-  friend class asrv;
-
-protected:
-  bool isreplay (svccb *);
+  svccb *lookup (svccb *);
   void sendreply (svccb *sbp, xdrsuio *, bool nocache);
 
+  asrv_replay (ref<xhinfo> x, const rpc_program &rp, asrv_cb::ptr cb)
+    : asrv (x, rp, cb), rsize (0) {}
+  ~asrv_replay ();
+};
+
+class asrv_unreliable : public asrv_replay {
+  const u_int maxrsize;
+
+  bool isreplay (svccb *sbp);
+  void sendreply (svccb *sbp, xdrsuio *, bool nocache);
+
+protected:
   asrv_unreliable (ref<xhinfo> x, const rpc_program &rp,
 		   asrv_cb::ptr cb, u_int rs = 16)
-    : asrv (x, rp, cb), rsize (0), maxrsize (rs) {}
-  ~asrv_unreliable ();
+    : asrv_replay (x, rp, cb), maxrsize (rs) {}
 };
+
+class asrv_resumable : public asrv_replay {
+  bool isreplay (svccb *sbp);
+  void sendreply (svccb *sbp, xdrsuio *, bool nocache);
+
+protected:
+  asrv_resumable (ref<xhinfo> x, const rpc_program &rp, asrv_cb::ptr cb)
+    : asrv_replay (x, rp, cb) {}
+
+public:
+  bool resume (ref<axprt>);
+
+  static ptr<asrv_resumable> alloc (ref<axprt>, const rpc_program &,
+                                    asrv_cb::ptr);
+};
+
+ptr<asrv> asrv_alloc (ref<axprt>, const rpc_program &,
+    		      callback<void, svccb *>::ptr, bool);

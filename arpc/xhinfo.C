@@ -24,7 +24,7 @@
 #include "arpc.h"
 
 xhinfo::xhinfo (const ref<axprt> &x)
-  : eof (false), nsvc (0), xh (x)
+  : eof (false), nsvc (0), xh (x), max_acked_offset (0)
 {
   xh->xhip = this;
   xh->setrcb (wrap (this, &xhinfo::dispatch));

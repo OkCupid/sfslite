@@ -147,8 +147,10 @@ public:
     { switch (0) case 0: case m <= max:; copy (v.base (), m); return *this; }
 
   void swap (rpc_vec &v) {
-    assert (!nofree && !v.nofree);
-    super::swap (v);
+    bool nf = v.nofree;
+    v.nofree = nofree;
+    nofree = nf;
+    base_t::swap (v);
   }
 
   rpc_vec &set (elm_t *base, size_t len) {

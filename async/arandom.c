@@ -25,7 +25,7 @@
 
 u_int32_t (*arandom_fn) ();
 
-#ifndef HAVE_ARC4RANDOMxxx
+#ifndef HAVE_ARC4RANDOM
 /* This is a simple random number generator, based on the ARC4 stream
  * cipher.  THIS IS NOT CRYPTOGRAPHICALLY SECURE!  It is simply for
  * getting a somewhat random-looking series of bytes.  In order to get
@@ -136,7 +136,6 @@ bad_random ()
     | arc4rnd_getbyte (&bad_random_state) << 24;
 }
 
-
 #endif /* !HAVE_ARC4RANDOM */
 
 u_int32_t
@@ -151,13 +150,4 @@ arandom ()
 #endif /* !HAVE_ARC4RANDOM */
   }
   return (*arandom_fn) ();
-
 }
-
-void
-gcc_hack ()
-{
-  bad_random_init ();
-  bad_random ();
-}
-

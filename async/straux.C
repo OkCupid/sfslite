@@ -47,7 +47,7 @@ mempbrk (char *s1, const char *s2, int len)
 /* This is a strsep function that returns a null field for adjacent
  * separators.  This is the same as the 4.4BSD strsep, but different
  * from the one in the GNU libc. */
-inline char *
+char *
 xstrsep(char **str, const char *delim)
 {
   char *s, *e;

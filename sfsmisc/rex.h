@@ -117,6 +117,7 @@ class rexsession;
 class rexchannel {
   vec <ptr<rexfd> > vfds;
   int fdc;
+  void deref_vfds ();
 
  protected:
   rexsession *sess;
@@ -151,10 +152,11 @@ class rexchannel {
   rexchannel (rexsession *sess, int initialfdcount, vec <str> command)
     : fdc (0), sess (sess), got_exit_cb (false), initnfds (initialfdcount),
       command(command) {
-/*     warn << "--reached rexchannel: fdc = " << fdc << "\n"; */
+    // warn << "--reached rexchannel: fdc = " << fdc << "\n";
   }
   virtual ~rexchannel () {
-/*     warn << "--reached ~rexchannel\n"; */
+    // warn << "--reached ~rexchannel\n";
+    deref_vfds ();  // allow fd destructors to run, possibly calling remove_fd
   }
 };
 
@@ -162,7 +164,10 @@ class rexsession {
   bool verbose;
 
   ptr<axprt_crypt> proxyxprt;
-  ptr<asrv> rexserv;
+  ptr<asrv_resumable> rexserv;
+  sfs_seqno seqno;
+  bool resumable;
+  bool suspended;
 
   //todo : make this non-refcounted pointer
   qhash<u_int32_t, ref<rexchannel> > channels;
@@ -170,26 +175,37 @@ class rexsession {
   int cchan;
 
   callback<void>::ptr endcb;
+  callback<bool>::ptr failcb;
+  callback<bool>::ptr timeoutcb;
 
   str schost;
-  cbv::ptr sessioncreatedcb;
-  bool forwardagent;
+
+  ifchgcb_t *ifchg;
+  time_t last_heard;
+  time_t min_silence_tmo;
+  timecb_t *silence_cb;
 
  public:
-  ptr<aclnt> proxy;
+  ptr<aclnt_resumable> proxy;
 
  private:
   void rexcb_dispatch (svccb *sbp);
+  bool fail ();
+  void ifchg_cb_set ();
+  void ifchg_cb_clear ();
+  void rpc_call_hook ();
+  void rpc_recv_hook ();
+  void silence_tmo_init ();
+  void pong (clnt_stat err);
+  void silence_tmo_set ();
+  void silence_tmo_check ();
+  void silence_tmo_clear ();
+  void silence_tmo_reset ();
+
+  void resumed (ptr<axprt_crypt> xprt, ref<bool> resp, ptr<aclnt> proxytmp,
+                callback<void, bool>::ref cb, clnt_stat err);
   void madechannel (ptr<rex_mkchannel_res> resp, 
 		    ptr<rexchannel> newchan, clnt_stat err);
-  void seq2sessinfo (u_int64_t seqno, sfs_hash *sidp, sfs_sessinfo *sip,
-		     rex_sesskeydat *kcsdat, rex_sesskeydat *kscdat);
-  void attached (rexd_attach_res *resp, ptr<axprt_crypt> sessxprt,
-		 sfs_sessinfo *sessinfo, clnt_stat err);
-  void connected (rex_sesskeydat *kcsdat, rex_sesskeydat *kscdat,
-		  sfs_seqno *rexseqno, ptr<sfscon> sc,
-		  str err);
-  void connect (bool bypass_cache = false);
   void quitcaller (const u_int32_t &chno, ptr<rexchannel> pchan) {
     pchan->quit ();
   }
@@ -198,7 +214,7 @@ class rexsession {
   }
 
  public:
-  // get's called when all channels close or we get EOF from proxy
+  // gets called when all channels close or we get EOF from proxy
   void setendcb (cbv endcb) { rexsession::endcb = endcb; }
   void set_verbose (bool status) { verbose = status; }
   void makechannel (ptr<rexchannel> newchan, rex_env env = rex_env ());
@@ -216,12 +232,27 @@ class rexsession {
     channels.traverse (wrap (this, &rexsession::abortcaller));
   }
 
-  //use this one if you already have an encrypted transport connected to proxy
-  rexsession (str schostname, ptr<axprt_crypt> proxyxprt);
-  rexsession (cbv sessioncreatedcb, str schostname, bool forwardagent);
-  ~rexsession () {
-    /* warn << "--reached ~rexsession\n"; */
+  rexsession (str schostname, ptr<axprt_crypt> proxyxprt,
+      	      callback<bool>::ptr failcb, callback<bool>::ptr timeoutcb = NULL,
+      	      bool verbose = false, bool resumable_mode = false);
+  ~rexsession ();
+
+  void setresumable (bool mode);
+  bool getresumable () const { return resumable; }
+
+  void set_call_hook (cbv::ptr cb) {
+    proxy->set_send_hook (cb);
   }
+  void set_recv_hook (cbv::ptr cb) {
+    proxy->set_recv_hook (cb);
+    rexserv->set_recv_hook (cb);
+  }
+
+  callbase *ping (callback<void, clnt_stat>::ref, time_t timeout = 0);
+
+  void suspend ();
+  void resume (ptr<axprt_crypt> xprt, sfs_seqno seqno,
+               callback<void, bool>::ref cb);
 };
 
 inline void

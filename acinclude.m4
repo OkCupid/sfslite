@@ -179,6 +179,9 @@ AC_DEFUN(SFS_FIND_RESOLV,
 [AC_CHECK_FUNC(res_mkquery)
 if test "$ac_cv_func_res_mkquery" != yes; then
 	AC_CHECK_LIB(resolv, res_mkquery)
+	if test "$ac_cv_lib_resolv_res_mkquery" = no; then
+		AC_CHECK_LIB(resolv, __res_mkquery)
+	fi
 fi
 dnl See if the resolv functions are actually declared
 SFS_CHECK_DECL(res_init, resolv.h,
@@ -250,6 +253,22 @@ changequote([,])],
 if test $sfs_cv_egid_in_grouplist = yes; then
 	AC_DEFINE(HAVE_EGID_IN_GROUPLIST, 1,
 	  Define if the first element of a grouplist is the effective gid)
+fi])
+dnl
+dnl Check for struct passwd fields
+dnl
+AC_DEFUN(SFS_PASSWD_FIELD,
+[AC_CACHE_CHECK(for $1 in struct passwd, sfs_cv_passwd_$1,
+AC_TRY_COMPILE([
+#include <sys/types.h>
+#include <pwd.h>
+], [
+   struct passwd *pw;
+   pw->$1;
+], sfs_cv_passwd_$1=yes, sfs_cv_passwd_$1=no))
+if test "$sfs_cv_passwd_$1" = yes; then
+        AC_DEFINE(HAVE_PASSWD_[]translit($1, [a-z ], [A-Z_]), 1,
+		Define if struct passwd has $1 field)
 fi])
 dnl
 dnl Check if putenv copies arguments
@@ -367,8 +386,13 @@ fi])
 dnl
 dnl Check for type
 dnl
+
+dnl [AC_CACHE_CHECK(for $1, sfs_cv_type_$1,
+dnl ], sfs_cv_type_$1=yes, sfs_cv_type_$1=no))
+dnl ], sfs_cv_type_[]translit($1, [ ], [_])=yes, sfs_cv_type_[]translit($1, [ ], [_])=no))
+
 AC_DEFUN(SFS_CHECK_TYPE,
-[AC_CACHE_CHECK(for $1, sfs_cv_type_$1,
+[AC_CACHE_CHECK(for $1, sfs_cv_type_[]translit($1, [ ], [_]),
 AC_TRY_COMPILE([
 #include <stddef.h>
 #include <stdlib.h>
@@ -380,9 +404,9 @@ AC_TRY_COMPILE([
 $2
 ],[
 sizeof($1);
-], sfs_cv_type_$1=yes, sfs_cv_type_$1=no))
-if test $sfs_cv_type_$1 = yes; then
-        AC_DEFINE(HAVE_[]translit($1, [a-z], [A-Z]), 1,
+], sfs_cv_type_[]translit($1, [ ], [_])=yes, sfs_cv_type_[]translit($1, [ ], [_])=no))
+if test $sfs_cv_type_[]translit($1, [ ], [_]) = yes; then
+        AC_DEFINE(HAVE_[]translit($1, [a-z ], [A-Z_]), 1,
 		  Define if system headers declare a $1 type.)
 fi])
 dnl
@@ -437,6 +461,23 @@ sa.sa_len = 0;
 if test $sfs_cv_sa_len = yes; then
 	AC_DEFINE(HAVE_SA_LEN, 1,
 	Define if struct sockaddr has sa_len field.)
+fi])
+dnl
+dnl Check for sockaddr_storage
+dnl
+AC_DEFUN(SFS_CHECK_SOCKADDR_STORAGE,
+[SFS_CHECK_TYPE(struct sockaddr_storage)
+AC_CACHE_CHECK(for __ss_len in sockaddr_storage, sfs_cv_ss_len_underscores,
+AC_TRY_COMPILE([
+#include <sys/types.h>
+#include <sys/socket.h>
+],[
+struct sockaddr_storage ss;
+ss.__ss_len = 0;
+], sfs_cv_ss_len_underscores=yes, sfs_cv_ss_len_underscores=no))
+if test $sfs_cv_ss_len_underscores = yes; then
+	AC_DEFINE(HAVE_SS_LEN_UNDERSCORES, 1,
+	Define if struct sockaddr_storage has __ss_len field, not ss_len)
 fi])
 dnl
 dnl Check something about the nfs_args field
@@ -917,12 +958,15 @@ majvers=`echo $vers | sed -e 's/\..*//'`
 minvers=`echo $vers | sed -e 's/[^.]*\.//' -e 's/\..*//'`
 escvers=`echo $vers | sed -e 's/\./\\./g'`
 catvers=`echo $vers | sed -e 's/\.//g'`
+: sfs_try_sleepycat_version $vers $dir $majvers $minvers $escvers $catvers
 
 unset db_header
 unset db_library
 
-for header in $dir/include/db$majvers.h $dir/include/db$catvers.h \
-	$dir/include/db$majvers/db.h $dir/include/db$catvers/db.h \
+for header in \
+	$dir/include/db$vers/db.h $dir/include/db$catvers/db.h \
+	$dir/include/db$majvers/db.h \
+	$dir/include/db$catvers.h $dir/include/db$majvers.h \
 	$dir/include/db.h
 do
     test -f $header || continue
@@ -933,18 +977,22 @@ db_version_is DB_VERSION_MAJOR.DB_VERSION_MINOR
 done
 
 if test "$db_header"; then
-    for library in $dir/lib/libdb-$vers.la $dir/lib/libdb$catvers.la \
-	    $dir/lib/libdb-$vers.a $dir/lib/libdb$catvers.a
+    for vdir in "$dir/lib/db$catvers" "$dir/lib/db$majvers" \
+		"$dir/lib/db" "$dir/lib"
     do
-	if test -f $library; then
-	    db_library=$library
-	    break;
-	fi
+        for library in $vdir/libdb-$vers.la $vdir/libdb$catvers.la \
+	    $vdir/libdb.la $vdir/libdb-$vers.a $vdir/libdb$catvers.a
+        do
+    	if test -f $library; then
+    	    db_library=$library
+    	    break 2;
+    	fi
+        done
     done
     if test -z "$db_library"; then
 	case $db_header in
 	*/db.h)
-	    test -a -f $dir/lib/libdb.a && db_library=$dir/lib/libdb.a
+	    test -f $dir/lib/libdb.a && db_library=$dir/lib/libdb.a
 	    ;;
 	esac
     fi
@@ -1028,14 +1076,16 @@ fi
 
 if test x"$DB_LIB" != x; then
     AC_MSG_RESULT($DB_LIB)
+    USE_DB=yes
 else
     AC_MSG_RESULT(no)
+    USE_DB=no
     if test "$2" != "no"; then
         AC_MSG_ERROR(Cannot find BerkeleyDB)
     fi
 fi
 
-AM_CONDITIONAL(USE_DB, test x"${with_db}" != x)
+AM_CONDITIONAL(USE_DB, test "$USE_DB" = yes)
 ])
 
 

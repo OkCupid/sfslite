@@ -113,8 +113,8 @@ fi
 # XXX - next line seems to be required for some autoconf/-make/libtool versions
 test -z "$target" && target=NONE
 AC_DISABLE_SHARED
-AC_PROG_LIBTOOL
-dnl AM_PROG_LIBTOOL
+dnl AC_PROG_LIBTOOL
+AM_PROG_LIBTOOL
 AM_CONDITIONAL(STATIC, test "$enable_shared" != yes)
 
 AC_SUBST(MALLOCK)
@@ -122,12 +122,18 @@ MALLOCK='$(top_builddir)/sfsmisc/mallock.o'
 AC_SUBST(NOPAGING)
 if test "$enable_static" = yes -a -z "${NOPAGING+set}"; then
     case "$host_os" in
+	openbsd3.[[3456789]]*|openbsd[[456789]]*)
+	    #MALLOCK=		# mallock.o may panic the OpenBSD kernel
+# ... unfortunately OMAGIC files don't work on OpenBSD
+	    NOPAGING="-all-static"
+	;;
 	openbsd*)
 	    test "$ac_cv_prog_gcc" = yes && NOPAGING="-Wl,-Bstatic,-N"
 	    MALLOCK=		# mallock.o panics the OpenBSD kernel
 	;;
 	freebsd*)
-	    test "$ac_cv_prog_gcc" = yes && NOPAGING="-Wl,-Bstatic"
+	    test yes = "$ac_cv_prog_gcc" -a yes != "$ac_cv_func_mlockall" \
+		 && NOPAGING="-Wl,-Bstatic"
 	;;
     esac
 fi
@@ -181,6 +187,7 @@ AC_TYPE_UID_T
 AC_TYPE_SIZE_T
 AC_C_BIGENDIAN
 SFS_TIMESPEC
+SFS_PASSWD_FIELD(pw_expire)
 SFS_CHECK_TYPE(ssize_t)
 SFS_CHECK_TYPE(int32_t)
 SFS_CHECK_TYPE(u_int32_t)
@@ -207,6 +214,7 @@ SFS_CHECK_OFF_T_64
 SFS_SETGROUPS
 SFS_AUTHUNIX_GROUP_T
 SFS_XDR_OPS_T
+SFS_CHECK_SOCKADDR_STORAGE
 SFS_CHECK_DECL(pread, unistd.h)
 SFS_CHECK_DECL(pwrite, unistd.h)
 SFS_CHECK_DECL(mkstemp, unistd.h stdlib.h)
@@ -278,7 +286,7 @@ AC_SUBST(DBLIB)
 AC_SUBST(DBDEPS)
 DBLIB='$(top_builddir)/sfsrodb/libsfsrodb.a'
 DBDEPS='$(top_builddir)/sfsrodb/libsfsrodb.a'
-if test "${with_db}" != no; then
+if test "${USE_DB}" != no; then
 	CPPFLAGS="$CPPFLAGS -DSLEEPYCAT"
 	DBLIB="$DBLIB $DB_LIB"
 else
@@ -418,15 +426,9 @@ AC_ARG_WITH(sfsgroup,
 
 
 
+dnl 
+dnl -- sfslite change
+dnl
 AC_OUTPUT(Makefile async/Makefile rpcc/Makefile arpc/Makefile
 	crypt/Makefile sfsmisc/Makefile libsfs/Makefile)
-dnl 
-dnl svc/Makefile sfsmisc/Makefile libsfs/Makefile
-dnl 	etc/Makefile etc/agentrc etc/sfs_config etc/sfscd_config
-dnl 	etc/sfssd_config etc/sfsauthd_config doc/Makefile tests/Makefile
-dnl 	sfssd/Makefile sfsrwsd/Makefile
-dnl 	nfsmounter/Makefile sfscd/Makefile sfsrwcd/Makefile agent/Makefile
-dnl 	rex/Makefile sfsauthd/Makefile sfsusrv/Makefile
-dnl 	adb/Makefile sfsrodb/Makefile sfsrosd/Makefile sfsrocd/Makefile
-dnl 	sfsaclsd/Makefile)
-dnl 
+

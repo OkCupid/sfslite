@@ -47,6 +47,7 @@ struct child {
   child (pid_t p, cbi c) : pid (p), cb (c) {}
 };
 static ihash<pid_t, child, &child::pid, &child::link> chldcbs;
+static time_t chldcb_check_last;
 
 struct timecb_t {
   timespec ts;
@@ -108,13 +109,14 @@ chldcb_check ()
     int status;
     pid_t pid = waitpid (-1, &status, WNOHANG);
     if (pid == 0 || pid == -1)
-      return;
+      break;
     if (child *c = chldcbs[pid]) {
       chldcbs.remove (c);
       (*c->cb) (status);
       delete c;
     }
   }
+  chldcb_check_last = timenow;
 }
 
 timecb_t *
@@ -240,6 +242,10 @@ sigcatch (int sig)
 cbv::ptr
 sigcb (int sig, cbv::ptr cb, int flags)
 {
+  sigset_t set;
+  if (!sigemptyset (&set) && !sigaddset (&set, sig))
+    sigprocmask (SIG_UNBLOCK, &set, NULL);
+
   struct sigaction sa;
   assert (sig > 0 && sig < nsig);
   bzero (&sa, sizeof (sa));
@@ -342,6 +348,21 @@ _acheck ()
   lazycb_check ();
   fdcb_check ();
   sigcb_check ();
+
+#if 0
+  /*
+   * On planet-lab's weird Linux kernel, sometimes processes stop
+   * receiving SIGCHLD signals.  To avoid endlessly accumulating
+   * Zombie children, we periodically try to reap children anyway,
+   * even when we haven't received a SIGCHLD.  This is kind of gross,
+   * but without the workaround one can end up completely filling the
+   * process table with zombies (making it hard to log in and fix the
+   * problem).
+   */
+  if (timenow > chldcb_check_last + 60)
+    chldcb_check ();
+#endif
+
   timecb_check ();
 }
 

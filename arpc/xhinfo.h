@@ -47,5 +47,7 @@ public:
   bool ateof () { return eof; }
   static ptr<xhinfo> lookup (const ref<axprt> &);
   static void xon (const ref<axprt> &x, bool receive = true);
+
+  u_int64_t max_acked_offset;  // aclnts update this
 };
 

@@ -28,12 +28,17 @@
 #include <string.h>
 #include <assert.h>
 #include <sys/types.h>
+#include <setjmp.h>
 
 #ifdef DMALLOC
 #include <dmalloc.h>
 #endif /* DMALLOC */
 #undef malloc
 #undef free
+
+#ifdef __OpenBSD__
+# define NO_STACK_TOP 1
+#endif /* OpenBSD */
 
 #if __GNUC__ >= 2 && defined (__i386__)
 
@@ -47,6 +52,16 @@ struct traceback {
 #define STKCACHESIZE 509U
 static struct traceback *stkcache[STKCACHESIZE];
 
+#if NO_STACK_TOP
+static sigjmp_buf segv_env;
+
+static void
+segv_handler (int sig)
+{
+  siglongjmp (segv_env, 1);
+}
+#endif /* NO_STACK_TOP */
+
 const char *
 __backtrace (const char *file)
 {
@@ -56,6 +71,9 @@ __backtrace (const char *file)
   char *bp = buf + sizeof (buf);
   u_long bucket = 5381;
   struct traceback *tb;
+#if NO_STACK_TOP
+  struct sigaction segv, osegv;
+#endif /* NO_STACK_TOP */
 
   filelen = strlen (file);
   if (filelen >= sizeof (buf))
@@ -63,13 +81,22 @@ __backtrace (const char *file)
   bp -= filelen + 1;
   strcpy (bp, file);
 
+#if NO_STACK_TOP
+  bzero (&segv, sizeof (segv));
+  segv.sa_handler = segv_handler;
+#ifdef SA_RESETHAND
+  segv.sa_flags |= SA_RESETHAND;
+#endif /* SA_RESETHAND */
+  if (sigaction (SIGSEGV, &segv, &osegv) < 0)
+    return file;
+#endif /* NO_STACK_TOP */
+
   __asm volatile ("movl %%ebp, %0" : "=g" (framep) :);
-  while (framep[0] && bp >= buf + 9) {
+  while (framep[0] && bp >= buf + 11) {
     int i;
     u_long pc = (u_long) framep[1] - 1;
-    framep = *framep;
     bucket = ((bucket << 5) + bucket) ^ pc;
-
+    
     *--bp = ' ';
     *--bp = hexdigits[pc & 0xf];
     pc >>= 4;
@@ -77,7 +104,19 @@ __backtrace (const char *file)
       *--bp = hexdigits[pc & 0xf];
       pc >>= 4;
     }
+    *--bp = 'x';
+    *--bp = '0';
+#if NO_STACK_TOP
+    if (sigsetjmp (segv_env, 0))
+      break;
+#endif /* NO_STACK_TOP */
+    framep = *framep;
   }
+
+#if NO_STACK_TOP
+  sigaction (SIGSEGV, &osegv, NULL);
+#endif /* NO_STACK_TOP */
+
   bucket = (bucket & 0xffffffff) % STKCACHESIZE;
 
   for (tb = stkcache[bucket]; tb; tb = tb->next)

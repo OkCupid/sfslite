@@ -166,6 +166,9 @@
 /* Define if you have the openpty function. */
 #undef HAVE_OPENPTY
 
+/* Define if struct passwd has pw_expire field */
+#undef HAVE_PASSWD_PW_EXPIRE
+
 /* Define to 1 if you have the `pread' function. */
 #undef HAVE_PREAD
 
@@ -190,6 +193,9 @@
 /* Define if system headers declare a ssize_t type. */
 #undef HAVE_SSIZE_T
 
+/* Define if struct sockaddr_storage has __ss_len field */
+#undef HAVE_SS_LEN_UNDERSCORES
+
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
 
@@ -210,6 +216,9 @@
 
 /* Define to 1 if you have the <string.h> header file. */
 #undef HAVE_STRING_H
+
+/* Define if system headers declare a struct sockaddr_storage type. */
+#undef HAVE_STRUCT_SOCKADDR_STORAGE
 
 /* The the fh field of the nfs_arg structure points to an SVR4 nfs_fh3 */
 #undef HAVE_SVR4_FH3

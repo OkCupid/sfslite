@@ -62,18 +62,14 @@ operator<< (const str &s, const char *a)
 str
 suio_getline (suio *uio)
 {
-  size_t n = 0;
-  for (const iovec *v = uio->iov (), *e = uio->iovlim ();
-       v < e; n += v++->iov_len)
-    if (void *p = memchr ((char *) v->iov_base, '\n', v->iov_len)) {
-      n += static_cast<char *> (p) - static_cast<char *> (v->iov_base);
-      mstr m (n);
-      uio->copyout (m, n);
-      uio->rembytes (n + 1);
-      if (m.len () && m.cstr ()[m.len () - 1] == '\r')
-	m.setlen (m.len () -1 );
-      return m;
-    }
+  if (size_t n = uio->linelen ()) {
+    mstr m (n - 1);
+    uio->copyout (m, n - 1);
+    uio->rembytes (n);
+    if (m.len () && m.cstr ()[m.len () - 1] == '\r')
+      m.setlen (m.len () -1 );
+    return m;
+  }
   return NULL;
 }
 

@@ -3,7 +3,7 @@
 
 /*
  *
- * Copyright (C) 1998 David Mazieres (dm@uun.org)
+ * Copyright (C) 1998-2003 David Mazieres (dm@uun.org)
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -27,6 +27,53 @@
 #define _DNSPARSE_H_ 1
 
 #include "dns.h"
+#include "qhash.h"
+
+#define QBSIZE 512
+
+#ifndef T_DNAME
+# define T_DNAME 39
+#endif /* !T_DNAME */
+#ifndef T_SRV
+# define T_SRV 33
+#endif /* !T_SRV */
+
+#ifndef MAXDNAME
+# define MAXDNAME 1025
+#endif /* !MAXDNAME */
+
+class dnstcppkt {
+  u_int inbufsize;
+  u_int inbufpos;
+  u_int inbufused;
+  u_char *inbuf;
+  suio outbuf;
+  void compact ();
+  u_int pktsize ()
+    { return inbufpos < inbufused + 2 ? 2 : getshort (inbuf + inbufused) + 2; }
+public:
+  dnstcppkt ();
+  ~dnstcppkt ();
+  void reset ();
+  int input (int fd);		// Returns size of packet, 0 incomplete, -1 err
+  int output (int fd);		// 1 drained, 0 need again, -1 err
+  bool getpkt (u_char **pp, size_t *sp);
+  void putpkt (const u_char *p, size_t s);
+};
+
+class nameset {
+  typedef qhash<str, u_int> map_t;
+  u_int pos;
+  map_t name2pos;
+public:
+  nameset () : pos (0) {}
+  char *store (str s);
+  char *lookup (str s) const;
+  bool present (str s) const { return name2pos[s]; }
+  static char *xlat (char *base, char *p) { return base + (p - (char *) 0); }
+  u_int size () const { return pos; }
+  void put (char *dst) const;
+};
 
 struct resrec {
   struct rd_mx {
@@ -82,6 +129,11 @@ class dnsparse {
   static int mxrec_cmp (const void *, const void *);
   static int srvrec_cmp (const void *, const void *);
   static void srvrec_randomize (srvrec *base, srvrec *last);
+  static size_t hintsize (u_int nhints)
+    { return nhints * sizeof (addrhint) + (nhints+1) * sizeof (addrhint *); }
+  static addrhint **puthints (char *dst, const vec<addrhint> &hv,
+			     char *namebase);
+  bool gethints (vec<addrhint> *hv, const nameset &nset);
 
 public:
   int error;
@@ -98,6 +150,8 @@ public:
   bool qparse (question *);
   bool qparse (const u_char **, question *);
   bool rrparse (const u_char **, resrec *);
+
+  bool skipnrecs (const u_char **, u_int);
 
   ptr<hostent> tohostent ();
   ptr<mxlist> tomxlist ();

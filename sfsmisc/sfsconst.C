@@ -31,11 +31,10 @@
 # define SFSUSER "sfs"
 #endif /* !SFSUSER */
 
-
+u_int32_t sfs_release = 99999;
+u_int16_t sfs_defport;
 uid_t sfs_uid;
 gid_t sfs_gid;
-u_int32_t sfs_release = 9999;
-u_int16_t sfs_defport = 4;
 uid_t nobody_uid = (uid_t) -1;
 gid_t nobody_gid = (gid_t) -1;
 u_int32_t sfs_resvgid_start;	// First reserved gid
@@ -53,11 +52,11 @@ const char *sfsroot = "/sfs";
 const char *sfs_authd_syslog_priority = "local4.info";
 u_int sfs_dlogsize = 1024;
 u_int sfs_mindlogsize = 768;
-u_int sfs_maxdlogsize = 9000;
+u_int sfs_maxdlogsize = 24576;
 u_int sfs_rsasize = 1280;
 u_int sfs_minrsasize = 768;
-u_int sfs_maxrsasize = 9000;
-u_int sfs_pwdcost = 11;
+u_int sfs_maxrsasize = 24576;
+u_int sfs_pwdcost = 12;
 u_int sfs_hashcost = 0;
 u_int sfs_maxhashcost = 22;
 
@@ -345,10 +344,10 @@ sfsconst_init ()
     etc1dir = sfsdir;
     etc2dir = xstrdup (str (builddir << "/etc"));
   }
+#endif /* MAINTAINER */
   if (char *ps = safegetenv ("SFS_PORT"))
     if (int pv = atoi (ps))
       sfs_defport = pv;
-#endif /* MAINTAINER */
 
   str sfs_config = safegetenv ("SFS_CONFIG");
   if (sfs_config && sfs_config[0] == '/') {

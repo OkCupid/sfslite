@@ -105,6 +105,7 @@ public:
   bool chkfh3 (const nfs_fh *);
   static afsnode *fh3node (const nfs_fh3 *);
 
+  virtual str readlink () const { return NULL; }
   virtual void mkfattr (fattr *, sfs_aid aid);
   virtual void mkfattr3 (fattr3 *, sfs_aid aid);
   void mkpoattr (post_op_attr &poa, sfs_aid aid)

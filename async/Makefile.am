@@ -32,7 +32,11 @@ aiod_DEPENDENCIES =
 endif
 
 sfsinclude_HEADERS = \
-aiod.h aiod_prot.h aios.h amisc.h arena.h array.h async.h backoff.h bbuddy.h bitvec.h callback.h cbuf.h dns.h dnsparse.h err.h fdlim.h ihash.h init.h itree.h keyfunc.h list.h msb.h opnew.h parseopt.h pcre.h qhash.h refcnt.h rxx.h serial.h stllike.h str.h suio++.h sysconf.h union.h vatmpl.h vec.h rwfd.h
+aiod.h aiod_prot.h aios.h amisc.h arena.h array.h async.h backoff.h	\
+bbuddy.h bitvec.h callback.h cbuf.h dns.h dnsimpl.h dnsparse.h err.h	\
+fdlim.h ihash.h init.h itree.h keyfunc.h list.h msb.h opnew.h		\
+parseopt.h pcre.h qhash.h refcnt.h rxx.h serial.h stllike.h str.h	\
+suio++.h sysconf.h union.h vatmpl.h vec.h rwfd.h
 
 noinst_HEADERS = internal.h
 
@@ -56,6 +60,9 @@ stamp-async-repo: $(async_repo_OBJECTS)
 	touch $@
 libasync_la_DEPENDENCIES = stamp-async-repo
 endif
+
+stktrace.lo: $(srcdir)/stktrace.c $(srcdir)/sysconf.h
+	$(LTCOMPILE) $(NW) -c $(srcdir)/stktrace.c
 
 EXTRA_DIST = .cvsignore
 CLEANFILES = core *.core *~ *.rpo dftables chartables.c stamp-async-repo

@@ -62,12 +62,15 @@ void err_init ();
 void err_flush ();
 
 /* tcpconnect.C */
+struct srvlist;
 struct tcpconnect_t;
 tcpconnect_t *tcpconnect (in_addr addr, u_int16_t port, cbi cb);
 tcpconnect_t *tcpconnect (str hostname, u_int16_t port, cbi cb,
 			  bool dnssearch = true, str *namep = NULL);
 tcpconnect_t *tcpconnect_srv (str hostname, str service, u_int16_t defport,
-			      cbi cb, bool dnssearch = true);
+			      cbi cb, bool dnssearch = true,
+			      ptr<srvlist> *srvlp = NULL, str *np = NULL);
+tcpconnect_t *tcpconnect_srv_retry (ref<srvlist> srvl, cbi cb, str *np = NULL);
 void tcpconnect_cancel (tcpconnect_t *tc);
 
 /* ident.C */

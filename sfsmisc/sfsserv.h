@@ -87,12 +87,11 @@ public:
 };
 
 typedef callback<void, ptr<axprt_crypt> >::ref sfsserv_cb;
-void sfssd_slave (sfsserv_cb cb, bool allowstandalone = true);
+void sfssd_slave (sfsserv_cb cb);
 bool sfssd_slave (sfsserv_cb cb, bool allowstandalone, u_int port);
 void sfssd_slavegen (str sock, sfsserv_cb cb);
 
 typedef callback<ptr<axprt_crypt>, ptr<axprt_crypt> >::ref sfsserv_axprt_cb;
-void sfssd_slave_axprt (sfsserv_axprt_cb cb, bool allowstandalone = true);
 bool sfssd_slave_axprt (sfsserv_axprt_cb cb, bool allowstandalone, u_int port);
 void sfssd_slavegen_axprt (str sock, sfsserv_axprt_cb cb);
 

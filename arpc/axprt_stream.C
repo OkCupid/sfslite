@@ -36,13 +36,21 @@ axprt_stream::wrsync ()
 axprt_stream::axprt_stream (int f, size_t ps, size_t bs)
   : axprt (true, true), destroyed (false), ingetpkt (false), pktsize (ps),
     bufsize (bs ? bs : pktsize + 4), fd (f), cb (NULL), pktlen (0),
-    wcbset (false)
+    wcbset (false), raw_bytes_sent (0)
 {
   make_async (fd);
   close_on_exec (fd);
   out = New suio;
   pktbuf = NULL;
   bytes_sent = bytes_recv = 0;
+
+#if defined (SO_SNDBUF)
+  socklen_t sn = sizeof (sndbufsz);
+  if (getsockopt (fd, SOL_SOCKET, SO_SNDBUF, (char *) &sndbufsz, &sn))
+    sndbufsz = -1;
+#else /* ! defined (SO_SNDBUF) */
+  sndbufsz = -1;
+#endif /* ! defined (SO_SNDBUF) */
 }
 
 axprt_stream::~axprt_stream ()
@@ -166,6 +174,7 @@ axprt_stream::sendv (const iovec *iov, int cnt, const sockaddr *)
     return;
   }
   bytes_sent += len;
+  raw_bytes_sent += len + 4;
   len = htonl (0x80000000 | len);
 
   if (!out->resid () && cnt < min (16, UIO_MAXIOV)) {
@@ -279,7 +288,7 @@ axprt_stream::getpkt (char **cpp, char *eom)
 ssize_t
 axprt_stream::doread (void *buf, size_t maxlen)
 {
-  return read (fd, pktbuf + pktlen, bufsize - pktlen);
+  return read (fd, buf, maxlen);
 }
 
 void
@@ -310,17 +319,22 @@ axprt_stream::callgetpkt ()
 {
   if (ingetpkt)
     return;
+
+  ref<axprt> hold (mkref (this)); // Don't let this be freed under us
+
   ingetpkt = true;
   char *cp = pktbuf, *eom = pktbuf + pktlen;
   while (cb && getpkt (&cp, eom))
     ;
-  if (cp != pktbuf)
-    memmove (pktbuf, cp, eom - cp);
-  pktlen -= cp - pktbuf;
-  if (!pktlen) {
-    xfree (pktbuf);
-    pktbuf = NULL;
+  if (!ateof ()) {
+    if (cp != pktbuf)
+      memmove (pktbuf, cp, eom - cp);
+    pktlen -= cp - pktbuf;
+    if (!pktlen) {
+      xfree (pktbuf);
+      pktbuf = NULL;
+    }
+    assert (pktlen < pktsize);
   }
-  assert (pktlen < pktsize);
   ingetpkt = false;
 }

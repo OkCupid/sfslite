@@ -4271,12 +4271,18 @@ MALLOCK='$(top_builddir)/sfsmisc/mallock.o'
 
 if test "$enable_static" = yes -a -z "${NOPAGING+set}"; then
     case "$host_os" in
+	openbsd3.[3456789]*|openbsd[456789]*)
+	    #MALLOCK=		# mallock.o may panic the OpenBSD kernel
+# ... unfortunately OMAGIC files don't work on OpenBSD
+	    NOPAGING="-all-static"
+	;;
 	openbsd*)
 	    test "$ac_cv_c_compiler_gnu" = yes && NOPAGING="-Wl,-Bstatic,-N"
 	    MALLOCK=		# mallock.o panics the OpenBSD kernel
 	;;
 	freebsd*)
-	    test "$ac_cv_c_compiler_gnu" = yes && NOPAGING="-Wl,-Bstatic"
+	    test yes = "$ac_cv_c_compiler_gnu" -a yes != "$ac_cv_func_mlockall" \
+		 && NOPAGING="-Wl,-Bstatic"
 	;;
     esac
 fi
@@ -6882,6 +6888,64 @@ _ACEOF
 
 fi
 
+echo "$as_me:$LINENO: checking for pw_expire in struct passwd" >&5
+echo $ECHO_N "checking for pw_expire in struct passwd... $ECHO_C" >&6
+if test "${sfs_cv_passwd_pw_expire+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+
+#include <sys/types.h>
+#include <pwd.h>
+
+#ifdef F77_DUMMY_MAIN
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+#endif
+int
+main ()
+{
+
+   struct passwd *pw;
+   pw->pw_expire;
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  sfs_cv_passwd_pw_expire=yes
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+sfs_cv_passwd_pw_expire=no
+fi
+rm -f conftest.$ac_objext conftest.$ac_ext
+fi
+echo "$as_me:$LINENO: result: $sfs_cv_passwd_pw_expire" >&5
+echo "${ECHO_T}$sfs_cv_passwd_pw_expire" >&6
+if test "$sfs_cv_passwd_pw_expire" = yes; then
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_PASSWD_PW_EXPIRE 1
+_ACEOF
+
+fi
 echo "$as_me:$LINENO: checking for ssize_t" >&5
 echo $ECHO_N "checking for ssize_t... $ECHO_C" >&6
 if test "${sfs_cv_type_ssize_t+set}" = set; then
@@ -8573,6 +8637,127 @@ cat >>confdefs.h <<_ACEOF
 #define xdr_ops_t $sfs_cv_xdr_ops_t
 _ACEOF
 
+echo "$as_me:$LINENO: checking for struct sockaddr_storage" >&5
+echo $ECHO_N "checking for struct sockaddr_storage... $ECHO_C" >&6
+if test "${sfs_cv_type_struct_sockaddr_storage+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+
+#include <stddef.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#ifdef HAVE_RPC_RPC_H
+#include <rpc/rpc.h>
+#endif
+
+
+#ifdef F77_DUMMY_MAIN
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+#endif
+int
+main ()
+{
+
+sizeof(struct sockaddr_storage);
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  sfs_cv_type_struct_sockaddr_storage=yes
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+sfs_cv_type_struct_sockaddr_storage=no
+fi
+rm -f conftest.$ac_objext conftest.$ac_ext
+fi
+echo "$as_me:$LINENO: result: $sfs_cv_type_struct_sockaddr_storage" >&5
+echo "${ECHO_T}$sfs_cv_type_struct_sockaddr_storage" >&6
+if test $sfs_cv_type_struct_sockaddr_storage = yes; then
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_STRUCT_SOCKADDR_STORAGE 1
+_ACEOF
+
+fi
+echo "$as_me:$LINENO: checking for __ss_len in sockaddr_storage" >&5
+echo $ECHO_N "checking for __ss_len in sockaddr_storage... $ECHO_C" >&6
+if test "${sfs_cv_ss_len_underscores+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+
+#include <sys/types.h>
+#include <sys/socket.h>
+
+#ifdef F77_DUMMY_MAIN
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+#endif
+int
+main ()
+{
+
+struct sockaddr_storage ss;
+ss.__ss_len = 0;
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  sfs_cv_ss_len_underscores=yes
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+sfs_cv_ss_len_underscores=no
+fi
+rm -f conftest.$ac_objext conftest.$ac_ext
+fi
+echo "$as_me:$LINENO: result: $sfs_cv_ss_len_underscores" >&5
+echo "${ECHO_T}$sfs_cv_ss_len_underscores" >&6
+if test $sfs_cv_ss_len_underscores = yes; then
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_SS_LEN_UNDERSCORES 1
+_ACEOF
+
+fi
 echo "$as_me:$LINENO: checking for a declaration of pread" >&5
 echo $ECHO_N "checking for a declaration of pread... $ECHO_C" >&6
 if test "${sfs_cv_pread_decl+set}" = set; then
@@ -13539,6 +13724,73 @@ _ACEOF
 
 fi
 
+	if test "$ac_cv_lib_resolv_res_mkquery" = no; then
+
+echo "$as_me:$LINENO: checking for __res_mkquery in -lresolv" >&5
+echo $ECHO_N "checking for __res_mkquery in -lresolv... $ECHO_C" >&6
+if test "${ac_cv_lib_resolv___res_mkquery+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lresolv  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char __res_mkquery ();
+#ifdef F77_DUMMY_MAIN
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+#endif
+int
+main ()
+{
+__res_mkquery ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_resolv___res_mkquery=yes
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_cv_lib_resolv___res_mkquery=no
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_resolv___res_mkquery" >&5
+echo "${ECHO_T}$ac_cv_lib_resolv___res_mkquery" >&6
+if test $ac_cv_lib_resolv___res_mkquery = yes; then
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBRESOLV 1
+_ACEOF
+
+  LIBS="-lresolv $LIBS"
+
+fi
+
+	fi
 fi
 echo "$as_me:$LINENO: checking for a declaration of res_init" >&5
 echo $ECHO_N "checking for a declaration of res_init... $ECHO_C" >&6
@@ -14233,12 +14485,15 @@ majvers=`echo $vers | sed -e 's/\..*//'`
 minvers=`echo $vers | sed -e 's/^.*\.//' -e 's/\..*//'`
 escvers=`echo $vers | sed -e 's/\./\\./g'`
 catvers=`echo $vers | sed -e 's/\.//g'`
+: sfs_try_sleepycat_version $vers $dir $majvers $minvers $escvers $catvers
 
 unset db_header
 unset db_library
 
-for header in $dir/include/db$majvers.h $dir/include/db$catvers.h \
-	$dir/include/db$majvers/db.h $dir/include/db$catvers/db.h \
+for header in \
+	$dir/include/db$vers/db.h $dir/include/db$catvers/db.h \
+	$dir/include/db$majvers/db.h \
+	$dir/include/db$catvers.h $dir/include/db$majvers.h \
 	$dir/include/db.h
 do
     test -f $header || continue
@@ -14258,18 +14513,22 @@ rm -f conftest*
 done
 
 if test "$db_header"; then
-    for library in $dir/lib/libdb-$vers.la $dir/lib/libdb$catvers.la \
-	    $dir/lib/libdb-$vers.a $dir/lib/libdb$catvers.a
+    for vdir in "$dir/lib/db$catvers" "$dir/lib/db$majvers" \
+		"$dir/lib/db" "$dir/lib"
     do
-	if test -f $library; then
-	    db_library=$library
-	    break;
-	fi
+        for library in $vdir/libdb-$vers.la $vdir/libdb$catvers.la \
+	    $vdir/libdb.la $vdir/libdb-$vers.a $vdir/libdb$catvers.a
+        do
+    	if test -f $library; then
+    	    db_library=$library
+    	    break 2;
+    	fi
+        done
     done
     if test -z "$db_library"; then
 	case $db_header in
 	*/db.h)
-	    test -a -f $dir/lib/libdb.a && db_library=$dir/lib/libdb.a
+	    test -f $dir/lib/libdb.a && db_library=$dir/lib/libdb.a
 	    ;;
 	esac
     fi
@@ -14308,12 +14567,15 @@ majvers=`echo $vers | sed -e 's/\..*//'`
 minvers=`echo $vers | sed -e 's/^.*\.//' -e 's/\..*//'`
 escvers=`echo $vers | sed -e 's/\./\\./g'`
 catvers=`echo $vers | sed -e 's/\.//g'`
+: sfs_try_sleepycat_version $vers $dir $majvers $minvers $escvers $catvers
 
 unset db_header
 unset db_library
 
-for header in $dir/include/db$majvers.h $dir/include/db$catvers.h \
-	$dir/include/db$majvers/db.h $dir/include/db$catvers/db.h \
+for header in \
+	$dir/include/db$vers/db.h $dir/include/db$catvers/db.h \
+	$dir/include/db$majvers/db.h \
+	$dir/include/db$catvers.h $dir/include/db$majvers.h \
 	$dir/include/db.h
 do
     test -f $header || continue
@@ -14333,18 +14595,22 @@ rm -f conftest*
 done
 
 if test "$db_header"; then
-    for library in $dir/lib/libdb-$vers.la $dir/lib/libdb$catvers.la \
-	    $dir/lib/libdb-$vers.a $dir/lib/libdb$catvers.a
+    for vdir in "$dir/lib/db$catvers" "$dir/lib/db$majvers" \
+		"$dir/lib/db" "$dir/lib"
     do
-	if test -f $library; then
-	    db_library=$library
-	    break;
-	fi
+        for library in $vdir/libdb-$vers.la $vdir/libdb$catvers.la \
+	    $vdir/libdb.la $vdir/libdb-$vers.a $vdir/libdb$catvers.a
+        do
+    	if test -f $library; then
+    	    db_library=$library
+    	    break 2;
+    	fi
+        done
     done
     if test -z "$db_library"; then
 	case $db_header in
 	*/db.h)
-	    test -a -f $dir/lib/libdb.a && db_library=$dir/lib/libdb.a
+	    test -f $dir/lib/libdb.a && db_library=$dir/lib/libdb.a
 	    ;;
 	esac
     fi
@@ -14383,9 +14649,11 @@ fi
 if test x"$DB_LIB" != x; then
     echo "$as_me:$LINENO: result: $DB_LIB" >&5
 echo "${ECHO_T}$DB_LIB" >&6
+    USE_DB=yes
 else
     echo "$as_me:$LINENO: result: no" >&5
 echo "${ECHO_T}no" >&6
+    USE_DB=no
     if test "no" != "no"; then
         { { echo "$as_me:$LINENO: error: Cannot find BerkeleyDB" >&5
 echo "$as_me: error: Cannot find BerkeleyDB" >&2;}
@@ -14395,7 +14663,7 @@ fi
 
 
 
-if test x"${with_db}" != x; then
+if test "$USE_DB" = yes; then
   USE_DB_TRUE=
   USE_DB_FALSE='#'
 else
@@ -14407,7 +14675,7 @@ fi
 
 DBLIB='$(top_builddir)/sfsrodb/libsfsrodb.a'
 DBDEPS='$(top_builddir)/sfsrodb/libsfsrodb.a'
-if test "${with_db}" != no; then
+if test "${USE_DB}" != no; then
 	CPPFLAGS="$CPPFLAGS -DSLEEPYCAT"
 	DBLIB="$DBLIB $DB_LIB"
 else
@@ -15986,4 +16254,5 @@ echo "$as_me: error: $ac_sub_configure failed for $ac_dir" >&2;}
     cd $ac_popdir
   done
 fi
+
 

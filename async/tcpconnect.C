@@ -55,8 +55,8 @@ tcpportconnect_t::tcpportconnect_t (const in_addr &a, u_int16_t p, cbi c)
 }
 
 tcpportconnect_t::tcpportconnect_t (str hostname, u_int16_t p, cbi c,
-			    bool dnssearch, str *namep)
-  : port (p), cb (c), fd (-1), dnsp (NULL), namep (NULL)
+			    bool dnssearch, str *np)
+  : port (p), cb (c), fd (-1), dnsp (NULL), namep (np)
 {
   connect_to_name (hostname, dnssearch);
 }
@@ -65,8 +65,10 @@ tcpportconnect_t::~tcpportconnect_t ()
 {
   if (dnsp)
     dnsreq_cancel (dnsp);
-  if (fd >= 0)
+  if (fd >= 0) {
+    fdcb (fd, selwrite, NULL);
     close (fd);
+  }
 }
 
 void
@@ -154,8 +156,6 @@ tcpconnect_cancel (tcpconnect_t *tc)
 }
 
 struct tcpsrvconnect_t : tcpconnect_t {
-  str name;
-  str service;
   u_int16_t defport;
   cbi cb;
   int dnserr;
@@ -167,8 +167,12 @@ struct tcpsrvconnect_t : tcpconnect_t {
   vec<tcpconnect_t *> cons;
   int cbad;
   int error;
+  ptr<srvlist> *srvlp;
+  str *namep;
 
-  tcpsrvconnect_t (str name, str service, cbi cb, u_int16_t dp, bool search);
+  tcpsrvconnect_t (str name, str service, cbi cb, u_int16_t dp,
+		   bool search, ptr<srvlist> *sp, str *np);
+  tcpsrvconnect_t (ref<srvlist> sl, cbi cb, str *np);
   ~tcpsrvconnect_t ();
   void dnsacb (ptr<hostent>, int err);
   void dnssrvcb (ptr<srvlist>, int err);
@@ -191,13 +195,33 @@ tcpsrvconnect_t::nextsrv (bool timeout)
 
   // warn ("nextsrv %d (port %d)\n", n, srvl->s_srvs[n].port);
 
-  if (h && !strcasecmp (srvl->s_srvs[n].name, h->h_name))
+  if (!srvl->s_srvs[n].port || !srvl->s_srvs[n].name[0]) {
+    cons.push_back (NULL);
+    errno = ENOENT;
+    connectcb (n, -1);
+    return;
+  }
+  else if (h && !strcasecmp (srvl->s_srvs[n].name, h->h_name))
     cons.push_back (tcpconnect (*(in_addr *) h->h_addr, srvl->s_srvs[n].port,
 				wrap (this, &tcpsrvconnect_t::connectcb, n)));
-  else
-    cons.push_back (tcpconnect (srvl->s_srvs[n].name, srvl->s_srvs[n].port,
-				wrap (this, &tcpsrvconnect_t::connectcb, n),
-				false));
+  else {
+    str name = srvl->s_srvs[n].name;
+    addrhint **hint;
+    for (hint = srvl->s_hints;
+	 *hint && ((*hint)->h_addrtype != AF_INET
+		   || strcasecmp ((*hint)->h_name, name));
+	 hint++)
+      ;
+    if (*hint)
+      cons.push_back (tcpconnect (*(in_addr *) (*hint)->h_address,
+				  srvl->s_srvs[n].port,
+				  wrap (this, &tcpsrvconnect_t::connectcb,
+					n)));
+    else
+      cons.push_back (tcpconnect (srvl->s_srvs[n].name, srvl->s_srvs[n].port,
+				  wrap (this, &tcpsrvconnect_t::connectcb, n),
+				  false));
+  }
 
   tmo = delaycb (4, wrap (this, &tcpsrvconnect_t::nextsrv, true));
 }
@@ -209,6 +233,14 @@ tcpsrvconnect_t::connectcb (int cn, int fd)
 
   if (fd >= 0) {
     errno = 0;
+    if (namep) {
+      if (srvl) {
+	*namep = srvl->s_srvs[cn].name;
+	srvl->s_srvs[cn].port = 0;
+      }
+      else
+	*namep = h->h_name;
+    }
     (*cb) (fd);
     delete this;
     return;
@@ -216,12 +248,16 @@ tcpsrvconnect_t::connectcb (int cn, int fd)
 
   // warn ("%s:%d %m\n", srvl->s_srvs[cn].name, srvl->s_srvs[cn].port);
 
+  srvl->s_srvs[cn].port = 0;
   if (!error)
     error = errno;
   else if (errno == EAGAIN)
     error = errno;
   else if (error != EAGAIN && errno != ENOENT)
     error = errno;
+
+  if (srvl)
+    srvl->s_srvs[cn].port = 0;
 
   if (!srvl || ++cbad >= srvl->s_nsrv) {
     errno = error;
@@ -235,13 +271,21 @@ tcpsrvconnect_t::connectcb (int cn, int fd)
 }
 
 tcpsrvconnect_t::tcpsrvconnect_t (str name, str s, cbi cb, u_int16_t dp,
-				  bool search)
-  : name (name), service (s), defport (dp), cb (cb), dnserr (0),
-    tmo (NULL), cbad (0), error (0)
+				  bool search, ptr<srvlist> *sp, str *np)
+  : defport (dp), cb (cb), dnserr (0), tmo (NULL), cbad (0),
+    error (0), srvlp (sp), namep (np)
 {
   areq = dns_hostbyname (name, wrap (this, &tcpsrvconnect_t::dnsacb), search);
-  srvreq = dns_srvbyname (name, "tcp", service,
+  srvreq = dns_srvbyname (name, "tcp", s,
 			  wrap (this, &tcpsrvconnect_t::dnssrvcb), search);
+}
+
+tcpsrvconnect_t::tcpsrvconnect_t (ref<srvlist> sl, cbi cb, str *np)
+
+  : defport (0), cb (cb), dnserr (0), areq (NULL), srvreq (NULL),
+    tmo (NULL), cbad (0), error (0), srvlp (NULL), namep (np)
+{
+  delaycb (0, wrap (this, &tcpsrvconnect_t::dnssrvcb, sl, 0));
 }
 
 tcpsrvconnect_t::~tcpsrvconnect_t ()
@@ -293,12 +337,25 @@ tcpsrvconnect_t::dnssrvcb (ptr<srvlist> s, int err)
 {
   srvreq = NULL;
   srvl = s;
+  if (srvlp)
+    *srvlp = srvl;
   maybe_start (err);
 }
 
 tcpconnect_t *
-tcpconnect_srv (str hostname, str service, u_int16_t defport, cbi cb,
-		bool dnssearch)
+tcpconnect_srv (str hostname, str service, u_int16_t defport,
+		cbi cb, bool dnssearch, ptr<srvlist> *srvlp, str *np)
 {
-  return New tcpsrvconnect_t (hostname, service, cb, defport, dnssearch);
+  if (srvlp && *srvlp)
+    return New tcpsrvconnect_t (*srvlp, cb, np);
+  else
+    return New tcpsrvconnect_t (hostname, service, cb, defport,
+				dnssearch, srvlp, np);
 }
+
+tcpconnect_t *
+tcpconnect_srv_retry (ref<srvlist> srvl, cbi cb, str *np)
+{
+  return New tcpsrvconnect_t (srvl, cb, np);
+}
+

@@ -3,7 +3,7 @@
 
 /*
  *
- * Copyright (C) 1998 David Mazieres (dm@uun.org)
+ * Copyright (C) 1998-2003 David Mazieres (dm@uun.org)
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -45,6 +45,12 @@ int res_mkquery (int, const char *, int, int,
 #endif /* NEED_RES_MKQUERY_DECL */
 }
 
+struct addrhint {
+  char *h_name;
+  int h_addrtype;
+  int h_length;
+  char h_address[16];
+};
 
 struct hostent;
 
@@ -54,6 +60,7 @@ struct mxrec {
 };
 struct mxlist {
   char *m_name;		    /* Name of host for which MX list taken */
+  struct addrhint **m_hints;
   u_short m_nmx;		/* Number of mx records */
   struct mxrec m_mxes[1];	/* MX records */
 };
@@ -66,6 +73,7 @@ struct srvrec {
 };
 struct srvlist {
   char *s_name;
+  struct addrhint **s_hints;
   u_short s_nsrv;
   struct srvrec s_srvs[1];
 };

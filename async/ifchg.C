@@ -60,7 +60,6 @@ ifchgcb_test ()
     return;
   ifchg_addrs.swap (newaddrs);
   ++ifchg_count;
-  dns_reload ();
   list<ifchgcb_t, &ifchgcb_t::link> olist;
   chglist.swap (olist);
   while (ifchgcb_t *chg = olist.first) {

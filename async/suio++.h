@@ -126,6 +126,7 @@ public:
 
   size_t fastspace () const { return scratch_lim - scratch_pos; }
   int (input) (int fd, size_t len = blocksize);
+  size_t linelen () const;
 };
 
 inline void
@@ -188,6 +189,18 @@ suio::copy (const void *buf, size_t len)
   }
   else
     slowcopy (buf, len);
+}
+
+inline size_t
+suio::linelen () const
+{
+  size_t n = 0;
+  for (const iovec *v = iov (), *e = iovlim ();
+       v < e; n += v++->iov_len)
+    if (void *p = memchr ((char *) v->iov_base, '\n', v->iov_len))
+      return n + (static_cast<char *> (p)
+		  - static_cast<char *> (v->iov_base)) + 1;
+  return 0;
 }
 
 size_t iovsize (const iovec *, int);

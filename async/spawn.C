@@ -36,6 +36,10 @@ nop (int)
 {
 }
 
+#ifdef MAINTAINER
+bool afork_debug = safegetenv ("AFORK_DEBUG");
+#endif /* MAINTAINER */
+
 pid_t
 afork ()
 {
@@ -65,6 +69,13 @@ afork ()
   bzero (&sa, sizeof (sa));
   sa.sa_handler = nop;
   sigaction (SIGPIPE, &sa, NULL);
+
+#ifdef MAINTAINER
+  if (afork_debug) {
+    warn ("AFORK_DEBUG: child process pid %d\n", getpid ());
+    sleep (7);
+  }
+#endif /* MAINTAINER */
 
   return 0;
 }

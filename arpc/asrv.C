@@ -31,27 +31,18 @@ bool asrvtime (getenv ("ASRV_TIME"));
 enum { asrvtrace = 0, asrvtime = 0 };
 #endif /* !MAINTAINER */
 
+#define trace (traceobj (asrvtrace, "ASRV_TRACE: ", asrvtime))
+
+
 inline u_int32_t
 xidswap (u_int32_t xid)
 {
   return htonl (xid);
 }
 
-static inline const char *
-tracetime ()
-{
-  static str buf ("");
-  if (asrvtime) {
-    timespec ts;
-    clock_gettime (CLOCK_REALTIME, &ts);
-    buf = strbuf (" %d.%06d", int (ts.tv_sec), int (ts.tv_nsec/1000));
-  }
-  return buf;
-}
-
 svccb::svccb ()
   : arg (NULL), aup (NULL), addr (NULL), addrlen (0),
-    res (NULL), reslen (0), resdat (NULL)
+    resdat (NULL), res (NULL), reslen (0)
 {
   bzero (&msg, sizeof (msg));
 }
@@ -160,10 +151,9 @@ svccb::reply (const void *reply, xdrproc_t xdr, bool nocache)
     return;
   }
 
-  if (asrvtrace >= 4)
-    warn ("ASRV_TRACE:%s reply %s:%s x=%x\n", tracetime (),
-	  srv->rpcprog->name, srv->tbl[msg.rm_call.cb_proc].name,
-	  xidswap (msg.rm_xid));
+  trace (4, "reply %s:%s x=%x\n",
+	 srv->rpcprog->name, srv->tbl[msg.rm_call.cb_proc].name,
+	 xidswap (msg.rm_xid));
   if (asrvtrace >= 5 && !xdr && srv->tbl[msg.rm_call.cb_proc].print_res)
     srv->tbl[msg.rm_call.cb_proc].print_res (reply, NULL, asrvtrace - 4,
 					     "REPLY", "");
@@ -267,10 +257,9 @@ asrv_accepterr (ref<xhinfo> xi, const sockaddr *addr,
 void
 svccb::reject (auth_stat stat)
 {
-  if (asrvtrace >= 3)
-    warn ("ASRV_TRACE:%s reject (auth_stat %d) %s:%s x=%x\n", tracetime (),
-	  stat, srv->rpcprog->name, srv->tbl[msg.rm_call.cb_proc].name,
-	  xidswap (msg.rm_xid));
+  trace (3, "reject (auth_stat %d) %s:%s x=%x\n",
+	 stat, srv->rpcprog->name, srv->tbl[msg.rm_call.cb_proc].name,
+	 xidswap (msg.rm_xid));
 
   if (!srv->xi->ateof ())
     asrv_auth_reject (srv->xi, addr, xid (), stat);
@@ -280,10 +269,9 @@ svccb::reject (auth_stat stat)
 void
 svccb::reject (accept_stat stat)
 {
-  if (asrvtrace >= 3)
-    warn ("ASRV_TRACE:%s reject (accept_stat %d) %s:%s x=%x\n", tracetime (),
-	  stat, srv->rpcprog->name, srv->tbl[msg.rm_call.cb_proc].name,
-	  xidswap (msg.rm_xid));
+  trace (3, "reject (accept_stat %d) %s:%s x=%x\n", stat,
+      	 srv->rpcprog->name, srv->tbl[msg.rm_call.cb_proc].name,
+	 xidswap (msg.rm_xid));
 
   if (!srv->xi->ateof ())
     asrv_accepterr (srv->xi, addr, stat, &msg);
@@ -298,15 +286,30 @@ svccb::ignore ()
 }
 
 asrv::asrv (ref<xhinfo> xi, const rpc_program &pr, asrv_cb::ptr cb)
-  : rpcprog (&pr), tbl (pr.tbl), nproc (pr.nproc), cb (cb), xi (xi),
-    pv (pr.progno, pr.versno)
+  : rpcprog (&pr), tbl (pr.tbl), nproc (pr.nproc), cb (cb), recv_hook (NULL),
+    xi (xi), pv (pr.progno, pr.versno)
 {
+  start ();
+}
+
+void
+asrv::start ()
+{
+  if (xi->stab[progvers (rpcprog->progno, rpcprog->versno)])
+    panic ("attempt to reregister %s on same transport\n", rpcprog->name);
   xi->stab.insert (this);
+}
+
+void
+asrv::stop ()
+{
+  if (xi->stab [progvers (rpcprog->progno, rpcprog->versno)] == this)
+    xi->stab.remove (this);
 }
 
 asrv::~asrv ()
 {
-  xi->stab.remove (this);
+  stop ();
 }
 
 const ref<axprt> &
@@ -321,8 +324,6 @@ asrv::alloc (ref<axprt> x, const rpc_program &pr, asrv_cb::ptr cb)
   ptr<xhinfo> xi = xhinfo::lookup (x);
   if (!xi)
     return NULL;
-  if (xi->stab[progvers (pr.progno, pr.versno)])
-    panic ("attempt to reregister %s on same transport\n", pr.name);
   if (x->reliable)
     return New refcounted<asrv> (xi, pr, cb);
   else
@@ -371,14 +372,12 @@ asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
   rpc_msg *m = &sbp->msg;
 
   if (!xdr_callmsg (x.xdrp (), m)) {
-    if (asrvtrace >= 1)
-      warn ("asrv::dispatch: xdr_callmsg failed\n");
+    trace (1) << "asrv::dispatch: xdr_callmsg failed\n";
     seteof (xi, src);
     return;
   }
   if (m->rm_call.cb_rpcvers != RPC_MSG_VERSION) {
-    if (asrvtrace >= 1)
-      warn ("asrv::dispatch: bad RPC message version\n");
+    trace (1) << "asrv::dispatch: bad RPC message version\n";
     asrv_rpc_mismatch (xi, src, m->rm_xid);
     return;
   }
@@ -397,6 +396,10 @@ asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
     asrv_accepterr (xi, src, PROG_UNAVAIL, m);
     return;
   }
+
+  if (s->recv_hook)
+    s->recv_hook ();
+
   sbp->init (s, src);
 
   if (sbp->proc () >= s->nproc) {
@@ -408,10 +411,9 @@ asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
   }
 
   if (s->isreplay (sbp.get ())) {
-    if (asrvtrace >= 1)
-      warn ("asrv::dispatch: replay %s:%s x=%x\n",
-	    s->rpcprog->name, s->tbl[m->rm_call.cb_proc].name,
-	    xidswap (m->rm_xid));
+    trace (4, "replay %s:%s x=%x\n",
+           s->rpcprog->name, s->tbl[m->rm_call.cb_proc].name,
+           xidswap (m->rm_xid));
     return;
   }
 
@@ -428,14 +430,14 @@ asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
 
   if (asrvtrace >= 2) {
     if (const authunix_parms *aup = sbp->getaup ())
-      warn ("ASRV_TRACE:%s serve %s:%s x=%x u=%u\n", tracetime (),
-	    s->rpcprog->name, rtp->name, xidswap (m->rm_xid), aup->aup_uid);
+      trace (2, "serve %s:%s x=%x u=%u\n",
+	     s->rpcprog->name, rtp->name, xidswap (m->rm_xid), aup->aup_uid);
     else if (u_int32_t i = sbp->getaui ())
-      warn ("ASRV_TRACE:%s serve %s:%s x=%x i=%u\n", tracetime (),
-	    s->rpcprog->name, rtp->name, xidswap (m->rm_xid), i);
+      trace (2, "serve %s:%s x=%x i=%u\n",
+	     s->rpcprog->name, rtp->name, xidswap (m->rm_xid), i);
     else
-      warn ("ASRV_TRACE:%s serve %s:%s x=%x\n", tracetime (),
-	    s->rpcprog->name, rtp->name, xidswap (m->rm_xid));
+      trace (2, "serve %s:%s x=%x\n",
+	     s->rpcprog->name, rtp->name, xidswap (m->rm_xid));
   }
   if (asrvtrace >= 5 && rtp->print_arg)
     rtp->print_arg (sbp->arg, NULL, asrvtrace - 4, "ARGS", "");
@@ -443,35 +445,35 @@ asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
   (*s->cb) (sbp.release ());
 }
 
-void
-asrv_unreliable::delsbp (svccb *sbp)
+
+/* asrv_replay */
+
+svccb *
+asrv_replay::lookup (svccb *sbp)
 {
+  svccb *osbp = rtab[*sbp];
+  if (!osbp)
+    rtab.insert (sbp);
+  return osbp;
+}
+
+void
+asrv_replay::delsbp (svccb *sbp)
+{
+  // trace (4, "EVICT x=%x o=%lu\n", xidswap (sbp->xid ()),
+  //                                (unsigned long) sbp->offset);
   rtab.remove (sbp);
   rq.remove (sbp);
-  rsize--;
   delete sbp;
 }
 
-asrv_unreliable::~asrv_unreliable ()
+asrv_replay::~asrv_replay ()
 {
-  rq.traverse (wrap (this, &asrv_unreliable::delsbp));
-}
-
-bool
-asrv_unreliable::isreplay (svccb *sbp)
-{
-  svccb *osbp = rtab[*sbp];
-  if (!osbp) {
-    rtab.insert (sbp);
-    return false;
-  }
-  if (osbp->res)
-    xi->xh->send (osbp->res, osbp->reslen, osbp->addr);
-  return true;
+  rtab.traverse (wrap (this, &asrv_replay::delsbp));
 }
 
 void
-asrv_unreliable::sendreply (svccb *sbp, xdrsuio *x, bool nocache)
+asrv_replay::sendreply (svccb *sbp, xdrsuio *x, bool nocache)
 {
   if (!x) {
     rtab.remove (sbp);
@@ -484,13 +486,11 @@ asrv_unreliable::sendreply (svccb *sbp, xdrsuio *x, bool nocache)
     sbp->arg = NULL;
   }
 
-  if (!xi->ateof ()) {
-    sbp->reslen = x->uio ()->resid ();
-    sbp->res = suio_flatten (x->uio ());
-    x->uio ()->clear ();
+  sbp->reslen = x->uio ()->resid ();
+  sbp->res = suio_flatten (x->uio ());
+  x->uio ()->clear ();
+  if (!xi->ateof ())
     xi->xh->send (sbp->res, sbp->reslen, sbp->addr);
-  }
-
   if (sbp->resdat) {
     xdr_delete (tbl[sbp->proc ()].xdr_res, sbp->resdat);
     sbp->resdat = NULL;
@@ -501,12 +501,147 @@ asrv_unreliable::sendreply (svccb *sbp, xdrsuio *x, bool nocache)
     delete sbp;
     return;
   }
-  else {
-    ref<asrv> hold = sbp->srv;	// Don't let this be freed
-    sbp->srv = NULL;		// Decrement reference count on this
-    rsize++;
-    rq.insert_tail (sbp);
-    while (rsize > maxrsize)
-      delsbp (rq.first);
+}
+
+
+/* asrv_unreliable */
+
+bool
+asrv_unreliable::isreplay (svccb *sbp)
+{
+  svccb *osbp = lookup (sbp);
+  if (!osbp)
+    return false;
+
+  if (osbp->res) {
+    trace (4, "reply to replay x=%x\n", xidswap (osbp->xid ()));
+    xi->xh->send (osbp->res, osbp->reslen, osbp->addr);
+  }
+  // else still waiting for sendreply
+
+  return true;
+}
+
+void
+asrv_unreliable::sendreply (svccb *sbp, xdrsuio *x, bool nocache)
+{
+  asrv_replay::sendreply (sbp, x, nocache);
+  if (!x || nocache)
+    return;
+
+  ref<asrv> hold = sbp->srv;	// Don't let this be freed
+  sbp->srv = NULL;		// Decrement reference count on this
+  rsize++;
+  rq.insert_tail (sbp);
+
+  while (rsize > maxrsize) {
+    delsbp (rq.first);
+    rsize--;
   }
 }
+
+
+/* asrv_resumable */
+
+/* We keep track of the byte offset of each reply so that cached
+ * replies can be evicted when we known they have been received by the
+ * client.
+ *
+ * When we resume, all calls cached in the reply queue (rq) are given
+ * a zero byte offset.  If such a call is replayed by the client, it
+ * is moved to the end of the reply queue and given the byte offset of
+ * its most recent reply message.  But when we receive the first
+ * non-replay call after resumption, we assume all calls left over
+ * from the previous connection have been dealt with, and evict them
+ * from the reply queue.
+ */
+
+bool
+asrv_resumable::isreplay (svccb *sbp)
+{
+  svccb *osbp = lookup (sbp);
+  if (!osbp) {
+    // clear out any calls from the last connection
+    while ((sbp = rq.first) && !sbp->offset)
+      delsbp (sbp);
+    return false;
+  }
+
+  if (osbp->res) {
+    xi->xh->send (osbp->res, osbp->reslen, osbp->addr);
+    osbp->offset = xi->xh->get_raw_bytes_sent ();
+    rq.remove (osbp);
+    rq.insert_tail (osbp);
+  }
+  // else still waiting for sendreply
+
+  return true;
+}
+
+void
+asrv_resumable::sendreply (svccb *sbp, xdrsuio *x, bool nocache)
+{
+  assert (!(x && nocache));
+  asrv_replay::sendreply (sbp, x, nocache);
+  if (!x)
+    return;
+
+  sbp->offset = xi->xh->get_raw_bytes_sent ();
+
+  ref<asrv> hold = sbp->srv;	// Don't let this be freed
+  sbp->srv = NULL;		// Decrement reference count on this
+  rq.insert_tail (sbp);
+
+  u_int64_t bytes_sent = xi->xh->get_raw_bytes_sent ();
+  int sndbufsz = xi->xh->sndbufsize ();
+  u_int64_t known_received = sndbufsz > 0
+                             ? (bytes_sent > (unsigned) sndbufsz
+                                ? bytes_sent - sndbufsz : 0)
+                             : 0;
+  known_received = max (known_received, xi->max_acked_offset);
+  while ((sbp = rq.first) && sbp->offset && sbp->offset < known_received)
+    delsbp (sbp);
+}
+
+bool
+asrv_resumable::resume (ref<axprt> newxprt)
+{
+  if (!newxprt->reliable)
+    panic ("resumable asrv on unreliable transport: unimplemented\n");
+  ptr<xhinfo> newxi = xhinfo::lookup (newxprt);
+  if (!newxi)
+    return false;
+
+  stop ();
+  xi = newxi;
+  start ();
+
+  svccb *sbp;
+  for (sbp = rtab.first (); (sbp); sbp = rtab.next (sbp)) {
+    sbp->offset = 0;
+    xi->svcadd ();
+  }
+  return true;
+}
+
+ptr<asrv_resumable>
+asrv_resumable::alloc (ref<axprt> x, const rpc_program &pr, asrv_cb::ptr cb)
+{
+  ptr<xhinfo> xi = xhinfo::lookup (x);
+  if (!xi)
+    return NULL;
+  if (!x->reliable)
+    panic ("resumable asrv on unreliable transport unimplemented\n");
+  return New refcounted<asrv_resumable> (xi, pr, cb);
+}
+
+ptr<asrv>
+asrv_alloc (ref<axprt> x, const rpc_program &pr,
+    	    callback<void, svccb *>::ptr cb, bool resumable)
+{
+  if (resumable)
+    return asrv_resumable::alloc (x, pr, cb);
+  else
+    return asrv::alloc (x, pr, cb);
+}
+

@@ -65,6 +65,7 @@ private:
   bool destroyed;
   int recon_backoff;
   timecb_t *recon_tmo;
+  ptr<srvlist> srvl;
 
   void lock () { assert (!lock_flag); lock_flag = true; }
   void unlock ();
@@ -106,6 +107,8 @@ protected:
 public:
   sfsprog &prog;
   str path;
+  str dnsname;
+  int portno;
   const sfs_connectinfo carg;
   ptr<const sfs_servinfo_w> si;
   sfs_authinfo authinfo;
