@@ -30,7 +30,8 @@
  *   A = g^a mod N
  *
  *   b and u are random elements of Z_N^* picked by the server
- *   B = v + g^b mod N
+ *   B = v + g^b mod N       (in version 3 of the protocol)
+ *   B = 3v + g^b mod N      (in version 6 of the protocol)
  *
  *   S = g^{ab} * g^{xub}
  *   M = SHA-1 (sessid, N, g, user, salt, A, B, S)

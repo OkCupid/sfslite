@@ -157,6 +157,9 @@
 /* Define if the nfs_args structure has a sotype field. */
 #undef HAVE_NFSMNT_SOTYPE
 
+/* Define to 1 if you have the <nfs/nfsproto.h> header file. */
+#undef HAVE_NFS_NFSPROTO_H
+
 /* If the system supports NFS 3 */
 #undef HAVE_NFS_V3
 

@@ -128,6 +128,7 @@ srp_client::init (srpmsg *msgout, const srp_hash &sid,
   user = uu;
   pwd = pp;
   host = NULL;
+  host_ok = false;
   sessid = sid;
   msgout->setsize (0);
   phase = 1;
@@ -198,6 +199,7 @@ srp_client::phase5 (srpmsg *msgout, const srpmsg *msgin)
   srp_hash m;
   if (!bytes2xdr (m, *msgin) || m != H)
     return SRP_FAIL;
+  host_ok = true;
   return SRP_DONE;
 }
 

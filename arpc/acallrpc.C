@@ -33,7 +33,7 @@ static rpc_program noprog;
 
 ptr<axprt_stream> aclnt_axprt_stream_alloc (size_t ps, int fd);
 const axprtalloc_fn axprt_stream_alloc_default
-  = wrap (aclnt_axprt_stream_alloc, int (axprt_stream::defps));
+  = gwrap (aclnt_axprt_stream_alloc, int (axprt_stream::defps));
 
 INITFN(acallrpc_init);
 

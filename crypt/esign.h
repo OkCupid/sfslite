@@ -23,18 +23,39 @@
  */
 
 #include "bigint.h"
+#include "modalg.h"
 
 class esign_pub {
 public:
-  bigint n;
-  u_long k;
+  const bigint n;
+  const u_long k;
+  const int log2k;		// log_2 (k), or -1 if k not power of 2
 
 protected:
   bigint t;
 
   static void msg2bigint (bigint *resp, const str &msg, int bits);
+  static int calc_log2k (u_long k);
 
 public:
+  void kpow (bigint *rp, const bigint &x) const {
+#if 1
+    *rp = powm (x, k, n);
+#else  /* This seems to be slower on the P4 */
+    if (log2k <= 0)
+      *rp = powm (x, k, n);
+    else {
+      bigint tmp;
+      mpz_square (&tmp, &x);
+      mpz_mod (rp, &tmp, &n);
+      for (int i = log2k - 1; i > 0; i--) {
+	mpz_square (&tmp, rp);
+	mpz_mod (rp, &tmp, &n);
+      }
+    }
+#endif
+  }
+
   esign_pub (const bigint &n, u_long k);
   bool raw_verify (const bigint &msg, const bigint &sig) const;
   bool verify (const str &msg, const bigint &sig) const {
@@ -62,4 +83,4 @@ public:
   }
 };
 
-esign_priv esign_keygen (size_t nbits, u_long k = 4);
+esign_priv esign_keygen (size_t nbits, u_long k = 8);

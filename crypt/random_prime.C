@@ -528,5 +528,5 @@ srpprime_test (const bigint &n, u_int iter)
   for (int i = 0; i < num_small_primes; i++)
     if (!quickmod (q, small_primes[i]))
       return false;
-  return fermat2_test (n) && prime_test (q, iter);
+  return prime_test (q, iter);
 }

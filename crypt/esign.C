@@ -41,10 +41,17 @@ esign_pub::msg2bigint (bigint *resp, const str &msg, int bits)
   mpz_set_rawmag_le (resp, buf, bytes);
 }
 
-esign_pub::esign_pub (const bigint &nn, u_long kk)
-  : n (nn), k (kk)
+int
+esign_pub::calc_log2k (u_long k)
 {
-  assert (k >= 4);
+  assert (k > 4);
+  int l = log2c (k);
+  return k == (u_long) 1 << l ? l : -1;
+}
+
+esign_pub::esign_pub (const bigint &nn, u_long kk)
+  : n (nn), k (kk), log2k (calc_log2k (k))
+{
   size_t nb = mpz_sizeinbase2 (&n);
   nb = ((2 * nb) + 2) / 3;
   t.setbit (nb, 1);
@@ -53,8 +60,12 @@ esign_pub::esign_pub (const bigint &nn, u_long kk)
 bool
 esign_pub::raw_verify (const bigint &z, const bigint &sig) const
 {
-  bigint u = powm (sig, k, n);
-  return z <= u && u <= z + t;
+  bigint u;
+  kpow (&u, sig);
+  if (u < z)
+    return false;
+  u -= t;
+  return u <= z;
 }
 
 esign_priv::esign_priv (const bigint &p, const bigint &q, u_long kk)
@@ -67,13 +78,21 @@ bigint
 esign_priv::raw_sign (const bigint &v) const
 {
   bigint x = random_zn (p);
-  bigint xk = powm (x, k, n);
+  bigint xk;
+  kpow (&xk, x);
   bigint w = v - xk;
   if (mpz_sgn (&w) < 0)
     w += n;
   mpz_cdiv_q (&w, &w, &pq);
   assert (mpz_sgn (&w) > 0);
+#if 1
   xk *= k;
+#else /* Don't notice a speedup */
+  if (log2k < 0)
+    xk *= k;
+  else
+    xk <<= log2k;
+#endif
   xk = invert (xk, p);
   xk *= x;
   xk *= w;

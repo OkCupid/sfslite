@@ -25,7 +25,6 @@
 #include "list.h"
 #include "backoff.h"
 #include "xdr_suio.h"
-#include "callback.h"
 
 #ifdef MAINTAINER
 int aclnttrace (getenv ("ACLNT_TRACE")
@@ -46,13 +45,7 @@ ignore_clnt_stat (clnt_stat)
 {
 }
 
-#ifdef WRAP_DEBUG
-aclnt_cb aclnt_cb_null (_wrap ("ignore_clnt_stat", "",
-			       "void ignore_clnt_stat (clnt_stat)",
-			       __FL__, ignore_clnt_stat));
-#else
-aclnt_cb aclnt_cb_null (wrap (ignore_clnt_stat));
-#endif /* WRAP_DEBUG */
+aclnt_cb aclnt_cb_null (gwrap (ignore_clnt_stat));
 
 INITFN (aclnt_init);
 

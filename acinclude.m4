@@ -641,6 +641,10 @@ dnl Check if we can find the nfs_args structure
 dnl
 AC_DEFUN(SFS_CHECK_NFSMNT,
 [AC_CHECK_FUNCS(vfsmount unmount)
+AC_CHECK_HEADERS(nfs/nfsproto.h, [], [],
+[#include <sys/types.h>
+#include <sys/param.h>
+#include <sys/mount.h>])
 need_nfs_nfs_h=no
 AC_EGREP_HEADER(nfs_args, sys/mount.h,,
 	AC_EGREP_HEADER(nfs_args, nfs/mount.h,

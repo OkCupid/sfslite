@@ -36,13 +36,11 @@ enum srpres { SRP_FAIL, SRP_NEXT, SRP_SETPWD, SRP_LAST, SRP_DONE };
 
 class srp_base {
 protected:
-  str user;
   str salt;
   bigint A;
   bigint B;
   srp_hash M;
   srp_hash H;
-  srp_hash sessid;
   static bigint k1;
   static bigint k3;
   bigint *k;
@@ -62,6 +60,8 @@ protected:
   static int lastpos;
 
 public:
+  srp_hash sessid;
+  str user;
   static u_int minprimsize;
   bigint S;
   bigint N;
@@ -85,10 +85,11 @@ class srp_client : public srp_base {
 public:
   str pwd;
   str host;
+  bool host_ok;
   u_int cost;
   eksblowfish eksb;
 
-  srp_client () : phase (-1) {}
+  srp_client () : phase (-1), host_ok (false) {}
   void setpwd (const str &p) { pwd = p; }
   str getname () const
     { return strbuf () << user << "@" << host << "/" << N.nbits (); }

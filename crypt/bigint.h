@@ -695,6 +695,19 @@ rpc_traverse (const stompcast_t, bigint &obj)
 {
   return true;
 }
+inline bool
+rpc_traverse (rpc_clear_t &, bigint &obj)
+{
+  obj = 0;
+  return true;
+}
+inline bool
+rpc_traverse (rpc_wipe_t &, bigint &obj)
+{
+  bigint zero (0);
+  zero.swap (obj);
+  return true;
+}
 #define xdr_bigint reinterpret_cast<xdrproc_t> (xdr_mpz_t) // XXX
 RPC_TYPE2STR_DECL (bigint)
 inline RPC_PRINT_GEN (bigint, sb << obj)

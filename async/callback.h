@@ -150,6 +150,8 @@ my $verbosedestruct = 0;
 my ($ia, $ib);
 
 my $enddebug = '#endif /' . '* WRAP_DEBUG *' . '/';
+my $elsenotdebug = '#else /' . '* !WRAP_DEBUG *' . '/';
+my $endnotdebug = '#endif /' . '* !WRAP_DEBUG *' . '/';
 
 sub jc {
     join (', ', @_);
@@ -531,13 +533,20 @@ print <<"EOF";
 # undef wrap
 # define wrap_arg1(arg_1, arg_rest...) #arg_1
 # define wrap_arg2(arg_1, arg_rest...) wrap_arg1 (arg_rest)
-# define do_wrap(__do_wrap_args...) \\
+# define do_wrap(__func_name, __do_wrap_args...) \\
 	_wrap (wrap_arg1(__do_wrap_args), wrap_arg2(__do_wrap_args), \\
-	       __PRETTY_FUNCTION__, __FL__, ## __do_wrap_args)
-# define wrap(__wrap_args...) do_wrap(__wrap_args)
-$enddebug
+	       __func_name, __FL__, ## __do_wrap_args)
+# define wrap(__wrap_args...) do_wrap(__PRETTY_FUNCTION__, __wrap_args)
+# define gwrap(__wrap_args...) do_wrap(__FL__, __wrap_args)
+$elsenotdebug
+# define gwrap wrap
+$endnotdebug
 
 EOF
+
+# Note that gwrap is for use outside of functions, because with some
+# versions of gcc, using __PRETTY_FUNCTION__ outside of any function
+# causes link-time errors
 
 print "\n", '#endif /', '* !_CALLBACK_H_INCLUDED_ *', '/', "\n";
 
@@ -2182,11 +2191,14 @@ class refops<callback<R, B1, B2, B3> > {
 # undef wrap
 # define wrap_arg1(arg_1, arg_rest...) #arg_1
 # define wrap_arg2(arg_1, arg_rest...) wrap_arg1 (arg_rest)
-# define do_wrap(__do_wrap_args...) \
+# define do_wrap(__func_name, __do_wrap_args...) \
 	_wrap (wrap_arg1(__do_wrap_args), wrap_arg2(__do_wrap_args), \
-	       __PRETTY_FUNCTION__, __FL__, ## __do_wrap_args)
-# define wrap(__wrap_args...) do_wrap(__wrap_args)
-#endif /* WRAP_DEBUG */
+	       __func_name, __FL__, ## __do_wrap_args)
+# define wrap(__wrap_args...) do_wrap(__PRETTY_FUNCTION__, __wrap_args)
+# define gwrap(__wrap_args...) do_wrap(__FL__, __wrap_args)
+#else /* !WRAP_DEBUG */
+# define gwrap wrap
+#endif /* !WRAP_DEBUG */
 
 
 #endif /* !_CALLBACK_H_INCLUDED_ */
