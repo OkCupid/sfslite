@@ -429,6 +429,27 @@ int clock_gettime (int, struct timespec *);
 # endif /* !PATH_MAX && !FILENAME_MAX */
 #endif /* PATH_MAX */
 
+
+#ifndef HAVE_GETPEEREID
+# ifdef SO_PEERCRED
+static inline int
+getpeereid (int fd, uid_t *u, gid_t *g)
+{
+  struct ucred cred;
+  socklen_t credlen = sizeof (cred);
+  int r = getsockopt (fd, SOL_SOCKET, SO_PEERCRED, &cred, &credlen);
+  if (r >= 0) {
+    if (u)
+      *u = cred.uid;
+    if (g)
+      *g = cred.gid;
+  }
+  return r;
+}
+#  define HAVE_GETPEEREID 1
+# endif /* SO_PEERCRED */
+#endif /* !HAVE_GETPEEREID */
+
 /*
  * Debug malloc
  */

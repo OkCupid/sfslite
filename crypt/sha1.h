@@ -41,6 +41,7 @@ public:
 };
 
 class sha1ctx : public sha1 {
+protected:
   u_int32_t state[hashwords];
 
   void consume (const u_char *p) { transform (state, p); }
@@ -82,6 +83,76 @@ sha1_hashxdr (void *digest, const T &t, bool scrub = false)
   if (!rpc_traverse (xp, const_cast<T &> (t)))
     return false;
   sha1_hashv (digest, x.iov (), x.iovcnt ());
+  return true;
+}
+#endif /* _ARPC_XDRMISC_H_ */
+
+class sha1hmac : public sha1ctx {
+  u_int32_t istate[hashwords];
+  u_int32_t ostate[hashwords];
+public:
+  sha1hmac () {}		// Warning, no sanity check, must call setkey
+  sha1hmac (const void *k, size_t klen) { setkey (k, klen); }
+  void setkey (const void *, size_t);
+  // void setkey2 (const void *, size_t, const void *, size_t);
+  void reset () { count = blocksize; memcpy (state, istate, sizeof (state)); }
+  void final (void *digest);
+};
+
+inline void
+sha1_hmac (void *out, const void *key, size_t keylen,
+	   const void *msg, size_t msglen)
+{
+  sha1hmac hc (key, keylen);
+  hc.update (msg, msglen);
+  hc.final (out);
+}
+
+#ifdef _ARPC_XDRMISC_H_
+template<class T> bool
+sha1_hmacxdr (void *digest, const void *k1, size_t k1l,
+	      const T &t, bool scrub = false)
+{
+  xdrsuio x (XDR_ENCODE, scrub);
+  XDR *xp = &x;
+  if (!rpc_traverse (xp, const_cast<T &> (t)))
+    return false;
+
+  sha1hmac hc;
+  hc.setkey (k1, k1l);
+  hc.updatev (x.iov (), x.iovcnt ());
+  hc.final (digest);
+
+  if (scrub)
+    hc.setkey (NULL, 0);
+
+  return true;
+}
+
+template<class T> bool
+sha1_hmacxdr_2 (void *digest, const void *k1, size_t k1l,
+		const void *k2, size_t k2l,
+		const T &t, bool scrub = false)
+{
+  xdrsuio x (XDR_ENCODE, scrub);
+  XDR *xp = &x;
+  if (!rpc_traverse (xp, const_cast<T &> (t)))
+    return false;
+
+  u_char *kbuf = static_cast<u_char *> (xmalloc (k1l + k2l));
+  memcpy (kbuf, k1, k1l);
+  memcpy (kbuf + k1l, k2, k2l);
+  sha1hmac hc;
+  hc.setkey (kbuf, k1l + k2l);
+  bzero (kbuf, k1l + k2l);
+  xfree (kbuf);
+
+  hc.updatev (x.iov (), x.iovcnt ());
+  hc.final (digest);
+
+  if (scrub)
+    hc.setkey (NULL, 0);
+
   return true;
 }
 #endif /* _ARPC_XDRMISC_H_ */

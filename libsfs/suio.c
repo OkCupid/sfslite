@@ -28,8 +28,6 @@
 const char *suiocheck_file;
 int suiocheck_line;
 
-extern void panic (const char *, ...) __attribute__ ((format (printf, 1, 2)));
-
 struct memsum {
   struct iovec iov;
   u_int16_t sum;
@@ -80,9 +78,11 @@ static void
 memsum_check (void *_ms)
 {
   struct memsum *ms = (struct memsum *) _ms;
-  if (cksum (ms->iov.iov_base, ms->iov.iov_len) != ms->sum)
-    panic ("%s:%d: data in uio subesquently changed!\n",
-	   ms->file, ms->line);
+  if (cksum (ms->iov.iov_base, ms->iov.iov_len) != ms->sum) {
+    fprintf (stderr, "%s:%d: data in uio subesquently changed!\n",
+	     ms->file, ms->line);
+    abort ();
+  }
   xfree (ms);
 }
 

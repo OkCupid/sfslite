@@ -1,0 +1,26 @@
+
+When Syncing from SFS to SFSlite: A Checklist
+---------------------------------------------
+ - acinclude.m4
+    - copy over SFS_TAG macro
+ - configure.in
+    - copy block of code from begin sfslite to end sfslite
+    - meaning, we need new rules for sfsincludedir, sfslibdir, etc, that
+      contain mention of the SFS tag.
+    - also make sure the m4 macro SFS_TAG is being called from here.
+ - Makefile.am
+    - David usually doesn't update this; Needs a bunch of syncs.
+ - async/Makefile.am
+    - change sfsexec_PROGRAMS to contain mmcd
+    - add litetime.C to libasync_la_SOURCES
+    - add litetime.h to sfsinclude_HEADERS
+    - add mmcd_SOURCES, mmcd_LDADD, and mmcd_DEPENDENCIES
+ - async/core.C
+    - add #include "litetime.h"
+    - s/clock_gettime (a,b)/my_clock_gettime ($b)/g
+ - async/
+    - add mmcd.c, litetime.[Ch]
+ - rpcc/Makefile.am
+    - delete dependency of scan.o on parse.h
+
+

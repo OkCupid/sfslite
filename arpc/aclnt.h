@@ -76,8 +76,8 @@ public:
   void *outmem;
   xdrproc_t outxdr;
 
-  rpccb (ref<aclnt>, xdrsuio &, aclnt_cb, void *, xdrproc_t,
-	 const sockaddr *, bool doxmit = true);
+  rpccb (ref<aclnt>, xdrsuio &, aclnt_cb, void *, xdrproc_t, const sockaddr *);
+  virtual callbase *init (xdrsuio &x);
   clnt_stat decodemsg (const char *, size_t);
   void finish (clnt_stat);
 };
@@ -86,7 +86,7 @@ class rpccb_msgbuf : public rpccb {
 protected:
   rpccb_msgbuf (ref<aclnt> c, xdrsuio &x, aclnt_cb cb,
 		void *out, xdrproc_t outproc, const sockaddr *d)
-    : rpccb (c, x, cb, out, outproc, d, false) {
+    : rpccb (c, x, cb, out, outproc, d) {
     msglen = x.uio ()->resid ();
     msgbuf = suio_flatten (x.uio ());
   }
@@ -95,6 +95,7 @@ protected:
     : rpccb (c, getxid (c, buf, len), cb, out, outproc, d),
       msgbuf (buf), msglen (len) {}
   ~rpccb_msgbuf () { xfree (msgbuf); }
+  virtual callbase *init (xdrsuio &x) { return this; }
 
 public:
   void *msgbuf;
@@ -106,7 +107,8 @@ class rpccb_msgbuf_xmit : public rpccb_msgbuf {
 public:
   rpccb_msgbuf_xmit (ref<aclnt> c, xdrsuio &x, aclnt_cb cb,
                      void *out, xdrproc_t outproc, const sockaddr *d)
-    : rpccb_msgbuf (c, x, cb, out, outproc, d) { xmit (0); }
+    : rpccb_msgbuf (c, x, cb, out, outproc, d) {}
+  virtual callbase *init (xdrsuio &x) { xmit (0); return this; }
 };
 
 class rpccb_unreliable : public rpccb_msgbuf {
@@ -120,6 +122,7 @@ public:
   rpccb_unreliable (ref<aclnt>, char *, size_t, aclnt_cb,
 		    void *out, xdrproc_t outproc, const sockaddr *);
   ~rpccb_unreliable ();
+  virtual callbase *init (xdrsuio &x);
 
   void timeout () { finish (RPC_TIMEDOUT); }
 };
@@ -128,7 +131,7 @@ template<class T> callbase *
 callbase_alloc (ref<aclnt> c, xdrsuio &x, aclnt_cb cb,
     		void *out, xdrproc_t outproc, sockaddr *d)
 {
-  return New T (c, x, cb, out, outproc, d);
+  return (New T (c, x, cb, out, outproc, d))->init (x);
 }
 
 class aclnt : public virtual refcount {
@@ -157,10 +160,10 @@ protected:
 
   tailq<callbase, &callbase::clink> calls;
   virtual bool forget_call (aclnt_cb);
-  virtual void fail ();
   virtual bool handle_err (clnt_stat) { return false; }
 
 public:
+  virtual void fail ();
   list_entry<aclnt> xhlink;
   const ref<axprt> &xprt () const;
   typedef callbase *(*rpccb_alloc_t) (ref<aclnt>, xdrsuio &, aclnt_cb,

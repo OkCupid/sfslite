@@ -100,18 +100,24 @@ rpccb::rpccb (ref<aclnt> c, u_int32_t xid, aclnt_cb cb,
 	      void *out, xdrproc_t outproc, const sockaddr *d)
   : callbase (c, xid, d), cb (cb), outmem (out), outxdr (outproc)
 {
-  assert (!tmo);
 }
 
 rpccb::rpccb (ref<aclnt> c, xdrsuio &x, aclnt_cb cb,
-	      void *out, xdrproc_t outproc, const sockaddr *d, bool doxmit)
+	      void *out, xdrproc_t outproc, const sockaddr *d)
   : callbase (c, getxid (c, x), d), cb (cb), outmem (out), outxdr (outproc)
 {
-  assert (!tmo);
-  if (doxmit && !c->xi->ateof ()) {
-    c->xprt ()->sendv (x.iov (), x.iovcnt (), d);
-    offset = c->xprt ()->get_raw_bytes_sent ();
-  }
+}
+
+callbase *
+rpccb::init (xdrsuio &x)
+{
+  ref<aclnt> cc (c);
+  cc->xprt ()->sendv (x.iov (), x.iovcnt (), dest);
+  if (cc->xi_xh_ateof_fail ())
+    return NULL;
+  offset = c->xprt ()->get_raw_bytes_sent ();
+  return this;
+#if 0
   if (tmo && !c->xprt ()->reliable) {
     panic ("transport callback added timeout (%p)\n"
 	   "   xprt type: %s\n  rpccb type: %s\n\n"
@@ -119,6 +125,7 @@ rpccb::rpccb (ref<aclnt> c, xdrsuio &x, aclnt_cb cb,
 	   tmo, typeid (*c->xprt ()).name (),
 	   typeid (*this).name ());
   }
+#endif
 }
 
 void
@@ -192,9 +199,6 @@ rpccb_unreliable::rpccb_unreliable (ref<aclnt> c, xdrsuio &x,
 				    const sockaddr *d)
   : rpccb_msgbuf (c, x, cb, out, outproc, d)
 {
-  assert (!tmo);
-  rpctoq.start (this);
-  assert (!tmo);
 }
 
 rpccb_unreliable::rpccb_unreliable (ref<aclnt> c,
@@ -204,14 +208,20 @@ rpccb_unreliable::rpccb_unreliable (ref<aclnt> c,
 				    const sockaddr *d)
   : rpccb_msgbuf (c, buf, len, cb, out, outproc, d)
 {
-  assert (!tmo);
-  rpctoq.start (this);
-  assert (!tmo);
 }
 
 rpccb_unreliable::~rpccb_unreliable ()
 {
   rpctoq.remove (this);
+}
+
+callbase *
+rpccb_unreliable::init (xdrsuio &x)
+{
+  assert (!tmo);
+  rpctoq.start (this);
+  assert (!tmo);
+  return this;
 }
 
 aclnt::aclnt (const ref<xhinfo> &x, const rpc_program &p)
@@ -402,19 +412,15 @@ aclnt::call (u_int32_t procno, const void *in, void *out,
     d = dest;
 
   if (send_hook)
-    send_hook ();
+    (*send_hook) ();
 
   if (forget_call (cb)) {
     if (!xi->ateof ())
       xi->xh->sendv (x.iov (), x.iovcnt (), d);
     return NULL;
   }
-  else {
-    callbase *ret = (*rpccb_alloc) (mkref (this), x, cb, out, outproc, d);
-    if (xi_xh_ateof_fail ())
-      return NULL;
-    return ret;
-  }
+  else
+    return (*rpccb_alloc) (mkref (this), x, cb, out, outproc, d);
 }
 
 bool aclnt::xi_ateof_fail () { return xi->ateof (); }
@@ -467,7 +473,7 @@ aclnt::scall (u_int32_t procno, const void *in, void *out,
   if (cbase && duration)
     cbase->timeout (duration);
   while (!done)
-    acheck ();
+    xprt ()->poll ();
   return err;
 }
 
@@ -575,7 +581,7 @@ aclnt::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
 
   if (!err) {
     if (rp->c->recv_hook)
-      rp->c->recv_hook ();
+      (*(rp->c->recv_hook)) ();
     xi->max_acked_offset = max (xi->max_acked_offset, rp->offset);
   }
 
@@ -612,7 +618,7 @@ aclnt::alloc (ref<axprt> x, const rpc_program &pr, const sockaddr *d,
 void
 aclnt_resumable::fail ()
 {
-  if (!((*failcb) ()))  // may be called multiple times
+  if (!((*failcb) ()))		// may be called multiple times
     aclnt::fail ();
 }
 

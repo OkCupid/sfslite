@@ -27,7 +27,7 @@ prng rnd;
 sha1oracle rnd_input (64, 0, 8);
 
 enum { seedsize = 48 };
-enum { mapsize = 8192 };
+const int mapsize = sysconf (_SC_PAGESIZE);
 
 static void *seed;
 static bool initialized;
@@ -67,12 +67,19 @@ random_timer ()
   timecb (time (NULL) + 1800 + rnd.getword () % 1800, wrap (random_timer));
 }
 
+static u_int32_t
+random_word ()
+{
+  return rnd.getword ();
+}
+
 void
 random_start ()
 {
   if (!initialized) {
     initialized = true;
     random_update ();
+    arandom_fn = random_word;
     random_timer ();
   }
 }
@@ -117,7 +124,8 @@ random_set_seedfile (str path)
   struct stat sb;
   char c;
   if (read (fd, &c, 1) < 0 || fstat (fd, &sb) < 0
-      || lseek (fd, seedsize, SEEK_SET) == -1 || write (fd, "", 1) < 0) {
+      || lseek (fd, mapsize - 1, SEEK_SET) == -1
+      || write (fd, "", 1) < 0) {
     /* The read call avoids a segfault on NFS 2.  Specifically, if we
      * are root and the random_seed file is over NFS 2, the open will
      * succeed even though read returns EACCES.  If we map the file

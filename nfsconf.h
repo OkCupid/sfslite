@@ -138,7 +138,8 @@ struct nfs3_fh {
 
 #undef export
 
-#if defined (__OpenBSD__) || defined (__FreeBSD__) || defined (__NetBSD__)
+#if defined (__OpenBSD__) || defined (__FreeBSD__) \
+  || defined (__NetBSD__) || defined (__APPLE__)
 /* Define this if you can mount a file system on the current working
  * directory. */
 # define MOUNT_DOT 1

@@ -36,13 +36,13 @@ seqcheck::check (u_int64_t seqno)
   if (seqno < bottom)
     return false;
   seqno -= bottom;
-  if (seqno > 3 * nbits) {
+  if (seqno >= 3 * nbits) {
     bottom += seqno;
     seqno = 0;
     bv[0].setrange (0, nbits, 0);
     bv[1].setrange (0, nbits, 0);
   }
-  else if (seqno > 2 * nbits) {
+  else if (seqno >= 2 * nbits) {
     bottom += nbits;
     seqno -= nbits;
     swap (bv[0], bv[1]);
@@ -50,7 +50,7 @@ seqcheck::check (u_int64_t seqno)
   }
 
   bitvec *bvp;
-  if (seqno > nbits) {
+  if (seqno >= nbits) {
     bvp = &bv[1];
     seqno -= nbits;
   }

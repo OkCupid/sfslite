@@ -85,6 +85,7 @@ bool myipaddrs (vec<in_addr> *res);
 
 /* fdwait.C */
 enum selop { selread = 0, selwrite = 1 };
+int fdwait (int fd, bool r, bool w, timeval *tvp);
 int fdwait (int fd, selop op, timeval *tvp = NULL);
 
 /* spawn.C */

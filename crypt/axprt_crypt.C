@@ -43,7 +43,7 @@
  * u_char mackey1[16] := A[0] .. A[15]
  * u_char mackey2[16] := A[16] .. A[31]
  * 
- * P[0] .. P[3] := ntonl (0x80000000|n)
+ * P[0] .. P[3] := htonl (0x80000000|n)
  * P[4] .. P[3+n] := M[0] .. M[n - 1]
  * P[4+n] .. P[4+n+15] := SHA-1/16 (mackey1, P[0] .. p[3+n], mackey2)
  * 
@@ -201,6 +201,7 @@ axprt_crypt::sendv (const iovec *iov, int cnt, const sockaddr *)
   assert (msgbuf + len + macsize + 4 == cp);
 
   out->print (msgbuf, cp - msgbuf);
+  raw_bytes_sent += cp - msgbuf;
 
   if (!blocked)
     output ();

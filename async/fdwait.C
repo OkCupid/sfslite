@@ -24,7 +24,7 @@
 #include "amisc.h"
 
 int
-fdwait (int fd, selop op, timeval *tvp)
+fdwait (int fd, bool r, bool w, timeval *tvp)
 {
   static int nfd;
   static fd_set *fds;
@@ -40,19 +40,21 @@ fdwait (int fd, selop op, timeval *tvp)
   }
 
   FD_SET (fd, fds);
-  int res = 0;			// XXX - egcs
-  switch (op) {
-  case selread:
-    res = select (fd + 1, fds, NULL, NULL, tvp);
-    break;
-  case selwrite:
-    res = select (fd + 1, NULL, fds, NULL, tvp);
-    break;
-  default:
-    panic ("fdwait: bad operation\n");
-    break;
-  }
+  int res = select (fd + 1, r ? fds : NULL, w ? fds : NULL, NULL, tvp);
   FD_CLR (fd, fds);
   return res;
+}
+
+int
+fdwait (int fd, selop op, timeval *tvp)
+{
+  switch (op) {
+  case selread:
+    return fdwait (fd, true, false, tvp);
+  case selwrite:
+    return fdwait (fd, false, true, tvp);
+  default:
+    panic ("fdwait: bad operation\n");
+  }
 }
 

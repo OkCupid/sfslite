@@ -23,6 +23,7 @@
 
 
 #include "arpc.h"
+#include "xdr_suio.h"
 
 #ifdef MAINTAINER
 int asrvtrace (getenv ("ASRV_TRACE") ? atoi (getenv ("ASRV_TRACE")) : 0);
@@ -363,6 +364,11 @@ asrv::sendreply (svccb *sbp, xdrsuio *x, bool)
 {
   if (!xi->ateof () && x)
     xi->xh->sendv (x->iov (), x->iovcnt (), sbp->addr);
+  /* If x contains a marshaled version of sbp->template getres<...> (),
+   * we need to clear the uio first (since deleting sbp will delete
+   * the object getres returned). */
+  if (sbp->resdat)
+    xsuio (x)->clear ();
   delete sbp;
 }
 

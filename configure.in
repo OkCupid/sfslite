@@ -4,14 +4,10 @@ dnl Process this file with autoconf to produce a configure script.
 dnl
 
 AC_INIT(acinclude.m4)
-AM_INIT_AUTOMAKE(sfs,0.7.2)
+AM_INIT_AUTOMAKE(sfs,0.8pre)
 dnl AC_INIT(sfs,0.7.2)
 dnl AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER(config.h)
-
-SFS_TAG
-AC_SUBST(DEBUG)
-
 
 AC_SUBST(LDEPS)
 AC_SUBST(LDADD)
@@ -33,6 +29,13 @@ AC_PROG_LN_S
 dnl AC_PROG_MAKE_SET
 AC_PATH_PROGS(M4, gm4 gnum4 m4, '$(top_srcdir)/missing')
 test "$RPCC" || RPCC='$(top_builddir)/rpcc/rpcc'
+
+dnl Check for X Windows
+AC_PATH_XTRA
+AM_CONDITIONAL(HAVE_X, test "$no_x" != yes)
+if test "$no_x" != yes; then
+  test -z "$x_includes" || CPPFLAGS="$CPPFLAGS -I$x_includes"
+fi
 
 dnl
 dnl Test user ID and group ID required for SFS
@@ -159,10 +162,12 @@ SFS_PATH_PROG(netstat)
 SFS_PATH_PROG(nfsstat)
 SFS_PATH_PROG(ntpq)
 SFS_PATH_PROG(ps)
-SFS_PATH_PROG(rup)
-SFS_PATH_PROG(rusers)
+dnl SFS_PATH_PROG(rup)
+dnl SFS_PATH_PROG(rusers)
 SFS_PATH_PROG(vmstat)
 SFS_PATH_PROG(w)
+dnl SFS_PATH_PROG(iostat)
+dnl SFS_PATH_PROG(pstat)
 
 dnl Path for ssu
 SFS_PATH_PROG(su)
@@ -181,6 +186,7 @@ AC_HEADER_SYS_WAIT
 AC_CHECK_HEADERS(string.h time.h)
 AC_CHECK_HEADERS(sys/rusage.h sys/mkdev.h)
 AC_CHECK_HEADERS(sys/sockio.h sys/filio.h sys/file.h sys/stropts.h)
+AC_CHECK_HEADERS(security/pam_appl.h)
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -226,6 +232,7 @@ SFS_CHECK_DECL(getrusage, sys/rusage.h sys/resource.h, sys/time.h)
 SFS_CHECK_DECL(fchdir, unistd.h)
 SFS_CHECK_DECL(flock, fcntl.h sys/file.h)
 SFS_CHECK_DECL(bindresvport, rpc/rpc.h)
+SFS_CHECK_DECL(sys_signame, signal.h)
 
 dnl Check for libraries
 AC_CHECK_LIB(socket, socket)
@@ -242,11 +249,11 @@ AC_CHECK_FUNCS(flock)
 AC_CHECK_FUNCS(mlockall)
 AC_CHECK_FUNCS(getspnam)
 AC_CHECK_FUNCS(issetugid geteuid getegid)
-AC_CHECK_FUNCS(fchown fchmod)
+dnl AC_CHECK_FUNCS(fchown fchmod)
 AC_CHECK_FUNCS(pread pwrite)
 AC_CHECK_FUNCS(setlogin)
 AC_CHECK_FUNCS(unsetenv)
-AC_CHECK_FUNCS(fhopen)
+AC_CHECK_FUNCS(getpeereid)
 SFS_GETGROUPLIST
 SFS_PTYLIB
 dnl AC_CHECK_FUNCS(popen times clock getrusage)
@@ -273,6 +280,7 @@ SFS_FIND_RESOLV
 SFS_FIND_CRYPT
 SFS_GMP
 SFS_OPENSSL
+SFS_CHECK_SETUSERCONTEXT
 
 AC_CACHE_CHECK(for arla xfs, sfs_cv_have_dev_xfs,
     if test -c /dev/xfs0; then
@@ -285,7 +293,7 @@ if test "$sfs_cv_have_dev_xfs" = yes; then
 	Define if your kernel has the Arla file system's XFS device)
 fi
 
-SFS_SLEEPYCAT(4.1 4.0 3.3 3.2 3.1, no)
+SFS_SLEEPYCAT(4.2 4.1 4.0 3.3 3.2 3.1, no)
 AC_SUBST(DBLIB)
 AC_SUBST(DBDEPS)
 DBLIB='$(top_builddir)/sfsrodb/libsfsrodb.a'
@@ -326,13 +334,35 @@ else
     LDEPS='$(LIBSFSMISC) $(LIBSVC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC)'
 fi
 
+AC_SUBST(LIBPAM)
+unset LIBPAM
+if test "$ac_cv_header_security_pam_appl_h" = yes; then
+	LIBPAM=-lpam
+fi
+
 #LDADD="$LDADD "'$(top_builddir)'"/svc/libsvc.la"
 #LDFLAGS="$LDFLAGS -L"'$(top_builddir)'"/svc"
 #LDEPS="$LDEPS "'$(top_builddir)'"/svc/libsvc.a"
 #LDADD="$LDADD -lsfsmisc -lsvc -lsfscrypt -larpc -lasync -lgmp"
+new_LDFLAGS=
+for flag in $LDFLAGS; do
+    if test x"$flag" = x-static; then
+	LIBAPM=
+	new_LDFLAGS="$new_LDFLAGS -all-static"
+    else
+	new_LDFLAGS=" $flag"
+    fi
+done
+LDFLAGS="$new_LDFLAGS"
+
+AM_CONDITIONAL(HAVE_PAM, test "$LIBPAM")
 
 
-dnl Auxilliary executables go in sfsexecdir
+dnl
+dnl BEGIN sfslite changes
+dnl
+dnl Auxilliary executables go in sfsexecdi
+SFS_TAG
 if test -z "$sfslibdir"; then
 	sfslibdirp='${pkglibdir}-${VERSION}'
 	sfslibdir='${pkglibdir}-${VERSION}${sfstagdir}'
@@ -359,6 +389,10 @@ SFS_CFLAGS
 
 ETAGS_ARGS='-C /dev/null'
 AC_SUBST(ETAGS_ARGS)
+
+dnl
+dnl END sfslite changes
+dnl
 
 
 AC_ARG_ENABLE(uvfs,
@@ -441,9 +475,14 @@ AC_ARG_WITH(sfsgroup,
 
 
 
-dnl 
-dnl -- sfslite change
+dnl
+dnl BEGIN sfslite change
 dnl
 AC_OUTPUT(Makefile async/Makefile rpcc/Makefile arpc/Makefile
 	crypt/Makefile sfsmisc/Makefile libsfs/Makefile)
+
+dnl
+dnl END sfslite change
+dnl
+
 

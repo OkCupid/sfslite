@@ -43,6 +43,9 @@ protected:
   srp_hash M;
   srp_hash H;
   srp_hash sessid;
+  static bigint k1;
+  static bigint k3;
+  bigint *k;
 
   void setparam (const bigint &NN, const bigint &gg) { N = NN; g = gg; }
   bool checkparam (u_int iter = 32)
@@ -90,7 +93,7 @@ public:
   str getname () const
     { return strbuf () << user << "@" << host << "/" << N.nbits (); }
   srpres init (srpmsg *msgout, const srp_hash &sessid,
-	       str user, str pwd = NULL);
+	       str user, str pwd = NULL, int version = 6);
   srpres next (srpmsg *msgout, const srpmsg *in);
 
   str create (const bigint &N, const bigint &g,
@@ -109,12 +112,11 @@ class srp_server : public srp_base {
 public:
   srp_server () : phase (-1) {}
   srpres init (srpmsg *msgout, const srpmsg *msgin,
-	       const srp_hash &sessid, str user, str info);
+	       const srp_hash &sessid, str user, str info, int version = 6);
   srpres next (srpmsg *msgout, const srpmsg *msgin);
 
   static bool sane (str info);
 };
-
 
 bool import_srp_params (str raw, bigint *Np, bigint *gp);
 str export_srp_params (const bigint &N, const bigint &g);

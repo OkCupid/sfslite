@@ -137,3 +137,66 @@ sha1::state2bytes (void *_cp, const u_int32_t *state)
     cp += 4;
   }
 }
+
+void
+sha1hmac::setkey (const void *_kdat, size_t klen)
+{
+  assert (klen < blocksize);
+  const u_char *kdat = static_cast<const u_char *> (_kdat);
+  u_char k[blocksize];
+
+  for (u_int i = 0; i < klen; i++)
+    k[i] = kdat[i] ^ 0x36;
+  for (u_int i = klen; i < sizeof (k); i++)
+    k[i] = 0x36;
+  newstate (istate);
+  transform (istate, k);
+
+  for (u_int i = 0; i < sizeof (k); i++)
+    k[i] ^= 0x36 ^ 0x5c;
+  newstate (ostate);
+  transform (ostate, k);
+
+  reset ();
+}
+
+#if 0
+void
+sha1hmac::setkey2 (const void *k1, size_t k1len, const void *k2, size_t k2len)
+{
+  assert (k1len + k2len < blocksize);
+
+  u_char k[blocksize];
+  memcpy (k, k1, k1len);
+  memcpy (k + k1len, k2, k2len);
+  bzero (k + k1len + k2len, sizeof (k) - (k1len + k2len));
+  for (u_int i = 0; i < blocksize; i++)
+    k[i] ^= 0x36;
+
+  newstate (istate);
+  transform (istate, k);
+
+  for (u_int i = 0; i < sizeof (k); i++)
+    k[i] ^= 0x36 ^ 0x5c;
+  newstate (ostate);
+  transform (ostate, k);
+
+  reset ();
+}
+#endif
+
+void
+sha1hmac::final (void *digest)
+{
+  u_char x[hashsize];
+  finish ();
+  state2bytes (x, state);
+
+  count = blocksize;
+  memcpy (state, ostate, sizeof (ostate));
+  update (x, sizeof (x));
+  finish ();
+  state2bytes (digest, state);
+
+  reset ();
+}

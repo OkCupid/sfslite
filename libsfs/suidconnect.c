@@ -26,6 +26,8 @@
 
 int suidprotect = 1;
 
+int opt_quiet;
+
 static int
 sendfd (int fd, int wfd)
 {
@@ -36,7 +38,7 @@ sendfd (int fd, int wfd)
 static void
 usage (void)
 {
-  fprintf (stderr, "usage: suidconnect program\n");
+  fprintf (stderr, "usage: suidconnect [-q] program\n");
   exit (1);
 }
 
@@ -87,13 +89,22 @@ main (int argc, char **argv)
   AUTH *auth;
   int res;
   enum clnt_stat err;
+  int argn;
 
-  if (argc != 2 || !getaddr (&sun, argv[1]))
+  for (argn = 1; argn < argc && argv[argn][0] == '-'; argn++) {
+    if (!strcmp (argv[argn], "-q"))
+      opt_quiet = 1;
+    else
+      usage ();
+  }
+
+  if (argn + 1 != argc || !getaddr (&sun, argv[argn]))
     usage ();
 
   if ((fd = socket (AF_UNIX, SOCK_STREAM, 0)) < 0
       || connect (fd, (struct sockaddr *) &sun, sizeof (sun)) < 0) {
-    perror (sun.sun_path);
+    if (!opt_quiet)
+      perror (sun.sun_path);
     exit (1);
   }
   

@@ -29,6 +29,8 @@
 #include "crypt_prot.h"
 #include "srp.h"
 
+bigint srp_base::k1 (1);
+bigint srp_base::k3 (3);
 u_int srp_base::minprimsize;
 srp_base::paramcache srp_base::cache[srp_base::cachesize];
 int srp_base::lastpos;
@@ -119,8 +121,10 @@ srp_base::genparam (size_t nbits, bigint *Np, bigint *gp)
 }
 
 srpres
-srp_client::init (srpmsg *msgout, const srp_hash &sid, str uu, str pp)
+srp_client::init (srpmsg *msgout, const srp_hash &sid,
+                  str uu, str pp, int version)
 {
+  k = (version < 6) ? &k1 : &k3;  // the former is for SRP-3, the latter SRP-6
   user = uu;
   pwd = pp;
   host = NULL;
@@ -178,7 +182,7 @@ srp_client::phase3 (srpmsg *msgout, const srpmsg *msgin)
     return SRP_FAIL;
 
   B = m.B;
-  if (!setS (powm (B - powm (g, x, N), a + m.u * x, N)))
+  if (!setS (powm (B - *k * powm (g, x, N), a + m.u * x, N)))
     return SRP_FAIL;
 
   if (!xdr2bytes (*msgout, M))
@@ -259,8 +263,9 @@ srp_server::sane (str info)
 
 srpres
 srp_server::init (srpmsg *msgout, const srpmsg *msgin,
-		  const srp_hash &sid, str uu, str info)
+		  const srp_hash &sid, str uu, str info, int version)
 {
+  k = (version < 6) ? &k1 : &k3;  // the former is for SRP-3, the latter SRP-6
   if (msgin->size () || !info || !info.len ())
     return SRP_FAIL;
   rxx r (srpinforx);
@@ -292,7 +297,9 @@ srp_server::phase2 (srpmsg *msgout, const srpmsg *msgin)
     return SRP_FAIL;
 
   b = random_zn (N);
-  B = (v + powm (g, b, N)) % N;
+  B = *k * v;           // XXX: want single expression; bigint.h bug?
+  B += powm (g, b, N);
+  B %= N;
   u = random_zn (N);
 
   srp_msg3 m;

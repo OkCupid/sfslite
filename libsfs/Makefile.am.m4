@@ -9,8 +9,12 @@ dnl
 ARPCGEN = $(top_builddir)/uvfs/arpcgen/arpcgen
 SVCDIR = $(top_srcdir)/svc
 
+if HAVE_PAM
+AUTH_HELPER = auth_helper
+endif
+
 lib_LIBRARIES = libsfs.a
-sfsexec_PROGRAMS = pathinfo suidconnect
+sfsexec_PROGRAMS = pathinfo suidconnect $(AUTH_HELPER)
 noinst_PROGRAMS = tst
 
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
@@ -45,6 +49,7 @@ rpcmk(nfs3exp_prot)
 rpcmk(sfs_prot)
 dnl rpcmk(sfsro_prot)
 rpcmk(sfsagent)
+rpcmk(auth_helper_prot)
 
 nfs3_prot.o: nfs3exp_prot.h
 
@@ -60,7 +65,7 @@ authunixint.c:
 EXTRA_DIST = Makefile.am.m4 .cvsignore
 libsfs_a_SOURCES = rpcmk_sources \
 rwfd.c suidprotect.c authunixint.c \
-devcon.c hashtab.c sfsops.c sfspaths.c srpc.c xdr_misc.c
+devcon.c hashtab.c sfsops.c sfspaths.c srpc.c xdr_misc.c suio.c
 
 DEPEND_ON_MAKEFILE = devgetcon.o sfspaths.o
 $(DEPEND_ON_MAKEFILE): Makefile
@@ -74,6 +79,11 @@ suidconnect_LDADD = libsfs.a
 
 pathinfo_SOURCES = pathinfo.c
 pathinfo_LDADD = libsfs.a
+
+if HAVE_PAM
+auth_helper_SOURCES = auth_helper_pam.c
+auth_helper_LDADD = libsfs.a $(LIBPAM)
+endif
 
 tst_SOURCES = tst.c
 tst_LDADD = libsfs.a

@@ -324,9 +324,15 @@ class kbdline : public kbdinput {
     : kbdinput (dst), prompt (pr), echo (echo), cb (cb) {}
 
   void outputch (u_char c) {
-    if (!echo)
-      return;
-    if (c < ' ')
+    if (!echo) {
+      /* Could conceivably thwart keystroke timing attacks like Dawn
+       * Song's by making it harder to distinguish portions of an
+       * encrypted login session that correspond to regular typing
+       * from those corresponding to passwords (typed with echo turned
+       * off). */
+      output (" \010");
+    }
+    else if (c < ' ')
       output (strbuf ("^%c", c + '@'));
     else if (c == '\177')
       output ("^?");

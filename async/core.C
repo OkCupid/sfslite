@@ -41,6 +41,28 @@ const time_t &timenow = tsnow.tv_sec;
 
 static timeval selwait;
 
+#ifdef WRAP_DEBUG
+#define CBTR_FD    0x0001
+#define CBTR_TIME  0x0002
+#define CBTR_SIG   0x0004
+#define CBTR_CHLD  0x0008
+#define CBTR_LAZY  0x0010
+static int callback_trace;
+static bool callback_time;
+
+static inline const char *
+timestring ()
+{
+  if (!callback_time)
+    return "";
+
+  my_clock_gettime (&tsnow);
+  static str buf;
+  buf = strbuf ("%d.%06d ", int (tsnow.tv_sec), int (tsnow.tv_nsec/1000));
+  return buf;
+}
+#endif /* WRAP_DEBUG */
+
 struct child {
   pid_t pid;
   cbi cb;
@@ -113,6 +135,11 @@ chldcb_check ()
       break;
     if (child *c = chldcbs[pid]) {
       chldcbs.remove (c);
+#ifdef WRAP_DEBUG
+      if (callback_trace & CBTR_CHLD)
+	warn ("CALLBACK_TRACE: %schild pid %d %s <- %s\n",
+	      timestring (), pid, c->cb->dest, c->cb->line);
+#endif /* WRAP_DEBUG */
       (*c->cb) (status);
       delete c;
     }
@@ -168,6 +195,11 @@ timecb_check ()
     ntp = timecbs.next (tp);
     timecbs.remove (tp);
     timecbs_altered = false;
+#ifdef WRAP_DEBUG
+    if (callback_trace & CBTR_TIME)
+      warn ("CALLBACK_TRACE: %stimecb %s <- %s\n", timestring (),
+	    tp->cb->dest, tp->cb->line);
+#endif /* WRAP_DEBUG */
     (*tp->cb) ();
     delete tp;
   }
@@ -221,8 +253,16 @@ fdcb_check (void)
     for (int i = 0; i < fdsn; i++)
       if (FD_ISSET (fd, fdspt[i])) {
 	n--;
-	if (FD_ISSET (fd, fdsp[i]))
+	if (FD_ISSET (fd, fdsp[i])) {
+#ifdef WRAP_DEBUG
+	  if (fd != errfd && fd != sigpipes[0]
+	      && (callback_trace & CBTR_FD))
+	    warn ("CALLBACK_TRACE: %sfdcb %d%c %s <- %s\n",
+		  timestring (), fd, "rwe"[i],
+		  fdcbs[i][fd]->dest, fdcbs[i][fd]->line);
+#endif /* WRAP_DEBUG */
 	  (*fdcbs[i][fd]) ();
+	}
       }
 }
 
@@ -270,8 +310,20 @@ sigcb_check ()
     for (int i = 1; i < nsig; i++)
       if (sigcaught[i]) {
 	sigcaught[i] = 0;
-	if (cbv::ptr cb = sighandler[i])
+	if (cbv::ptr cb = sighandler[i]) {
+#ifdef WRAP_DEBUG
+	  if (callback_trace & CBTR_SIG && i != SIGCHLD) {
+# ifdef NEED_SYS_SIGNAME_DECL
+	    warn ("CALLBACK_TRACE: %ssignal %d %s <- %s\n",
+		  timestring (), i, cb->dest, cb->line);
+# else /* !NEED_SYS_SIGNAME_DECL */
+	    warn ("CALLBACK_TRACE: %sSIG%s %s <- %s\n", timestring (),
+		  sys_signame[i], cb->dest, cb->line);
+# endif /* !NEED_SYS_SIGNAME_DECL */
+	  }
+#endif /* WRAP_DEBUG */
 	  (*cb) ();
+	}
       }
   }
 }
@@ -310,6 +362,11 @@ lazycb_check ()
     if (timenow < lazy->next)
       continue;
     lazy->next = timenow + lazy->interval;
+#ifdef WRAP_DEBUG
+    if (callback_trace & CBTR_LAZY)
+      warn ("CALLBACK_TRACE: %slazy %s <- %s\n", timestring (),
+	    lazy->cb->dest, lazy->cb->line);
+#endif /* WRAP_DEBUG */
     (*lazy->cb) ();
     if (lazycb_removed)
       goto restart;
@@ -445,6 +502,25 @@ async_init::start ()
   }
 
   lazylist = New list<lazycb_t, &lazycb_t::link>;
+
+#ifdef WRAP_DEBUG 
+  if (char *p = getenv ("CALLBACK_TRACE")) {
+    if (strchr (p, 'f'))
+      callback_trace |= CBTR_FD;
+    if (strchr (p, 't'))
+      callback_trace |= CBTR_TIME;
+    if (strchr (p, 's'))
+      callback_trace |= CBTR_SIG;
+    if (strchr (p, 'c'))
+      callback_trace |= CBTR_CHLD;
+    if (strchr (p, 'l'))
+      callback_trace |= CBTR_LAZY;
+    if (strchr (p, 'a'))
+      callback_trace |= -1;
+    if (strchr (p, 'T'))
+      callback_time = true;
+  }
+#endif /* WRAP_DEBUG */
 }
 
 void
@@ -452,4 +528,3 @@ async_init::stop ()
 {
   err_flush ();
 }
-

@@ -52,15 +52,6 @@
 /* Define if the first element of a grouplist is the effective gid */
 #undef HAVE_EGID_IN_GROUPLIST
 
-/* Define to 1 if you have the `fchmod' function. */
-#undef HAVE_FCHMOD
-
-/* Define to 1 if you have the `fchown' function. */
-#undef HAVE_FCHOWN
-
-/* Define to 1 if you have the `fhopen' function. */
-#undef HAVE_FHOPEN
-
 /* Define to 1 if you have the `flock' function. */
 #undef HAVE_FLOCK
 
@@ -75,6 +66,9 @@
 
 /* Define to 1 if you have the `getgrouplist' function. */
 #undef HAVE_GETGROUPLIST
+
+/* Define to 1 if you have the `getpeereid' function. */
+#undef HAVE_GETPEEREID
 
 /* Define to 1 if you have the `getspnam' function. */
 #undef HAVE_GETSPNAM
@@ -108,6 +102,9 @@
 
 /* Define to 1 if you have the <linux/nfs2.h> header file. */
 #undef HAVE_LINUX_NFS2_H
+
+/* Define to 1 if you have the <login_cap.h> header file. */
+#undef HAVE_LOGIN_CAP_H
 
 /* Define to 1 if you have the `memcpy' function. */
 #undef HAVE_MEMCPY
@@ -184,8 +181,14 @@
 /* Define if struct sockaddr has sa_len field. */
 #undef HAVE_SA_LEN
 
+/* Define to 1 if you have the <security/pam_appl.h> header file. */
+#undef HAVE_SECURITY_PAM_APPL_H
+
 /* Define to 1 if you have the `setlogin' function. */
 #undef HAVE_SETLOGIN
+
+/* Define if you have the setusercontext function */
+#undef HAVE_SETUSERCONTEXT
 
 /* Define if system headers declare a socklen_t type. */
 #undef HAVE_SOCKLEN_T
@@ -373,6 +376,9 @@
 /* Define if system headers do not declare res_mkquery. */
 #undef NEED_RES_MKQUERY_DECL
 
+/* Define if system headers do not declare sys_signame. */
+#undef NEED_SYS_SIGNAME_DECL
+
 /* Define if system headers do not declare xdr_callmsg. */
 #undef NEED_XDR_CALLMSG_DECL
 
@@ -426,12 +432,6 @@
 
 /* Full path of ps command */
 #undef PATH_PS
-
-/* Full path of rup command */
-#undef PATH_RUP
-
-/* Full path of rusers command */
-#undef PATH_RUSERS
 
 /* Full path of sessreg command */
 #undef PATH_SESSREG
@@ -493,6 +493,9 @@
 /* Define to 1 if your processor stores words with the most significant byte
    first (like Motorola and SPARC, unlike Intel and VAX). */
 #undef WORDS_BIGENDIAN
+
+/* Define to 1 if the X Window System is missing or not being used. */
+#undef X_DISPLAY_MISSING
 
 /* Define to 1 if `lex' declares `yytext' as a `char *' by default, not a
    `char[]'. */

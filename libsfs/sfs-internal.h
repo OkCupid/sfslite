@@ -63,6 +63,7 @@ dev2int (dev_t dev)
 static inline u_int64_t
 dev2int (dev_t dev)
 {
+  switch (0) case 0: case sizeof (dev) == sizeof (u_int64_t):;
   return *(u_int64_t *) &dev;
 }
 #undef HAVE_XDR_INT64_T

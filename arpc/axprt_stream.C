@@ -315,6 +315,22 @@ axprt_stream::input ()
 }
 
 void
+axprt_stream::poll ()
+{
+  assert (cb);
+  assert (!ateof ());
+  if (ingetpkt)
+    panic ("axprt_stream: polling for more input from within a callback\n");
+
+  struct timeval ztv = { 0, 0 };
+  fdwait (fd, true, wcbset, NULL);
+  if (!wcbset || fdwait (fd, selread, &ztv) > 0)
+    input ();
+  else
+    output ();
+}
+
+void
 axprt_stream::callgetpkt ()
 {
   if (ingetpkt)

@@ -49,6 +49,7 @@ public:
   virtual bool ateof () { return false; }
   virtual u_int64_t get_raw_bytes_sent () const { return 0; }
   virtual int sndbufsize () const { panic ("unimplemented"); }
+  virtual void poll () = 0;
 
   void send (const void *data, size_t len, const sockaddr *dest) {
     iovec iov = {(char *) data, len};
@@ -74,6 +75,7 @@ protected:
 public:
   void sendv (const iovec *, int, const sockaddr *);
   void setrcb (recvcb_t);
+  void poll ();
 
   static ref<axprt_dgram> alloc (int f, size_t ss = sizeof (sockaddr),
 				 size_t ps = defps)
@@ -122,6 +124,7 @@ public:
   int reclaim ();
   int getfd () { return fd; }
   void sockcheck ();
+  void poll ();
 
   bool ateof () { return fd < 0; }
   virtual void sendv (const iovec *, int, const sockaddr * = NULL);

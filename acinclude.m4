@@ -132,6 +132,21 @@ if test $ac_cv_func_crypt = no; then
 fi
 ])
 dnl
+dnl Find the setusercontext function
+dnl
+AC_DEFUN(SFS_CHECK_SETUSERCONTEXT,
+[AC_SUBST(SETUSERCONTEXTLIB)
+AC_CHECK_FUNC(setusercontext)
+if test "$ac_cv_func_setusercontext" = no; then
+	AC_CHECK_LIB(setusercontext, util, SETUSERCONTEXTLIB="-lutil")
+fi
+if test "$ac_cv_func_setusercontext" = yes; then
+	AC_CHECK_HEADERS(login_cap.h)
+	AC_DEFINE(HAVE_SETUSERCONTEXT, 1,
+		Define if you have the setusercontext function)
+fi
+])
+dnl
 dnl Find pty functions
 dnl
 AC_DEFUN(SFS_PTYLIB,
@@ -1109,7 +1124,7 @@ if test "$DB_DIR" -a "$with_db" = yes; then
     CPPFLAGS="$CPPFLAGS "'-I$(top_builddir)/'"$DB_DIR/dist"
     DB_LIB='$(top_builddir)/'"$DB_DIR/dist/.libs/libdb-*.a"
     AC_MSG_RESULT([using distribution in $DB_DIR subdirectory])
-else
+elif test x"$with_db" != xno; then
     if test "$with_db" = yes; then
 	for vers in $1; do
 	    for dir in "$prefix/BerkeleyDB.$vers" \

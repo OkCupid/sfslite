@@ -26,6 +26,7 @@
 
 const stompcast_t _stompcast = stompcast_t ();
 struct rpc_clear_t _rpcclear;
+struct rpc_wipe_t _rpcwipe;
 const str rpc_emptystr ("");
 const char __xdr_zero_bytes[4] = { 0, 0, 0, 0 };
 

@@ -483,6 +483,8 @@ stompcast (T &t)
 
 struct rpc_clear_t {};
 extern struct rpc_clear_t _rpcclear;
+struct rpc_wipe_t : public rpc_clear_t {};
+extern struct rpc_wipe_t _rpcwipe;
 extern const str rpc_emptystr;
 
 inline bool
@@ -498,8 +500,21 @@ rpc_traverse (rpc_clear_t &, rpc_opaque<n> &obj)
   return true;
 }
 template<size_t n> inline bool
+rpc_traverse (rpc_wipe_t &, rpc_opaque<n> &obj)
+{
+  bzero (obj.base (), obj.size ());
+  return true;
+}
+template<size_t n> inline bool
 rpc_traverse (rpc_clear_t &, rpc_bytes<n> &obj)
 {
+  obj.setsize (0);
+  return true;
+}
+template<size_t n> inline bool
+rpc_traverse (rpc_wipe_t &, rpc_bytes<n> &obj)
+{
+  bzero (obj.base (), obj.size ());
   obj.setsize (0);
   return true;
 }
@@ -515,17 +530,39 @@ rpc_traverse (rpc_clear_t &, rpc_ptr<T> &obj)
   obj.clear ();
   return true;
 }
+template<class T> inline bool
+rpc_traverse (rpc_wipe_t &t, rpc_ptr<T> &obj)
+{
+  rpc_traverse (t, *obj);
+  obj.clear ();
+  return true;
+}
 template<class T, size_t n> inline bool
 rpc_traverse (rpc_clear_t &, rpc_vec<T, n> &obj)
 {
   obj.setsize (0);
   return true;
 }
+template<class T, size_t n> inline bool
+rpc_traverse (rpc_wipe_t &t, rpc_vec<T, n> &obj)
+{
+  for (typename rpc_vec<T, n>::elm_t *p = obj.base (); p < obj.lim (); p++)
+    rpc_traverse (*t, *p);
+  obj.setsize (0);
+  return true;
+}
+
 
 template<class T> inline void
 rpc_clear (T &obj)
 {
   rpc_traverse (_rpcclear, obj);
+}
+
+template<class T> inline void
+rpc_wipe (T &obj)
+{
+  rpc_traverse (_rpcwipe, obj);
 }
 
 /*

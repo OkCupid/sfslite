@@ -45,8 +45,30 @@
  *   User -> Server:  M
  *   Server -> User:  H
  *
- * After this, K can be used to generate secret session keys for use
+ * After this, S can be used to generate secret session keys for use
  * between the user and server.
+ */
+
+/*
+ * By default, the SRP code now uses an updated scheme designed to
+ * prevent two-for-one password guessing by an active attacker
+ * impersonating the server, as described in:
+ *
+ *   T. Wu, SRP-6: Improvements and Refinements to the Secure Remote
+ *   Password Protocol, Submission to the IEEE P1363 Working Group,
+ *   Oct 2002.
+ *
+ * The protocol is the same as the one above (called "SRP-3"), but a
+ * constant k=3 is used to remove the symmetry in the calculation of B
+ * by the server and of S by the client:
+ *
+ *   (server)   B = kv + g^b mod N
+ *
+ *   (client)   S = (B - kv)^(a + ux)
+ *
+ * The resulting value of S (as a function of all the other
+ * parameters) is the same as before, and there is no change in the
+ * sequence of messages exchanged.
  */
 
 typedef opaque _srp_hash[20];

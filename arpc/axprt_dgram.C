@@ -105,3 +105,24 @@ axprt_dgram::input ()
     (*cb) (pktbuf, ps, sabuf);
   }
 }
+
+void
+axprt_dgram::poll ()
+{
+  assert (cb);
+
+  make_sync (fd);
+
+  socklen_t ss = socksize;
+  bzero (sabuf, ss);
+  ssize_t ps = recvfrom (fd, pktbuf, pktsize, 0, sabuf, &ss);
+
+  make_async (fd);
+
+  if (ps < 0) {
+    if (errno != EAGAIN && connected)
+      (*cb) (NULL, -1, NULL);
+    return;
+  }
+  (*cb) (pktbuf, ps, sabuf);
+}
