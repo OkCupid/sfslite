@@ -231,7 +231,7 @@ class ihash
   const H hash;
 
 public:
-  ihash () {}
+  ihash () : eq (E ()), hash (H ()) {}
   ihash (const E &e, const H &h) : eq (e), hash (h) {}
 
   void insert (V *elm) { insert_val (elm, hash (elm->*key)); }

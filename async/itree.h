@@ -67,13 +67,14 @@ itree_entry {
   friend class itree_core;
 #endif /* NO_TEMPLATE_FRIENDS */
 public:
-  T *up () { return (T *) p.rbe_up; }
-  T *left () { return (T *) p.rbe_left; }
-  T *right () { return (T *) p.rbe_right; }
+  T *up () const { return (T *) p.rbe_up; }
+  T *left () const { return (T *) p.rbe_left; }
+  T *right () const { return (T *) p.rbe_right; }
 };
 
 template<class T, itree_entry<T> T::*field, class C = compare<T> >
 class itree_core {
+protected:
   oc rb_root;
 
   const C cmp;
@@ -104,9 +105,9 @@ public:
   void clear () {rb_root = NULL;}
 
   T *root () const { return (T *) rb_root; }
-  static T *up (T *n) { return (n->*field).up (); }
-  static T *left (T *n) { return (n->*field).left (); }
-  static T *right (T *n) { return (n->*field).right (); }
+  static T *up (const T *n) { return (n->*field).up (); }
+  static T *left (const T *n) { return (n->*field).left (); }
+  static T *right (const T *n) { return (n->*field).right (); }
 
   T *first () const {
     T *n, *nn;
@@ -114,8 +115,8 @@ public:
       ;
     return n;
   }
-  static T *next (T *n) { return (T *) itree_successor ((oc) n, eos); }
-  static T *prev (T *n) { return (T *) itree_predecessor ((oc) n, eos); }
+  static T *next (const T *n) { return (T *) itree_successor ((oc) n, eos); }
+  static T *prev (const T *n) { return (T *) itree_predecessor ((oc) n, eos); }
 
   void insert (T *n) {
     itree_insert (&rb_root, (oc) n, eos, cmpfn);

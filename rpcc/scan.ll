@@ -46,6 +46,7 @@ WSPACE	[ \t]
 {WSPACE}+	/* discard */;
 ^%.*		litq.push_back (yytext + 1);
 
+^#pragma\ 	{ BEGIN (GNL); }
 ^#\ *[0-9]+\ *	{ lineno = atoi (yytext + 1); BEGIN (GFILE); }
 <GFILE>.*	{ filename = str (yytext+1, yyleng-2); BEGIN (GNL); }
 <GFILE>\n	{ filename = "(stdin)"; BEGIN (GNL); }
@@ -90,7 +91,7 @@ vector		{ yyerror (strbuf ("illegal use of reserved word '%s'",
 
 {ID}		{ yylval.str = yytext; return T_ID; }
 [+-]?[0-9]+	|
-[+-]?0x[0-9]+	{ yylval.str = yytext; return T_NUM; }
+[+-]?0x[0-9a-fA-F]+	{ yylval.str = yytext; return T_NUM; }
 
 [=;{}<>\[\]*,:()] return yytext[0];
 

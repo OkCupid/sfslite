@@ -32,10 +32,14 @@ struct list_entry {
 };
 
 template<class T, list_entry<T> T::*field>
-struct list {
+class list {
+  // forbid copying
+  list (const list &);
+  list &operator= (const list &);
+public:
   T *first;
 
-  list() {first = NULL;}
+  list () { first = NULL; }
 
   void insert_head (T *elm) {
     if (((elm->*field).next = first))
@@ -51,7 +55,7 @@ struct list {
     return elm;
   }
 
-  static T *next (T *elm) {
+  static T *next (const T *elm) {
     return (elm->*field).next;
   }
 

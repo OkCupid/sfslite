@@ -28,6 +28,9 @@
 #include "async.h"
 
 class arena {
+protected:
+  enum { resv = sizeof (void *) };
+
   u_int size;
   u_int avail;
   char *chunk;
@@ -43,7 +46,7 @@ class arena {
 
   void *alloc (size_t bytes, size_t align = sizeof (double)) {
     int pad = (align - (chunk - (char *) 0)) % align;
-    if (avail + pad < bytes) {
+    if (avail < pad + bytes) {
       newchunk (bytes + align);
       pad = (align - (chunk - (char *) 0)) % align;
     }

@@ -24,8 +24,6 @@
 #include "arena.h"
 #include "msb.h"
 
-const int resv = sizeof (void *);
-
 void
 arena::newchunk (size_t bytes)
 {

@@ -87,14 +87,6 @@ public:
   ihash_entry<conftab_el> lnk;
 };
 
-class conftab_ignore : public conftab_el {
-public:
-  conftab_ignore (const str &n) : conftab_el (n) {}
-  bool convert (const vec<str> &v, const str &loc, bool *e) { return true; }
-  bool inbounds () { return true; }
-  void set () {}
-};
-
 typedef callback<void, vec<str>, str, bool *>::ref confcb;
 class conftab_str : public conftab_el
 {
@@ -172,8 +164,6 @@ public:
   { tab.insert (New conftab_str (nm, s, b));  return *this; }
   conftab & add (const str &nm, bool *b) 
   { tab.insert (New conftab_bool (nm, b)); return *this; }
-  conftab & ignore (const str &m)
-  { tab.insert (New conftab_ignore (m)); return *this; }
 
   ~conftab () { tab.deleteall (); }
 

@@ -215,7 +215,7 @@ rpccb_unreliable::~rpccb_unreliable ()
 }
 
 aclnt::aclnt (const ref<xhinfo> &x, const rpc_program &p)
-  : xi (x), rp (p), eofcb (NULL), stopped (true),
+  : xi (x), rp (p), eofcb (NULL), dest (NULL), stopped (true),
     send_hook (NULL), recv_hook (NULL)
 {
   start ();
@@ -225,7 +225,8 @@ aclnt::~aclnt ()
 {
   assert (!calls.first);
   stop ();
-  xfree (dest);
+  if (dest)
+    xfree (dest);
 }
 
 void
@@ -257,6 +258,7 @@ aclnt::stop ()
     rpccb_msgbuf *rb;
     for (rb = static_cast<rpccb_msgbuf *> (calls.first); rb;
          rb = static_cast<rpccb_msgbuf *> (calls.next (rb))) {
+      assert (xi->xidtab[rb->xid]);
       xi->xidtab.remove (rb);
     }
   }

@@ -23,7 +23,8 @@
 
 #include "sysconf.h"
 
-u_int32_t (*arandom_fn) ();
+/* XXX - need initializer because of broken Apple Darwin linker */
+u_int32_t (*arandom_fn) () = 0;
 
 #ifndef HAVE_ARC4RANDOM
 /* This is a simple random number generator, based on the ARC4 stream

@@ -40,6 +40,22 @@ xidswap (u_int32_t xid)
   return htonl (xid);
 }
 
+static str
+sock2str (const struct sockaddr *sp)
+{
+  static str empty ("");
+  if (sp)
+    switch (sp->sa_family) {
+    case AF_INET:
+      {
+	const sockaddr_in *sinp = reinterpret_cast<const sockaddr_in *> (sp);
+	return strbuf (" in4=%s:%d", inet_ntoa (sinp->sin_addr),
+		       ntohs (sinp->sin_port));
+      }
+    }
+  return empty;
+}
+
 svccb::svccb ()
   : arg (NULL), aup (NULL), addr (NULL), addrlen (0),
     resdat (NULL), res (NULL), reslen (0)
@@ -67,7 +83,7 @@ svccb::operator== (const svccb &a) const
 {
   return (xid () == a.xid () && prog () == a.prog ()
 	  && vers () == a.vers () && proc () == a.proc ()
-	  && addrlen == a.addrlen && !memcmp (addr, a.addr, addrlen));
+	  && addrlen == a.addrlen && addreq (addr, a.addr, addrlen));
 }
 
 u_int
@@ -411,9 +427,9 @@ asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
   }
 
   if (s->isreplay (sbp.get ())) {
-    trace (4, "replay %s:%s x=%x\n",
+    trace (4, "replay %s:%s x=%x",
            s->rpcprog->name, s->tbl[m->rm_call.cb_proc].name,
-           xidswap (m->rm_xid));
+           xidswap (m->rm_xid)) << sock2str (src) << "\n";
     return;
   }
 
@@ -421,8 +437,9 @@ asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
   sbp->arg = s->tbl[sbp->proc ()].alloc_arg ();
   if (!rtp->xdr_arg (x.xdrp (), sbp->arg)) {
     if (asrvtrace >= 1)
-      warn ("asrv::dispatch: bad message %s:%s x=%x\n", s->rpcprog->name,
-	    rtp->name, xidswap (m->rm_xid));
+      warn ("asrv::dispatch: bad message %s:%s x=%x", s->rpcprog->name,
+	    rtp->name, xidswap (m->rm_xid))
+	      << sock2str (src), "\n";
     asrv_accepterr (xi, src, GARBAGE_ARGS, m);
     s->sendreply (sbp.release (), NULL, true);
     return;
@@ -430,14 +447,18 @@ asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
 
   if (asrvtrace >= 2) {
     if (const authunix_parms *aup = sbp->getaup ())
-      trace (2, "serve %s:%s x=%x u=%u\n",
-	     s->rpcprog->name, rtp->name, xidswap (m->rm_xid), aup->aup_uid);
+      trace (2, "serve %s:%s x=%x u=%u g=%u",
+	     s->rpcprog->name, rtp->name, xidswap (m->rm_xid),
+             aup->aup_uid, aup->aup_gid)
+	       << sock2str (src) << "\n";
     else if (u_int32_t i = sbp->getaui ())
-      trace (2, "serve %s:%s x=%x i=%u\n",
-	     s->rpcprog->name, rtp->name, xidswap (m->rm_xid), i);
+      trace (2, "serve %s:%s x=%x i=%u",
+	     s->rpcprog->name, rtp->name, xidswap (m->rm_xid), i)
+	       << sock2str (src) << "\n";
     else
-      trace (2, "serve %s:%s x=%x\n",
-	     s->rpcprog->name, rtp->name, xidswap (m->rm_xid));
+      trace (2, "serve %s:%s x=%x",
+	     s->rpcprog->name, rtp->name, xidswap (m->rm_xid))
+	       << sock2str (src) << "\n";
   }
   if (asrvtrace >= 5 && rtp->print_arg)
     rtp->print_arg (sbp->arg, NULL, asrvtrace - 4, "ARGS", "");

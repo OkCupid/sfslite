@@ -173,25 +173,80 @@ else
 fi
 fi])
 dnl
+dnl SFS_TRY_RESOLV_LIB(library)
+dnl   see if -llibrary is needed to get res_mkquery
+dnl
+AC_DEFUN(SFS_TRY_RESOLV_LIB,
+[reslib="$1"
+if test -z "$reslib"; then
+    resdesc="standard C library"
+else
+    resdesc="lib$reslib"
+fi
+AC_CACHE_CHECK(for resolver functions in [$resdesc],
+	sfs_cv_reslib_lib$1,
+[sfs_try_resolv_lib_save_LIBS="$LIBS"
+if test x"$reslib" != x; then
+    LIBS="$LIBS -l$reslib"
+fi
+AC_LINK_IFELSE([
+#include "confdefs.h"
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#if HAVE_ARPA_NAMESER_COMPAT_H
+#include <arpa/nameser_compat.h>
+#else /* !HAVE_ARPA_NAMESER_COMPAT_H */
+#include <arpa/nameser.h>
+#endif /* !HAVE_ARPA_NAMESER_COMPAT_H */
+#include <resolv.h>
+
+int
+main (int argc, char **argv)
+{
+  res_mkquery (0, 0, 0, 0, 0, 0, 0, 0, 0);
+  return 0;
+}], sfs_cv_reslib_lib$1=yes, sfs_cv_reslib_lib$1=no)
+LIBS="$sfs_try_resolv_lib_save_LIBS"])
+if test "$sfs_cv_reslib_lib$1" = yes -a "$reslib"; then
+    LIBS="$LIBS -l$reslib"
+fi
+])
+dnl
 dnl Use -lresolv only if we need it
 dnl
 AC_DEFUN(SFS_FIND_RESOLV,
-[AC_CHECK_FUNC(res_mkquery)
-if test "$ac_cv_func_res_mkquery" != yes; then
-	AC_CHECK_LIB(resolv, res_mkquery)
-	if test "$ac_cv_lib_resolv_res_mkquery" = no; then
-		AC_CHECK_LIB(resolv, __res_mkquery)
-	fi
+[AC_CHECK_HEADERS(arpa/nameser_compat.h)
+if test "$ac_cv_header_arpa_nameser_compat_h" = yes; then
+	nameser_header=arpa/nameser_compat.h
+else
+	nameser_header=arpa/nameser.h
 fi
+
+dnl AC_CHECK_FUNC(res_mkquery)
+dnl if test "$ac_cv_func_res_mkquery" != yes; then
+dnl 	AC_CHECK_LIB(resolv, res_mkquery)
+dnl 	if test "$ac_cv_lib_resolv_res_mkquery" = no; then
+dnl 		AC_CHECK_LIB(resolv, __res_mkquery)
+dnl 	fi
+dnl fi
+
+SFS_TRY_RESOLV_LIB([])
+if test "$sfs_cv_reslib_lib" = no; then
+    SFS_TRY_RESOLV_LIB(resolv)
+fi
+
 dnl See if the resolv functions are actually declared
 SFS_CHECK_DECL(res_init, resolv.h,
-	sys/types.h sys/socket.h netinet/in.h arpa/nameser.h)
+	sys/types.h sys/socket.h netinet/in.h $nameser_header)
 SFS_CHECK_DECL(res_mkquery, resolv.h,
-	sys/types.h sys/socket.h netinet/in.h arpa/nameser.h)
+	sys/types.h sys/socket.h netinet/in.h $nameser_header)
 SFS_CHECK_DECL(dn_skipname, resolv.h,
-	sys/types.h sys/socket.h netinet/in.h arpa/nameser.h)
+	sys/types.h sys/socket.h netinet/in.h $nameser_header)
 SFS_CHECK_DECL(dn_expand, resolv.h,
-	sys/types.h sys/socket.h netinet/in.h arpa/nameser.h)
+	sys/types.h sys/socket.h netinet/in.h $nameser_header)
 ])
 dnl
 dnl Check if first element in grouplist is egid
@@ -225,7 +280,7 @@ main (int argc, char **argv)
   XDR x;
 
   /* Must hard-code OSes with egid in grouplist *and* broken RPC lib */
-#if __FreeBSD__
+#if __FreeBSD__ || __APPLE__
   return 0;
 #endif 
 

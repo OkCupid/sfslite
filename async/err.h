@@ -56,7 +56,7 @@ extern "C" {
 class warnobj : public strbuf {
   const int flags;
 public:
-  enum { xflag = 1, fatalflag = 2, panicflag = 4 };
+  enum { xflag = 1, fatalflag = 2, panicflag = 4, timeflag = 8 };
 
   explicit warnobj (int);
   ~warnobj ();
@@ -66,6 +66,7 @@ public:
 #define warn warnobj (0)
 #define vwarn warn.vfmt
 #define warnx warnobj (int (::warnobj::xflag))
+#define warnt warnobj (int (::warnobj::timeflag))
 #define vwarnx warnx.vfmt
 
 #ifndef __attribute__
@@ -96,6 +97,22 @@ struct traceobj : public strbuf {
   const traceobj &operator() (int threshold, const char *fmt, ...)
     __attribute__ ((format (printf, 3, 4)));
 };
+
+template<class T> inline const traceobj &
+operator<< (const traceobj &sb, const T &a)
+{
+  if (sb.doprint)
+    strbuf_cat (sb, a);
+  return sb;
+}
+inline const traceobj &
+operator<< (const traceobj &sb, const str &s)
+{
+  if (sb.doprint)
+    suio_print (sb.tosuio (), s);
+  return sb;
+}
+
 
 #undef assert
 #define assert(e)						\

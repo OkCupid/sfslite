@@ -30,7 +30,12 @@
 
 extern "C" {
 #define class rr_class
+#if HAVE_ARPA_NAMESER_COMPAT_H
+#include <arpa/nameser_compat.h>
 #include <arpa/nameser.h>
+#else /* !HAVE_ARPA_NAMESER_COMPAT_H */
+#include <arpa/nameser.h>
+#endif /* !HAVE_ARPA_NAMESER_COMPAT_H */
 #undef class
 #include <resolv.h>
 

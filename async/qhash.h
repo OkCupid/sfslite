@@ -84,7 +84,7 @@ private:
     { (*cb) (s->key, R::ret (&s->value)); }
 
 public:
-  qhash () {}
+  qhash () : eq (E ()), hash (H ()) {}
   void clear () {
     core::traverse (wrap (this, &qhash::delslot));
     core::clear ();

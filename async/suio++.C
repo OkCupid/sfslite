@@ -22,7 +22,6 @@
  */
 
 #include "suio++.h"
-#include "callback.h"
 
 #ifdef DMALLOC
 
@@ -193,8 +192,10 @@ iovmgr::size () const
 void
 suio::makeuiocbs ()
 {
+  callback<void>::ptr cb;
   while (!uiocbs.empty () && uiocbs.front ().nbytes <= nrembytes) {
-    callback<void>::ref cb = uiocbs.pop_front ().cb;
+    // it is safer to pop first, and then call. 
+    cb = uiocbs.pop_front ().cb;
     (*cb) ();
   }
 }

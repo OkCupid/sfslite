@@ -104,6 +104,16 @@ _err_output_sync (suio *uio, int flags)
   errno = saved_errno;
 }
 
+static const char *
+timestring ()
+{
+  timespec ts;
+  clock_gettime (CLOCK_REALTIME, &ts);
+  static str buf;
+  buf = strbuf ("%d.%06d", int (ts.tv_sec), int (ts.tv_nsec/1000));
+  return buf;
+}
+
 /*
  *  warnobj
  */
@@ -111,6 +121,8 @@ _err_output_sync (suio *uio, int flags)
 warnobj::warnobj (int f)
   : flags (f)
 {
+  if (flags & timeflag)
+    cat (timestring ()).cat (" ");
   if (!(flags & xflag) && progname)
     cat (progname).cat (": ");
   if (flags & panicflag)
@@ -145,16 +157,6 @@ fatalobj::~fatalobj ()
 }
 #endif /* !fatalobj */
 
-static const char *
-tracetime ()
-{
-  timespec ts;
-  clock_gettime (CLOCK_REALTIME, &ts);
-  static str buf;
-  buf = strbuf ("%d.%06d", int (ts.tv_sec), int (ts.tv_nsec/1000));
-  return buf;
-}
-
 void
 traceobj::init ()
 {
@@ -162,7 +164,7 @@ traceobj::init ()
     cat (progname).cat (": ");
   cat (prefix);
   if (dotime)
-    cat (tracetime ()).cat (" ");
+    cat (timestring ()).cat (" ");
 }
 
 traceobj::~traceobj ()

@@ -248,7 +248,6 @@ tcpsrvconnect_t::connectcb (int cn, int fd)
 
   // warn ("%s:%d %m\n", srvl->s_srvs[cn].name, srvl->s_srvs[cn].port);
 
-  srvl->s_srvs[cn].port = 0;
   if (!error)
     error = errno;
   else if (errno == EAGAIN)
