@@ -45,17 +45,38 @@ bool __globaldestruction_t::started;
 
 #include "callback.h"
 
+
 static void
 ignore_void ()
 {
 }
-callback<void>::ref cbv_null (wrap (ignore_void));
 
 static void
 ignore_int (int)
 {
 }
+
+#ifdef WRAP_DEBUG
+
+//
+// unroll these calls to wrap() for workaround to new __PRETTY_FUNCTION__
+// semantics in gcc 3.2.
+//
+
+callback<void>::ref 
+cbv_null (_wrap ("ignore_void", "", "void ignore_void ()", 
+		 __FL__ , ignore_void));
+
+callback<void, int>::ref 
+cbi_null (_wrap ("ignore_int", "", "void ignore_int (int)", 
+		 __FL__, ignore_int));
+
+#else
+
+callback<void>::ref cbv_null (wrap (ignore_void));
 callback<void, int>::ref cbi_null (wrap (ignore_int));
+
+#endif /* WRAP_DEBUG */
 
 #include "err.h"
 #include <typeinfo>
