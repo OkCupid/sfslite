@@ -16,7 +16,7 @@ sfs_clock_t sfs_clock = SFS_CLOCK_GETTIME;
 
 struct mmap_clock_t {
   mmap_clock_t (const str &fn) 
-    : mmp (NULL), n_since_diff (0), fd (-1), file (fn), 
+    : mmp (NULL), nbad (0), fd (-1), file (fn), 
     mmp_sz (sizeof (struct timespec) * 2)
   {
     ::clock_gettime (CLOCK_REALTIME, &last);
@@ -25,13 +25,11 @@ struct mmap_clock_t {
   bool init ();
   int clock_gettime (struct timespec *ts);
 
-  enum { tries = 10,    // number of retries before giving up
-	 wait_time = 1, // number of usecs to wait between tries
-	 stale_threshold = 50000 // number of stale values before we give up
+  enum { stale_threshhold = 50000 // number of stale values before we give up
   };
 
   struct timespec *mmp; // mmap'ed pointer
-  int n_since_diff;     // number of calls since diff
+  int nbad;             // number of calls since diff
   struct timespec last; // last returned value
   int fd;               // fd for the file
   const str file;       // file name of the mmaped clock file
@@ -119,60 +117,44 @@ mmap_clock_t::init ()
 int
 mmap_clock_t::clock_gettime (struct timespec *out)
 {
-  int i;
-  struct timeval wt;
   struct timespec tmp;
-  bool timeok = false;
-
-  wt.tv_sec = 0;
-  wt.tv_usec = wait_time;
 
   assert (mmap_clock);
 
-  for (i = 0; i < tries && !timeok; i++) {
-    *out = mmp[0];
-    tmp = mmp[1];
+  *out = mmp[0];
+  tmp = mmp[1];
+
+  // either we're unlucky or the guy crashed an a strange state
+  // which is unlucky too
+  if (!TIMESPEC_EQ (*out, tmp)) {
+    warn << "*mmap clock: reverting to clock_gettime\n";
+    ::clock_gettime (CLOCK_REALTIME, out);
+    last = *out;
+    ++nbad;
 
     //
     // likely case -- timestamp in shared memory is stale.
-    // no sense in waiting since the time is going to be stale
-    // anyways. 
     //
-    if (TIMESPEC_LT (*out, last)) {
-      TIMESPEC_INC (&last) ;
-      *out = last;
+  } else if (TIMESPEC_LT (*out, last)) {
+    TIMESPEC_INC (&last) ;
+    *out = last;
+    ++nbad;
 
-      //
-      // give up if we haven't seen a fresh time val in a while
-      if (++n_since_diff > stale_threshold) 
-	break;
-
-      timeok = true;
-
-    } else if (TIMESPEC_EQ (*out, tmp)) {
-      last = *out;
-      n_since_diff = 0;
-      timeok = true;
-    }
-
-    // otherwise, let's wait for the times to equal out
-    select (0, NULL, NULL, NULL, &wt);
+    //
+    // if the two stamps are equal, and they're strictly greater than
+    // any timestamp we've previously issued, then it's OK to use it
+    // as normal. this should be happening every so often..
+    //
+  } else {
+    last = *out;
+    nbad = 0;
   }
 
-  if (i > 1)
-    warn << "*mmap clock: " << i << " tries needed\n";
-
-  int r = 0;
-  if (!timeok) {
-    // 
-    // calling mmap_clock_fail will delete this object;
-    // the next call to my_clock_gettime should use the more
-    // stable clock_gettime that is native to SFS.
-    //
+  if (nbad > stale_threshhold) 
+    // will delete this, so be careful
     mmap_clock_fail ();
-    r = my_clock_gettime (out);
-  }
-  return r;
+
+  return 0;
 }
 
 
