@@ -1598,6 +1598,14 @@ case $with_mode in
 		;;
 	"lite" )
 		sfstag=lite
+		;;
+	*)
+		if test "${with_mode+set}" = "set" ; then
+			{ { echo "$as_me:$LINENO: error: Unrecognized SFS build mode" >&5
+echo "$as_me: error: Unrecognized SFS build mode" >&2;}
+   { (exit 1); exit 1; }; }
+		fi
+		;;
 esac
 
 if test "${sfstag+set}" = "set" ; then
@@ -4128,7 +4136,7 @@ test x"$silent" = xyes && libtool_flags="$libtool_flags --silent"
 case "$lt_target" in
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 4131 "configure"' > conftest.$ac_ext
+  echo '#line 4139 "configure"' > conftest.$ac_ext
   if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -11523,7 +11531,6 @@ if test "${with_dmalloc+set}" = set; then
 test "$pref" = NONE && pref=$ac_default_prefix
 test "$withval" = yes && withval="${pref}"
 test "$withval" || withval="${pref}"
-test "${with_dmalloc+set}" = "set" && withval="${pref}"
 using_dmalloc=no
 if test "$withval" != no; then
 
