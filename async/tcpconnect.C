@@ -224,7 +224,7 @@ tcpsrvconnect_t::connectcb (int cn, int fd)
     error = errno;
 
   if (!srvl || ++cbad >= srvl->s_nsrv) {
-    errno == error;
+    errno = error;
     (*cb) (-1);
     delete this;
     return;
