@@ -186,7 +186,7 @@ AC_HEADER_SYS_WAIT
 AC_CHECK_HEADERS(string.h time.h)
 AC_CHECK_HEADERS(sys/rusage.h sys/mkdev.h)
 AC_CHECK_HEADERS(sys/sockio.h sys/filio.h sys/file.h sys/stropts.h)
-AC_CHECK_HEADERS(security/pam_appl.h)
+AC_CHECK_HEADERS(security/pam_appl.h pam/pam_appl.h)
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -254,6 +254,7 @@ AC_CHECK_FUNCS(pread pwrite)
 AC_CHECK_FUNCS(setlogin)
 AC_CHECK_FUNCS(unsetenv)
 AC_CHECK_FUNCS(getpeereid)
+AC_CHECK_FUNCS(auth_userresponse)
 SFS_GETGROUPLIST
 SFS_PTYLIB
 dnl AC_CHECK_FUNCS(popen times clock getrusage)
@@ -334,11 +335,21 @@ else
     LDEPS='$(LIBSFSMISC) $(LIBSVC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC)'
 fi
 
-AC_SUBST(LIBPAM)
-unset LIBPAM
-if test "$ac_cv_header_security_pam_appl_h" = yes; then
-	LIBPAM=-lpam
+unset AUTH_HELPER_STYLE
+AC_SUBST(AUTH_HELPER_STYLE)
+AC_SUBST(AUTH_HELPER_LIB)
+if test "$ac_cv_header_security_pam_appl_h" = yes \
+		-o "$ac_cv_header_pam_pam_appl_h" = yes; then
+	AUTH_HELPER_STYLE=auth_helper_pam.c
+	AUTH_HELPER_LIB=-lpam
 fi
+if test "$ac_cv_func_auth_userresponse" = yes; then
+	AUTH_HELPER_STYLE=auth_helper_bsd.c
+	AUTH_HELPER_LIB=
+fi
+
+AM_CONDITIONAL(USE_AUTH_HELPER,
+	test x"$USE_AUTH_HELPER" != xno -a "${AUTH_HELPER_STYLE+set}")
 
 #LDADD="$LDADD "'$(top_builddir)'"/svc/libsvc.la"
 #LDFLAGS="$LDFLAGS -L"'$(top_builddir)'"/svc"
@@ -354,8 +365,6 @@ for flag in $LDFLAGS; do
     fi
 done
 LDFLAGS="$new_LDFLAGS"
-
-AM_CONDITIONAL(HAVE_PAM, test "$LIBPAM")
 
 
 dnl
@@ -385,14 +394,16 @@ fi
 AC_SUBST(sfsbindir)
 CPPFLAGS="$CPPFLAGS -DEXECDIR="'\"$(sfsexecdir)\"'
 
+dnl
+dnl END sfslite changes
+dnl
+
+
+
 SFS_CFLAGS
 
 ETAGS_ARGS='-C /dev/null'
 AC_SUBST(ETAGS_ARGS)
-
-dnl
-dnl END sfslite changes
-dnl
 
 
 AC_ARG_ENABLE(uvfs,
@@ -474,7 +485,6 @@ AC_ARG_WITH(sfsgroup,
 --with-sfsgroup=name      Name of sfs group)
 
 
-
 dnl
 dnl BEGIN sfslite change
 dnl
@@ -484,5 +494,4 @@ AC_OUTPUT(Makefile async/Makefile rpcc/Makefile arpc/Makefile
 dnl
 dnl END sfslite change
 dnl
-
 

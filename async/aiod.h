@@ -174,7 +174,7 @@ public:
 
   aiod (u_int nproc = 1, ssize_t shmsize = 0x200000,
 	size_t maxbuf = 0x10000, bool shmpin = false,
-	const str &path = "aiod");
+	str path = NULL, str tmpdir = NULL);
   void finalize () { finalized = true; addref (); delref (); }
 
   ptr<aiobuf> bufalloc (size_t len);

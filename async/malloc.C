@@ -34,6 +34,17 @@ void (*xmalloc_handler) (int) = default_xmalloc_handler;
 #undef new
 dmalloc_t dmalloc;
 
+#ifndef CHECK_ARRAY_DELETE
+# define CHECK_ARRAY_DELETE 1
+#endif /* !CHECK_ARRAY_DELETE */
+#if CHECK_ARRAY_DELETE
+/* Want to catch array new followed by non-array delete */
+enum { new_array_shift = 8 };
+static char array_marker[new_array_shift] = { 
+  0x79, 0x46, 0x55, 0x93, 0x12, 0x69, 0xaa, 0x7f
+};
+#endif /* !CHECK_ARRAY_DELETE */
+
 void *
 operator new (size_t size, dmalloc_t, const char *file, int line)
 {
@@ -47,9 +58,18 @@ operator new (size_t size, dmalloc_t, const char *file, int line)
 void *
 operator new[] (size_t size, dmalloc_t, const char *file, int line)
 {
+#if CHECK_ARRAY_DELETE
+  size = size + new_array_shift;
+#endif /* CHECK_ARRAY_DELETE */
   if (!size)
     size = 1;
+#if CHECK_ARRAY_DELETE
+  char *ret = static_cast <char *> (_xmalloc_leap (file, line, size));
+  memcpy (ret, array_marker, new_array_shift);
+  return ret + new_array_shift;
+#else /* !CHECK_ARRAY_DELETE */
   return _xmalloc_leap (file, line, size);
+#endif /* !CHECK_ARRAY_DELETE */
 }
 
 void *
@@ -63,9 +83,18 @@ operator new (size_t size, nothrow_t, const char *file, int line) throw ()
 void *
 operator new[] (size_t size, nothrow_t, const char *file, int line) throw ()
 {
+#if CHECK_ARRAY_DELETE
+  size = size + new_array_shift;
+#endif /* CHECK_ARRAY_DELETE */
   if (!size)
     size = 1;
-  return _malloc_leap (file, line, size);
+#if CHECK_ARRAY_DELETE
+  char *ret = static_cast <char *> (_xmalloc_leap (file, line, size));
+  memcpy (ret, array_marker, new_array_shift);
+  return ret + new_array_shift;
+#else /* !CHECK_ARRAY_DELETE */
+  return _xmalloc_leap (file, line, size);
+#endif /* !CHECK_ARRAY_DELETE */
 }
 
 #else /* !DMALLOC */
@@ -111,23 +140,7 @@ operator new (size_t size) throw (bad_alloc)
 }
 
 void *
-operator new[] (size_t size) throw (bad_alloc)
-{
-  if (!size)
-    size = 1;
-  return txmalloc (size);
-}
-
-void *
 operator new (size_t size, nothrow_t) throw ()
-{
-  if (!size)
-    size = 1;
-  return malloc (size);
-}
-
-void *
-operator new[] (size_t size, nothrow_t) throw ()
 {
   if (!size)
     size = 1;
@@ -144,8 +157,79 @@ operator delete (void *ptr) delete_throw
   xfree (ptr);
 }
 
+#ifndef DMALLOC
+
+void *
+operator new[] (size_t size) throw (bad_alloc)
+{
+  if (!size)
+    size = 1;
+  return txmalloc (size);
+}
+
+void *
+operator new[] (size_t size, nothrow_t) throw ()
+{
+  if (!size)
+    size = 1;
+  return malloc (size);
+}
+
 void
 operator delete[] (void *ptr) delete_throw
 {
   xfree (ptr);
 }
+
+#else /* DMALLOC */
+
+void *
+operator new[] (size_t size) throw (bad_alloc)
+{
+#if CHECK_ARRAY_DELETE
+  size = size + new_array_shift;
+#endif /* CHECK_ARRAY_DELETE */
+  if (!size)
+    size = 1;
+#if CHECK_ARRAY_DELETE
+  char *ret = static_cast <char *> (txmalloc (size));
+  memcpy (ret, array_marker, new_array_shift);
+  return ret + new_array_shift;
+#else /* !CHECK_ARRAY_DELETE */
+  return txmalloc (size);
+#endif /* !CHECK_ARRAY_DELETE */
+}
+
+void *
+operator new[] (size_t size, nothrow_t) throw ()
+{
+#if CHECK_ARRAY_DELETE
+  size = size + new_array_shift;
+#endif /* CHECK_ARRAY_DELETE */
+  if (!size)
+    size = 1;
+#if CHECK_ARRAY_DELETE
+  char *ret = static_cast <char *> (txmalloc (size));
+  memcpy (ret, array_marker, new_array_shift);
+  return ret + new_array_shift;
+#else /* !CHECK_ARRAY_DELETE */
+  return txmalloc (size);
+#endif /* !CHECK_ARRAY_DELETE */
+}
+
+void
+operator delete[] (void *_ptr) delete_throw
+{
+#if CHECK_ARRAY_DELETE
+  char *ptr = static_cast<char *> (_ptr) - new_array_shift;
+  if (memcmp (ptr, array_marker, new_array_shift)) {
+    char msg[] = "non-array delete of array (or fencepost error)\n";
+    write (errfd, msg, sizeof (msg) - 1);
+  }
+  xfree (ptr);
+#else /* !CHECK_ARRAY_DELETE */
+  xfree (_ptr);
+#endif /* !CHECK_ARRAY_DELETE */
+}
+
+#endif /* DMALLOC */

@@ -121,14 +121,14 @@ aiod::daemon::launch (str path, int shmfd, int commonfd)
   return true;
 }
 
-aiod::aiod (u_int nproc, ssize_t shmsize, size_t mb, bool sp, const str &path)
+aiod::aiod (u_int nproc, ssize_t shmsize, size_t mb, bool sp,
+	    str path, str tmpdir)
   : closed (false), finalized (false), growlock (false),
     bufwakereq (false), bufwakelock (false), shmpin (sp),
     refcnt (0), shmmax (shmsize + mb - 1 & ~(mb - 1)), shmlen (0),
     bb (shmlen, minbuf, mb), ndaemons (nproc), fhno_ctr (1), maxbuf (mb)
 {
   assert (shmsize > 0);
-
   static const char *const templates[] = {
     "/var/tmp/aioshmXXXXXXXX",
     "/usr/tmp/aioshmXXXXXXXX",
@@ -138,13 +138,28 @@ aiod::aiod (u_int nproc, ssize_t shmsize, size_t mb, bool sp, const str &path)
 
   str tmpfile;
   mode_t m = umask (077);
-  for (const char *const *p = templates; *p && !tmpfile; p++) {
-    char *temp = xstrdup (*p);
+
+  if (!tmpdir)
+    tmpdir = safegetenv ("TMPDIR");
+  if (tmpdir && tmpdir.len ()) {
+    if (tmpdir[tmpdir.len () - 1] == '/')
+      tmpdir = strbuf () << tmpdir << "aioshmXXXXXXXX";
+    else
+      tmpdir = strbuf () << tmpdir << "/aioshmXXXXXXXX";
+    char *temp = xstrdup (tmpdir);
     shmfd = mkstemp (temp);
     if (shmfd > 0)
       tmpfile = temp;
     xfree (temp);
   }
+  else
+    for (const char *const *p = templates; *p && !tmpfile; p++) {
+      char *temp = xstrdup (*p);
+      shmfd = mkstemp (temp);
+      if (shmfd > 0)
+	tmpfile = temp;
+      xfree (temp);
+    }
   if (!tmpfile)
     fatal ("aiod: could not create temporary file: %m\n");
   umask (m);
@@ -169,6 +184,8 @@ aiod::aiod (u_int nproc, ssize_t shmsize, size_t mb, bool sp, const str &path)
   int rfd = fds[0];
   shutdown (rfd, 1);
 
+  if (!path)
+    path = "aiod";
   str aiod_path = fix_exec_path (path);
   dv = New daemon[ndaemons];
   for (u_int i = 0; i < ndaemons; i++) {

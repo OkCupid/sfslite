@@ -74,8 +74,8 @@ tcpportconnect_t::~tcpportconnect_t ()
 void
 tcpportconnect_t::connect_to_name (str hostname, bool dnssearch)
 {
-  dns_hostbyname (hostname, wrap (this, &tcpportconnect_t::name_cb),
-		  dnssearch);
+  dnsp = dns_hostbyname (hostname, wrap (this, &tcpportconnect_t::name_cb),
+			 dnssearch);
 }
 
 void

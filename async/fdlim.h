@@ -91,7 +91,11 @@ fdlim_set (rlim_t lim, int hard)
       rlfd.rlim_cur = lim;
     break;
   default:
+#ifdef assert
     assert (0);
+#else /* !assert */
+    return -1;
+#endif /* !assert */
   }
 
   if (setrlimit (RLIMIT_NOFILE, &rlfd) < 0)
