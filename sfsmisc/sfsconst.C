@@ -26,6 +26,8 @@
 #include "parseopt.h"
 #include <pwd.h>
 #include <grp.h>
+#include "async.h"
+#include "crypt.h"
 
 #ifndef SFSUSER
 # define SFSUSER "sfs"
@@ -454,4 +456,23 @@ sfshostname ()
   for (u_int i = 0; i < name.len (); i++)
     m[i] = tolower (name[i]);
   return m;
+}
+
+static void
+setbool (bool *bp)
+{
+  *bp = true;
+}
+
+void
+rndkbd ()
+{
+  warnx << "\nI need secret bits with which to"
+    " seed the random number generator.\n"
+    "Please type some random or unguessable text until you hear a beep:\n";
+  bool finished = false;
+  if (!getkbdnoise (64, &rnd_input, wrap (&setbool, &finished)))
+    fatal << "no tty\n";
+  while (!finished)
+    acheck ();
 }
