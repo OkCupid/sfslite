@@ -50,10 +50,16 @@ axprt_clone::doread (void *buf, size_t maxlen)
 void
 axprt_clone::extract (int *fdp, str *datap)
 {
-  *datap = str (pktbuf, pktlen);
+  *datap = str (pktbuf, pktlen); 
   *fdp = takefd ();
 }
 
+//
+// MK Unauthorized Comment:
+//    An rcb on an axprt_unix will fill in the last 3 args;
+//    cloned servers put this packet back in the stream so that the
+//    new axprt will have this packet waiting for them.
+//
 void
 cloneserv_accept (ptr<axprt_unix> x, cloneserv_cb cb,
 		  const char *pkt, ssize_t len, const sockaddr *)

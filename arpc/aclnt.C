@@ -100,19 +100,12 @@ callbase::timeout (time_t duration)
     tmo = t;
 }
 
-static u_int32_t
-default_next_xid ()
-{
-  static u_int32_t xid;
-  return ++xid;
-}
-u_int32_t (*next_xid) () = default_next_xid;
-
+u_int32_t (*next_xid) () = arandom;
 static u_int32_t
 genxid (xhinfo *xi)
 {
   u_int32_t xid;
-  while (xi->xidtab[xid = (*next_xid) ()])
+  while (xi->xidtab[xid = (*next_xid) ()] || !xid)
     ;
   return xid;
 }
