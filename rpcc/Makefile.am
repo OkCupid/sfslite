@@ -48,6 +48,7 @@ parse.cc: parse.yy
 		fi;						\
 	fi
 
+parse.o: parse.cc 
 #parse.o: parse.cc parse.h
 #
 # got rid of this dependecy on parse.h, which was confusing gmake

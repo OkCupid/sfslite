@@ -27,6 +27,7 @@
 
 #include "amisc.h"
 #include "init.h"
+#include "litetime.h"
 
 /* core.C */
 struct timecb_t;
