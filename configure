@@ -14775,6 +14775,12 @@ fi
 
 sfsexecdir="$sfslibdir"
 
+if test -z "$sfstag"; then
+	sfsbindir='${prefix}/bin'
+else
+	sfsbindir="$sfslibdir"
+fi
+
 CPPFLAGS="$CPPFLAGS -DEXECDIR="'\"$(sfsexecdir)\"'
 
 unset CFLAGS
@@ -15614,6 +15620,7 @@ s,@sfslibdir@,$sfslibdir,;t t
 s,@sfslibdirp@,$sfslibdirp,;t t
 s,@sfsincludedir@,$sfsincludedir,;t t
 s,@sfsexecdir@,$sfsexecdir,;t t
+s,@sfsbindir@,$sfsbindir,;t t
 s,@ETAGS_ARGS@,$ETAGS_ARGS,;t t
 s,@UVFS_DIR@,$UVFS_DIR,;t t
 s,@UVFS_TRUE@,$UVFS_TRUE,;t t

@@ -345,6 +345,12 @@ fi
 AC_SUBST(sfsincludedir)
 sfsexecdir="$sfslibdir"
 AC_SUBST(sfsexecdir)
+if test -z "$sfstag"; then
+	sfsbindir='${prefix}/bin'
+else
+	sfsbindir="$sfslibdir"
+fi
+AC_SUBST(sfsbindir)
 CPPFLAGS="$CPPFLAGS -DEXECDIR="'\"$(sfsexecdir)\"'
 
 SFS_CFLAGS
