@@ -379,6 +379,7 @@ dnl
 dnl BEGIN sfslite changes
 dnl
 dnl Auxilliary executables go in sfsexecdi
+SFS_MMAP
 if test -z "$sfslibdir"; then
 	sfslibdirp='${pkglibdir}-${VERSION}'
 	sfslibdir='${pkglibdir}-${VERSION}${sfstagdir}'
@@ -495,7 +496,6 @@ AC_ARG_WITH(sfsgroup,
 dnl
 dnl BEGIN sfslite change
 dnl
-SFS_MMAP
 AC_OUTPUT(Makefile async/Makefile rpcc/Makefile arpc/Makefile
 	crypt/Makefile sfsmisc/Makefile libsfs/Makefile)
 

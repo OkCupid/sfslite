@@ -1846,6 +1846,7 @@ dnl
 AC_DEFUN(SFS_MMAP,
 [AC_CACHE_CHECK(for MAP_NOSYNC option, sfs_map_nosync_opt,
 [AC_TRY_COMPILE([
+#include <sys/types.h>
 #include <sys/mman.h>
 ], [
 int i = MAP_NOSYNC;

@@ -46,7 +46,7 @@ parse.cc: parse.yy
 		fi;						\
 	fi
 
-parse.o: parse.cc parse.h
+parse.o: parse.cc 
 # Note: certain versions of bison put __attribute__((unused)) after
 # unused goto labels, which doesn't agree well with gcc 3.2.1.
 # If you have problems, try the next line instead of the following one.
