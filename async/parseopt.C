@@ -234,7 +234,7 @@ conftab_str::set ()
     if (check) {
       if (dest->len ()) {
 	warn << loc << ": " << name << ": variable already defined\n";
-	*errp = false;
+	*errp = true;
       } else {
 	*dest = tmp_s;
       }
