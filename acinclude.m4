@@ -1618,12 +1618,10 @@ case $with_mode in
 		CXXDEBUG='-g -pg -O2'
 		;;
 
-	"optmz")
-		sfstag=lite
-		;;
-
-	"lite" )
-		sfstag=lite
+	"optmz" | "lite" )
+		dnl
+		dnl no-op, should go in the regular sfslite directory
+		dnl
 		;;
 
 	*)
