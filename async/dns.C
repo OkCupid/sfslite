@@ -76,7 +76,7 @@ public:
   u_int16_t id;			// DNS query ID
   str basename;			// Name for which to search
   str name;			// Name for which to query
-  u_short type;			// Type of query (T_A, T_PTR, etc.)
+  u_int16_t type;		// Type of query (T_A, T_PTR, etc.)
 
   ihash_entry<dnsreq> hlink;	// Per-id hash table link
   tmoq_entry<dnsreq> tlink;	// Retransmit queue link
@@ -99,7 +99,7 @@ time_t dnsreq::last_resp;
 time_t dnsreq::last_reload;
 
 
-static ihash<u_short, dnsreq, &dnsreq::id, &dnsreq::hlink> reqtab;
+static ihash<u_int16_t, dnsreq, &dnsreq::id, &dnsreq::hlink> reqtab;
 static tmoq<dnsreq, &dnsreq::tlink, 1, 5> reqtoq;
 
 static void dns_reload_dumpres (int fd);
@@ -107,12 +107,7 @@ static void dns_reload_dumpres (int fd);
 u_int16_t
 dnsreq::genid ()
 {
-#ifndef HAVE_ARC4RANDOM
-  static u_short dns_lastid;
-  return ++dns_lastid;
-#else /* HAVE_ARC4RANDOM */
-  return arc4random () & 0xffff;
-#endif /* HAVE_ARC4RANDOM */
+  return arandom () & 0xffff;
 }
 
 void
@@ -121,7 +116,6 @@ dnsreq::fail (int err)
   if (!error)
     error = err;
   readreply (NULL);
-  delete this;
 }
 
 void
@@ -417,6 +411,33 @@ dnsreq *
 dns_mxbyname (str name, cbmxlist cb, bool search)
 {
   return New dnsreq_mx (name, cb, search);
+}
+
+class dnsreq_srv : public dnsreq {
+  cbsrvlist cb;
+  dnsreq_srv ();
+public:
+  dnsreq_srv (str n, cbsrvlist c, bool s)
+    : dnsreq (n, T_SRV, s), cb (c) {}
+  void readreply (dnsparse *);
+};
+
+void
+dnsreq_srv::readreply (dnsparse *reply)
+{
+  ptr<srvlist> s;
+  if (!error) {
+    if (!(s = reply->tosrvlist ()))
+      error = reply->error;
+  }
+  (*cb) (s, error);
+  delete this;
+}
+
+dnsreq *
+dns_srvbyname (str name, cbsrvlist cb, bool search)
+{
+  return New dnsreq_srv (name, cb, search);
 }
 
 class dnsreq_ptr : public dnsreq {

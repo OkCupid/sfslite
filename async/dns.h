@@ -49,13 +49,25 @@ int res_mkquery (int, const char *, int, int,
 struct hostent;
 
 struct mxrec {
-  u_short pref;
+  u_int16_t pref;
   char *name;
 };
 struct mxlist {
-  char *m_name;                /* Name of host for which MX list taken */
-  u_short m_nmx;               /* Number of mx records */
-  struct mxrec m_mxes[1];      /* MX records */
+  char *m_name;		    /* Name of host for which MX list taken */
+  u_short m_nmx;		/* Number of mx records */
+  struct mxrec m_mxes[1];	/* MX records */
+};
+
+struct srvrec {
+  u_int16_t prio;
+  u_int16_t weight;
+  u_int16_t port;
+  char *name;
+};
+struct srvlist {
+  char *s_name;
+  u_short s_nsrv;
+  struct srvrec s_srvs[1];
 };
 
 /* Extender error types for ar_errno */
@@ -78,11 +90,22 @@ dnsreq_t *dns_hostbyaddr (const in_addr, cbhent);
 typedef callback<void, ptr<mxlist>, int>::ref cbmxlist;
 dnsreq_t *dns_mxbyname (str, cbmxlist, bool search = false);
 
+typedef callback<void, ptr<srvlist>, int>::ref cbsrvlist;
+dnsreq_t *dns_srvbyname (str name, cbsrvlist, bool search = false);
+
+inline dnsreq_t *
+dns_srvbyname (const char *name, const char *proto, const char *srv,
+	       cbsrvlist cb, bool search = false)
+{
+  return dns_srvbyname (strbuf ("_%s._%s.%s", srv, proto, name), cb, search);
+}
+
 const char *dns_strerror (int);
 int dns_tmperr (int);
 
 void printaddrs (const char *, ptr<hostent>, int = 0);
 void printmxlist (const char *, ptr<mxlist>, int = 0);
+void printsrvlist (const char *msg, ptr<srvlist> s, int = 0);
 
 void dns_reload ();
 

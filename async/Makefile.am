@@ -14,7 +14,7 @@ noinst_PROGRAMS = dftables
 sfsexec_PROGRAMS = aiod
 
 libasync_la_SOURCES = \
-clock_gettime.c flock.c rwfd.c stktrace.c suidprotect.c \
+arandom.c clock_gettime.c flock.c rwfd.c stktrace.c suidprotect.c \
 maketables.c pcre.c study.c \
 aerr.C aio.C aios.C arena.C armor.C bbuddy.C cbuf.C convertint.C	\
 core.C daemonize.C dns.C dnsparse.C err.C fdwait.C ident.C ifchg.C	\

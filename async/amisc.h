@@ -44,6 +44,12 @@ extern cbb cbb_null;
 extern cbv cbv_null;
 extern cbi cbi_null;
 
+/* arandom.c */
+extern "C" {
+  extern u_int32_t (*arandom_fn) ();
+  u_int32_t arandom ();
+}
+
 /* straux.C */
 char *mempbrk (char *, const char *, int);
 char *xstrsep (char **, const char *);

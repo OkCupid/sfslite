@@ -42,6 +42,12 @@ struct resrec {
     u_int32_t soa_expire;
     u_int32_t soa_minimum;
   };
+  struct rd_srv {
+    u_int16_t srv_prio;
+    u_int16_t srv_weight;
+    u_int16_t srv_port;
+    char srv_target[MAXDNAME];
+  };
 
   char rr_name[MAXDNAME];
   u_int16_t rr_class;
@@ -56,6 +62,7 @@ struct resrec {
     char rr_ptr[MAXDNAME];
     rd_mx rr_mx;
     char rr_txt[MAXDNAME];
+    rd_srv rr_srv;
   };
 };
 
@@ -73,11 +80,15 @@ class dnsparse {
   const u_char *anp;
 
   static int mxrec_cmp (const void *, const void *);
+  static int srvrec_cmp (const void *, const void *);
+  static void srvrec_randomize (srvrec *base, srvrec *last);
 
 public:
   int error;
   const HEADER *const hdr;
   const u_int ancount;
+  const u_int nscount;
+  const u_int arcount;
 
   dnsparse (const u_char *buf, size_t len, bool answer = true);
 
@@ -90,6 +101,7 @@ public:
 
   ptr<hostent> tohostent ();
   ptr<mxlist> tomxlist ();
+  ptr<srvlist> tosrvlist ();
 };
 
 #endif /* !_DNSPARSE_H_ */

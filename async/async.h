@@ -66,6 +66,8 @@ struct tcpconnect_t;
 tcpconnect_t *tcpconnect (in_addr addr, u_int16_t port, cbi cb);
 tcpconnect_t *tcpconnect (str hostname, u_int16_t port, cbi cb,
 			  bool dnssearch = true, str *namep = NULL);
+tcpconnect_t *tcpconnect_srv (str hostname, str service, u_int16_t defport,
+			      cbi cb, bool dnssearch = true);
 void tcpconnect_cancel (tcpconnect_t *tc);
 
 /* ident.C */

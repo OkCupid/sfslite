@@ -29,6 +29,7 @@
 #include "dnsparse.h"
 #include "arena.h"
 #include "vec.h"
+#include "qhash.h"
 
 extern "C" {
 #ifdef NEED_DN_SKIPNAME_DECL
@@ -65,7 +66,9 @@ dnsparse::dnsparse (const u_char *buf, size_t len, bool answer)
   : buf (buf), eom (buf + len),
     anp (NULL), error (0),
     hdr (len > sizeof (HEADER) ? (HEADER *) buf : NULL),
-    ancount (hdr ? ntohs (hdr->ancount) : 0)
+    ancount (hdr ? ntohs (hdr->ancount) : 0),
+    nscount (hdr ? ntohs (hdr->nscount) : 0),
+    arcount (hdr ? ntohs (hdr->arcount) : 0)
 {
   if (!hdr)
     error = ARERR_BADRESP;
@@ -73,8 +76,12 @@ dnsparse::dnsparse (const u_char *buf, size_t len, bool answer)
     error = hdr->rcode;
   else if ((!hdr->qr && answer) || (hdr->qr && !answer))
     error = ARERR_BADRESP;
-  else if (hdr->tc || !ntohs (hdr->qdcount))
+  else if (!ntohs (hdr->qdcount))
     error = ARERR_BADRESP;
+#if 0
+  else if (hdr->tc)
+    error = ARERR_BADRESP;
+#endif
   else {
     const u_char *cp = getqp ();
     for (int i = 0, l = ntohs (hdr->qdcount); i < l; i++) {
@@ -177,6 +184,17 @@ dnsparse::rrparse (const u_char **cpp, resrec *rrp)
     GETLONG (rrp->rr_soa.soa_retry, cp);
     GETLONG (rrp->rr_soa.soa_expire, cp);
     GETLONG (rrp->rr_soa.soa_minimum, cp);
+    break;
+  case T_SRV:
+    if (rdlen < 7)
+      return false;
+    GETSHORT (rrp->rr_srv.srv_prio, cp);
+    GETSHORT (rrp->rr_srv.srv_weight, cp);
+    GETSHORT (rrp->rr_srv.srv_port, cp);
+    if ((n = dn_expand (buf, eom, cp, rrp->rr_srv.srv_target,
+			sizeof (rrp->rr_srv.srv_target))) < 0)
+      return false;
+    cp += n;
     break;
   default:
     cp = e;
@@ -289,16 +307,18 @@ dnsparse::tomxlist ()
 
   for (u_int i = 0; i < ancount; i++) {
     resrec rr;
-    if (rrparse (&cp, &rr)) {
+    if (!rrparse (&cp, &rr)) {
       error = ARERR_BADRESP;
       return NULL;
     }
     if (rr.rr_class == C_IN && rr.rr_type == T_MX) {
-      u_short pr = rr.rr_mx.mx_pref;
+      u_int16_t pr = rr.rr_mx.mx_pref;
       u_int mxi;
 
       if (!name)
 	name = a.strdup (rr.rr_name);
+      else if (strcasecmp (name, rr.rr_name))
+	continue;
 
       for (mxi = 0; mxi < nmx && strcasecmp (rr.rr_mx.mx_exch,
 					     mxes[mxi].name); mxi++)
@@ -344,6 +364,141 @@ dnsparse::tomxlist ()
   return mxl;
 }
 
+int
+dnsparse::srvrec_cmp (const void *_a, const void *_b)
+{
+  const srvrec *a = (srvrec *) _a, *b = (srvrec *) _b;
+  if (int d = (int) a->prio - (int) b->prio)
+    return d;
+  return (int) b->weight - (int) a->weight;
+}
+
+void
+dnsparse::srvrec_randomize (srvrec *base, srvrec *last)
+{
+  qsort (base, last - base, sizeof (*base), &srvrec_cmp);
+
+#if 0
+  for (srvrec *x = base; x < last; x++)
+    warn ("DBG:  %3d %3d %5d %s\n", x->prio, x->weight, x->port, x->name);
+#endif
+
+  while (base < last) {
+    srvrec *lastprio = base;
+    u_int totweight;
+
+    /* It's not clear from RFC 2782 if we need to randomize multiple
+     * records with weight 0 at the same priority.  We do it anyway
+     * just because it might be helpful. */
+    if (base->weight == 0) {
+      totweight = 1;
+      while (++lastprio < last && lastprio->prio == base->prio)
+	totweight++;
+      while (base + 1 < lastprio) {
+	u_int which = arandom () % totweight;
+	if (which) {
+	  srvrec tmp = base[which];
+	  base[which] = *base;
+	  *base = tmp;
+	}
+	base++;
+	totweight--;
+      }
+    }
+    else {
+      totweight = lastprio->weight;
+      while (++lastprio < last && lastprio->weight
+	     && lastprio->prio == base->prio)
+	totweight += lastprio->weight;
+
+      while (base + 1 < lastprio) {
+	u_int32_t rndweight = arandom () % totweight + 1;
+	srvrec *nextrec;
+	for (nextrec = base; nextrec->weight < rndweight; nextrec++)
+	  rndweight -= nextrec->weight;
+	srvrec tmp = *base;
+	*base = *nextrec;
+	*nextrec = tmp;
+	totweight -= base++->weight;
+      }
+      assert (totweight == base->weight);
+    }
+
+    base++;
+  }
+}
+
+ptr<srvlist>
+dnsparse::tosrvlist ()
+{
+  const u_char *cp = getanp ();
+  arena a;
+  int n_chars = 0;
+  char *name = NULL;
+  srvrec *recs;
+
+  if (!cp)
+    return NULL;
+
+  u_int nsrvs = 0;
+  recs = (srvrec *) a.alloc ((1 + ancount) * sizeof (*recs));
+
+  for (u_int i = 0; i < ancount; i++) {
+    resrec rr;
+    if (!rrparse (&cp, &rr)) {
+      error = ARERR_BADRESP;
+      return NULL;
+    }
+    if (rr.rr_class != C_IN || rr.rr_type != T_SRV)
+      continue;
+    if (!name) {
+      name = a.strdup (rr.rr_name);
+      n_chars += strlen (name) + 1;
+    }
+    else if (strcasecmp (name, rr.rr_name))
+      continue;
+
+#if 1
+    for (u_int i = 0; i < nsrvs; i++)
+      if (recs[i].prio == rr.rr_srv.srv_prio
+	  && recs[i].port == rr.rr_srv.srv_port
+	  && !strcasecmp (recs[i].name, rr.rr_srv.srv_target)) {
+	rr.rr_srv.srv_weight += recs[i].weight;
+	continue;
+      }
+#endif
+
+    srvrec &sr = recs[nsrvs++];
+    sr.prio = rr.rr_srv.srv_prio;
+    sr.weight = rr.rr_srv.srv_weight;
+    sr.port = rr.rr_srv.srv_port;
+    sr.name = a.strdup (rr.rr_srv.srv_target);
+    n_chars += strlen (sr.name) + 1;
+  }
+
+  srvrec_randomize (recs, recs + nsrvs);
+
+  ref<srvlist> s = refcounted<srvlist, vsize>::alloc
+    (offsetof (srvlist, s_srvs[nsrvs]) + n_chars);
+  s->s_nsrv = nsrvs;
+  char *np = reinterpret_cast<char *> (&s->s_srvs[nsrvs]);
+  s->s_name = np;
+  strcpy (np, name);
+  np += strlen (np) + 1;
+
+  for (u_int i = 0; i < s->s_nsrv; i++) {
+    s->s_srvs[i].prio = recs[i].prio;
+    s->s_srvs[i].weight = recs[i].weight;
+    s->s_srvs[i].port = recs[i].port;
+    s->s_srvs[i].name = np;
+    strcpy (np, recs[i].name);
+    np += strlen (np) + 1;
+  }
+  
+  return s;
+}
+
+
 #if 1
 void
 printaddrs (const char *msg, ptr<hostent> h, int dns_errno)
@@ -385,5 +540,24 @@ printmxlist (const char *msg, ptr<mxlist> m, int dns_errno)
   printf ("    Name: %s\n", m->m_name);
   for (i = 0; i < m->m_nmx; i++)
     printf ("      MX: %3d %s\n", m->m_mxes[i].pref, m->m_mxes[i].name);
+}
+
+void
+printsrvlist (const char *msg, ptr<srvlist> s, int dns_errno)
+{
+  int i;
+
+  if (msg)
+    printf ("%s (srvlist):\n", msg);
+
+  if (!s) {
+    printf ("   Error: %s\n", dns_strerror (dns_errno));
+    return;
+  }
+
+  printf ("    Name: %s\n", s->s_name);
+  for (i = 0; i < s->s_nsrv; i++)
+    printf ("     SRV: %3d %3d %3d %s\n", s->s_srvs[i].prio,
+	    s->s_srvs[i].weight, s->s_srvs[i].port, s->s_srvs[i].name);
 }
 #endif
