@@ -170,7 +170,7 @@ private:
 
 public:
   bhash () {}
-  void clear () { deleteall (); }
+  void clear () { this->deleteall (); }
   ~bhash () { clear (); }
 
   bool insert (const K &k) {

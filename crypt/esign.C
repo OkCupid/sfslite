@@ -74,30 +74,58 @@ esign_priv::esign_priv (const bigint &p, const bigint &q, u_long kk)
   assert (p > q);
 }
 
+void
+esign_priv::precompute () const
+{
+  precomp &prc = prevec.push_back ();
+  prc.x = random_zn (p);
+  kpow (&prc.xk, prc.x);
+  prc.x_over_kxk = prc.xk * k;
+  prc.x_over_kxk = invert (prc.x_over_kxk, p);
+  prc.x_over_kxk *= prc.x;
+}
+
 bigint
 esign_priv::raw_sign (const bigint &v) const
 {
-  bigint x = random_zn (p);
-  bigint xk;
-  kpow (&xk, x);
-  bigint w = v - xk;
-  if (mpz_sgn (&w) < 0)
-    w += n;
-  mpz_cdiv_q (&w, &w, &pq);
-  assert (mpz_sgn (&w) > 0);
+  if (prevec.empty ()) {
+    bigint x = random_zn (p);
+    bigint xk;
+    kpow (&xk, x);
+    bigint w = v - xk;
+    if (mpz_sgn (&w) < 0)
+      w += n;
+    mpz_cdiv_q (&w, &w, &pq);
+    assert (mpz_sgn (&w) > 0);
 #if 1
-  xk *= k;
-#else /* Don't notice a speedup */
-  if (log2k < 0)
     xk *= k;
-  else
-    xk <<= log2k;
+#else /* Don't notice a speedup */
+    if (log2k < 0)
+      xk *= k;
+    else
+      xk <<= log2k;
 #endif
-  xk = invert (xk, p);
-  xk *= x;
-  xk *= w;
-  xk = mod (xk, p);
-  return mod (x + xk * pq, n);
+    xk = invert (xk, p);
+    xk *= x;
+    xk *= w;
+    xk = mod (xk, p);
+    return mod (x + xk * pq, n);
+  }
+  else {
+    precomp &prc = prevec.front ();
+    bigint w (v - prc.xk);
+    if (mpz_sgn (&w) < 0)
+      w += n;
+    mpz_cdiv_q (&w, &w, &pq);
+    assert (mpz_sgn (&w) > 0);
+    w *= prc.x_over_kxk;
+    w = mod (w, p);
+    w *= pq;
+    w += prc.x;
+    w = mod (w, n);
+    prevec.pop_front ();
+    return w;
+  }
 }
 
 esign_priv

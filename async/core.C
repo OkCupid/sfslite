@@ -119,8 +119,10 @@ static void sigcb_check ();
 void
 chldcb (pid_t pid, cbi::ptr cb)
 {
-  if (child *c = chldcbs[pid])
+  if (child *c = chldcbs[pid]) {
     chldcbs.remove (c);
+    delete c;
+  }
   if (cb)
     chldcbs.insert (New child (pid, cb));
 }

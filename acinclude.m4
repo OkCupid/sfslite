@@ -3,11 +3,11 @@ dnl
 dnl Find full path to program
 dnl
 AC_DEFUN(SFS_PATH_PROG,
-[AC_PATH_PROG(PATH_[]translit($1, [a-z], [A-Z]), $1,,
+[AC_PATH_PROG(PATH_[]translit($1, [-a-z.], [_A-Z_]), $1,,
 $2[]ifelse($2,,,:)/usr/bin:/bin:/sbin:/usr/sbin:/usr/etc:/usr/libexec:/usr/ucb:/usr/bsd:/usr/5bin:$PATH:/usr/local/bin:/usr/local/sbin:/usr/X11R6/bin)
-if test "$PATH_[]translit($1, [a-z], [A-Z])"; then
-    AC_DEFINE_UNQUOTED(PATH_[]translit($1, [a-z], [A-Z]),
-		       "$PATH_[]translit($1, [a-z], [A-Z])",
+if test "$PATH_[]translit($1, [-a-z.], [_A-Z_])"; then
+    AC_DEFINE_UNQUOTED(PATH_[]translit($1, [-a-z.], [_A-Z_]),
+		       "$PATH_[]translit($1, [-a-z.], [_A-Z_])",
 			Full path of $1 command)
 fi])
 dnl
@@ -762,6 +762,124 @@ if test $sfs_cv_large_sock_buf = yes; then
 		  Define if SO_SNDBUF/SO_RCVBUF can exceed 64K.)
 fi])
 dnl
+dnl  Test to see if we can bind a port with SO_REUSEADDR when
+dnl  there is a connected TCP socket using the same port number,
+dnl  but the connected socket does not have SO_REUSEADDR set.
+dnl
+AC_DEFUN(SFS_CHECK_BSD_REUSEADDR,
+[AC_CACHE_CHECK(for BSD SO_REUSEADDR semantics, sfs_cv_bsd_reuseaddr,
+[AC_RUN_IFELSE([changequote changequote([[,]])[[
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+
+#include "confdefs.h"
+
+#ifndef HAVE_SOCKLEN_T
+# define socklen_t int
+#endif /* !HAVE_SOCKLEN_T */
+
+#ifndef bzero
+# define bzero(a,b)   memset((a), 0, (b))
+#endif /* !bzero */
+
+int
+inetsocket (unsigned long addr, int port, int *portp)
+{
+  int s;
+  struct sockaddr_in sin;
+  int n = 1;
+
+  bzero (&sin, sizeof (sin));
+  sin.sin_family = AF_INET;
+  sin.sin_port = htons (port);
+  sin.sin_addr.s_addr = htonl (addr);
+
+  s = socket (AF_INET, SOCK_STREAM, 0);
+  if (s < 0) {
+    perror ("socket");
+    exit (2);
+  }
+  if (port && setsockopt (s,SOL_SOCKET, SO_REUSEADDR, &n, sizeof n) < 0) {
+    perror ("SO_REUSEADDR");
+    exit (2);
+  }
+  if (bind (s, (struct sockaddr *) &sin, sizeof (sin)) < 0)
+    return -1;
+  if (portp) {
+    socklen_t sinlen = sizeof (sin);
+    getsockname (s, (struct sockaddr *) &sin, &sinlen);
+    *portp = ntohs (sin.sin_port);
+  }
+
+  return s;
+}
+
+int
+connectlocal (int s, int dport)
+{
+  struct sockaddr_in sin;
+
+  bzero (&sin, sizeof (sin));
+  sin.sin_family = AF_INET;
+  sin.sin_port = htons (dport);
+  sin.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
+  return connect (s, (struct sockaddr *) &sin, sizeof (sin));
+}
+
+void
+make_async (int s)
+{
+  int n;
+  if ((n = fcntl (s, F_GETFL)) < 0
+      || fcntl (s, F_SETFL, n | O_NONBLOCK) < 0) {
+    perror ("fcntl");
+    exit (2);
+  }
+}
+
+int
+main (int argc, char **argv)
+{
+  int s1, s1p;
+  int c1, c1p;
+  int c2;
+
+  s1 = inetsocket (INADDR_LOOPBACK, 0, &s1p);
+  listen (s1, 5);
+
+  c1 = inetsocket (INADDR_LOOPBACK, 0, &c1p);
+  make_async (c1);
+  if (connectlocal (c1, s1p) < 0) {
+    if (errno == EINPROGRESS) {
+      struct sockaddr_in sin;
+      socklen_t sinlen = sizeof (sin);
+      sin.sin_family = AF_INET;
+      accept (s1, (struct sockaddr *) &sin, &sinlen);
+    }
+    else {
+      perror ("connect");
+      exit (2);
+    }
+  }
+
+  c2 = inetsocket (INADDR_ANY, c1p, NULL);
+  exit (c2 < 0);
+}
+]]changequote([,])],
+	sfs_cv_bsd_reuseaddr=yes, sfs_cv_bsd_reuseaddr=no,
+	sfs_cv_bsd_reuseaddr=no)])
+if test "$sfs_cv_bsd_reuseaddr" = yes; then
+    AC_DEFINE(HAVE_BSD_REUSEADDR, 1,
+      Define if SO_REUSEADDR allows same user to bind non-SO_REUSEADDR port)
+fi])
+dnl
 dnl Find pthreads
 dnl
 AC_DEFUN(SFS_FIND_PTHREADS,
@@ -1178,7 +1296,7 @@ unset OPENSSL_DIR
 if test -z "$with_openssl"; then
     with_openssl=no
     for dir in /usr/local/openssl/ /usr/local/ssl/ \
-		`ls -1d /usr/local/openssl-*/ 2>/dev/null | tail -1`; do
+		`ls -1d /usr/local/openssl-*/ 2>/dev/null | sed -ne '$p'`; do
 	if test -f $dir/lib/libssl.a -a -f $dir/include/openssl/ssl.h; then
 	    with_openssl=`echo $dir | sed -e 's/\/$//'`
 	    break
@@ -1461,6 +1579,28 @@ AC_EGREP_HEADER([xdr_ops *\* *x_ops;], rpc/xdr.h,
 AC_DEFINE_UNQUOTED(xdr_ops_t, $sfs_cv_xdr_ops_t,
 	[The C++ type name of the x_ops field in struct XDR.])])
 dnl
+dnl Set nopaging
+dnl
+AC_DEFUN(SFS_NOPAGING,
+[AC_SUBST(NOPAGING)
+if test "$enable_static" = yes -a -z "${NOPAGING+set}"; then
+    case "$host_os" in
+	openbsd3.[[3456789]]*|openbsd[[456789]]*)
+	    #MALLOCK=		# mallock.o may panic the OpenBSD kernel
+# ... unfortunately OMAGIC files don't work on OpenBSD
+	    NOPAGING="-all-static"
+	;;
+	openbsd*)
+	    test "$ac_cv_prog_gcc" = yes && NOPAGING="-Wl,-Bstatic,-N"
+	    MALLOCK=		# mallock.o panics the OpenBSD kernel
+	;;
+	freebsd*)
+	    test yes = "$ac_cv_prog_gcc" -a yes != "$ac_cv_func_mlockall" \
+		 && NOPAGING="-all-static -Wl,-N"
+	;;
+    esac
+fi])
+dnl
 dnl Find installed SFS libraries
 dnl This is not for SFS, but for other packages that use SFS.
 dnl
@@ -1526,18 +1666,7 @@ elif test -f ${with_sfs}/include/sfs/autoconf.h \
 else
     AC_MSG_ERROR("Can\'t find SFS libraries")
 fi
-
-if test "$enable_static" = yes -a -z "${NOPAGING+set}"; then
-    case "$host_os" in
-	openbsd*)
-	    test "$ac_cv_prog_gcc" = yes && NOPAGING="-Wl,-Bstatic,-N"
-	    MALLOCK=		# mallock.o panics the OpenBSD kernel
-	;;
-	freebsd*)
-	    test "$ac_cv_prog_gcc" = yes && NOPAGING="-Wl,-Bstatic"
-	;;
-    esac
-fi
+SFS_NOPAGING
 
 sfslibdir='$(libdir)/sfs'
 sfsincludedir='$(libdir)/include'
@@ -1561,6 +1690,76 @@ LDEPS='$(LIBSFSMISC) $(LIBSVC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC)'
 LDADD="$LDEPS "'$(LIBGMP)'
 AC_SUBST(LDEPS)
 AC_SUBST(LDADD)
+])
+dnl
+dnl Test user ID and group ID required for SFS
+dnl
+AC_DEFUN(SFS_USER,
+[AC_SUBST(sfsuser)
+AC_SUBST(sfsgroup)
+sfsuser="$with_sfsuser"
+test -z "$sfsuser" && sfsuser=sfs
+sfsgroup="$with_sfsgroup"
+test -z "$sfsgroup" && sfsgroup="$sfsuser"
+
+if test -z "${with_sfsuser+set}" -o -z "${with_sfsgroup+set}"; then
+AC_CACHE_CHECK(for sfs user and group, sfs_cv_ugidok,
+    [changequote expr='[0-9][0-9]*$' changequote([,])]
+    uid_isnum=`expr $sfsuser : $expr`
+    if test "$uid_isnum" != 0; then
+	sfs_getpwd="getpwuid ($sfsuser)"
+    else
+	sfs_getpwd="getpwnam (\"$sfsuser\")"
+    fi
+    gid_isnum=`expr $sfsgroup : $expr`
+    if test "$gid_isnum" != 0; then
+	sfs_getgrp="getgrgid ($sfsgroup)"
+    else
+	sfs_getgrp="getgrnam (\"$sfsgroup\")"
+    fi
+    AC_TRY_RUN([changequote changequote([[,]])
+#include <stdio.h>
+#include <sys/types.h>
+#include <pwd.h>
+#include <grp.h>
+
+static int error;
+
+static void
+bad (char *p)
+{
+  if (error)
+    printf (" %s", p);
+  else {
+    error = 1;
+    printf ("[%s", p);
+  }
+}
+
+int
+main ()
+{
+  struct passwd *pw = $sfs_getpwd;
+  struct group *gr = $sfs_getgrp;
+
+  if (!$uid_isnum && !pw)
+    bad ("No user $sfsuser."); 
+  if (!$gid_isnum && !gr)
+    bad ("No group $sfsgroup."); 
+  else if (gr && gr->gr_mem[0])
+    bad ("Group $sfsgroup cannot have users."); 
+  if (pw && gr && pw->pw_gid != gr->gr_gid)
+    bad ("Login group of $sfsuser must be $sfsgroup."); 
+  if (error)
+    printf ("] ");
+  return error;
+}
+changequote([,])],
+    sfs_cv_ugidok=yes, sfs_cv_ugidok=no, sfs_cv_ugidok=skipped))
+
+    test "$sfs_cv_ugidok" = no \
+	&& AC_MSG_ERROR(Create sfs user/group or use --with-sfsuser/--with-sfsgroup)
+fi
 ])
 
 dnl 

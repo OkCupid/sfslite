@@ -36,13 +36,14 @@ struct identstat {
   int err;
   str user;
   str host;
-  callback<void, str, int>::ptr cb;
+  ptr<hostent> h;
+  callback<void, str, ptr<hostent>, int>::ptr cb;
 
   void cbdone ();
   void identcb (str u, int e)
     { if (u && identrx.search (u)) user = identrx[2]; cbdone (); }
-  void dnscb (ptr<hostent> h, int e)
-    { err = e; if (h) host = h->h_name; cbdone (); }
+  void dnscb (ptr<hostent> hh, int e)
+    { h = hh; err = e; if (h && *h->h_name) host = h->h_name; cbdone (); }
 };
 
 void
@@ -55,12 +56,12 @@ identstat::cbdone ()
     res = user << "@" << host;
   else
     res = host;
-  (*cb) (res, err);
+  (*cb) (res, h, err);
   delete this;
 }
 
 void
-ident (int fd, callback<void, str, int>::ref cb)
+identptr (int fd, callback<void, str, ptr<hostent>, int>::ref cb)
 {
   struct sockaddr_in la, ra;
   socklen_t len;
@@ -75,7 +76,7 @@ ident (int fd, callback<void, str, int>::ref cb)
       || ra.sin_family != AF_INET
       || len != sizeof (la)) {
     warn ("ident: getsockname/getpeername: %s\n", strerror (errno));
-    (*cb) ("*disconnected*", ARERR_CANTSEND);
+    (*cb) ("*disconnected*", NULL, ARERR_CANTSEND);
     return;
   }
 
@@ -86,6 +87,7 @@ ident (int fd, callback<void, str, int>::ref cb)
 
   int ifd = socket (AF_INET, SOCK_STREAM, 0);
   if (ifd >= 0) {
+    close_on_exec (ifd);
     make_async (ifd);
     if (connect (ifd, (sockaddr *) &ra, sizeof (ra)) < 0
 	&& errno != EINPROGRESS) {
@@ -111,4 +113,15 @@ ident (int fd, callback<void, str, int>::ref cb)
     is->ncb = 1;
 
   dns_hostbyaddr (ra.sin_addr, wrap (is, &identstat::dnscb));
+}
+
+static void
+strip_hostent (callback<void, str, int>::ref cb, str id, int err)
+{
+  (*cb) (id, err);
+}
+void
+ident (int fd, callback<void, str, int>::ref cb)
+{
+  ident (fd, wrap (strip_hostent, cb));
 }

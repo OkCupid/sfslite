@@ -114,12 +114,12 @@ template<int n> struct umac_poly : umac_prime<n> {
   umac_poly () { poly_reset (); }
   void poly_reset () { yp = 1; }
   void poly_inner (prime_t k, prime_t m) {
-    if (m >= maxword) {
-      yp = (yp * k + marker) % prime;
-      yp = (yp * k + (m - offset)) % prime;
+    if (m >= this->maxword) {
+      yp = (yp * k + this->marker) % this->prime;
+      yp = (yp * k + (m - this->offset)) % this->prime;
     }
     else
-      yp = (yp * k + m) % prime;
+      yp = (yp * k + m) % this->prime;
   }
 };
 template<> struct umac_poly<64> {

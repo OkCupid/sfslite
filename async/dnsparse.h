@@ -108,7 +108,7 @@ struct resrec {
     rd_soa rr_soa;
     char rr_ptr[MAXDNAME];
     rd_mx rr_mx;
-    char rr_txt[MAXDNAME];
+    char rr_txt[sizeof (rd_soa)];
     rd_srv rr_srv;
   };
 };
@@ -156,6 +156,7 @@ public:
   ptr<hostent> tohostent ();
   ptr<mxlist> tomxlist ();
   ptr<srvlist> tosrvlist ();
+  ptr<txtlist> totxtlist ();
 };
 
 #endif /* !_DNSPARSE_H_ */

@@ -27,7 +27,6 @@
 
 #include "amisc.h"
 #include "init.h"
-#include "litetime.h"
 
 /* core.C */
 struct timecb_t;
@@ -75,6 +74,7 @@ tcpconnect_t *tcpconnect_srv_retry (ref<srvlist> srvl, cbi cb, str *np = NULL);
 void tcpconnect_cancel (tcpconnect_t *tc);
 
 /* ident.C */
+void identptr (int fd, callback<void, str, ptr<hostent>, int>::ref);
 void ident (int fd, callback<void, str, int>::ref);
 
 /* pipe2str.C */

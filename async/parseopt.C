@@ -217,9 +217,11 @@ conftab_str::convert (const vec<str> &v, const str &l, bool *e)
       return false;
     else 
       tmp_s = v[1];
-  } else if (scb) {
+  }
+  else if (scb) {
     tmp_s = v[1];
-  } else {
+  }
+  else {
     tmp = v;
   }
   loc = l;
@@ -235,14 +237,18 @@ conftab_str::set ()
       if (dest->len ()) {
 	warn << loc << ": " << name << ": variable already defined\n";
 	*errp = true;
-      } else {
+      }
+      else {
 	*dest = tmp_s;
       }
-    } else
+    }
+    else
       *dest = tmp_s; 
-  } else if (cnfcb) { 
+  }
+  else if (cnfcb) { 
     (*cnfcb) (tmp, loc, errp); 
-  } else { 
+  }
+  else { 
     (*scb) (tmp_s); 
   }
 }
@@ -279,10 +285,12 @@ conftab::match (const vec<str> &av, const str &cf, int ln, bool *err)
   if (!el->convert (av, loc, err)) {
     warn << cf << ":" << ln << ": usage: " << el->name << " <value>\n";
     *err = true;
-  } else if (!el->inbounds ()) {
+  }
+  else if (!el->inbounds ()) {
     warn << cf << ":" << ln << ": " << el->name << " out of range\n";
     *err = true;
-  } else 
+  }
+  else 
     el->set ();
     
   return true;

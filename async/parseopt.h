@@ -96,8 +96,7 @@ public:
 };
 
 typedef callback<void, vec<str>, str, bool *>::ref confcb;
-class conftab_str : public conftab_el
-{
+class conftab_str : public conftab_el {
 public:
   conftab_str (const str &n, str *d, bool c = false) 
     : conftab_el (n), dest (d), cnfcb (NULL), scb (NULL), check (c) {}
@@ -123,8 +122,7 @@ private:
 };
 
 template<class T>
-class conftab_int : public conftab_el
-{
+class conftab_int : public conftab_el {
 public:
   conftab_int (const str &n, T *d, T l, T u)
     : conftab_el (n), dest (d), lb (l), ub (u) {}
@@ -141,8 +139,7 @@ private:
   T tmp;
 };
 
-class conftab_bool : public conftab_el
-{
+class conftab_bool : public conftab_el {
 public:
   conftab_bool (const str &n, bool *b) 
     : conftab_el (n), dest (b), err (false) {}
@@ -155,25 +152,24 @@ private:
   bool err;
 };
 
-class conftab
-{
+class conftab {
 public:
   conftab () {}
 
   template<class P, class D> 
-  conftab & add (const str &nm, P *dp, D lb, D ub)
-  { tab.insert (New conftab_int<P> (nm, dp, lb, ub)); return *this; }
+  conftab &add (const str &nm, P *dp, D lb, D ub)
+    { tab.insert (New conftab_int<P> (nm, dp, lb, ub)); return *this; }
   template<class A>
-  conftab & add (const str &nm, A a) 
-  { tab.insert (New conftab_str (nm, a)); return *this; }
-  conftab & ads (const str &nm, cbs c) // XXX: cannot overload
-  { tab.insert (New conftab_str (c, nm)); return *this; }
-  conftab & add (const str &nm, str *s, bool b)
-  { tab.insert (New conftab_str (nm, s, b));  return *this; }
-  conftab & add (const str &nm, bool *b) 
-  { tab.insert (New conftab_bool (nm, b)); return *this; }
-  conftab & ignore (const str &m)
-  { tab.insert (New conftab_ignore (m)); return *this; }
+  conftab &add (const str &nm, A a) 
+    { tab.insert (New conftab_str (nm, a)); return *this; }
+  conftab &ads (const str &nm, cbs c) // XXX: cannot overload
+    { tab.insert (New conftab_str (c, nm)); return *this; }
+  conftab &add (const str &nm, str *s, bool b)
+    { tab.insert (New conftab_str (nm, s, b));  return *this; }
+  conftab &add (const str &nm, bool *b) 
+    { tab.insert (New conftab_bool (nm, b)); return *this; }
+  conftab &ignore (const str &m)
+    { tab.insert (New conftab_ignore (m)); return *this; }
 
   ~conftab () { tab.deleteall (); }
 

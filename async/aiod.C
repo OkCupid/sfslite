@@ -277,7 +277,7 @@ void
 aiosrv::pathop (aiomsg_t msg)
 {
   static int fd = -1;
-  aiod_pathop *rq = buf->template getptr<aiod_pathop> (msg);
+  aiod_pathop *rq = buf->Xtmpl getptr<aiod_pathop> (msg);
   errno = 0;
   switch (rq->op) {
   case AIOD_UNLINK:
@@ -324,8 +324,8 @@ aiosrv::pathop (aiomsg_t msg)
 void
 aiosrv::fhop (aiomsg_t msg)
 {
-  aiod_fhop *rq = buf->template getptr<aiod_fhop> (msg);
-  aiod_file *af = buf->template getptr<aiod_file> (rq->fh);
+  aiod_fhop *rq = buf->Xtmpl getptr<aiod_fhop> (msg);
+  aiod_file *af = buf->Xtmpl getptr<aiod_file> (rq->fh);
 
   if (rq->op == AIOD_OPEN) {
     fht.create (af, rq->mode, &rq->err);
@@ -387,8 +387,8 @@ aiosrv::fhop (aiomsg_t msg)
 void
 aiosrv::fstat (aiomsg_t msg)
 {
-  aiod_fstat *rq = buf->template getptr<aiod_fstat> (msg);
-  aiod_file *af = buf->template getptr<aiod_file> (rq->fh);
+  aiod_fstat *rq = buf->Xtmpl getptr<aiod_fstat> (msg);
+  aiod_file *af = buf->Xtmpl getptr<aiod_file> (rq->fh);
 
   if (rq->op != AIOD_FSTAT)
     panic ("aiosrv::fstat: bad op %d\n", rq->op);
@@ -407,7 +407,7 @@ void
 aiosrv::nop (aiomsg_t msg)
 {
   /* If the shmfile is sparse, a nop forces allocation. */
-  aiod_nop *rq = buf->template getptr<aiod_nop> (msg);
+  aiod_nop *rq = buf->Xtmpl getptr<aiod_nop> (msg);
   size_t sz = 0;
   bool touchable = rq->nopsize;
   if (lseek (buf->fd, msg, SEEK_SET) != -1) {
@@ -466,7 +466,7 @@ aiosrv::getmsg (aiomsg_t msg)
     fatal ("bad opcode %d from client\n", op);
 
   if (aiodtrace)
-    aiod_dump (buf->template getptr<void> (msg));
+    aiod_dump (buf->Xtmpl getptr<void> (msg));
   if (write (fd, &msg, sizeof (msg)) != sizeof (msg)) {
     if (errno != EPIPE)
       fatal ("aiosrv::write: %m\n");
@@ -612,7 +612,7 @@ main (int argc, char **argv)
 
   srv = New aiosrv (rwfd, b);
 
-  sigemptyset (&sigio_mask);
+  (void) sigemptyset (&sigio_mask);
   sigaddset (&sigio_mask, SIGIO);
   sigprocmask (SIG_BLOCK, &sigio_mask, NULL);
 

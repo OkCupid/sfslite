@@ -83,6 +83,12 @@ struct srvlist {
   struct srvrec s_srvs[1];
 };
 
+struct txtlist {
+  char *t_name;
+  u_short t_ntxt;
+  char *t_txts[1];
+};
+
 /* Extender error types for ar_errno */
 #define ARERR_NXREC 0x101	/* No records of appropriate type */
 #define ARERR_TIMEOUT 0x102	/* Query timed out */
@@ -106,6 +112,9 @@ dnsreq_t *dns_mxbyname (str, cbmxlist, bool search = false);
 typedef callback<void, ptr<srvlist>, int>::ref cbsrvlist;
 dnsreq_t *dns_srvbyname (str name, cbsrvlist, bool search = false);
 
+typedef callback<void, ptr<txtlist>, int>::ref cbtxtlist;
+dnsreq_t *dns_txtbyname (str name, cbtxtlist cb, bool search = false);
+
 inline dnsreq_t *
 dns_srvbyname (const char *name, const char *proto, const char *srv,
 	       cbsrvlist cb, bool search = false)
@@ -119,6 +128,7 @@ int dns_tmperr (int);
 void printaddrs (const char *, ptr<hostent>, int = 0);
 void printmxlist (const char *, ptr<mxlist>, int = 0);
 void printsrvlist (const char *msg, ptr<srvlist> s, int = 0);
+void printtxtlist (const char *msg, ptr<txtlist> s, int = 0);
 
 void dns_reload ();
 

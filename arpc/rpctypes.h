@@ -98,6 +98,11 @@ template<class T, size_t max> class rpc_vec : private vec<T> {
   typedef vec<T> super;
 public:
   typedef typename super::elm_t elm_t;
+  typedef typename super::base_t base_t;
+  using super::basep;
+  using super::firstp;
+  using super::lastp;
+  using super::limp;
   enum { maxsize = max };
 
 protected:
@@ -224,6 +229,7 @@ swap (rpc_vec<T, max> &a, rpc_vec<T, max> &b)
   a.swap (b);
 }
 
+extern const str rpc_emptystr;
 template<size_t max = RPC_INFINITY> struct rpc_str : str
 {
   enum { maxsize = max };
@@ -259,10 +265,13 @@ public:
 };
 
 template<size_t n = RPC_INFINITY> struct rpc_opaque : array<char, n> {
-  rpc_opaque () { bzero (base (), size ()); }
+  rpc_opaque () { bzero (this->base (), this->size ()); }
 };
 template<size_t n = RPC_INFINITY> struct rpc_bytes : rpc_vec<char, n> {
-  void setstrmem (const str &s) { set (s.cstr (), s.len (), NOFREE); }
+  using rpc_vec<char, n>::base;
+  using rpc_vec<char, n>::size;
+
+  void setstrmem (const str &s) { set (s.cstr (), s.len ()); }
   rpc_bytes &operator= (const str &s)
     { setsize (s.len ()); memcpy (base (), s.cstr (), size ()); return *this; }
   template<size_t m> rpc_bytes &operator= (const rpc_vec<char, m> &v)
@@ -485,7 +494,6 @@ struct rpc_clear_t {};
 extern struct rpc_clear_t _rpcclear;
 struct rpc_wipe_t : public rpc_clear_t {};
 extern struct rpc_wipe_t _rpcwipe;
-extern const str rpc_emptystr;
 
 inline bool
 rpc_traverse (rpc_clear_t &, u_int32_t &obj)

@@ -123,7 +123,7 @@ private:
 
   cbv::ptr recv_hook;
 
-  static void seteof (ref<xhinfo>, const sockaddr *);
+  static void seteof (ref<xhinfo>, const sockaddr *, bool force = false);
 
 protected:
   ptr<xhinfo> xi;

@@ -196,6 +196,12 @@ operator!= (dev_t d1, dev_t d2)
 # endif /* !__attribute__ */
 #endif /* !gcc 2 */
 
+#if __GNUC__ >= 3
+# define Xtmpl
+#else /* gcc < 3 */
+# define Xtmpl template
+#endif /* gcc < 3 */
+
 #ifndef PRIVDEST
 #define PRIVDEST /* empty */
 #endif /* !PRIVDEST */
@@ -380,7 +386,7 @@ typedef char *iovbase_t;
 
 #ifndef HAVE_SOCKLEN_T
 #define socklen_t int
-#endif /* HAVE_SOCKLEN_T */
+#endif /* !HAVE_SOCKLEN_T */
 
 #ifndef HAVE_STRUCT_SOCKADDR_STORAGE
 #define sockaddr_storage sockaddr
@@ -392,6 +398,14 @@ struct timespec {
   long tv_nsec;
 };
 #endif /* !HAVE_TIMESPEC */
+
+
+#ifndef HAVE_ST_MTIMESPEC
+# ifdef HAVE_ST_MTIM
+#  define st_mtimespec st_mtim
+#  define HAVE_ST_MTIMESPEC 1
+# endif /* HAVE_ST_MTIM */
+#endif /* !HAVE_ST_MTIMESPEC */
 
 
 #ifdef NEED_MKSTEMP_DECL

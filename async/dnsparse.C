@@ -39,6 +39,9 @@ int dn_expand (const u_char *, const u_char *, const u_char *, char *, int);
 #endif /* NEED_DN_EXPAND_DECL */
 }
 
+#define my_offsetof(p_type,field) ((size_t)&(((p_type *)0)->field))
+
+
 #if 0
 int
 dn_skipname (const u_char *icp, const u_char *eom)
@@ -268,11 +271,20 @@ dnsparse::rrparse (const u_char **cpp, resrec *rrp)
     cp += n;
     break;
   case T_TXT:
-    if (rdlen >= sizeof (rrp->rr_txt) || rdlen < 1
-	|| rdlen < *cp + 1)
+    if (rdlen >= sizeof (rrp->rr_txt) || rdlen < 1)
       return false;
-    memcpy (rrp->rr_txt, cp + 1, *cp);
-    rrp->rr_txt[rdlen] = '\0';
+    else {
+      char *dp = rrp->rr_txt;
+      while (rdlen > 0) {
+	if (*cp + 1 > rdlen)
+	  return false;
+	memcpy (dp, cp + 1, *cp);
+	dp += *cp;
+	rdlen -= *cp + 1;
+	cp += *cp + 1;
+      }
+      *dp++ = '\0';
+    }
     cp += rdlen;
     break;
   case T_SOA:
@@ -509,16 +521,13 @@ dnsparse::tomxlist ()
     error = ARERR_NXREC;
     return NULL;
   }
-  else if (mxes.size () > 1)
-    qsort (mxes.base (), mxes.size (), sizeof (mxes[0]), mxrec_cmp);
 
-  
   vec<addrhint> hints;
   if (!gethints (&hints, nset))
     return NULL;
 
   ref <mxlist> mxl = refcounted<mxlist, vsize>::alloc
-    (offsetof (mxlist, m_mxes[mxes.size ()])
+    (my_offsetof (mxlist, m_mxes[mxes.size ()])
      + hintsize (hints.size ()) + nset.size ());
   char *hintp = reinterpret_cast<char *> (&mxl->m_mxes[mxes.size ()]);
   char *namebase = hintp + hintsize (hints.size ());
@@ -530,6 +539,8 @@ dnsparse::tomxlist ()
     mxl->m_mxes[i].pref = mxes[i].pref;
     mxl->m_mxes[i].name = nset.xlat (namebase, mxes[i].name);
   }
+  if (mxl->m_nmx > 1)
+    qsort (mxl->m_mxes, mxl->m_nmx, sizeof (mxrec), mxrec_cmp);
 
   return mxl;
 }
@@ -653,7 +664,7 @@ dnsparse::tosrvlist ()
   srvrec_randomize (recs.base (), recs.lim ());
 
   ref<srvlist> s = refcounted<srvlist, vsize>::alloc
-    (offsetof (srvlist, s_srvs[recs.size ()])
+    (my_offsetof (srvlist, s_srvs[recs.size ()])
      + hintsize (hints.size ()) + nset.size ());
 
   char *hintp = reinterpret_cast<char *> (&s->s_srvs[recs.size ()]);
@@ -671,8 +682,56 @@ dnsparse::tosrvlist ()
   return s;
 }
 
+ptr<txtlist>
+dnsparse::totxtlist ()
+{
+  const u_char *cp = getanp ();
+  arena a;
+  vec<char *> txtv;
+  char *name = NULL;
+  u_int nchars = 0;
 
-#if 1
+  if (!cp)
+    return NULL;
+
+  for (size_t i = 0; i < ancount; i++) {
+    resrec rr;
+    if (!rrparse (&cp, &rr)) {
+      error = ARERR_BADRESP;
+      return NULL;
+    }
+    if (rr.rr_class == C_IN && rr.rr_type == T_TXT) {
+      if (!name) {
+	name = a.strdup (rr.rr_name);
+	nchars += strlen (name) + 1;
+      }
+      txtv.push_back (a.strdup (rr.rr_txt));
+      nchars += strlen (txtv.back ()) + 1;
+    }
+  }
+
+  if (!name) {
+    error = ARERR_NXREC;
+    return NULL;
+  }
+
+  ref<txtlist> t = refcounted<txtlist, vsize>::alloc
+    (my_offsetof (txtlist, t_txts[txtv.size ()]) + nchars);
+
+  char *dp = (char *) &t->t_txts[txtv.size ()];
+  t->t_name = dp;
+  strcpy (dp, name);
+  dp += strlen (dp) + 1;
+  t->t_ntxt = txtv.size ();
+  for (u_int i = 0; i < t->t_ntxt; i++) {
+    t->t_txts[i] = dp;
+    strcpy (dp, txtv[i]);
+    dp += strlen (dp) + 1;
+  }
+
+  return t;
+}
+
 void
 printaddrs (const char *msg, ptr<hostent> h, int dns_errno)
 {
@@ -744,4 +803,19 @@ printsrvlist (const char *msg, ptr<srvlist> s, int dns_errno)
 	    s->s_srvs[i].weight, s->s_srvs[i].port, s->s_srvs[i].name);
   printhints (s->s_hints);
 }
-#endif
+
+void
+printtxtlist (const char *msg, ptr<txtlist> t, int dns_errno)
+{
+  if (msg)
+    printf ("%s (txtlist):\n", msg);
+
+  if (!t) {
+    printf ("   Error: %s\n", dns_strerror (dns_errno));
+    return;
+  }
+
+  printf ("    Name: %s\n", t->t_name);
+  for (int i = 0; i < t->t_ntxt; i++)
+    printf ("     TXT: %s\n", t->t_txts[i]);
+}

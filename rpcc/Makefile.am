@@ -3,7 +3,7 @@
 
 LDADD = $(LIBASYNC)
 
-sfsbin_PROGRAMS = rpcc
+bin_PROGRAMS = rpcc
 
 noinst_HEADERS = rpcc.h parse.h
 
@@ -31,10 +31,8 @@ parse.cc: parse.yy
 	case "$(YACC)" in					\
 	*bison*)						\
 		sed -e 's/union yyalloc/struct yyalloc/g'	\
-			< y.tab.c |				\
-		sed -e 's/__attribute__ \(\(.*\)\)/if (0) YYERROR;/'  \
-                        > $(srcdir)/parse.cc ;                  \
-                rm -f y.tab.c                                   \
+			< y.tab.c > $(srcdir)/parse.cc ;	\
+		rm -f y.tab.c					\
 		;;						\
 	*)							\
 		mv -f y.tab.c $(srcdir)/parse.cc		\
@@ -48,11 +46,7 @@ parse.cc: parse.yy
 		fi;						\
 	fi
 
-parse.o: parse.cc 
-#parse.o: parse.cc parse.h
-#
-# got rid of this dependecy on parse.h, which was confusing gmake
-#
+parse.o: parse.cc parse.h
 # Note: certain versions of bison put __attribute__((unused)) after
 # unused goto labels, which doesn't agree well with gcc 3.2.1.
 # If you have problems, try the next line instead of the following one.

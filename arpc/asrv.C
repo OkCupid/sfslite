@@ -348,14 +348,16 @@ asrv::alloc (ref<axprt> x, const rpc_program &pr, asrv_cb::ptr cb)
 }
 
 void
-asrv::seteof (ref<xhinfo> xi, const sockaddr *src)
+asrv::seteof (ref<xhinfo> xi, const sockaddr *src, bool force)
 {
-  asrv *s;
-  ptr<asrv> sp;
-  for (s = xi->stab.first (); s; s = xi->stab.next (s)) {
-    sp = mkref (s);
-    if (s->cb)
-      (*s->cb) (NULL);
+  if (force || xi->xh->connected) {
+    asrv *s;
+    ptr<asrv> sp;
+    for (s = xi->stab.first (); s; s = xi->stab.next (s)) {
+      sp = mkref (s);
+      if (s->cb)
+	(*s->cb) (NULL);
+    }
   }
 }
 
@@ -385,7 +387,7 @@ asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
 		const sockaddr *src)
 {
   if (!msg || len < 8 || getint (msg + 4) != CALL) {
-    seteof (xi, src);
+    seteof (xi, src, len < 0);
     return;
   }
  
@@ -445,7 +447,7 @@ asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
     if (asrvtrace >= 1)
       warn ("asrv::dispatch: bad message %s:%s x=%x", s->rpcprog->name,
 	    rtp->name, xidswap (m->rm_xid))
-	      << sock2str (src), "\n";
+	      << sock2str (src) << "\n";
     asrv_accepterr (xi, src, GARBAGE_ARGS, m);
     s->sendreply (sbp.release (), NULL, true);
     return;

@@ -73,8 +73,17 @@ public:
 protected:
   bigint pq;
 
+  struct precomp {
+    bigint x;
+    bigint xk;
+    bigint x_over_kxk;
+  };
+  mutable vec<precomp, 2> prevec;
+
 public:
   esign_priv (const bigint &p, const bigint &q, u_long k);
+  void precompute () const;
+  size_t nprecomputed () const { return prevec.size (); }
   bigint raw_sign (const bigint &m) const;
   bigint sign (const str &msg) const {
     bigint z;

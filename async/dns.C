@@ -458,7 +458,8 @@ resolv_conf::srchlist (int n)
 
 
 dnsreq::dnsreq (resolver *rp, str n, u_int16_t t, bool search)
-  : ntries (0), resp (rp), usetcp (false), error (0), type (t)
+  : ntries (0), resp (rp), usetcp (false), constructed (false),
+    error (0), type (t)
 {
   while (n.len () && n[n.len () - 1] == '.') {
     search = false;
@@ -475,13 +476,23 @@ dnsreq::dnsreq (resolver *rp, str n, u_int16_t t, bool search)
     name = NULL;
   }
   start (false);
+  constructed = true;
+}
+
+void
+dnsreq::remove ()
+{
+  if (intable) {
+    intable = false;
+    resp->reqtab.remove (this);
+    if (!usetcp)
+      resp->reqtoq.remove (this);
+  }
 }
 
 dnsreq::~dnsreq ()
 {
-  resp->reqtab.remove (this);
-  if (!usetcp)
-    resp->reqtoq.remove (this);
+  remove ();
 }
 
 void
@@ -505,6 +516,7 @@ dnsreq::start (bool again)
       name = basename;
   }
   id = resp->genid ();
+  intable = true;
   resp->reqtab.insert (this);
   if (usetcp)
     xmit (0);
@@ -536,7 +548,10 @@ dnsreq::fail (int err)
 {
   if (!error)
     error = err;
-  readreply (NULL);
+  if (constructed)
+    readreply (NULL);
+  else
+    delaycb (0, wrap (this, &dnsreq::readreply, (dnsparse *) NULL));
 }
 
 void
@@ -637,6 +652,21 @@ dns_srvbyname (str name, cbsrvlist cb, bool search)
 }
 
 
+dnsreq_ptr::~dnsreq_ptr ()
+{
+  while (!vrfyv.empty ())
+    delete vrfyv.pop_front ();
+}
+
+void
+dnsreq_ptr::maybe_push (vec<str, 2> *sv, const char *s)
+{
+  for (const str *sp = sv->base (); sp < sv->lim (); sp++)
+    if (!strcasecmp (sp->cstr (), s))
+      return;
+  sv->push_back (s);
+}
+
 str
 dnsreq_ptr::inaddr_arpa (in_addr addr)
 {
@@ -647,19 +677,28 @@ dnsreq_ptr::inaddr_arpa (in_addr addr)
 void
 dnsreq_ptr::readreply (dnsparse *reply)
 {
+  vec<str, 2> names;
   if (!error) {
     const u_char *cp = reply->getanp ();
     for (u_int i = 0; i < reply->ancount; i++) {
       resrec rr;
       if (!reply->rrparse (&cp, &rr))
 	break;
-      if (rr.rr_type == T_PTR && rr.rr_class == C_IN) {
-	vNew dnsreq_a (resp, rr.rr_ptr,
-		       wrap (this, &dnsreq_ptr::readvrfy), addr);
-	return;
-      }
+      if (rr.rr_type == T_PTR && rr.rr_class == C_IN)
+	maybe_push (&names, rr.rr_ptr);
+    }
+
+    if (!names.empty ()) {
+      napending = names.size ();
+      remove ();
+      for (u_int i = 0; i < names.size (); i++)
+	vrfyv.push_back (New dnsreq_a (resp, names[i],
+				       wrap (this, &dnsreq_ptr::readvrfy, i),
+				       addr));
+      return;
     }
   }
+
   if (!error && !(error = reply->error))
     error = ARERR_NXREC;
   (*cb) (NULL, error);
@@ -667,10 +706,61 @@ dnsreq_ptr::readreply (dnsparse *reply)
 }
 
 void
-dnsreq_ptr::readvrfy (ptr<hostent> h, int err)
+dnsreq_ptr::readvrfy (int i, ptr<hostent> h, int err)
 {
-  vrfyreq = NULL;
-  (*cb) (h, err);
+  vrfyv[i] = NULL;
+  if (err && (dns_tmperr (err) || !error))
+    error = err;
+  if (h) {
+    maybe_push (&vnames, h->h_name);
+    for (char **np = h->h_aliases; *np; np++)
+      maybe_push (&vnames, *np);
+  }
+  if (--napending)
+    return;
+
+  if (vnames.empty () && !error)
+    error = ARERR_PTRSPOOF;
+  if (error) {
+    (*cb) (NULL, error);
+    delete this;
+    return;
+  }
+
+  u_int namelen = 0;
+  for (str *np = vnames.base (); np < vnames.lim (); np++)
+    namelen += np->len () + 1;
+
+  int hsize = (sizeof (*h)
+		+ (vnames.size () + 1) * sizeof (char *)
+	       + namelen
+	       + 2 * sizeof (char *)
+	       + sizeof (in_addr));
+  h = refcounted<hostent, vsize>::alloc (hsize);
+  h->h_addrtype = AF_INET;
+  h->h_length = sizeof (in_addr);
+  h->h_aliases = (char **) &h[1];
+  h->h_addr_list = &h->h_aliases[vnames.size ()];
+
+  h->h_addr_list[0] = (char *) &h->h_addr_list[2];
+  h->h_addr_list[1] = NULL;
+  *(in_addr *) h->h_addr_list[0] = addr;
+
+  char *dp = h->h_addr_list[0] + sizeof (in_addr);
+  memcpy (h->h_name = dp, vnames[0], vnames[0].len () + 1);
+  dp += vnames[0].len () + 1;
+  vnames.pop_front ();
+  char **ap = h->h_aliases;
+  while (!vnames.empty ()) {
+    *ap = dp;
+    memcpy (dp, vnames.front (), vnames.front ().len () + 1);
+    dp += vnames.front ().len () + 1;
+    ap++;
+    vnames.pop_front ();
+  }
+  *ap = NULL;
+
+  (*cb) (h, error);
   delete this;
 }
 
@@ -678,6 +768,23 @@ dnsreq *
 dns_hostbyaddr (in_addr addr, cbhent cb)
 {
   return New dnsreq_ptr (&resconf, addr, cb);
+}
+
+
+void
+dnsreq_txt::readreply (dnsparse *reply)
+{
+  ptr<txtlist> t;
+  if (!error && !(t = reply->totxtlist ()))
+    error = reply->error;
+  (*cb) (t, error);
+  delete this;
+}
+
+dnsreq_t *
+dns_txtbyname (str name, cbtxtlist cb, bool search)
+{
+  return New dnsreq_txt (&resconf, name, cb, search);
 }
 
 

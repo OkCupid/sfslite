@@ -37,6 +37,12 @@ class dnsreq {
 public:
   resolver *const resp;
   bool usetcp;
+private:
+  bool constructed;
+  bool intable;
+protected:
+  void remove ();
+public:
   int error;
   u_int16_t id;			// DNS query ID
   str basename;			// Name for which to search
@@ -88,14 +94,27 @@ public:
 class dnsreq_ptr : public dnsreq {
   in_addr addr;
   cbhent cb;			// Callback for hostbyname/addr
-  dnsreq_a *vrfyreq;
+
+  int napending;
+  vec<str, 2> vnames;
+  vec<dnsreq_a *> vrfyv;
+
+  static void maybe_push (vec<str, 2> *sv, const char *s);
 public:
   static str inaddr_arpa (in_addr);
   dnsreq_ptr (resolver *rp, in_addr a, cbhent c)
-    : dnsreq (rp, inaddr_arpa (a), T_PTR), addr (a), cb (c), vrfyreq (NULL) {}
-  ~dnsreq_ptr () { delete vrfyreq; }
+    : dnsreq (rp, inaddr_arpa (a), T_PTR), addr (a), cb (c) {}
+  ~dnsreq_ptr ();
   void readreply (dnsparse *);
-  void readvrfy (ptr<hostent> h, int err);
+  void readvrfy (int i, ptr<hostent> h, int err);
+};
+
+class dnsreq_txt : public dnsreq {
+  cbtxtlist cb;
+public:
+  dnsreq_txt (resolver *rp, str n, cbtxtlist c, bool s = false)
+    : dnsreq (rp, n, T_TXT, s), cb (c) {}
+  void readreply (dnsparse *);
 };
 
 class dnssock {

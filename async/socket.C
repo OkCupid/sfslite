@@ -43,7 +43,7 @@ enum { maxsobufsize = 0x05000 }; /* 16K + header */
 #endif /* !SFS_ALLOW_LARGE_BUFFER */
 int sndbufsize = maxsobufsize;
 int rcvbufsize = maxsobufsize;
-static in_addr bindaddr;
+in_addr inet_bindaddr;
 INITFN(init_env);
 static void
 init_env ()
@@ -54,8 +54,8 @@ init_env ()
     rcvbufsize = atoi (p);
 
   char *p = safegetenv ("BINDADDR");
-  if (!p || inet_aton (p, &bindaddr) <= 0)
-    bindaddr.s_addr = htonl (INADDR_ANY);
+  if (!p || inet_aton (p, &inet_bindaddr) <= 0)
+    inet_bindaddr.s_addr = htonl (INADDR_ANY);
 }
 
 
@@ -72,7 +72,7 @@ inetsocket_resvport (int type, u_int32_t addr)
   sin.sin_family = AF_INET;
   sin.sin_port = htons (0);
   if (addr == INADDR_ANY)
-    sin.sin_addr = bindaddr;
+    sin.sin_addr = inet_bindaddr;
   else
     sin.sin_addr.s_addr = htonl (addr);
   if ((s = socket (AF_INET, type, 0)) < 0)
@@ -135,7 +135,7 @@ inetsocket (int type, u_int16_t port, u_int32_t addr)
   sin.sin_family = AF_INET;
   sin.sin_port = htons (port);
   if (addr == INADDR_ANY)
-    sin.sin_addr = bindaddr;
+    sin.sin_addr = inet_bindaddr;
   else
     sin.sin_addr.s_addr = htonl (addr);
   if ((s = socket (AF_INET, type, 0)) < 0)
@@ -228,9 +228,9 @@ isunixsocket (int fd)
 }
 
 void
-close_on_exec (int s)
+close_on_exec (int s, bool set)
 {
-  if (fcntl (s, F_SETFD, 1) < 0)
+  if (fcntl (s, F_SETFD, int (set)) < 0)
     fatal ("F_SETFD: %s\n", strerror (errno));
 }
 

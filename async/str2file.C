@@ -72,7 +72,7 @@ mktmp_atomic (str tmpfile, int perm)
 }
 
 bool
-str2file (str file, str s, int perm, bool excl)
+str2file (str file, str s, int perm, bool excl, struct stat *sbp)
 {
   if (!file.len () || file.len () < strlen (file)) {
     errno = EINVAL;
@@ -93,14 +93,17 @@ str2file (str file, str s, int perm, bool excl)
   if (fd < 0)
     return false;
 
-  if (write (fd, s.cstr (), s.len ()) != int (s.len ()) || fsync (fd) < 0) {
+  if (write (fd, s.cstr (), s.len ()) != int (s.len ())) {
     close (fd);
     unlink (tmpfile);
     return false;
   }
   if (s.len () && s[s.len () - 1] != '\n')
     write (fd, "\n", 1);
-  if (close (fd) < 0 || (excl && link (tmpfile, file) < 0)
+  int err = fsync (fd);
+  if (sbp && !err)
+    err = fstat (fd, sbp);
+  if (close (fd) < 0 || err < 0 || (excl && link (tmpfile, file) < 0)
       || (!excl && rename (tmpfile, file) < 0)) {
     unlink (tmpfile);
     return false;

@@ -407,6 +407,7 @@ public:
 template<class T>
 class ref : public refpriv, public refops<T> {
   friend class refpriv;
+  using refops<T>::p;
 
   friend ref<T> mkref<T> (T *);
   ref (T *pp, refcount *cc) : refpriv (cc) { p = pp; inc (); }
@@ -454,6 +455,7 @@ struct __bss_init {};
 template<class T>
 class ptr : public refpriv, public refops <T> {
   friend class refpriv;
+  using refops<T>::p;
 
   void inc () const { if (c) (rinc (c)); }
   void dec () const { if (c) (rdec (c)); }
@@ -509,6 +511,7 @@ public:
 
 template<class T>
 struct bssptr : ptr<T> {
+  using ptr<T>::Xleak;
   // Don't initialize (assume we were 0 initialized in the BSS)
   bssptr () : ptr<T> (__bss_init ()) {}
   // Override the effects of destruction

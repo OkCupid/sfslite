@@ -89,7 +89,7 @@ start_logger (const str &priority, const str &tag, const str &line,
   return start_log_to_file (line, logfile, flags, mode);
 }
 
-static void
+void
 start_logger ()
 {
 #ifdef PATH_LOGGER
@@ -129,13 +129,25 @@ start_logger ()
   dup2 (errfd, 1);
 }
 
-static vec<str> pidfiles;
+struct pidfile {
+  const str path;
+  const struct stat sb;
+  pidfile (str p, struct stat s) : path (p), sb (s) {}
+};
+static vec<pidfile> pidfiles;
+
 EXITFN(pidclean);
 static void
 pidclean ()
 {
-  while (!pidfiles.empty ())
-    unlink (pidfiles.pop_front ());
+  for (; !pidfiles.empty (); pidfiles.pop_front ()) {
+    pidfile &pf = pidfiles.front ();
+    struct stat sb;
+    if (!stat (pf.path, &sb)
+	&& sb.st_dev == pf.sb.st_dev
+	&& sb.st_ino == pf.sb.st_ino)
+      unlink (pf.path);
+  }
 }
 
 void
@@ -154,16 +166,18 @@ daemonize ()
     fatal ("setsid: %m\n");
   if (!builddir) {
     start_logger ();
-    str pidfile = strbuf () << PIDDIR << "/" << progname << ".pid";
-    pidfiles.push_back (pidfile);
-    str2file (pidfile, strbuf ("%d\n", int (getpid ())), 0444);
+    str path = strbuf () << PIDDIR << "/" << progname << ".pid";
+    struct stat sb;
+    if (str2file (path, strbuf ("%d\n", int (getpid ())), 0444, false, &sb))
+      pidfiles.push_back (pidfile (path, sb));
   }
   else {
     str piddir = buildtmpdir;
     if (!piddir)
       piddir = builddir;
-    str pidfile = strbuf () << piddir << "/" << progname << ".pid";
-    pidfiles.push_back (pidfile);
-    str2file (pidfile, strbuf ("%d\n", int (getpid ())), 0444);
+    str path = strbuf () << piddir << "/" << progname << ".pid";
+    struct stat sb;
+    if (str2file (path, strbuf ("%d\n", int (getpid ())), 0444, &sb))
+      pidfiles.push_back (pidfile (path, sb));
   }
 }

@@ -56,12 +56,13 @@ char *xstrsep (char **, const char *);
 char *strnnsep (char **, const char *);
 
 /* socket.C */
+extern in_addr inet_bindaddr;
 int inetsocket (int, u_int16_t = 0, u_int32_t = INADDR_ANY);
 int inetsocket_resvport (int, u_int32_t = INADDR_ANY);
 int unixsocket (const char *);
 int unixsocket_connect (const char *);
 bool isunixsocket (int);
-void close_on_exec (int);
+void close_on_exec (int, bool = true);
 int _make_async (int);
 void make_async (int);
 void make_sync (int);
@@ -148,6 +149,7 @@ public:
 /* daemonize.C */
 extern str syslog_priority;
 void daemonize ();
+void start_logger ();
 int start_logger (const str &pri, const str &tag, const str &line, 
 		  const str &logfile, int flags, mode_t mode);
 

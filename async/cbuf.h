@@ -48,6 +48,7 @@ public:
 
   size_t space () const
     { return (empty || start < end ? buflen : 0) + start - end; }
+  size_t bytes () const { return buflen - space (); }
   const iovec *iniov ();
   int iniovcnt ()
     { return empty || start < end ? 1 + !!start : start != end; }
@@ -78,7 +79,7 @@ public:
   }
   void unrembytes (size_t n) {
     if (n) {
-      assert (n >= space ());
+      assert (n <= space ());
       start = (start >= n ? 0 : buflen) + start - n;
       empty = false;
     }

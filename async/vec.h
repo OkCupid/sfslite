@@ -75,6 +75,13 @@ template<class T, size_t N = 0> class vec : public vec_base<T, N> {
 protected:
   typedef vec_base<T, N> base_t;
   typedef typename base_t::elm_t elm_t;
+  using base_t::basep;
+  using base_t::firstp;
+  using base_t::lastp;
+  using base_t::limp;
+  using base_t::def_basep;
+  using base_t::def_limp;
+
   void move (elm_t *dst) {
     if (dst == firstp)
       return;

@@ -27,7 +27,8 @@
 
 #include "str.h"
 
-bool str2file (str file, str s, int perm = 0666, bool excl = false);
+bool str2file (str file, str s, int perm = 0666, bool excl = false,
+	       struct stat *sbp = NULL);
 str file2str (str file);
 
 static inline void
@@ -158,5 +159,41 @@ dearmor32 (str asc)
     return NULL;
   return dearmor32 (asc.cstr (), asc.len ());
 }
+
+/*
+ * Base-16 encoding
+ */
+
+inline bool
+hexconv (int &out, const char in)
+{
+  if (in >= '0' && in <= '9')
+    out = in - '0';
+  else if (in >= 'a' && in <= 'f')
+    out = in - ('a' - 10);
+  else if (in >= 'A' && in <= 'F')
+    out = in - ('A' - 10);
+  else
+    return false;
+  return true;
+}
+
+inline str
+hex2bytes (str asc)
+{
+  if (asc.len () & 1)
+    return NULL;
+  mstr b (asc.len () / 2);
+  int i = 0;
+  for (const char *p = asc.cstr (), *e = p + asc.len (); p < e; p += 2) {
+    int h, l;
+    if (!hexconv (h, p[0]) || !hexconv (l, p[1]))
+      return NULL;
+    b[i++] = h << 4 | l;
+  }
+  return b;
+}
+
+// Note: see hexdump in str.h to print data in base-16
 
 #endif /* !_ASYNC_SERIAL_H_ */

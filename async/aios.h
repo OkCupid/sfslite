@@ -109,6 +109,7 @@ public:
   void abort ();
 
   void setrbufsize (size_t n) { inb.resize (n); }
+  size_t getrbufbytes () { return inb.bytes (); }
   void readline (rcb_t cb) { setreadcb (&aios::rline, cb); }
   void readany (rcb_t cb) { setreadcb (&aios::rany, cb); }
   void readcancel () { infn = &aios::rnone; rcb = NULL; }

@@ -43,7 +43,7 @@ aios::fail (int e)
     if (rcb)
       mkrcb (NULL);
 
-    if (fd >= 0 && err) {
+    if (fd >= 0 && err && err != ETIMEDOUT) {
       fdcb (fd, selwrite, NULL);
       outb.tosuio ()->clear ();
     }
@@ -123,7 +123,7 @@ aios::input ()
       fdcb (fd, selread, wrap (this, &aios::input));
     else
       fdcb (fd, selread, NULL);
-    timeoutbump ();
+    //timeoutbump ();
   }
   rlock = false;
 }
@@ -219,7 +219,7 @@ aios::output ()
 void
 aios::setoutcb ()
 {
-  if (err) {
+  if (err && err != ETIMEDOUT) {
     fdcb (fd, selwrite, NULL);
     outb.tosuio ()->clear ();
   }
@@ -358,12 +358,15 @@ aios::finalize ()
 {
   if (globaldestruction)
     make_sync (fd);
-  if (err || !outb.tosuio ()->resid ())
+  if (!outb.tosuio ()->resid () || fd < 0)
     delete this;
-  else if (outb.tosuio ()->resid ()
-	   && outb.tosuio ()->output (fd) < 0)
+  else if (err) {
+    // Make one last effort to flush buffer
+    if (err == ETIMEDOUT)
+      outb.tosuio ()->output (fd);
     delete this;
-  else if (!outb.tosuio ()->resid ())
+  }
+  else if (outb.tosuio ()->output (fd) < 0)
     delete this;
 }
 
