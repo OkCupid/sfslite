@@ -1,0 +1,432 @@
+dnl $Id$
+dnl
+dnl Process this file with autoconf to produce a configure script.
+dnl
+
+AC_INIT(acinclude.m4)
+AM_INIT_AUTOMAKE(sfs,0.7.2)
+dnl AC_INIT(sfs,0.7.2)
+dnl AM_INIT_AUTOMAKE
+AM_CONFIG_HEADER(config.h)
+
+AC_SUBST(LDEPS)
+AC_SUBST(LDADD)
+
+AC_SUBST(RPCC)
+
+AC_CANONICAL_HOST
+
+dnl Checks for programs.
+AC_PROG_CC
+AC_PROG_CPP
+AC_PROG_CXX
+AM_PROG_LEX
+AC_PROG_YACC
+SFS_WFLAGS
+SFS_PATH_CPP
+AC_PROG_INSTALL
+AC_PROG_LN_S
+dnl AC_PROG_MAKE_SET
+AC_PATH_PROGS(M4, gm4 gnum4 m4, '$(top_srcdir)/missing')
+test "$RPCC" || RPCC='$(top_builddir)/rpcc/rpcc'
+
+dnl
+dnl Test user ID and group ID required for SFS
+dnl
+AC_SUBST(sfsuser)
+AC_SUBST(sfsgroup)
+sfsuser="$with_sfsuser"
+test -z "$sfsuser" && sfsuser=sfs
+sfsgroup="$with_sfsgroup"
+test -z "$sfsgroup" && sfsgroup="$sfsuser"
+
+if test -z "${with_sfsuser+set}" -o -z "${with_sfsgroup+set}"; then
+AC_CACHE_CHECK(for sfs user and group, sfs_cv_ugidok,
+    [changequote expr='[0-9][0-9]*$' changequote([,])]
+    uid_isnum=`expr $sfsuser : $expr`
+    if test "$uid_isnum" != 0; then
+	sfs_getpwd="getpwuid ($sfsuser)"
+    else
+	sfs_getpwd="getpwnam (\"$sfsuser\")"
+    fi
+    gid_isnum=`expr $sfsgroup : $expr`
+    if test "$gid_isnum" != 0; then
+	sfs_getgrp="getgrgid ($sfsgroup)"
+    else
+	sfs_getgrp="getgrnam (\"$sfsgroup\")"
+    fi
+    AC_TRY_RUN([changequote changequote([[,]])
+#include <stdio.h>
+#include <sys/types.h>
+#include <pwd.h>
+#include <grp.h>
+
+static int error;
+
+static void
+bad (char *p)
+{
+  if (error)
+    printf (" %s", p);
+  else {
+    error = 1;
+    printf ("[%s", p);
+  }
+}
+
+int
+main ()
+{
+  struct passwd *pw = $sfs_getpwd;
+  struct group *gr = $sfs_getgrp;
+
+  if (!$uid_isnum && !pw)
+    bad ("No user $sfsuser."); 
+  if (!$gid_isnum && !gr)
+    bad ("No group $sfsgroup."); 
+  else if (gr && gr->gr_mem[0])
+    bad ("Group $sfsgroup cannot have users."); 
+  if (pw && gr && pw->pw_gid != gr->gr_gid)
+    bad ("Login group of $sfsuser must be $sfsgroup."); 
+  if (error)
+    printf ("] ");
+  return error;
+}
+changequote([,])],
+    sfs_cv_ugidok=yes, sfs_cv_ugidok=no, sfs_cv_ugidok=skipped))
+
+    test "$sfs_cv_ugidok" = no \
+	&& AC_MSG_ERROR(Create sfs user/group or use --with-sfsuser/--with-sfsgroup)
+fi
+
+
+AC_ARG_ENABLE(shlib,
+--enable-shlib            Build shared libraries rather than static ones,,)
+if test "$enable_shlib" = yes; then
+    enable_shared=yes
+    enable_static=no
+fi
+if test "$enable_shlib" = no; then
+    enable_shared=no
+    enable_static=yes
+fi
+# XXX - next line seems to be required for some autoconf/-make/libtool versions
+test -z "$target" && target=NONE
+AC_DISABLE_SHARED
+AC_PROG_LIBTOOL
+dnl AM_PROG_LIBTOOL
+AM_CONDITIONAL(STATIC, test "$enable_shared" != yes)
+
+AC_SUBST(MALLOCK)
+MALLOCK='$(top_builddir)/sfsmisc/mallock.o'
+AC_SUBST(NOPAGING)
+if test "$enable_static" = yes -a -z "${NOPAGING+set}"; then
+    case "$host_os" in
+	openbsd*)
+	    test "$ac_cv_prog_gcc" = yes && NOPAGING="-Wl,-Bstatic,-N"
+	    MALLOCK=		# mallock.o panics the OpenBSD kernel
+	;;
+	freebsd*)
+	    test "$ac_cv_prog_gcc" = yes && NOPAGING="-Wl,-Bstatic"
+	;;
+    esac
+fi
+
+dnl Path for daemonize
+SFS_PATH_PROG(logger)
+
+dnl Path for pathinfo
+SFS_PATH_DF
+
+dnl Paths for random number generator
+SFS_DEV_RANDOM
+SFS_PATH_PROG(dmesg)
+SFS_PATH_PROG(fstat)
+SFS_PATH_PROG(ls)
+SFS_PATH_PROG(lsof)
+SFS_LSOF_DEVCACHE
+SFS_PATH_PROG(netstat)
+SFS_PATH_PROG(nfsstat)
+SFS_PATH_PROG(ntpq)
+SFS_PATH_PROG(ps)
+SFS_PATH_PROG(rup)
+SFS_PATH_PROG(rusers)
+SFS_PATH_PROG(vmstat)
+SFS_PATH_PROG(w)
+
+dnl Path for ssu
+SFS_PATH_PROG(su)
+
+dnl Path for ptyd
+SFS_PATH_PROG(sessreg)
+
+dnl Path for rex
+SFS_PATH_PROG(xauth)
+
+SFS_PERL_POD
+
+dnl Checks for header files.
+AC_HEADER_STDC
+AC_HEADER_SYS_WAIT
+AC_CHECK_HEADERS(string.h time.h)
+AC_CHECK_HEADERS(sys/rusage.h sys/mkdev.h)
+AC_CHECK_HEADERS(sys/sockio.h sys/filio.h sys/file.h sys/stropts.h)
+
+dnl Checks for typedefs, structures, and compiler characteristics.
+AC_C_CONST
+AC_C_INLINE
+AC_STRUCT_TM
+AC_TYPE_OFF_T
+AC_TYPE_UID_T
+AC_TYPE_SIZE_T
+AC_C_BIGENDIAN
+SFS_TIMESPEC
+SFS_CHECK_TYPE(ssize_t)
+SFS_CHECK_TYPE(int32_t)
+SFS_CHECK_TYPE(u_int32_t)
+SFS_CHECK_TYPE(u_int16_t)
+SFS_CHECK_TYPE(u_int8_t)
+SFS_CHECK_TYPE(mode_t)
+SFS_CHECK_TYPE(u_char)
+SFS_CHECK_TYPE(u_int)
+SFS_CHECK_TYPE(u_long)
+SFS_CHECK_TYPE(int64_t)
+SFS_CHECK_TYPE(u_int64_t)
+SFS_CHECK_TYPE(socklen_t)
+SFS_CHECK_TYPE(rlim_t,
+[#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif /* HAVE_SYS_TIME_H */
+#include <sys/resource.h>
+#ifdef HAVE_SYS_RUSAGE_H
+#include <sys/rusage.h>
+#endif /* !HAVE_SYS_RUSAGE_H */])
+AC_CHECK_SIZEOF(long, 4)
+AC_CHECK_SIZEOF(long long, 0)
+SFS_CHECK_OFF_T_64
+SFS_SETGROUPS
+SFS_AUTHUNIX_GROUP_T
+SFS_XDR_OPS_T
+SFS_CHECK_DECL(pread, unistd.h)
+SFS_CHECK_DECL(pwrite, unistd.h)
+SFS_CHECK_DECL(mkstemp, unistd.h stdlib.h)
+SFS_CHECK_DECL(getrusage, sys/rusage.h sys/resource.h, sys/time.h)
+SFS_CHECK_DECL(fchdir, unistd.h)
+SFS_CHECK_DECL(flock, fcntl.h sys/file.h)
+SFS_CHECK_DECL(bindresvport, rpc/rpc.h)
+
+dnl Check for libraries
+AC_CHECK_LIB(socket, socket)
+AC_CHECK_LIB(nsl, main)
+
+dnl Checks for library functions.
+AC_CHECK_FUNCS(strchr memcpy strcasecmp)
+AC_CHECK_FUNCS(getdtablesize)
+AC_CHECK_FUNCS(strerror)
+AC_CHECK_FUNCS(inet_aton bindresvport)
+AC_CHECK_FUNCS(__seterr_reply xdr_int64_t xdr_u_int64_t xdr_longlong_t)
+AC_CHECK_FUNCS(arc4random)
+AC_CHECK_FUNCS(flock)
+AC_CHECK_FUNCS(mlockall)
+AC_CHECK_FUNCS(getspnam)
+AC_CHECK_FUNCS(issetugid geteuid getegid)
+AC_CHECK_FUNCS(fchown fchmod)
+AC_CHECK_FUNCS(pread pwrite)
+AC_CHECK_FUNCS(setlogin)
+AC_CHECK_FUNCS(unsetenv)
+AC_CHECK_FUNCS(fhopen)
+SFS_GETGROUPLIST
+SFS_PTYLIB
+dnl AC_CHECK_FUNCS(popen times clock getrusage)
+
+dnl POSIX.1b defines a struct timespec to record time information in two
+dnl fields: seconds and nanoseconds.  Some stat structures have these.
+dnl Others (including linux) don not have the sub-second information.
+dnl Check for this by looking for the st_atimespec field in struct stat.
+
+SFS_CHECK_STAT_FIELD(st_atimespec)
+SFS_CHECK_STAT_FIELD(st_mtimespec)
+
+dnl SFS specific checks
+SFS_DMALLOC
+SFS_CHECK_XDR
+SFS_CHECK_WIDE_SELECT
+SFS_PUTENV_COPY
+SFS_CHECK_NFSMNT
+SFS_CHECK_SA_LEN
+SFS_CHECK_FDPASS
+SFS_CHECK_SOCK_BUF
+SFS_CHECK_EGID_IN_GROUPLIST
+SFS_FIND_RESOLV
+SFS_FIND_CRYPT
+SFS_GMP
+SFS_OPENSSL
+
+AC_CACHE_CHECK(for arla xfs, sfs_cv_have_dev_xfs,
+    if test -c /dev/xfs0; then
+	sfs_cv_have_dev_xfs=yes
+    else
+	sfs_cv_have_dev_xfs=no
+    fi)
+if test "$sfs_cv_have_dev_xfs" = yes; then
+    AC_DEFINE(HAVE_DEV_XFS, 1,
+	Define if your kernel has the Arla file system's XFS device)
+fi
+
+SFS_SLEEPYCAT(4.1 4.0 3.3 3.2 3.1, no)
+AC_SUBST(DBLIB)
+AC_SUBST(DBDEPS)
+DBLIB='$(top_builddir)/sfsrodb/libsfsrodb.a'
+DBDEPS='$(top_builddir)/sfsrodb/libsfsrodb.a'
+if test "${with_db}" != no; then
+	CPPFLAGS="$CPPFLAGS -DSLEEPYCAT"
+	DBLIB="$DBLIB $DB_LIB"
+else
+	DBLIB="$DBLIB"' $(top_builddir)/adb/libbtree.a'
+	DBDEPS="$DBDEPS"' $(top_builddir)/adb/libbtree.a'
+fi
+
+dnl Add SFS libraries to LDADD by default.
+CPPFLAGS="$CPPFLAGS -I"'$(top_srcdir)'
+for lib in async arpc crypt sfsmisc sfsrodb adb; do
+    CPPFLAGS="$CPPFLAGS -I"'$(top_srcdir)'"/$lib"
+done
+CPPFLAGS="$CPPFLAGS -I"'$(top_builddir)'"/svc"
+CPPFLAGS="$CPPFLAGS -I"'$(top_srcdir)'"/svc"
+AC_SUBST(LIBASYNC)
+LIBASYNC='$(top_builddir)/async/libasync.la'
+AC_SUBST(LIBARPC)
+LIBARPC='$(top_builddir)/arpc/libarpc.la'
+AC_SUBST(LIBSFSCRYPT)
+LIBSFSCRYPT='$(top_builddir)/crypt/libsfscrypt.la'
+AC_SUBST(LIBSVC)
+LIBSVC='$(top_builddir)/svc/libsvc.la'
+AC_SUBST(LIBADB)
+LIBADB='$(top_builddir)/adb/btree/libbtree.la'
+AC_SUBST(LIBSFSRODB)
+LIBSFSRODB='$(top_builddir)/sfsrodb/libsfsrodb.la'
+AC_SUBST(LIBSFSMISC)
+LIBSFSMISC='$(top_builddir)/sfsmisc/libsfsmisc.la'
+LDADD='$(LIBSFSMISC) $(LIBSVC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC) $(LIBGMP)'
+if test "$enable_shared" = yes; then
+    LDEPS=
+else
+    LDEPS='$(LIBSFSMISC) $(LIBSVC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC)'
+fi
+
+#LDADD="$LDADD "'$(top_builddir)'"/svc/libsvc.la"
+#LDFLAGS="$LDFLAGS -L"'$(top_builddir)'"/svc"
+#LDEPS="$LDEPS "'$(top_builddir)'"/svc/libsvc.a"
+#LDADD="$LDADD -lsfsmisc -lsvc -lsfscrypt -larpc -lasync -lgmp"
+
+dnl Auxilliary executables go in sfsexecdir
+if test -z "$sfslibdir"; then
+	sfslibdir='${pkglibdir}-${VERSION}'
+fi
+AC_SUBST(sfslibdir)
+if test -z "$sfsincludedir"; then
+	sfsincludedir='${pkgincludedir}-${VERSION}'
+fi
+AC_SUBST(sfsincludedir)
+sfsexecdir="$sfslibdir"
+AC_SUBST(sfsexecdir)
+CPPFLAGS="$CPPFLAGS -DEXECDIR="'\"$(sfsexecdir)\"'
+
+SFS_CFLAGS
+
+ETAGS_ARGS='-C /dev/null'
+AC_SUBST(ETAGS_ARGS)
+
+
+AC_ARG_ENABLE(uvfs,
+--enable-uvfs             Build support for user-level VFS lkm,,
+enable_uvfs=no)
+if test "$enable_uvfs" = yes; then
+    CPPFLAGS="$CPPFLAGS -DUSE_UVFS "'-I$(top_srcdir)/uvfs'
+    UVFS_DIR=uvfs
+else
+    UVFS_DIR=
+    case "$ac_configure_args" in
+	*--disable-uvfs*)
+	    ;;
+	*)
+	    ac_configure_args="${ac_configure_args}${ac_configure_args+ }--disable-uvfs"
+	    ;;
+    esac
+fi
+AC_SUBST(UVFS_DIR)
+dnl AC_CONFIG_SUBDIRS($UVFS_DIR)
+AC_CONFIG_SUBDIRS(uvfs)
+AM_CONDITIONAL(UVFS, test "$enable_uvfs" = yes)
+
+AC_ARG_ENABLE(repo,
+--enable-repo             Try to use the -frepo flag of egcs,,
+enable_repo=no)
+if test "$enable_repo" = yes; then
+    CXXFLAGS="$CXXFLAGS -frepo"
+fi
+AM_CONDITIONAL(REPO, test "$enable_repo" = yes)
+
+AC_ARG_WITH(mailpath,
+[--with-mailpath=DIR       Directory where mail spool files are located],
+	[sfs_cv_mailpath=$withval],
+	[AC_CACHE_CHECK(for where new mail is stored, sfs_cv_mailpath,
+		[sfs_cv_mailpath=no
+		if test -d /var/mail; then
+			sfs_cv_mailpath=/var/mail
+		elif test -d /var/spool/mail; then
+			sfs_cv_mailpath=/var/spool/mail
+		elif test -d /usr/spool/mail; then
+			sfs_cv_mailpath=/usr/spool/mail
+		elif test -d /usr/mail; then
+			sfs_cv_mailpath=/usr/mail
+		fi])
+	])
+if test $sfs_cv_mailpath != no; then
+    AC_DEFINE_UNQUOTED(MAILPATH, "$sfs_cv_mailpath",
+        [Define to be the directory where mail spools are stored (for REX server)])
+fi
+
+AC_ARG_WITH(etcdir,
+--with-etcdir=DIR         Location of per-host SFS configuration files)
+etcdir="$with_etcdir"
+test -z "$etcdir" -o "$etcdir" = yes -o "$etcdir" = no && etcdir=/etc/sfs
+AC_SUBST(etcdir)
+CPPFLAGS="$CPPFLAGS -DETCDIR="'\"$(etcdir)\"'
+CPPFLAGS="$CPPFLAGS -DDATADIR="'\"$(pkgdatadir)\"'
+
+if test -d /var/run; then
+    piddir=/var/run
+else
+    piddir="$etcdir"
+fi
+AC_SUBST(piddir)
+CPPFLAGS="$CPPFLAGS -DPIDDIR="'\"$(piddir)\"'
+
+AC_ARG_WITH(sfsdir,
+--with-sfsdir=DIR         Location of SFS working files,
+    sfsdir="$withval",
+    if test -d /var; then sfsdir=/var/sfs;
+    else sfsdir=/usr/sfs; fi)
+AC_SUBST(sfsdir)
+CPPFLAGS="$CPPFLAGS -DSFSDIR="'\"$(sfsdir)\"'
+
+AC_ARG_WITH(sfsuser,
+--with-sfsuser=name       Name of sfs user)
+AC_ARG_WITH(sfsgroup,
+--with-sfsgroup=name      Name of sfs group)
+
+
+
+AC_OUTPUT(Makefile async/Makefile rpcc/Makefile arpc/Makefile
+	crypt/Makefile sfsmisc/Makefile libsfs/Makefile)
+dnl 
+dnl svc/Makefile sfsmisc/Makefile libsfs/Makefile
+dnl 	etc/Makefile etc/agentrc etc/sfs_config etc/sfscd_config
+dnl 	etc/sfssd_config etc/sfsauthd_config doc/Makefile tests/Makefile
+dnl 	sfssd/Makefile sfsrwsd/Makefile
+dnl 	nfsmounter/Makefile sfscd/Makefile sfsrwcd/Makefile agent/Makefile
+dnl 	rex/Makefile sfsauthd/Makefile sfsusrv/Makefile
+dnl 	adb/Makefile sfsrodb/Makefile sfsrosd/Makefile sfsrocd/Makefile
+dnl 	sfsaclsd/Makefile)
+dnl 

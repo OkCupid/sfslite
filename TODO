@@ -1,0 +1,35 @@
+
+* Add unix= field to privs in sfs_users file
+
+* Deal with small RPC packets that claim to contain huge arrays (don't malloc)
+* http://www.mit.edu:8008/snafu.fooworld.org/sfs/224
+
+* SECURITY: setuid programs currently cause security hole with DMALLOC
+            because of log files.
+
+* Better revocation/forwarding support in sfskey, sfssd
+* Worry about core dumps (do modern os's still set core mode with umask?)
+* Copy sfsrwcd to local disk to avoid paging over NFS?
+
+* Flow-control aggressive clients
+* Provable SRP primes
+* Make SFS run without reserved uid/gid
+* Check build with KCC
+
+* Login
+* Automatically check portmap for forwarding?  mountd -n
+* Random XID's in client
+
+* Break out private key into separate program
+* Make timecb deal better with clock adjustments
+* Check build without -DMAINTAINER
+* Compress traffic
+
+* UVFS
+* SFS-RO
+* Anonymous remote execution (CGI)
+
+* Agent should log to a file if desired
+
+* Schnorr Key Generation: generate arbitrary-length schnorr keys.
+* Simple password change program

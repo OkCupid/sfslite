@@ -1,0 +1,59 @@
+/* $Id$ */
+
+/*
+ *
+ * Copyright (C) 2000 Michael Kaminsky (kaminsky@lcs.mit.edu)
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
+ * USA
+ *
+ */
+
+#ifndef _SFSMISC_AGENTCONN_H_
+#define _SFSMISC_AGENTCONN_H_ 1
+
+#include "async.h"
+#include "arpc.h"
+#include "sfsmisc.h"
+#include "sfsagent.h"
+#include "agentmisc.h"
+
+class agentconn : public virtual refcount {
+private:
+  int agentfd;
+  ptr<aclnt> agentclnt_ctl;
+  ptr<aclnt> agentclnt_cb;
+  ptr<axprt_unix> sfscdxprt;
+  ptr<aclnt> sfscdclnt;
+
+
+public:
+  agentconn ()
+    : agentfd (-1) {}
+  ~agentconn () {}
+
+  int cagent_fd ();
+
+  ptr<aclnt> ccd (bool required = true);
+  ref<aclnt> cagent_ctl ();
+  ref<aclnt> cagent_cb ();
+
+  str lookup (str &hostname);
+  ptr<sfsagent_auth_res> auth (sfsagent_authinit_arg &arg);
+  ptr<sfsagent_rex_res> rex (str &pathname, bool forwardagent);
+  bool isagentrunning ();
+};
+
+#endif /* _SFSMISC_AGENTCONN_H_ */

@@ -1,0 +1,32 @@
+$Id$
+
+SFS (Self-certifying File System) is a secure, global network file
+system.  SFS names file systems by public keys.  Every remote file
+server is mounted on a self-certifying pathname--a directory of the
+form /sfs/LOCATION:HOSTID, where LOCATION is a DNS hostname and HOSTID
+is a cryptographic hash of a public key.  This naming scheme allows
+for completely decentralized control--anyone can create a file server,
+and any user can access any file server from any client.  Various key
+management schemes can be built on top of SFS using symbolic links to
+map human-readable names to self-certifying pathnames.
+
+SFS should run with little or no modification on any operating system
+that supports NFS3.  We have at varoius points run SFS on OpenBSD,
+FreeBSD, Linux, Solaris, and Digital Unix.  SFS also compiles and runs
+under MacOS X, but see the file INSTALL.darwin in the distribution for
+more information on this.
+
+This release of SFS should be considered pre-alpha.  Though to-date
+SFS has been remarkably stable, the SFS protocols and interface will
+change in the future.  Though we will make some effort to maintain
+compatibility, we cannot guarantee complete compatibility with future
+versions.
+
+More documentation can be found in the SFS info pages in the doc
+subdirectory, or at the SFS web site http://www.fs.net/.
+
+Report bugs in the system to <sfsbug@redlab.lcs.mit.edu>.
+
+Send questions, comments, and feature requests to
+<sfsdev@redlab.lcs.mit.edu>.  We would like to hear about how people
+are using SFS.

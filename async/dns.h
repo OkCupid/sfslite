@@ -1,0 +1,90 @@
+// -*-c++-*-
+/* $Id$ */
+
+/*
+ *
+ * Copyright (C) 1998 David Mazieres (dm@uun.org)
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
+ * USA
+ *
+ */
+
+
+#ifndef _DNS_H_
+#define _DNS_H_ 1
+
+#include "async.h"
+
+extern "C" {
+#define class rr_class
+#include <arpa/nameser.h>
+#undef class
+#include <resolv.h>
+
+/* Declarations missing on some OS's */
+#ifdef NEED_RES_INIT_DECL
+void res_init ();
+#endif /* NEED_RES_INIT_DECL */
+#ifdef NEED_RES_MKQUERY_DECL
+int res_mkquery (int, const char *, int, int,
+		 const u_char *, int, const u_char *,
+		 u_char *, int);
+#endif /* NEED_RES_MKQUERY_DECL */
+}
+
+
+struct hostent;
+
+struct mxrec {
+  u_short pref;
+  char *name;
+};
+struct mxlist {
+  char *m_name;                /* Name of host for which MX list taken */
+  u_short m_nmx;               /* Number of mx records */
+  struct mxrec m_mxes[1];      /* MX records */
+};
+
+/* Extender error types for ar_errno */
+#define ARERR_NXREC 0x101	/* No records of appropriate type */
+#define ARERR_TIMEOUT 0x102	/* Query timed out */
+#define ARERR_PTRSPOOF 0x103	/* PTR response was a lie! */
+#define ARERR_BADRESP 0x104	/* Nameserver replied with malformed packet */
+#define ARERR_CANTSEND 0x105	/* Can't send to name server */
+#define ARERR_REQINVAL 0x106	/* Request was for malformed domain name */
+#define ARERR_CNAMELOOP 0x107   /* CNAME records form loop */
+
+typedef struct dnsreq dnsreq_t;
+void dnsreq_cancel (dnsreq_t *rqp);
+
+typedef callback<void, ptr<hostent>, int>::ref cbhent;
+dnsreq_t *dns_hostbyname (str, cbhent,
+			  bool search = false, bool addrok = true);
+dnsreq_t *dns_hostbyaddr (const in_addr, cbhent);
+
+typedef callback<void, ptr<mxlist>, int>::ref cbmxlist;
+dnsreq_t *dns_mxbyname (str, cbmxlist, bool search = false);
+
+const char *dns_strerror (int);
+int dns_tmperr (int);
+
+void printaddrs (const char *, ptr<hostent>, int = 0);
+void printmxlist (const char *, ptr<mxlist>, int = 0);
+
+void dns_reload ();
+
+#endif /* !_DNS_H_ */
+

@@ -1,0 +1,118 @@
+$Id$
+
+Upgrading From SFS 0.6 to SFS 0.7
+==================================
+
+I. Introduction / Quick Setup
+-----------------------------
+Starting in release 0.7, SFS will have a new authentication server,
+authentication protocol, and pathname syntax.  The new versions of
+SFS will not be fully backwards compatible with the old. Here are 
+the quick steps to take to upgrade your configuration files
+after installing new binaries:
+
+	1. Update sfs_users
+	-------------------
+       	    Run:
+
+		perl sfsauthd/upgradedb.pl
+
+	    By default, the script will operate on the sfs_users
+	    file in /etc/sfs.  You can alternatively specify files
+	    to upgrade on the command line, or try the -a flag to
+	    upgrade all sfs_users files found with the locate utility.
+	    If you do not explicitly specify files to upgrade, the
+	    utility will prompt for confirmation on a file-by-file
+	    basis.
+	
+	2. Upgrade sfsauthd_config file 
+	-------------------------------- 
+	    The standard Userfile line is now:
+		
+		Userfile -passwd -update -pub=<file>.pub <file> 
+
+	    Where <file> is one of the system's sfs_users files.  An
+	    empty sfsauthd_config file will be interpreted as above,
+	    where <file> is the first sfs_users file found in the 
+	    SFS configuration directories. 
+
+
+II. SFS Pathnames
+-----------------
+Up to release 0.6, SFS pathnames were of the form:
+
+	<Hostname>:<HostId>[@<port>]
+	/sfs/pitt.scs.cs.nyu.edu:eigp6w44ddevhm64h4bx7jwqthtgt22g
+
+As of release 0.7, SFS pathnames are of the form:
+
+	@<Hostname>[%<port>],<HostId>
+	/sfs/@pitt.scs.cs.nyu.edu,rexmmr795q6enmhsemr5xt5f6jjhjm6h
+
+Note that the HostId has changed; HostID was previously determined by: 
+
+	SHA-1 (sfs_hostinfo, sfs_hostinfo)
+
+where sfs_hostinfo contained the hostname, and the host's public key, among
+other things.  In release 0.7, HostID is given by:
+
+	SHA-1 ( SHA-1 (pubkey), pubkey)
+
+The new HostID does not contain a reference to the hostname; this 
+facilitates -- among other things -- SFS between DHCP'ed laptops.
+
+It is recommended that all symlinks referring to the old SFS pathname be
+upgraded to the new SFS pathname format, but there is no automated tool
+for so doing at this time.  Upgrading is not essential, however. The new 
+sfs*cd will recognize old pathnames, even if they refer to SFS servers that 
+have been upgraded and run the new sfs*sd.
+
+
+III. Backwards Compatibility
+----------------------------
+
+Eventually, all functionality particular to the old SFS will be phased out,
+but for now, there are many incompatibilities between the old services 
+and the new; they are shown in the matrix below.
+
+
+	         SFS Release 0.7
+
+	 | A | B | C | D | E | F | G | H | I | J |
+         +---+---+---+---+---+---+---+---+---+---+
+       A |   |   | N | Y |   | N | N |   | N | N |
+  S      +---+---+---+---+---+---+---+---+---+---+
+  F    B |   |   |   | N | N |   |   |   |   |   |
+  S      +---+---+---+---+---+---+---+---+---+---+
+       C | N |   |   | N |   |   |   |   |   | N |       
+  R      +---+---+---+---+---+---+---+---+---+---+
+  e    D | Y | Y | Y |   |   |   |   |   |   |   |
+  l      +---+---+---+---+---+---+---+---+---+---+
+  e    E |   | N |   |   |   |   |   | N |   |   |    
+  a      +---+---+---+---+---+---+---+---+---+---+
+  s    F | N |   |   |   |   |   |   |   |   | N |
+  e      +---+---+---+---+---+---+---+---+---+---+
+       G | U |   |   |   |   |   |   |   |   |   |
+  0      +---+---+---+---+---+---+---+---+---+---+
+  .    H |   |   |   |   | N |   |   |   | N | N |
+  6      +---+---+---+---+---+---+---+---+---+---+
+       I | N |   |   |   |   |   |   | Y |   | N |
+         +---+---+---+---+---+---+---+---+---+---+
+       J | Y |   | Y |   |   | Y |   | Y | Y |   |
+         +---+---+---+---+---+---+---+---+---+---+
+
+	Compatibility Codes		Features
+	----------------- 		---------
+	N - Not compatible		A - sfsauthd
+	T - Not fully tested, but 	B - sfskey add
+            should be compatible	C - sfskey reg/update
+	U - Needs upgrade		D - SRP serve or fetch
+	Y - Compatible			E - sfsagent
+	<blank> - N/A			F - sfsauthd_config
+					G - sfs_users
+					H - sfscd
+					I - sfssd
+					J - sfs pathnames
+
+Note that SRP fetch and sfscd are compatible with older SFS servers.  
+
