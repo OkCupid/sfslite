@@ -127,7 +127,10 @@ mmap_clock_t::clock_gettime (struct timespec *out)
   // either we're unlucky or the guy crashed an a strange state
   // which is unlucky too
   if (!TIMESPEC_EQ (*out, tmp)) {
-    warn << "*mmap clock: reverting to clock_gettime\n";
+    
+    // debug message
+    //warn << "*mmap clock: reverting to clock_gettime\n";
+
     ::clock_gettime (CLOCK_REALTIME, out);
     last = *out;
     ++nbad;
