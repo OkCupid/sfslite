@@ -22,6 +22,7 @@
  */
 
 #include "suio++.h"
+#include "callback.h"
 
 #ifdef DMALLOC
 
@@ -193,8 +194,7 @@ void
 suio::makeuiocbs ()
 {
   while (!uiocbs.empty () && uiocbs.front ().nbytes <= nrembytes) {
-    (*uiocbs.front ().cb) ();
-    uiocbs.popn_front (1);
+    (*uiocbs.pop_front ().cb) ();
   }
 }
 
