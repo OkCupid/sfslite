@@ -3,7 +3,10 @@
 
 LDADD = $(LIBASYNC)
 
-bin_PROGRAMS = rpcc
+sfsexec_PROGRAMS = rpcc
+if DO_BIN_INSTALL
+	bin_PROGRAMS = rpcc
+endif
 
 noinst_HEADERS = rpcc.h parse.h
 

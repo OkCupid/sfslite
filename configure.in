@@ -9,6 +9,10 @@ dnl AC_INIT(sfs,0.7.2)
 dnl AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER(config.h)
 
+SFS_TAG
+AC_SUBST(DEBUG)
+
+
 AC_SUBST(LDEPS)
 AC_SUBST(LDADD)
 
@@ -327,11 +331,14 @@ fi
 #LDEPS="$LDEPS "'$(top_builddir)'"/svc/libsvc.a"
 #LDADD="$LDADD -lsfsmisc -lsvc -lsfscrypt -larpc -lasync -lgmp"
 
+
 dnl Auxilliary executables go in sfsexecdir
 if test -z "$sfslibdir"; then
-	sfslibdir='${pkglibdir}-${VERSION}'
+	sfslibdirp='${pkglibdir}-${VERSION}'
+	sfslibdir='${pkglibdir}-${VERSION}${sfstagdir}'
 fi
 AC_SUBST(sfslibdir)
+AC_SUBST(sfslibdirp)
 if test -z "$sfsincludedir"; then
 	sfsincludedir='${pkgincludedir}-${VERSION}'
 fi

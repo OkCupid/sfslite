@@ -1139,6 +1139,7 @@ pref=$prefix
 test "$pref" = NONE && pref=$ac_default_prefix
 test "$withval" = yes && withval="${pref}"
 test "$withval" || withval="${pref}"
+test "{$with_dmalloc+set" = "set" && withval="${pref}"
 using_dmalloc=no
 if test "$withval" != no; then
 	AC_DEFINE(DMALLOC, 1, Define if compiling with dmalloc. )
@@ -1487,4 +1488,35 @@ LDEPS='$(LIBSFSMISC) $(LIBSVC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC)'
 LDADD="$LDEPS "'$(LIBGMP)'
 AC_SUBST(LDEPS)
 AC_SUBST(LDADD)
+])
+
+dnl 
+dnl SFS_TAG -- allows different builds of SFS to be installed on
+dnl the same machine (i.e., for optimzation, debug, etc)
+dnl
+AC_DEFUN(SFS_TAG,
+[AC_ARG_WITH(tag,
+--with-tag=TAG	    	Specify a custom SFS build tag)
+AC_ARG_WITH(mode,
+--with-mode=[debug|optmz]   Specify a build mode for SFS)
+if test "${with_tag+set}" = "set" -a "$with_tag" != "no"; then
+	sfstag=$with_tag
+	sfs_no_bin_install=yes
+fi
+case $with_mode in
+	"debug" )
+		DEBUG=-g
+		sfstag=$with_mode
+		with_dmalloc=yes
+		sfs_no_bin_install=yes
+		;;
+	"optmz" ) ;;
+esac
+
+if test "${sfstag+set}" = "set" ; then
+	sfstagdir="/$sfstag"
+fi	
+AC_SUBST(sfstagdir)
+AC_SUBST(sfstag)
+AM_CONDITIONAL(DO_BIN_INSTALL, test "$sfs_no_bin_install" != "yes")
 ])

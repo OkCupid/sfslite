@@ -56,12 +56,12 @@ install-data-local:
 	fi
 
 install-exec-local:
-	-src=$(DESTDIR)$(sfslibdir); dst=$(DESTDIR)$(pkglibdir); \
+	-src=$(DESTDIR)$(sfslibdirp); dst=$(DESTDIR)$(pkglibdir); \
 	rm -f $$dst; \
 	if test "`dirname $$src`" = "`dirname $$dst`"; then \
 		ln -s "`basename $$src`" $$dst; \
 	else \
-		ln -s $(sfslibdir) $$dst; \
+		ln -s $(sfslibdirp) $$dst; \
 	fi
 
 install-data-hook:
