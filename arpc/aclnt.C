@@ -44,7 +44,14 @@ static void
 ignore_clnt_stat (clnt_stat)
 {
 }
+
+#ifdef WRAP_DEBUG
+aclnt_cb aclnt_cb_null (_wrap ("ignore_clnt_stat", "", 
+			       "void ignore_clnt_stat (clnt_stat)",
+			       __FL__, ignore_clnt_stat));
+#else
 aclnt_cb aclnt_cb_null (wrap (ignore_clnt_stat));
+#endif
 
 INITFN (aclnt_init);
 
