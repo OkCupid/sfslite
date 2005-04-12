@@ -23,6 +23,8 @@
 
 #include "rpcc.h"
 
+str module;
+
 static void
 pmshl (str id)
 {
@@ -34,6 +36,8 @@ pmshl (str id)
 static str
 decltype (const rpc_decl *d)
 {
+  return "PyObject *";
+
   if (d->type == "string")
     return strbuf () << "rpc_str<" << d->bound << ">";
   else if (d->type == "opaque")
@@ -74,6 +78,148 @@ pdecl (str prefix, const rpc_decl *d)
   aout << prefix << decltype (d) << " " << name << ";\n";
 }
 
+static str
+init_frag_for_member (const rpc_decl *d)
+{
+  // XXX
+  // for now, don't distinguish between VEC's and ARRAY's
+  if (d->type == "string" || d->type == "opaque") 
+    return "PyString_FromString (\"\")";
+  else {
+    switch (d->qual) {
+    case rpc_decl::SCALAR:
+      return "PyInt_FromLong (0)";
+    case rpc_decl::PTR:
+      return "Py_None";
+    case rpc_decl::VEC:
+    case rpc_decl::ARRAY:
+      return "PyList_New (0)";
+    default:
+      panic ("Bad rpc_decl qual (%d)\n", d->qual);
+    }
+  }
+  panic ("bad data type: %s\n", d->type.cstr ());
+}
+
+static void
+dump_init_frag (str prefix, const rpc_decl *d)
+{
+  aout << prefix << "if (!(self->" << d->id << " = " 
+       << init_frag_for_member (d) << ")) {\n"
+       << prefix << "  Py_DECREF (self);\n"
+       << prefix << "  return NULL;\n"
+       << prefix << "}\n";
+}
+
+static void
+dump_class_new_func (const rpc_struct *rs)
+{
+  aout << "\nstatic PyObject *\n"
+       << rs->id 
+       << "_new (PyTypeObject *type, PyObject *args, PyObject *kwds)\n"
+       << "{\n"
+       << "  " << rs->id << " *self;\n"
+       << "  if (!(self = (bar_t *)type->py_alloc (type, 0)))\n"
+       << "    return NULL;\n";
+  for (const rpc_decl *rd = rs->decls.base (); rd < rs->decls.lim (); rd++) {
+    dump_init_frag ("  ", rd);
+  }
+  aout << "  return (PyObject *)self;\n"
+       << "}\n";
+
+}
+
+static void
+dump_class_dealloc_func (const rpc_struct *rs)
+{
+  aout << "\nstatic void\n"
+       << rs->id << "_dealloc (" << rs->id << " *self)\n"
+       << "{\n";
+  for (const rpc_decl *rd = rs->decls.base (); rd < rs->decls.lim (); rd++) {
+    aout << "  Py_XDECREF (self->" << rd->id << ");\n";
+  }
+  aout << "}\n\n";
+}
+
+static void
+dump_allocator (const rpc_struct *rs)
+{
+  aout << "void *\n"
+       << rs->id << "_alloc ()\n"
+       << "{"
+       << "  return New " << rs->id << ";"
+       << "}\n\n";
+}
+
+static void
+dump_xdr_func (const rpc_struct *rs)
+{
+  aout << "bool_t\n"
+       << "xdr_" << rs->id << " (XDR *xdrs, void *objp)\n"
+       << "{\n"
+       << "  switch (xdrs->x_ops) {\n"
+       << "  case XDR_ENCODE:\n"
+       << "  case XDR_DECODE:\n"
+       << "    return rpc_traverse (xdrs, *static_cast<" 
+       << rs->id << " *> (objp));\n"
+       << "  case XDR_FREE:\n"
+       << "    Py_XDECREF (static_cast<PyObject *> (objp));\n"
+       << "    return true;\n"
+       << "  default:\n"
+       << "    panic (\"invalid xdr operation %d\\n\", xdrs->x_op);"
+       << "  }\n"
+       << "  return false;\n"
+       << "}\n\n";
+}
+
+static void
+dump_class_members (const rpc_struct *rs)
+{
+  aout << "static PyTypeObject " << rs->id << "_Type = {\n"
+       << "  PyObject_HEAD_INIT(NULL)\n"
+       << "  0,                         /*ob_size*/\n"
+       << "  \"" <<  module << "." << rs->id 
+       << "\",               /*tp_name*/\n"
+       << "  sizeof(" << rs->id << "),             /*tp_basicsize*/\n"
+       << "  0,                         /*tp_itemsize*/\n"
+       << "  (destructor)" << rs->id << "_dealloc, /*tp_dealloc*/\n"
+       << "  0,                         /*tp_print*/\n"
+       << "  0,                         /*tp_getattr*/\n"
+       << "  0,                         /*tp_setattr*/\n"
+       << "  0,                         /*tp_compare*/\n"
+       << "  0,                         /*tp_repr*/\n"
+       << "  0,                         /*tp_as_number*/\n"
+       << "  0,                         /*tp_as_sequence*/\n"
+       << "  0,                         /*tp_as_mapping*/\n"
+       << "  0,                         /*tp_hash */\n"
+       << "  0,                         /*tp_call*/\n"
+       << "  0,                         /*tp_str*/\n"
+       << "  0,                         /*tp_getattro*/\n"
+       << "  0,                         /*tp_setattro*/\n"
+       << "  0,                         /*tp_as_buffer*/\n"
+       << "  Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /*tp_flags*/\n"
+       << "  \"" << rs->id << " objects\",           /* tp_doc */\n"
+       << "  0,		               /* tp_traverse */\n"
+       << "  0,		               /* tp_clear */\n"
+       << "  0,		               /* tp_richcompare */\n"
+       << "  0,		               /* tp_weaklistoffset */\n"
+       << "  0,		               /* tp_iter */\n"
+       << "  0,		               /* tp_iternext */\n"
+       << "  " << rs->id << "_methods,             /* tp_methods */\n"
+       << "  " << rs->id << "_members,             /* tp_members */\n"
+       << "  0,                         /* tp_getset */\n"
+       << "  0,                         /* tp_base */\n"
+       << "  0,                         /* tp_dict */\n"
+       << "  0,                         /* tp_descr_get */\n"
+       << "  0,                         /* tp_descr_set */\n"
+       << "  0,                         /* tp_dictoffset */\n"
+       << "  (initproc)" << rs->id << "_init,      /* tp_init */\n"
+       << "  0,                         /* tp_alloc */\n"
+       << "  " << rs->id << "_new,                 /* tp_new */\n"
+       << "};\n\n";
+}
+
+
 static void
 dumpstruct (const rpc_sym *s)
 {
@@ -82,9 +228,15 @@ dumpstruct (const rpc_sym *s)
   for (const rpc_decl *rd = rs->decls.base (); rd < rs->decls.lim (); rd++)
     pdecl ("  ", rd);
   aout << "};\n";
-  pmshl (rs->id);
+  //pmshl (rs->id);
   aout << "RPC_STRUCT_DECL (" << rs->id << ")\n";
   // aout << "RPC_TYPE_DECL (" << rs->id << ")\n";
+
+  dump_class_dealloc_func (rs);
+  dump_class_new_func (rs);
+  dump_allocator (rs);
+  dump_xdr_func (rs);
+  dump_class_members (rs);
 
   aout << "\ntemplate<class T> "
        << (rs->decls.size () > 1 ? "" : "inline ") << "bool\n"
@@ -103,7 +255,7 @@ dumpstruct (const rpc_sym *s)
 }
 
 void
-pswitch (str prefix, const rpc_union *rs, str swarg,
+static py_pswitch (str prefix, const rpc_union *rs, str swarg,
 	 void (*pt) (str, const rpc_union *rs, const rpc_utag *),
 	 str suffix, void (*defac) (str, const rpc_union *rs))
 {
@@ -206,7 +358,7 @@ dumpunion (const rpc_sym *s)
   aout << "#define rpcunion_tag_" << rs->id << " " << rs->tagid << "\n";
   aout << "#define rpcunion_switch_" << rs->id
        << "(swarg, action, voidaction, defaction) \\\n";
-  pswitch ("  ", rs, "swarg", punionmacro, " \\\n", punionmacrodefault);
+  py_pswitch ("  ", rs, "swarg", punionmacro, " \\\n", punionmacrodefault);
 
   aout << "\n"
        << "  " << rs->id << " (" << rs->tagtype << " _tag = ("
@@ -376,8 +528,9 @@ dumpsym (const rpc_sym *s)
   }
 }
 
+
 static str
-makeguard (str fname)
+makemodulename (str fname)
 {
   strbuf guard;
   const char *p;
@@ -386,28 +539,23 @@ makeguard (str fname)
     p++;
   else p = fname;
 
-  guard << "__RPCC_";
   while (char c = *p++) {
     if (isalnum (c))
-      c = toupper (c);
+      guard << c;
     else
-      c = '_';
-    guard << c;
+      break;
   }
-  guard << "_INCLUDED__";
 
   return guard;
 }
 
 void
-genheader (str fname)
+genpyc (str fname)
 {
-  str guard = makeguard (fname);
+  module = makemodulename (fname);
 
   aout << "// -*-c++-*-\n"
        << "/* This file was automatically generated by rpcc. */\n\n"
-       << "#ifndef " << guard << "\n"
-       << "#define " << guard << " 1\n\n"
        << "#include \"xdrmisc.h\"\n";
 
   int last = rpc_sym::LITERAL;
@@ -422,6 +570,4 @@ genheader (str fname)
     last = s->type;
     dumpsym (s);
   }
-
-  aout << "#endif /* !" << guard << " */\n";
 }
