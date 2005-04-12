@@ -7,7 +7,8 @@ bin_PROGRAMS = rpcc
 
 noinst_HEADERS = rpcc.h parse.h
 
-rpcc_SOURCES = genheader.C gencfile.C genpython.C parse.yy scan.ll rpcc.C
+rpcc_SOURCES = genheader.C gencfile.C genpython.C parse.yy scan.ll rpcc.C \
+	genpycfile.C
 if STATIC
 rpcc_LDADD = $(LDADD)
 rpcc_DEPENDENCIES = $(LIBASYNC)

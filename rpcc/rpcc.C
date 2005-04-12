@@ -123,7 +123,7 @@ cleanup ()
 static void
 usage ()
 {
-  warn << "usage: rpcc {-c | -h | -python} [-Ppref] [-Ddef] [-Idir] "
+  warn << "usage: rpcc {-c | -h | -python | -q } [-Ppref] [-Ddef] [-Idir] "
     "[-o outfile] file.x\n";
   exit (1);
 }
@@ -147,7 +147,7 @@ main (int argc, char **argv)
   vec<char *> av;
   char *fname = NULL;
   char *basename;
-  enum { BAD, HEADER, CFILE, PYTHON } mode = BAD;
+  enum { BAD, HEADER, CFILE, PYTHON, PYC } mode = BAD;
   void (*fn) (str) = NULL;
   int len;
 
@@ -170,6 +170,8 @@ main (int argc, char **argv)
       mode = CFILE;
     else if (!strcmp (arg, "-python") && mode == BAD)
       mode = PYTHON;
+    else if (!strcmp (arg, "-q") && mode == BAD)
+      mode = PYC;
     else if (!strcmp (arg, "-o") && !outfile && ++an < argc)
       outfile = argv[an];
     else if (!strncmp (arg, "-o", 2) && !outfile && arg[2])
@@ -215,6 +217,12 @@ main (int argc, char **argv)
     if (!outfile)
       outfile = strbuf ("%.*spy", len - 1, basename);
      break;
+  case PYC:
+    av[2] = "-DRPCC_PYC";
+    fn = genpyc;
+    if (!outfile)
+      outfile = strbuf ("%.*sC", len -1, basename);
+    break;
   default:
     usage ();
     break;

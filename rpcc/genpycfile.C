@@ -96,6 +96,12 @@ is_double_type (const str &s)
   return (s == "double"  || s == "quadruple");
 }
 
+static bool
+is_number (const str &s)
+{
+  return is_double_type (s) || is_int_type (s) || is_long_type (s);
+}
+
 static str
 py_type (const str &in)
 {
@@ -105,7 +111,7 @@ py_type (const str &in)
 }
 
 static str
-py_type (rpc_decl *d)
+py_type (const rpc_decl *d)
 {
   if (d->type == "string" || d->type == "opaque") {
     return "PyString_Type";
@@ -133,7 +139,7 @@ py_type (rpc_decl *d)
 
 
 static str
-init_frag_for_member (const rpc_decl *d)
+py_member_init (const rpc_decl *d)
 {
   // XXX
   // for now, don't distinguish between VEC's and ARRAY's
@@ -171,7 +177,7 @@ static void
 dump_init_frag (str prefix, const rpc_decl *d)
 {
   aout << prefix << "if (!(self->" << d->id << " = " 
-       << init_frag_for_member (d) << ")) {\n"
+       << py_member_init (d) << ")) {\n"
        << prefix << "  Py_DECREF (self);\n"
        << prefix << "  return NULL;\n"
        << prefix << "}\n";
@@ -302,7 +308,7 @@ dump_object_table (const rpc_struct *rs)
        << "  0,		               /* tp_iternext */\n"
        << "  " << rs->id << "_methods,             /* tp_methods */\n"
        << "  " << rs->id << "_members,             /* tp_members */\n"
-       << "  0,                         /* tp_getset */\n"
+       << "  " << rs->id << "_getsetters,          /* tp_getset */\n"
        << "  0,                         /* tp_base */\n"
        << "  0,                         /* tp_dict */\n"
        << "  0,                         /* tp_descr_get */\n"
@@ -311,6 +317,134 @@ dump_object_table (const rpc_struct *rs)
        << "  (initproc)" << rs->id << "_init,      /* tp_init */\n"
        << "  0,                         /* tp_alloc */\n"
        << "  " << rs->id << "_new,                 /* tp_new */\n"
+       << "};\n\n";
+}
+
+static void
+dump_getter_decl (const str &cl, const rpc_decl *d)
+{
+  aout << "PyObject * " << cl << "_get" << d->id 
+       << " (" << cl << " *self, void, *closure);\n";
+}
+
+static void
+dump_getter (const str &cl, const rpc_decl *d)
+{
+  aout << "PyObject * " << cl << "_get" << d->id 
+       << " (" << cl << " *self, void, *closure)\n"
+       << "{\n"
+       << "  Py_XINCREF (self->" << d->id << ");\n"
+       << "  return self->" << d->id << ";\n"
+       << "}\n\n";
+}
+
+
+static str
+py_typecheck (const rpc_decl *d, const str &v)
+{
+  strbuf b;
+  if (d->type == "string" || d->type == "opaque") {
+    b << "PyString_Check (" << v << ")";
+  } else {
+    switch (d->qual) {
+    case rpc_decl::PTR:
+    case rpc_decl::SCALAR: 
+      {
+	if (is_number (d->type))
+	  b << "PyNumber_Check (" << v << ")";
+	else {
+	  b << "PyObject_IsInstance (" << v << ", " << 
+	    py_type (d->type) << ")";
+	}
+      }
+    case rpc_decl::VEC:
+    case rpc_decl::ARRAY:
+      b << "PyList_Check (" << v << ")";
+    }
+  }
+  return b;
+}
+
+static void
+dump_setter (const str &cl, const rpc_decl *d)
+{
+  aout << "int " << cl << "_set" << d->id 
+       << " (" << cl << " *self, PyObject *value, void *closure)\n"
+       << "{\n"
+       << "  if (value == NULL) {\n"
+       << "    PyErr_SetString(PyExc_TypeError, "
+       << "\"Cannot delete first attributed\");\n"
+       << "    return -1;\n"
+       << "  }\n"
+       << "  if (! " << py_typecheck (d, "value") << ") {\n"
+       << "    PyErr_SetString (PyExc_Type_Error, "
+       << "\"The first attributed must be of type " << py_type (d) 
+       << "\");\n"
+       << "    return -1;\n"
+       << "  }\n"
+       << "  Py_DECREF (self->" << d->id << ");\n"
+       << "  Py_INCREF (value);\n"
+       << "  self->" << d->id << " = value;\n"
+       << "\n"
+       << "  return 0;\n"
+       << "};\n\n";
+}
+
+
+
+static void
+dump_setter_decl (const str &cl, const rpc_decl *d)
+{
+  aout << "int " << cl << "_set" << d->id 
+       << " (" << cl << " *self, PyObject *value, void *closure);\n";
+}
+
+static void
+dump_getsetter_decl (const str &cl, const rpc_decl *d)
+{
+  dump_getter_decl (cl, d);
+  dump_setter_decl (cl, d);
+}
+
+static void
+dump_getsetter (const str &cl, const rpc_decl *d)
+{
+  dump_getter (cl, d);
+  dump_setter (cl, d);
+}
+
+static void
+dump_getsetters_decls (const rpc_struct *rs)
+{
+  for (const rpc_decl *rd = rs->decls.base (); rd < rs->decls.lim (); rd++)
+    dump_getsetter_decl (rs->id, rd);
+  aout << "\n\n";
+}
+
+static void
+dump_getsetters (const rpc_struct *rs)
+{
+  for (const rpc_decl *rd = rs->decls.base (); rd < rs->decls.lim (); rd++)
+    dump_getsetter (rs->id, rd);
+}
+
+static void
+dump_getsetter_table_row (const str &prfx, const str &typ, const rpc_decl *d)
+{
+  aout << prfx << "{\"" << d->id << "\", "
+       <<            "(getter)" << typ << "_get" << d->id << ", "
+       <<            "(setter)" << typ << "_set" << d->id << ", "
+       <<            "\"class variable: " << d->id << "\", "
+       <<            "NULL },\n" ;
+}
+
+static void
+dump_getsetter_table (const rpc_struct *rs)
+{
+  aout << "static PyGetSetDef " << rs->id << "_getsetters[] = {\n";
+  for (const rpc_decl *rd = rs->decls.base (); rd < rs->decls.lim (); rd++)
+    dump_getsetter_table_row ("  ", rs->id, rd);
+  aout << "  {NULL}\n"
        << "};\n\n";
 }
 
@@ -333,7 +467,10 @@ dumpstruct (const rpc_sym *s)
   dump_xdr_func (rs);
   dump_class_members (rs);
   dump_class_methods_struct (rs);
+  dump_getsetters_decls (rs);
+  dump_getsetter_table (rs);
   dump_object_table (rs);
+  dump_getsetters (rs);
 
   aout << "\ntemplate<class T> "
        << (rs->decls.size () > 1 ? "" : "inline ") << "bool\n"
