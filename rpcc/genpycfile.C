@@ -26,6 +26,17 @@
 str module;
 
 static void
+dump_obj_wrap ()
+{
+  aout << "struct PyObjWrap {\n"
+       << "  bool scalar;         // =true if scalar\n"
+       << "  bool fixed;          // =true if fixed\n"
+       << "  int bound;           // max # of elements in vec\n"
+       << "  PyObject *obj;       // actual object\n"
+       << "};\n\n";
+}
+
+static void
 pmshl (str id)
 {
   aout <<
@@ -36,7 +47,7 @@ pmshl (str id)
 static str
 decltype (const rpc_decl *d)
 {
-  return "PyObject *";
+  return "PyObjWrap ";
 
   if (d->type == "string")
     return strbuf () << "rpc_str<" << d->bound << ">";
@@ -138,6 +149,32 @@ py_type (const rpc_decl *d)
   return NULL;
 }
 
+static bool
+is_scalar (const rpc_decl *d)
+{
+  return (d->qual == rpc_decl::SCALAR);
+}
+
+static bool
+is_fixed (const rpc_decl *d)
+{
+  return (d->qual == rpc_decl::ARRAY);
+}
+
+static str
+obj_in_class (const rpc_decl *d)
+{
+  strbuf b;
+  b << d->id << ".obj";
+  return b;
+}
+
+static str
+bound (const rpc_decl *d)
+{
+  return (is_scalar (d) ? "0" : d->bound);
+}
+
 static str
 py_typecheck_unqual (const str &typ, const str &v)
 {
@@ -189,13 +226,19 @@ py_member_init (const rpc_decl *d)
 }
 
 static void
-dump_init_frag (str prefix, const rpc_decl *d)
+dump_init_frag (str prfx, const rpc_decl *d)
 {
-  aout << prefix << "if (!(self->" << d->id << " = " 
+  aout << prfx << "if (!(self->" << obj_in_class (d) << " = " 
        << py_member_init (d) << ")) {\n"
-       << prefix << "  Py_DECREF (self);\n"
-       << prefix << "  return NULL;\n"
-       << prefix << "}\n";
+       << prfx << "  Py_DECREF (self);\n"
+       << prfx << "  return NULL;\n"
+       << prfx << "}\n"
+       << prfx << "self->" << d->id << ".fixed = " 
+       << (is_fixed (d) ? "true" : "false") << ";\n"
+       << prfx << "self->" << d->id << ".bound = " << bound (d) << ";\n"
+       << prfx << "self->" << d->id << ".scalar = " 
+       << (is_scalar (d) ? "true" : "false") << ";\n"
+       << "\n";
 }
 
 static void
@@ -212,7 +255,7 @@ dump_class_new_func (const rpc_struct *rs)
     dump_init_frag ("  ", rd);
   }
   aout << "  return (PyObject *)self;\n"
-       << "}\n";
+       << "}\n\n";
 
 }
 
@@ -223,7 +266,7 @@ dump_class_dealloc_func (const rpc_struct *rs)
        << rs->id << "_dealloc (" << rs->id << " *self)\n"
        << "{\n";
   for (const rpc_decl *rd = rs->decls.base (); rd < rs->decls.lim (); rd++) {
-    aout << "  Py_XDECREF (self->" << rd->id << ");\n";
+    aout << "  Py_XDECREF (self->" << obj_in_class (rd) << ");\n";
   }
   aout << "}\n\n";
 }
@@ -234,7 +277,7 @@ dump_allocator (const rpc_struct *rs)
   aout << "void *\n"
        << rs->id << "_alloc ()\n"
        << "{\n"
-       << "  return New " << rs->id << ";\n"
+       << "  return PyInstance_New (" << py_type (rs->id) << ", NULL, NULL);\n"
        << "}\n\n";
 }
 
@@ -287,12 +330,18 @@ dump_rpc_traverse (const rpc_struct *rs)
   str typ = py_type (rs->id);
 
   aout << "template<class T> bool\n"
-       << "rpc_traverse_" << typ << " (T &id, PyObject *obj)\n"
+       << "rpc_traverse_" << typ << " (T &id, PyObjWrap &w)\n"
        << "{\n"
-       << "  if (! " << py_typecheck_unqual (rs->id, "obj") << ") {\n"
+       << "  if (! " << py_typecheck_unqual (rs->id, "w.obj") << ") {\n"
        << "    PyErr_SetString (PyExec_Type_Error, \n"
        << "                     \"Type mismatch in rpc_traverse for type=" 
        <<                       typ << "\");\n"
+       << "    return false;\n"
+       << "  }\n"
+       << "  if (!w.scalar) {\n"
+       << "    PyErr_SetString (PyExec_Type_Error,\n"
+       << "                     \"Expected a scalar object; got a vector!\")"
+       <<                 ";\n"
        << "    return false;\n"
        << "  }\n"
        << "  return rpc_traverse (id, *static_cast<" << rs->id 
@@ -389,8 +438,8 @@ dump_getter (const str &cl, const rpc_decl *d)
   aout << "PyObject * " << cl << "_get" << d->id 
        << " (" << cl << " *self, void, *closure)\n"
        << "{\n"
-       << "  Py_XINCREF (self->" << d->id << ");\n"
-       << "  return self->" << d->id << ";\n"
+       << "  Py_XINCREF (self->" << obj_in_class (d) << ");\n"
+       << "  return self->" << obj_in_class (d) << ";\n"
        << "}\n\n";
 }
 
@@ -434,9 +483,9 @@ dump_setter (const str &cl, const rpc_decl *d)
        <<                        py_type (d) << "\");\n"
        << "    return -1;\n"
        << "  }\n"
-       << "  Py_DECREF (self->" << d->id << ");\n"
+       << "  Py_DECREF (self->" << obj_in_class (d) << ");\n"
        << "  Py_INCREF (value);\n"
-       << "  self->" << d->id << " = value;\n"
+       << "  self->" << obj_in_class (d) << " = value;\n"
        << "\n"
        << "  return 0;\n"
        << "};\n\n";
@@ -505,7 +554,8 @@ static void
 dumpstruct (const rpc_sym *s)
 {
   const rpc_struct *rs = s->sstruct.addr ();
-  aout << "\nstruct " << rs->id << " {\n";
+  aout << "\nstruct " << rs->id << " {\n"
+       << "  PyObject_HEAD\n";
   for (const rpc_decl *rd = rs->decls.base (); rd < rs->decls.lim (); rd++)
     pdecl ("  ", rd);
   aout << "};\n";
@@ -831,7 +881,11 @@ genpyc (str fname)
 
   aout << "// -*-c++-*-\n"
        << "/* This file was automatically generated by rpcc. */\n\n"
-       << "#include \"xdrmisc.h\"\n";
+       << "#include \"xdrmisc.h\"\n"
+       << "#include \"py_arpc.h\"\n"
+       << "\n";
+
+  dump_obj_wrap ();
 
   int last = rpc_sym::LITERAL;
   for (const rpc_sym *s = symlist.base (); s < symlist.lim (); s++) {
