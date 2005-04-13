@@ -302,6 +302,12 @@ dump_xdr_func (const rpc_struct *rs)
        << "}\n\n";
 }
 
+static str
+rpc_trav_func (const str &a1, const str &obj, const rpc_decl *d)
+{
+  return str ();
+}
+
 static void
 dump_rpc_traverse (const rpc_struct *rs)
 {
@@ -311,14 +317,15 @@ dump_rpc_traverse (const rpc_struct *rs)
        << (rs->decls.size () > 1 ? "" : "inline ") << "bool\n"
        << "rpc_traverse (T &t, " << rs->id << " &obj)\n"
        << "{\n";
+  str fnc;
   const rpc_decl *rd = rs->decls.base ();
   if (rd < rs->decls.lim ()) {
-    aout << "  return rpc_traverse_" 
-	 << py_type (rd) << " (t, obj." << rd->id << ")";
+    fnc = rpc_trav_func ("t", "obj", rd);
+    aout << "  return " << fnc;
     rd++;
-    while (rd < rs->decls.lim ()) {
-      aout << "\n    && rpc_traverse_"
-	   << py_type (rd) << " (t, obj." << rd->id << ")";
+    while (rd < rs->decls.lim ()) { 
+      fnc = rpc_trav_func ("t", "obj", rd);
+      aout << "\n     && " << fnc;
       rd++;
     }
     aout << ";\n";
