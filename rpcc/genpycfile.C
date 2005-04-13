@@ -78,6 +78,7 @@ pdecl (str prefix, const rpc_decl *d)
   aout << prefix << decltype (d) << " " << name << ";\n";
 }
 
+
 static bool
 is_int_type (const str &s)
 {
@@ -135,6 +136,20 @@ py_type (const rpc_decl *d)
     }
   }
   return NULL;
+}
+
+static str
+py_typecheck_unqual (const str &typ, const str &v)
+{
+  strbuf b;
+  if (typ == "string" || typ == "opqaue") {
+    b << "PyString_Check (" << v << ")";
+  } else if (is_number (typ)) {
+    b << "PyNumber_Check (" << v << ")";
+  } else {
+    b << "PyObject_IsInstance (" << v << ", " << py_type (typ) << ")";
+  }
+  return b;
 }
 
 
@@ -245,6 +260,47 @@ dump_xdr_func (const rpc_struct *rs)
 }
 
 static void
+dump_rpc_traverse (const rpc_struct *rs)
+{
+
+
+  aout << "\ntemplate<class T> "
+       << (rs->decls.size () > 1 ? "" : "inline ") << "bool\n"
+       << "rpc_traverse (T &t, " << rs->id << " &obj)\n"
+       << "{\n";
+  const rpc_decl *rd = rs->decls.base ();
+  if (rd < rs->decls.lim ()) {
+    aout << "  return rpc_traverse_" 
+	 << py_type (rd) << " (t, obj." << rd->id << ")";
+    rd++;
+    while (rd < rs->decls.lim ()) {
+      aout << "\n    && rpc_traverse_"
+	   << py_type (rd) << " (t, obj." << rd->id << ")";
+      rd++;
+    }
+    aout << ";\n";
+  }
+  else
+    aout << "  return true;\n";
+  aout << "}\n\n";
+
+  str typ = py_type (rs->id);
+
+  aout << "template<class T> bool\n"
+       << "rpc_traverse_" << typ << " (T &id, PyObject *obj)\n"
+       << "{\n"
+       << "  if (! " << py_typecheck_unqual (rs->id, "obj") << ") {\n"
+       << "    PyErr_SetString (PyExec_Type_Error, \n"
+       << "                     \"Type mismatch in rpc_traverse for type=" 
+       <<                       typ << "\");\n"
+       << "    return false;\n"
+       << "  }\n"
+       << "  return rpc_traverse (id, *static_cast<" << rs->id 
+       << " *> (obj));\n"
+       << "}\n\n";
+}
+
+static void
 dump_class_member_frag (str prefix, str typ, const rpc_decl *d)
 {
   aout << prefix << "{ \"" << d->id << "\", T_OBJECT_EX, "
@@ -338,31 +394,27 @@ dump_getter (const str &cl, const rpc_decl *d)
        << "}\n\n";
 }
 
-
 static str
 py_typecheck (const rpc_decl *d, const str &v)
 {
-  strbuf b;
+  str s;
   if (d->type == "string" || d->type == "opaque") {
-    b << "PyString_Check (" << v << ")";
+    s = py_typecheck_unqual (d->type, v);
   } else {
     switch (d->qual) {
     case rpc_decl::PTR:
     case rpc_decl::SCALAR: 
-      {
-	if (is_number (d->type))
-	  b << "PyNumber_Check (" << v << ")";
-	else {
-	  b << "PyObject_IsInstance (" << v << ", " << 
-	    py_type (d->type) << ")";
-	}
-      }
+      s =  py_typecheck_unqual (d->type, v);
     case rpc_decl::VEC:
-    case rpc_decl::ARRAY:
-      b << "PyList_Check (" << v << ")";
+    case rpc_decl::ARRAY: 
+      { 
+	strbuf b;
+	b << "PyList_Check (" << v << ")";
+	s = b;
+      }
     }
   }
-  return b;
+  return s;
 }
 
 static void
@@ -373,13 +425,13 @@ dump_setter (const str &cl, const rpc_decl *d)
        << "{\n"
        << "  if (value == NULL) {\n"
        << "    PyErr_SetString(PyExc_TypeError, "
-       << "\"Cannot delete first attributed\");\n"
+       << "\"Cannot delete first attribute\");\n"
        << "    return -1;\n"
        << "  }\n"
        << "  if (! " << py_typecheck (d, "value") << ") {\n"
-       << "    PyErr_SetString (PyExc_Type_Error, "
-       << "\"The first attributed must be of type " << py_type (d) 
-       << "\");\n"
+       << "    PyErr_SetString (PyExc_Type_Error, \n"
+       << "                     \"The first attribute must be of type " 
+       <<                        py_type (d) << "\");\n"
        << "    return -1;\n"
        << "  }\n"
        << "  Py_DECREF (self->" << d->id << ");\n"
@@ -472,20 +524,8 @@ dumpstruct (const rpc_sym *s)
   dump_object_table (rs);
   dump_getsetters (rs);
 
-  aout << "\ntemplate<class T> "
-       << (rs->decls.size () > 1 ? "" : "inline ") << "bool\n"
-       << "rpc_traverse (T &t, " << rs->id << " &obj)\n"
-       << "{\n";
-  const rpc_decl *rd = rs->decls.base ();
-  if (rd < rs->decls.lim ()) {
-    aout << "  return rpc_traverse (t, obj." << (rd++)->id << ")";
-    while (rd < rs->decls.lim ())
-      aout << "\n    && rpc_traverse (t, obj." << (rd++)->id << ")";
-    aout << ";\n";
-  }
-  else
-    aout << "  return true;\n";
-  aout << "}\n\n";
+  dump_rpc_traverse (rs);
+
 }
 
 void
