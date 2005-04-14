@@ -25,6 +25,10 @@
 
 str module;
 
+typedef 
+enum { PASS_ONE = 1, PASS_TWO = 2, PASS_THREE = 3, N_PASSES = 4}
+pass_num_t;
+
 static void
 dump_obj_wrap ()
 {
@@ -442,9 +446,59 @@ dump_class_members (const rpc_struct *rs)
 }
 
 static void
+dump_class_method_decls (const rpc_struct *rs)
+{
+  str ct = pyc_type (rs->id);
+  aout << "PyObject * " << ct << "_pydump (" << ct << " *self);\n"
+       << "PyObject * " << ct << "_str2xdr (" << ct 
+       << " *self, PyObject *args);\n"
+       << "PyObject * " << ct << "_xdr2str (" << ct << " *self);\n\n";
+}
+
+static void
+dump_class_methods (const rpc_struct *rs)
+{
+  str ct = pyc_type (rs->id);
+  aout << "PyObject *\n" 
+       << ct << "_pydump (" << ct << " *self)\n"
+       << "{\n"
+       << "  dump_" << ct << " (self);\n"
+       << "  Py_INCREF (Py_None);\n"
+       << "  return Py_None;\n"
+       << "}\n\n"
+       << "PyObject *\n"
+       << ct << "_xdr2str (" << ct << " *self)\n"
+       << "{\n"
+       << "  str ret = xdr2str (*self);\n"
+       << "  if (ret) {\n"
+       << "    return PyString_FromStringAndSize (ret.cstr (), ret.len ());\n"
+       << "  } else {\n"
+       << "    Py_INCREF (Py_None);\n"
+       << "    return Py_None;\n"
+       << "  }\n"
+       << "}\n\n"
+       << "PyObject *\n"
+       << ct << "_str2xdr (" << ct << " *self, PyObject *args)\n"
+       << "{\n"
+       << "  Py_INCREF (Py_None);\n"
+       << "  return Py_None;\n"
+       << "}\n\n";
+}
+
+static void
 dump_class_methods_struct (const rpc_struct *rs)
 {
-  aout << "static PyMethodDef " << pyc_type (rs->id) << "_methods[] = {\n"
+  str ct = pyc_type (rs->id);
+  aout << "static PyMethodDef " << ct << "_methods[] = {\n"
+       << "  {\"dump\", (PyCFunction)" << ct << "_pydump, "
+       <<        " METH_NOARGS,\n"
+       << "   \"RPC-pretty print this method to stderr via aysnc::warn\"},\n"
+       << "  {\"xdr2str\", (PyCFunction)" << ct << "_xdr2str, "
+       <<        " METH_NOARGS,\n"
+       << "   \"Export RPC structure to a regular string buffer\"},\n"
+       << "  {\"str2xdr\", (PyCFunction)" << ct << "_str2xdr, "
+       <<        " METH_VARARGS,\n"
+       << "   \"Import RPC structure from a regular string buffer\"},\n"
        << " {NULL}\n"
        << "};\n\n";
 }
@@ -725,7 +779,14 @@ dumpprint (const rpc_sym *s)
   }
 }
 
-
+static void
+dumpstruct_mthds (const rpc_sym *s)
+{
+  const rpc_struct *rs = s->sstruct.addr ();
+  dump_getsetters (rs);
+  dump_allocator (rs);
+  dump_class_methods (rs);
+}
 
 static void
 dumpstruct (const rpc_sym *s)
@@ -744,13 +805,12 @@ dumpstruct (const rpc_sym *s)
   dump_class_dealloc_func (rs);
   dump_class_new_func (rs);
   dump_class_members (rs);
+  dump_class_method_decls (rs);
   dump_class_methods_struct (rs);
   dump_getsetters_decls (rs);
   dump_getsetter_table (rs);
   dump_class_init_func (rs);
   dump_object_table (rs);
-  dump_getsetters (rs);
-  dump_allocator (rs);
 
   dump_rpc_traverse (rs);
   dump_xdr_func (rs);
@@ -1001,7 +1061,7 @@ dumpprog (const rpc_sym *s)
 }
 
 static void
-dumpsym (const rpc_sym *s)
+dumpsym (const rpc_sym *s, pass_num_t pass)
 {
   switch (s->type) {
   case rpc_sym::CONST:
@@ -1009,22 +1069,30 @@ dumpsym (const rpc_sym *s)
 	 << " = " << s->sconst->val << " };\n";
     break;
   case rpc_sym::STRUCT:
-    dumpstruct (s);
+    if (pass == PASS_ONE)
+      dumpstruct (s);
+    else if (pass == PASS_THREE) 
+      dumpstruct_mthds (s);
     break;
   case rpc_sym::UNION:
-    dumpunion (s);
+    if (pass == PASS_ONE)
+      dumpunion (s);
     break;
   case rpc_sym::ENUM:
-    dumpenum (s);
+    if (pass == PASS_ONE)
+      dumpenum (s);
     break;
   case rpc_sym::TYPEDEF:
-    dumptypedef (s);
+    if (pass == PASS_ONE)
+      dumptypedef (s);
     break;
   case rpc_sym::PROGRAM:
-    dumpprog (s);
+    if (pass == PASS_ONE)
+      dumpprog (s);
     break;
   case rpc_sym::LITERAL:
-    aout << *s->sliteral << "\n";
+    if (pass == PASS_ONE)
+      aout << *s->sliteral << "\n";
     break;
   default:
     break;
@@ -1052,6 +1120,70 @@ makemodulename (str fname)
   return guard;
 }
 
+static str
+get_c_class (const rpc_sym *s)
+{
+  switch (s->type) {
+  case rpc_sym::STRUCT:
+    return s->sstruct.addr ()->id;
+  case rpc_sym::UNION:
+    return s->sunion.addr ()->id;
+  default:
+    return NULL;
+  }
+}
+
+static void
+dumpmodule (const symlist_t &lst)
+{
+  aout << "static PyMethodDef module_methods[] = {\n"
+       << "  {NULL}\n"
+       << "};\n\n"
+       << "#ifndef PyMODINIT_FUNC	"
+       << "/* declarations for DLL import/export */\n"
+       << "#define PyMODINIT_FUNC void\n"
+       << "#endif\n"
+       << "PyMODINIT_FUNC\n"
+       << "init" << module << " (void)\n"
+       << "{\n"
+       << "  PyObject* m;\n"
+       << "  if (";
+
+  bool first = true;
+  str cls;
+  for (const rpc_sym *s = lst.base (); s < lst.lim () ; s++) {
+    if (!(cls = get_c_class (s)))
+      continue;
+
+    if (first)
+      first = false;
+    else {
+      aout << " ||\n     ";
+    }
+
+    aout << "PyType_Ready (&" << py_type (cls) << ") < 0";
+  }
+  aout << ")\n"
+       << "    return;\n\n"
+       << "  m = Py_InitModule3 (\"" << module << "\", module_methods,\n"
+       << "                      \"Python/rpc/XDR module for " 
+       << module << ".\");\n"
+       << "\n"
+       << "  if (m == NULL)\n"
+       << "    return;\n"
+       << "\n";
+
+  for (const rpc_sym *s = lst.base (); s < lst.lim () ; s++) {
+    if (!(cls = get_c_class (s)))
+      continue;
+    aout << "  Py_INCREF (&" << py_type (cls) << ");\n"
+	 << "  PyModule_AddObject (m, \"" << cls
+	 << "\", (PyObject *)&" << py_type (cls) << ");\n";
+  }
+  aout << "}\n"
+       << "\n";
+}
+
 void
 genpyc (str fname)
 {
@@ -1061,20 +1193,37 @@ genpyc (str fname)
   aout << "// -*-c++-*-\n"
        << "/* This file was automatically generated by rpcc. */\n\n"
        << "#include \"xdrmisc.h\"\n"
+       << "#include \"crypt.h\"\n"
        << "#include \"py_rpctypes.h\"\n"
        << "\n";
 
   int last = rpc_sym::LITERAL;
-  for (const rpc_sym *s = symlist.base (); s < symlist.lim (); s++) {
-    if (last != s->type
-	|| last == rpc_sym::PROGRAM
-	|| last == rpc_sym::TYPEDEF
-	|| last == rpc_sym::STRUCT
-	|| last == rpc_sym::UNION
-	|| last == rpc_sym::ENUM)
-      aout << "\n";
-    last = s->type;
-    dumpsym (s);
-    dumpprint (s);
+  
+  // 3 - pass system to get dependencies / orders right
+  for (pass_num_t i = PASS_ONE; i < N_PASSES ; 
+       i = (pass_num_t) ((int )i + 1)) {
+    for (const rpc_sym *s = symlist.base (); s < symlist.lim (); s++) {
+      if (last != s->type
+	  || last == rpc_sym::PROGRAM
+	  || last == rpc_sym::TYPEDEF
+	  || last == rpc_sym::STRUCT
+	  || last == rpc_sym::UNION
+	  || last == rpc_sym::ENUM)
+	aout << "\n";
+      last = s->type;
+      switch (i) {
+      case PASS_ONE:
+      case PASS_THREE:
+	dumpsym (s, i);
+	break;
+      case PASS_TWO:
+	dumpprint (s);
+	break;
+      default:
+	break;
+      }
+    }
   }
+
+  dumpmodule (symlist);
 }
