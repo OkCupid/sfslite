@@ -7,10 +7,16 @@ else
 ADB = adb
 endif
 
+if USE_PY
+PYARPC = pyarpc
+else
+PYARPC = 
+endif
+
 #
 # sfslite change
 #
-SUBDIRS = async rpcc arpc crypt sfsmisc
+SUBDIRS = async rpcc arpc crypt sfsmisc $(PYARPC)
 
 
 noinst_HEADERS = nfsconf.h

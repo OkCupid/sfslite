@@ -35,6 +35,7 @@ SFS_PATH_CPP
 AC_PROG_INSTALL_C
 AC_PROG_LN_S
 dnl AC_PROG_MAKE_SET
+SFS_PYINC
 AC_PATH_PROGS(M4, gm4 gnum4 m4, '$(top_srcdir)/missing')
 test "$RPCC" || RPCC='$(top_builddir)/rpcc/rpcc'
 
@@ -497,7 +498,8 @@ dnl
 dnl BEGIN sfslite change
 dnl
 AC_OUTPUT(Makefile async/Makefile rpcc/Makefile arpc/Makefile
-	crypt/Makefile sfsmisc/Makefile libsfs/Makefile)
+	  crypt/Makefile sfsmisc/Makefile libsfs/Makefile
+	  pyarpc/Makefile)
 
 dnl
 dnl END sfslite change

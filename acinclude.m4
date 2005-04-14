@@ -1342,6 +1342,42 @@ fi)
 AM_CONDITIONAL(DMALLOC, test "$using_dmalloc" = yes)
 ])
 dnl
+dnl Find Python Headers for Python Glue
+dnl
+AC_DEFUN(SFS_PYINC,
+[AC_ARG_WITH(pyinc,
+--with-pyinc=DIR             Specifcy the location of the Python Include Dir)
+USE_PY=no
+ac_save_CFLAGS=$CFLAGS
+dirs="/usr/local/include/python2.4 /usr/include/python2.4 
+      /usr/local/include/python2.3 /usr/include/python2.3 "
+if test "${with_pyinc}"; then
+	dirs="${with_pyinc} $dirs"
+fi
+AC_CACHE_CHECK(for Python headers, sfs_cv_pyinc,
+[
+sfs_cv_pyinc=no
+for d in $dirs " " ; do
+	case $d in
+		" ") iflags=" " ;;
+		*)   iflags="-I${d}" ;;
+	esac
+	CFLAGS="${ac_save_CFLAGS} $iflags"
+	AC_TRY_COMPILE([#include <Python.h>
+			#include "structmember.h"
+			], [],
+		       sfs_cv_pyinc="${iflags}"; break)
+done
+])
+if test "${sfs_cv_pyinc+set}" && test "$sfs_cv_pyinc" != "no"; then
+	CPPFLAGS="$CPPFLAGS $sfs_cv_pyinc"
+	AC_DEFINE(HAVE_PYINC, 1, Allow SFS-Python glue)
+	USE_PY=yes
+fi
+CFLAGS=$ac_save_CFLAGS
+AM_CONDITIONAL(USE_PY, test "$USE_PY" = yes)
+])
+dnl
 dnl Find perl
 dnl
 AC_DEFUN(SFS_PERLINFO,

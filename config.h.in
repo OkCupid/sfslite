@@ -145,6 +145,9 @@
 /* Define to 1 if you have the `pwrite' function. */
 #undef HAVE_PWRITE
 
+/* Allow SFS-Python glue */
+#undef HAVE_PYINC
+
 /* Define if system headers declare a rlim_t type. */
 #undef HAVE_RLIM_T
 
