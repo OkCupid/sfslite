@@ -480,6 +480,32 @@ dump_class_methods (const rpc_struct *rs)
        << "PyObject *\n"
        << ct << "_str2xdr (" << ct << " *self, PyObject *args)\n"
        << "{\n"
+       << "  PyObject *input;\n" 
+       << "  if (!PyArg_Parse (args, \"(O)\", &input))\n"
+       << "    return NULL;\n"
+       << "\n"
+       << "  if (!PyString_Check (input)) {\n"
+       << "    PyErr_SetString (PyExc_TypeError,\n"
+       << "                     \"Expected a string object\");\n"
+       << "    return NULL;\n"
+       << "  }\n"
+       << "\n"
+       << "  char *dat;\n"
+       << "  int len;\n"
+       << "  if (PyString_AsStringAndSize (input, &dat, &len) < 0) {\n"
+       << "    PyErr_SetString (PyExc_Exception,\n"
+       << "                     \"Garbled / corrupted string passed\");\n"
+       << "    return NULL;\n"
+       << "  }\n"
+       << "  if (len == 0 || !dat) {\n"
+       << "    goto succ;\n"
+       << "  }\n"
+       << "  if (!str2xdr (*self, str (dat, len))) {\n"
+       << "    PyErr_SetString (AsyncXDR_Exception,\n"
+       << "                     \"Failed to demarshal XDR data\");\n"
+       << "    return NULL;\n"
+       << "  }\n"
+       << " succ:\n"
        << "  Py_INCREF (Py_None);\n"
        << "  return Py_None;\n"
        << "}\n\n";
@@ -492,7 +518,7 @@ dump_class_methods_struct (const rpc_struct *rs)
   aout << "static PyMethodDef " << ct << "_methods[] = {\n"
        << "  {\"dump\", (PyCFunction)" << ct << "_pydump, "
        <<        " METH_NOARGS,\n"
-       << "   \"RPC-pretty print this method to stderr via aysnc::warn\"},\n"
+       << "   \"RPC-pretty print this method to stderr via async::warn\"},\n"
        << "  {\"xdr2str\", (PyCFunction)" << ct << "_xdr2str, "
        <<        " METH_NOARGS,\n"
        << "   \"Export RPC structure to a regular string buffer\"},\n"
@@ -1180,7 +1206,13 @@ dumpmodule (const symlist_t &lst)
 	 << "  PyModule_AddObject (m, \"" << cls
 	 << "\", (PyObject *)&" << py_type (cls) << ");\n";
   }
-  aout << "}\n"
+  aout << "  PyObject *async_module = PyImport_ImportModule (\"async.err\");\n"
+       << "  if (!async_module) {\n"
+       << "    return;\n"
+       << "  }\n"
+       << "  AsyncXDR_Exception = PyObject_GetAttrString (async_module,\n"
+       << "          \"AsyncXDRException\");\n"
+       << "}\n"
        << "\n";
 }
 
@@ -1195,6 +1227,9 @@ genpyc (str fname)
        << "#include \"xdrmisc.h\"\n"
        << "#include \"crypt.h\"\n"
        << "#include \"py_rpctypes.h\"\n"
+       << "\n"
+       << "\n"
+       << "static PyObject *AsyncXDR_Exception;\n"
        << "\n";
 
   int last = rpc_sym::LITERAL;
