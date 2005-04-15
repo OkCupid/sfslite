@@ -5,6 +5,8 @@
 #include "structmember.h"
 #include "async.h"
 #include "arpc.h"
+#include "py_rpctypes.h"
+
 
 struct py_axprt_t {
   PyObject_HEAD
@@ -32,6 +34,56 @@ py_axprt_t_new (PyTypeObject *type, PyObject *args, PyObject *kws)
 		  "The axprt type cannot be instantiated");
   return NULL;
 }
+
+static PyObject *
+py_rpc_program_t_new (PyTypeObject *type, PyObject *args, PyObject *kws)
+{
+  PyErr_SetString(PyExc_TypeError,
+		  "The rpc_program type cannot be instantiated");
+  return NULL;
+}
+
+static PyTypeObject py_rpc_program_t_Type = {
+  PyObject_HEAD_INIT(&PyType_Type)
+  0,                         /*ob_size*/
+  "arpc.rpc_program",        /*tp_name*/
+  0,                         /*tp_basicsize*/
+  0,                         /*tp_itemsize*/
+  0,                         /*tp_dealloc*/
+  0,                         /*tp_print*/
+  0,                         /*tp_getattr*/
+  0,                         /*tp_setattr*/
+  0,                         /*tp_compare*/
+  0,                         /*tp_repr*/
+  0,                         /*tp_as_number*/
+  0,                         /*tp_as_sequence*/
+  0,                         /*tp_as_mapping*/
+  0,                         /*tp_hash */
+  0,                         /*tp_call*/
+  0,                         /*tp_str*/
+  0,                         /*tp_getattro*/
+  0,                         /*tp_setattro*/
+  0,                         /*tp_as_buffer*/
+  Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /*tp_flags*/
+  "rpc_program object",      /* tp_doc */
+  0,		             /* tp_traverse */
+  0,		             /* tp_clear */
+  0,		             /* tp_richcompare */
+  0,		             /* tp_weaklistoffset */
+  0,		             /* tp_iter */
+  0,		             /* tp_iternext */
+  0,                         /* tp_methods */
+  0,                         /* tp_members */
+  0,                         /* tp_getset */
+  0,                         /* tp_base */
+  0,                         /* tp_dict */
+  0,                         /* tp_descr_get */
+  0,                         /* tp_descr_set */
+  0,                         /* tp_dictoffset */
+  0,                         /* tp_init */
+  0,                         /* tp_alloc */
+  py_rpc_program_t_new,      /* tp_new */
+};
 
 static PyTypeObject py_axprt_t_Type = {
   PyObject_HEAD_INIT(&PyType_Type)
@@ -83,15 +135,6 @@ py_axprt_stream_t_new (PyTypeObject *type, PyObject *args, PyObject *kwds)
   self = (py_axprt_stream_t *)type->tp_alloc (type, 0);
   return (PyObject *)self;
 }
-
-PyObject *
-py_aclnt_t_new (PyObject *type, PyObject *args, PyObject *kwds)
-{
-  py_aclnt_t *self;
-  self = (py_aclnt_t *)type->tp_alloc (type, 0);
-  return (PyObject *)self;
-}
-
 
 static int
 py_axprt_stream_t_init (py_axprt_stream_t *self, PyObject *args, 
@@ -182,9 +225,27 @@ py_aclnt_t_init (py_aclnt_t *self, PyObject *args, PyObject *kwds)
 {
   PyObject *x = NULL;
   PyObject *prog = NULL;
+  PyObject *tmp;
   static char *kwlist[] = { "x", "prog", NULL };
   if (!PyArg_ParseTupleAndKeywords (args, kwds, "OO", kwlist, &x, &prog))
     return -1;
+
+  if (!x || !PyObject_IsInstance (x, (PyObject *)&py_axprt_t_Type)) {
+    PyErr_SetString (PyExc_TypeError,
+		     "aclnt expects arg 1 as an axprt transport");
+    return -1;
+  }
+
+  if (!prog || 
+      !PyObject_IsInstance (prog, (PyObject *)&py_rpc_program_t_Type)) {
+    PyErr_SetString (PyExc_TypeError,
+		     "aclnt expects arg 2 as an rpc_program");
+    return -1;
+  }
+  py_axprt_t *p_x = (py_axprt_t *)x;
+  py_rpc_program_t *p_prog = (py_rpc_program_t *)prog;
+
+  self->cli = aclnt::alloc (p_x->x, *p_prog->prog);
   
   return 0;
 }
@@ -243,20 +304,25 @@ PyMODINIT_FUNC
 initarpc (void)
 {
   PyObject* m;
-  if (PyType_Ready (&py_axprt_t_Type) < 0)
-    return;
-  if (PyType_Ready (&py_axprt_stream_t_Type) < 0)
+  if (PyType_Ready (&py_axprt_t_Type) < 0 ||
+      PyType_Ready (&py_axprt_stream_t_Type) < 0 ||
+      PyType_Ready (&py_rpc_program_t_Type) < 0 ||
+      PyType_Ready (&py_aclnt_t_Type) < 0)
     return;
 
   m = Py_InitModule3 ("async.arpc", module_methods,
-                      "Python/rpc/XDR module for example5.");
+                      "arpc wrappers for libasync");
 
   if (m == NULL)
     return;
 
   Py_INCREF (&py_axprt_t_Type);
   Py_INCREF (&py_axprt_stream_t_Type);
+  Py_INCREF (&py_rpc_program_t_Type);
+  Py_INCREF (&py_aclnt_t_Type);
   PyModule_AddObject (m, "axprt", (PyObject *)&py_axprt_t_Type);
   PyModule_AddObject (m, "axprt_stream", (PyObject *)&py_axprt_stream_t_Type);
+  PyModule_AddObject (m, "rpc_program", (PyObject *)&py_rpc_program_t_Type);
+  PyModule_AddObject (m, "aclnt", (PyObject *)&py_aclnt_t_Type);
 }
 

@@ -587,9 +587,7 @@ dump_prog_py_obj (const rpc_program *prog)
     str pt = rpcprog (prog, rv); 
     str ct = pyc_type (pt);
     str ptt = py_type (pt);
-    aout << "struct " << ct << " {\n"
-	 << "  PyObject_HEAD\n"
-	 << "  const rpc_program *prog;\n"
+    aout << "struct " << ct << " : public py_rpc_program_t {\n"
 	 << "};\n\n"
 	 << "static PyObject *\n"
 	 << ct << "_new (PyTypeObject *type, PyObject *args, PyObject *kwds)\n"
@@ -1277,8 +1275,62 @@ dumpmodule (const symlist_t &lst)
        << "init" << module << " (void)\n"
        << "{\n"
        << "  PyObject* m;\n"
-       << "  if (";
+       << "\n"
+       << "  // import async.err and get the Type imformation for\n"
+       << "  // async.err.AsyncXDRException\n"
+       << "  PyObject *module = PyImport_ImportModule (\"async.err\");\n"
+       << "  if (!module) {\n"
+       << "    return;\n"
+       << "  }\n"
+       << "  AsyncXDR_Exception = PyObject_GetAttrString (module,\n"
+       << "          \"AsyncXDRException\");\n"
+       << "  if (!AsyncXDR_Exception) {\n"
+       << "    Py_DECREF (module);\n"
+       << "    PyErr_SetString (PyExc_TypeError,\n"
+       << "                \"Cannot load exception types from aysnc.err\");\n"
+       << "    return;\n"
+       << "  }\n"
+       << "  Py_DECREF (module);\n"
+       << "\n"
+       << "  // import async.arpc and get the type information for\n"
+       << "  // async.arpc.rpc_program\n"
+       << "  module = PyImport_ImportModule (\"async.arpc\");\n"
+       << "  if (!module)\n"
+       << "    return;\n"
+       << "  PyObject *tmp = PyObject_GetAttrString (module,\n"
+       << "         \"rpc_program\");\n"
+       << "  if (!tmp) {\n"
+       << "    PyErr_SetString (PyExc_TypeError,\n"
+       << "             \"Cannot load rpc_program type from async.arpc\");\n"
+       << "    Py_DECREF (module);\n"
+       << "    return;\n"
+       << "  }\n"
+       << "  if (!PyType_Check (tmp)) {\n"
+       << "     Py_DECREF (tmp);\n"
+       << "     Py_DECREF (module);\n"
+       << "     PyErr_SetString(PyExc_TypeError,\n"
+       << "             \"Expected async.arpc.rpc_program to be a type\");\n"
+       << "     return;\n"
+       << "  }\n"
+       << "  py_rpc_program = (PyTypeObject *)tmp;\n"
+       << "  Py_DECREF (module);\n"
+       << "\n";
+    
+  // now add the subclasses to therpc_program types
+  aout << "  // after import, we can fix up the rpc_program types..\n";
+  for (const rpc_sym *s = lst.base (); s < lst.lim () ; s++) {
+    if (s->type != rpc_sym::PROGRAM) 
+      continue;
+    vec<str> clss = get_c_classes (s);
+    str cls;
+    while (clss.size ()) {
+      cls = clss.pop_back ();
+      aout <<  "  " << py_type (cls) << ".tp_base = py_rpc_program;\n";
+    }
+  }
 
+  aout << "\n"
+       << "  if (";
   bool first = true;
   str cls;
   for (const rpc_sym *s = lst.base (); s < lst.lim () ; s++) {
@@ -1291,12 +1343,12 @@ dumpmodule (const symlist_t &lst)
       else {
 	aout << " ||\n     ";
       }
-      
       aout << "PyType_Ready (&" << py_type (cls) << ") < 0";
     }
   }
   aout << ")\n"
-       << "    return;\n\n"
+       << "    return;\n"
+       << "\n"
        << "  m = Py_InitModule3 (\"" << module << "\", module_methods,\n"
        << "                      \"Python/rpc/XDR module for " 
        << module << ".\");\n"
@@ -1304,41 +1356,19 @@ dumpmodule (const symlist_t &lst)
        << "  if (m == NULL)\n"
        << "    return;\n"
        << "\n";
-
-  aout << "  PyObject *async_module = PyImport_ImportModule (\"async.err\");\n"
-       << "  if (!async_module) {\n"
-       << "    return;\n"
-       << "  }\n"
-       << "  AsyncXDR_Exception = PyObject_GetAttrString (async_module,\n"
-       << "          \"AsyncXDRException\");\n"
-       << "  Py_DECREF (async_module);\n"
-       << "  async_module = PyImport_ImportModule (\"async.arpc\");\n"
-       << "  if (!async_module)\n"
-       << "    return;\n"
-       << "  PyObject *tmp = PyObject_GetAttrString (async_module,\n"
-       << "         \"rpc_program\");\n"
-       << "  if (!PyType_Check (tmp)) {\n"
-       << "     Py_DECREF (tmp);\n"
-       << "     PyErr_SetString(PyExc_TypeError,\n"
-       << "             \"Expected async.arpc.rpc_program to be a type\");\n"
-       << "     return;\n"
-       << "  }\n"
-       << "  py_rpc_program = (PyTypeObject *)tmp;\n"
-       << "  Py_DECREF (async_module);\n";
-
+  
+  
   for (const rpc_sym *s = lst.base (); s < lst.lim () ; s++) {
     vec<str> clss = get_c_classes (s);
     str cls;
     while (clss.size ()) {
       cls = clss.pop_back ();
-      if (s->type == rpc_sym::PROGRAM) 
-	aout <<  "  " << py_type (cls) << ".tp_base = py_rpc_program;\n";
       aout << "  Py_INCREF (&" << py_type (cls) << ");\n"
 	   << "  PyModule_AddObject (m, \"" << cls
 	   << "\", (PyObject *)&" << py_type (cls) << ");\n";
     }
   }
-
+  
   aout << "}\n"
        << "\n";
 }
