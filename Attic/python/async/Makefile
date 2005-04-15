@@ -14,7 +14,7 @@ endif
 
 PYINC =		-I$(PRFX)/include/python2.3
 SFSINCDIR =	/usr/local/include/sfslite/$(SFSTAG)
-SFSLIBDIR =	/usr/local/lib/sfslite/shdbg
+SFSLIBDIR =	/usr/local/lib/sfslite/$(SFSTAG)
 
 SFSINC =	-I$(SFSINCDIR) -I/usr/local/include
 
