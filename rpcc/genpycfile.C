@@ -581,6 +581,79 @@ dump_object_table (const rpc_struct *rs)
 }
 
 static void
+dump_prog_py_obj (const rpc_program *prog)
+{
+  for (const rpc_vers *rv = prog->vers.base (); rv < prog->vers.lim (); rv++) {
+    str pt = rpcprog (prog, rv); 
+    str ct = pyc_type (pt);
+    str ptt = py_type (pt);
+    aout << "struct " << ct << " {\n"
+	 << "  PyObject_HEAD\n"
+	 << "  const rpc_program *prog;\n"
+	 << "};\n\n"
+	 << "static PyObject *\n"
+	 << ct << "_new (PyTypeObject *type, PyObject *args, PyObject *kwds)\n"
+	 << "{\n"
+	 << "  " << ct << " *self;\n"
+	 << "  self = (" << ct << " *)type->tp_alloc (type, 0);\n"
+	 << "  return (PyObject *)self;\n"
+	 << "}\n\n"
+	 << "static int\n"
+	 << ct << "_init (" << ct << " *self, PyObject *args, "
+	 << "PyObject *kwds)\n"
+	 << "{\n"
+	 << "  if (!PyArg_ParseTuple (args, \"\"))\n"
+	 << "    return -1;\n"
+	 << "  self->prog = &" << pt << ";\n" 
+	 << "  return 0;\n"
+	 << "}\n\n"
+	 << "static PyTypeObject " << ptt << " = {\n"
+	 << "  PyObject_HEAD_INIT(NULL)\n"
+	 << "  0,                         /*ob_size*/\n"
+	 << "  \"" <<  module << "." <<  pt
+	 << "\",               /*tp_name*/\n"
+	 << "  sizeof(" << ct << "),             /*tp_basicsize*/\n"
+	 << "  0,                         /*tp_itemsize*/\n"
+	 << "  0,                         /*tp_dealloc*/\n"
+	 << "  0,                         /*tp_print*/\n"
+	 << "  0,                         /*tp_getattr*/\n"
+	 << "  0,                         /*tp_setattr*/\n"
+	 << "  0,                         /*tp_compare*/\n"
+	 << "  0,                         /*tp_repr*/\n"
+	 << "  0,                         /*tp_as_number*/\n"
+	 << "  0,                         /*tp_as_sequence*/\n"
+	 << "  0,                         /*tp_as_mapping*/\n"
+	 << "  0,                         /*tp_hash */\n"
+	 << "  0,                         /*tp_call*/\n"
+	 << "  0,                         /*tp_str*/\n"
+	 << "  0,                         /*tp_getattro*/\n"
+	 << "  0,                         /*tp_setattro*/\n"
+	 << "  0,                         /*tp_as_buffer*/\n"
+	 << "  Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /*tp_flags*/\n"
+	 << "  \"" << pt << " objects\",           /* tp_doc */\n"
+	 << "  0,		               /* tp_traverse */\n"
+	 << "  0,		               /* tp_clear */\n"
+	 << "  0,		               /* tp_richcompare */\n"
+	 << "  0,		               /* tp_weaklistoffset */\n"
+	 << "  0,		               /* tp_iter */\n"
+	 << "  0,		               /* tp_iternext */\n"
+	 << "  0,                              /* tp_methods */\n"
+	 << "  0,                              /* tp_members */\n"
+	 << "  0,                              /* tp_getset */\n"
+	 << "  0,                         /* tp_base */\n"
+	 << "  0,                         /* tp_dict */\n"
+	 << "  0,                         /* tp_descr_get */\n"
+	 << "  0,                         /* tp_descr_set */\n"
+	 << "  0,                         /* tp_dictoffset */\n"
+	 << "  (initproc)" << ct << "_init,      /* tp_init */\n"
+	 << "  0,                         /* tp_alloc */\n"
+	 << "  " << ct << "_new,                 /* tp_new */\n"
+	 << "};\n\n";
+  }
+  
+}
+
+static void
 dump_getter_decl (const str &cl, const rpc_decl *d)
 {
   aout << "PyObject * " << cl << "_get" << d->id 
@@ -1053,6 +1126,23 @@ dumptypedef (const rpc_sym *s)
   pmshl (rd->id);
   aout << "RPC_TYPEDEF_DECL (" << rd->id << ")\n";
 }
+static void
+mktbl (const rpc_program *rs)
+{
+  for (const rpc_vers *rv = rs->vers.base (); rv < rs->vers.lim (); rv++) {
+    str name = rpcprog (rs, rv);
+    aout << "static const rpcgen_table " << name << "_tbl[] = {\n"
+	 << "  " << rs->id << "_" << rv->val << "_APPLY (XDRTBL_DECL)\n"
+	 << "};\n"
+	 << "const rpc_program " << name << " = {\n"
+	 << "  " << rs->id << ", " << rv->id << ", " << name << "_tbl,\n"
+	 << "  sizeof (" << name << "_tbl" << ") / sizeof ("
+	 << name << "_tbl[0]),\n"
+	 << "  \"" << name << "\"\n"
+	 << "};\n";
+  }
+  aout << "\n";
+}
 
 static void
 dumpprog (const rpc_sym *s)
@@ -1063,7 +1153,7 @@ dumpprog (const rpc_sym *s)
        << "#define " << rs->id << " " << rs->val << "\n"
        << "#endif /* !" << rs->id << " */\n";
   for (const rpc_vers *rv = rs->vers.base (); rv < rs->vers.lim (); rv++) {
-    aout << "extern const rpc_program " << rpcprog (rs, rv) << ";\n";
+    //aout << "extern const rpc_program " << rpcprog (rs, rv) << ";\n";
     aout << "enum { " << rv->id << " = " << rv->val << " };\n";
     aout << "enum {\n";
     for (const rpc_proc *rp = rv->procs.base (); rp < rv->procs.lim (); rp++)
@@ -1084,6 +1174,8 @@ dumpprog (const rpc_sym *s)
 	 << pyc_type ("void") << ")\n";
   }
   aout << "\n";
+  mktbl (rs);
+  dump_prog_py_obj (rs);
 }
 
 static void
@@ -1113,7 +1205,7 @@ dumpsym (const rpc_sym *s, pass_num_t pass)
       dumptypedef (s);
     break;
   case rpc_sym::PROGRAM:
-    if (pass == PASS_ONE)
+    if (pass == PASS_THREE)
       dumpprog (s);
     break;
   case rpc_sym::LITERAL:
@@ -1146,17 +1238,29 @@ makemodulename (str fname)
   return guard;
 }
 
-static str
-get_c_class (const rpc_sym *s)
+static vec<str>
+get_c_classes (const rpc_sym *s)
 {
+  vec<str> ret;
   switch (s->type) {
   case rpc_sym::STRUCT:
-    return s->sstruct.addr ()->id;
+    ret.push_back (s->sstruct.addr ()->id);
+    break;
   case rpc_sym::UNION:
-    return s->sunion.addr ()->id;
+    ret.push_back (s->sunion.addr ()->id);
+    break;
+  case rpc_sym::PROGRAM:
+    {
+      const rpc_program *p = s->sprogram.addr ();
+      for (const rpc_vers *rv = p->vers.base (); rv < p->vers.lim (); rv++) {
+	ret.push_back (rpcprog (p, rv));
+      }
+    }
+    break;
   default:
-    return NULL;
+    break;
   }
+  return ret;
 }
 
 static void
@@ -1178,16 +1282,18 @@ dumpmodule (const symlist_t &lst)
   bool first = true;
   str cls;
   for (const rpc_sym *s = lst.base (); s < lst.lim () ; s++) {
-    if (!(cls = get_c_class (s)))
-      continue;
-
-    if (first)
-      first = false;
-    else {
-      aout << " ||\n     ";
+    vec<str> clss = get_c_classes (s);
+    str cls;
+    while (clss.size ()) {
+      cls = clss.pop_back ();
+      if (first)
+	first = false;
+      else {
+	aout << " ||\n     ";
+      }
+      
+      aout << "PyType_Ready (&" << py_type (cls) << ") < 0";
     }
-
-    aout << "PyType_Ready (&" << py_type (cls) << ") < 0";
   }
   aout << ")\n"
        << "    return;\n\n"
@@ -1199,20 +1305,41 @@ dumpmodule (const symlist_t &lst)
        << "    return;\n"
        << "\n";
 
-  for (const rpc_sym *s = lst.base (); s < lst.lim () ; s++) {
-    if (!(cls = get_c_class (s)))
-      continue;
-    aout << "  Py_INCREF (&" << py_type (cls) << ");\n"
-	 << "  PyModule_AddObject (m, \"" << cls
-	 << "\", (PyObject *)&" << py_type (cls) << ");\n";
-  }
   aout << "  PyObject *async_module = PyImport_ImportModule (\"async.err\");\n"
        << "  if (!async_module) {\n"
        << "    return;\n"
        << "  }\n"
        << "  AsyncXDR_Exception = PyObject_GetAttrString (async_module,\n"
        << "          \"AsyncXDRException\");\n"
-       << "}\n"
+       << "  Py_DECREF (async_module);\n"
+       << "  async_module = PyImport_ImportModule (\"async.arpc\");\n"
+       << "  if (!async_module)\n"
+       << "    return;\n"
+       << "  PyObject *tmp = PyObject_GetAttrString (async_module,\n"
+       << "         \"rpc_program\");\n"
+       << "  if (!PyType_Check (tmp)) {\n"
+       << "     Py_DECREF (tmp);\n"
+       << "     PyErr_SetString(PyExc_TypeError,\n"
+       << "             \"Expected async.arpc.rpc_program to be a type\");\n"
+       << "     return;\n"
+       << "  }\n"
+       << "  py_rpc_program = (PyTypeObject *)tmp;\n"
+       << "  Py_DECREF (async_module);\n";
+
+  for (const rpc_sym *s = lst.base (); s < lst.lim () ; s++) {
+    vec<str> clss = get_c_classes (s);
+    str cls;
+    while (clss.size ()) {
+      cls = clss.pop_back ();
+      if (s->type == rpc_sym::PROGRAM) 
+	aout <<  "  " << py_type (cls) << ".tp_base = py_rpc_program;\n";
+      aout << "  Py_INCREF (&" << py_type (cls) << ");\n"
+	   << "  PyModule_AddObject (m, \"" << cls
+	   << "\", (PyObject *)&" << py_type (cls) << ");\n";
+    }
+  }
+
+  aout << "}\n"
        << "\n";
 }
 
@@ -1230,6 +1357,7 @@ genpyc (str fname)
        << "\n"
        << "\n"
        << "static PyObject *AsyncXDR_Exception;\n"
+       << "static PyTypeObject *py_rpc_program;\n"
        << "\n";
 
   int last = rpc_sym::LITERAL;

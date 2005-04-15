@@ -176,5 +176,9 @@ RPC_PRINT_TYPE_DECL (py_u_int32_t)
 RPC_PRINT_DECL (py_u_int32_t)
 
 
+struct py_rpc_program_t {
+  PyObject_HEAD
+  const rpc_program *prog;
+};
 
 #endif

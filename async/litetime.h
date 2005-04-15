@@ -39,6 +39,8 @@ typedef enum { SFS_CLOCK_GETTIME = 0,
 void sfs_set_clock (sfs_clock_t typ, const str &s = NULL);
 int my_clock_gettime (struct timespec *p);
 
+#define HAVE_MY_CLOCK_GETTIME 1
+
 #define TIMESPEC_INC(ts)                  \
   if (++ (ts)->tv_nsec == 1000000000L)  { \
     (ts)->tv_sec ++;                      \

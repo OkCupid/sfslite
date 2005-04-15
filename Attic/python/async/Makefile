@@ -1,12 +1,12 @@
 
-#CXX =		g++
-CXX =		/usr/local/gcc33/bin/g++
-#PRFX =		/usr
-PRFX =		/usr/local
-#SFSTAG =	shdbg
-SFSTAG	=	dbg33
-#RPCC =		/disk/max/d/sfslite/rpcc/rpcc
-RPCC =		/disk/rael/max/d33/sfs/rpcc/rpcc
+CXX =		g++
+#CXX =		/usr/local/gcc33/bin/g++
+PRFX =		/usr
+#PRFX =		/usr/local
+SFSTAG =	shdbg
+#SFSTAG	=	dbg33
+RPCC =		/disk/max/d/sfslite/rpcc/rpcc
+#RPCC =		/disk/rael/max/d33/sfs/rpcc/rpcc
 
 
 PYINC =		-I$(PRFX)/include/python2.3
@@ -21,12 +21,12 @@ SFSLIB = 	-L$(SFSLIBDIR) -lasync -L$(SFSLIBDIR) -larpc \
 
 default:	all
 
-all:		core.so
+all:		core.so arpc.so
 
 .C.o:
 	$(CXX) -g $(PYINC) $(SFSINC) -o $@ -c $< 
 
-core.so: core.o
+%.so: %.o
 	$(CXX) -shared $< $(SFSLIB) -o $@
 
 clean:	
