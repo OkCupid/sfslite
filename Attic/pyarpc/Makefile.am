@@ -5,7 +5,7 @@ sfslib_LTLIBRARIES = libpyarpc.la
 
 libpyarpc_la_SOURCES = py_rpctypes.C
 
-sfsinclude_HEADERS = py_rpctypes.h
+sfsinclude_HEADERS = py_rpctypes.h py_gen.h
 
 if REPO
 pyarpc_repo_OBJECTS = $(libpyarpc_la_OBJECTS) $(LIBASYNC)

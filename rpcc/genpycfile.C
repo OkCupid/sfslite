@@ -537,7 +537,7 @@ dump_object_table (const rpc_struct *rs)
   str pt = rs->id;
 
   aout << "static PyTypeObject " << t << " = {\n"
-       << "  PyObject_HEAD_INIT(NULL)\n"
+       << "  PyObject_HEAD_INIT(&PyType_Type)\n"
        << "  0,                         /*ob_size*/\n"
        << "  \"" <<  module << "." <<  pt
        << "\",               /*tp_name*/\n"

@@ -1,12 +1,15 @@
 
+ifdef LAB
+CXX =		/usr/local/gcc33/bin/g++
+PRFX =		/usr/local
+SFSTAG	=	dbg33
+RPCC =		/disk/rael/max/d33/sfs/rpcc/rpcc
+else
 CXX =		g++
-#CXX =		/usr/local/gcc33/bin/g++
 PRFX =		/usr
-#PRFX =		/usr/local
 SFSTAG =	shdbg
-#SFSTAG	=	dbg33
 RPCC =		/disk/max/d/sfslite/rpcc/rpcc
-#RPCC =		/disk/rael/max/d33/sfs/rpcc/rpcc
+endif
 
 
 PYINC =		-I$(PRFX)/include/python2.3
