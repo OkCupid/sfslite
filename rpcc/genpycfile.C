@@ -543,6 +543,14 @@ dump_object_table (const rpc_struct *rs)
        << "\n";
 }
 
+static str
+py_rpc_procno_method (const str &ct, const str &id)
+{
+  strbuf b;
+  b << ct << "_RPC_PROCNO_" << id;
+  return b;
+}
+
 static void
 dump_prog_py_obj (const rpc_program *prog)
 {
@@ -567,11 +575,32 @@ dump_prog_py_obj (const rpc_program *prog)
 	 << "    return -1;\n"
 	 << "  self->prog = &" << pt << ";\n" 
 	 << "  return 0;\n"
-	 << "}\n\n"
-	 << "PY_CLASS_DEF(" << ct << ", \"" << module << "." << pt << "\", "
+	 << "}\n\n";
+
+    for (const rpc_proc *rp = rv->procs.base (); rp < rv->procs.lim (); rp++) {
+      aout << "static PyObject *\n"
+	   << py_rpc_procno_method (ct, rp->id) <<  " (" <<  ct << " *self)"
+	   << "{\n"
+	   << "  return Py_BuildValue (\"i\", " << rp->id << ");\n"
+	   << "}\n\n";
+    }
+
+    aout << "static PyMethodDef " << ct << "_methods[] = {\n";
+    for (const rpc_proc *rp = rv->procs.base (); rp < rv->procs.lim (); rp++) {
+      aout << "  {\"" << rp->id <<  "\", (PyCFunction)" 
+	   << py_rpc_procno_method (ct, rp->id)
+	   << ", METH_NOARGS,\n"
+	   << "   \"RPC Procno for " << rp->id << "\"},\n";
+    }
+    aout << "  {NULL}\n"
+	 << "};\n\n";
+
+
+	 
+    aout << "PY_CLASS_DEF(" << ct << ", \"" << module << "." << pt << "\", "
 	 <<               "1, 0, -1,\n"
 	 << "             \"" << pt << " RPC program wrapper\", "
-	 <<               "0, 0, 0, init, new, 0);\n\n";
+	 <<               "methods, 0, 0, init, new, 0);\n\n";
   }
   
 }
