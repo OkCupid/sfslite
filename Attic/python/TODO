@@ -1,0 +1,6 @@
+
+* make RPC procnos available via getsetters as opposed to method calls
+	- save the programmer from typing in the parenthesis
+	- make them available as static methods from the class, too,
+	  this way it is not necessary to have the rpc program object
+	  around
