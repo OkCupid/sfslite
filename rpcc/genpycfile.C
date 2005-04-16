@@ -560,13 +560,7 @@ dump_prog_py_obj (const rpc_program *prog)
     str ptt = py_type (pt);
     aout << "struct " << ct << " : public py_rpc_program_t {\n"
 	 << "};\n\n"
-	 << "static PyObject *\n"
-	 << ct << "_new (PyTypeObject *type, PyObject *args, PyObject *kwds)\n"
-	 << "{\n"
-	 << "  " << ct << " *self;\n"
-	 << "  self = (" << ct << " *)type->tp_alloc (type, 0);\n"
-	 << "  return (PyObject *)self;\n"
-	 << "}\n\n"
+	 << "PY_CLASS_NEW(" << ct << ")\n\n"
 	 << "static int\n"
 	 << ct << "_init (" << ct << " *self, PyObject *args, "
 	 << "PyObject *kwds)\n"
@@ -1097,6 +1091,24 @@ mktbl (const rpc_program *rs)
 }
 
 static void
+dump_procno_ins (const rpc_program *rs)
+{
+  aout << "static int\n"
+       << "py_module_all_ins (PyObject *mod)\n"
+       << "{\n"
+       << "  int rc = 0;\n";
+    for (const rpc_vers *rv = rs->vers.base (); rv < rs->vers.lim (); rv++) {
+    for (const rpc_proc *rp = rv->procs.base (); rp < rv->procs.lim (); rp++) {
+      aout << "  if ((rc = PyModule_AddIntConstant (mod, \""
+	   << rp->id << "\", (long )" << rp->id << ")) < 0) return rc;\n";
+    }
+  }
+  aout << "  return rc;\n"
+       << "}\n\n";
+
+}
+
+static void
 dumpprog (const rpc_sym *s)
 {
   const rpc_program *rs = s->sprogram.addr ();
@@ -1127,6 +1139,7 @@ dumpprog (const rpc_sym *s)
   }
   aout << "\n";
   mktbl (rs);
+  dump_procno_ins (rs);
   dump_prog_py_obj (rs);
 }
 
@@ -1308,6 +1321,8 @@ dumpmodule (const symlist_t &lst)
        << module << ".\");\n"
        << "\n"
        << "  if (m == NULL)\n"
+       << "    return;\n"
+       << "  if (py_module_all_ins (m) < 0)\n"
        << "    return;\n"
        << "\n";
   

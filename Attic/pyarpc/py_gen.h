@@ -77,4 +77,20 @@ static PyTypeObject T##_Type = {                                          \
   PY_ABSTRACT_CLASS_NEW(T,Q)                                              \
   PY_CLASS_DEF(T, Q, 0, 0, -1, Q " base abstract object", 0, 0, 0, 0, new, 0)
 
+static inline void
+py_module_ins (PyObject *d, const char *name, long val)
+{
+  PyObject *v = PyInt_FromLong (val);
+  if (v) {
+    (void)PyDict_SetItemString (d, name, v);
+    Py_DECREF (v);
+  }
+}
+
+static int
+py_module_ins(PyObject *module, const char *symbol, long value)
+{
+  return PyModule_AddIntConstant(module, symbol, value);
+}
+
 #endif
