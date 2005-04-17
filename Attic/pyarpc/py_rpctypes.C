@@ -38,3 +38,10 @@ RPC_PRINT_GEN (py_u_int32_t, sb.fmt ("0x%x", obj.get ()))
 RPC_PRINT_DEFINE (py_u_int32_t)
 
 
+
+py_rpcgen_table_t
+py_rcgen_error = 
+{
+  typecheck_error,
+  typecheck_error
+};

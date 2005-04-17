@@ -1088,7 +1088,6 @@ dumptypedef (const rpc_sym *s)
 static void
 mktbl (const rpc_program *rs)
 {
-  // py_rpc_program
   for (const rpc_vers *rv = rs->vers.base (); rv < rs->vers.lim (); rv++) {
     str name = rpcprog (rs, rv);
     aout << "static const rpcgen_table " << name << "_tbl[] = {\n"
@@ -1099,7 +1098,10 @@ mktbl (const rpc_program *rs)
 	 << "  sizeof (" << name << "_tbl" << ") / sizeof ("
 	 << name << "_tbl[0]),\n"
 	 << "  \"" << name << "\"\n"
-	 << "};\n";
+	 << "};\n\n"
+	 << "const py_rpc_program py_" << name << " = {\n"
+	 << "  &" << name << ", py_" << name  << "_tbl\n"
+	 << "};\n\n";
   }
   aout << "\n";
 }
@@ -1152,7 +1154,23 @@ dumpprog (const rpc_sym *s)
 	 << rs->id << "_" << rv->val << "_APPLY_NOVOID(macro, "
 	 << pyc_type ("void") << ")\n";
   }
+
+  // dump typechecker methods
   aout << "\n";
+  for (const rpc_vers *rv = rs->vers.base (); rv < rs->vers.lim (); rv++) {
+    u_int n = 0;
+    str name = rpcprog (rs, rv);
+    aout << "const py_rpcgen_table_t " << name << "_tbl[] = {\n";
+    for (const rpc_proc *rp = rv->procs.base (); rp < rv->procs.lim (); rp++) {
+      while (n++ < rp->val) {
+	aout << "  { typecheck_error, typecheck_error },\n";
+      }
+      aout << "  {" << pyc_type (rp->arg) << "_typecheck, "
+	   << pyc_type (rp->res) << "_typecheck },\n";
+    }
+    aout << "};\n\n";
+  }
+
   mktbl (rs);
   dump_procno_ins (rs);
   dump_prog_py_obj (rs);

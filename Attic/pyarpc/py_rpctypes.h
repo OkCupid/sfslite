@@ -8,13 +8,16 @@
 #include "arpc.h"
 #include "rpctypes.h"
 
-struct py_rpcgen_table {
-  int (*typecheck) (PyObject *obj);
+struct py_rpcgen_table_t {
+  int (*typecheck_arg) (PyObject *obj);
+  int (*typecheck_res) (PyObject *obj);
 };
 
+extern py_rpcgen_table_t py_rcgen_error;
+
 struct py_rpc_program {
-  rpc_program prog;
-  const struct py_rpcgen_table *pytab;
+  const rpc_program *prog;
+  const struct py_rpcgen_table_t *pytab;
 };
 
 class py_rpc_base_t {
@@ -185,6 +188,7 @@ PY_RPC_TYPE2STR_DECL (u_int32_t)
 RPC_PRINT_TYPE_DECL (py_u_int32_t)
 RPC_PRINT_DECL (py_u_int32_t)
 
+inline int typecheck_error (PyObject *) { return -1; }
 
 struct py_rpc_program_t {
   PyObject_HEAD
