@@ -563,38 +563,53 @@ py_rpc_procno_method (const str &ct, const str &id)
   return b;
 }
 
+static str
+py_rpcprog_type (const rpc_program *prog, const rpc_vers *rv)
+{
+  return pyc_type (rpcprog (prog, rv));
+}
+
+static str
+py_rpcprog_extension (const rpc_program *prog, const rpc_vers *rv)
+{
+  strbuf sb;
+  sb << "py_" << rpcprog (prog, rv) << "_tbl";
+  return sb;
+}
+
 static void
 dump_prog_py_obj (const rpc_program *prog)
 {
   for (const rpc_vers *rv = prog->vers.base (); rv < prog->vers.lim (); rv++) {
-    str pt = rpcprog (prog, rv); 
-    str ct = pyc_type (pt);
-    str ptt = py_type (pt);
-    aout << "struct " << ct << " : public py_rpc_program_t {\n"
+    str type = py_rpcprog_type (prog, rv);
+    str objType = rpcprog (prog, rv);
+    aout << "struct " << type << " : public py_rpc_program_t {\n"
 	 << "};\n\n"
-	 << "PY_CLASS_NEW(" << ct << ")\n\n"
+	 << "PY_CLASS_NEW(" << type << ")\n\n"
 	 << "static int\n"
-	 << ct << "_init (" << ct << " *self, PyObject *args, "
+	 << type << "_init (" << type << " *self, PyObject *args, "
 	 << "PyObject *kwds)\n"
 	 << "{\n"
 	 << "  if (!PyArg_ParseTuple (args, \"\"))\n"
 	 << "    return -1;\n"
-	 << "  self->prog = &" << pt << ";\n" 
+	 << "  self->prog = &" << rpcprog (prog, rv) << ";\n" 
+	 << "  self->pytab = " << py_rpcprog_extension (prog, rv) << ";\n"
 	 << "  return 0;\n"
 	 << "}\n\n";
 
     for (const rpc_proc *rp = rv->procs.base (); rp < rv->procs.lim (); rp++) {
       aout << "static PyObject *\n"
-	   << py_rpc_procno_method (ct, rp->id) <<  " (" <<  ct << " *self)"
+	   << py_rpc_procno_method (type, rp->id) 
+	   <<  " (" <<  type << " *self)"
 	   << "{\n"
 	   << "  return Py_BuildValue (\"i\", " << rp->id << ");\n"
 	   << "}\n\n";
     }
 
-    aout << "static PyMethodDef " << ct << "_methods[] = {\n";
+    aout << "static PyMethodDef " << type << "_methods[] = {\n";
     for (const rpc_proc *rp = rv->procs.base (); rp < rv->procs.lim (); rp++) {
       aout << "  {\"" << rp->id <<  "\", (PyCFunction)" 
-	   << py_rpc_procno_method (ct, rp->id)
+	   << py_rpc_procno_method (type, rp->id)
 	   << ", METH_NOARGS,\n"
 	   << "   \"RPC Procno for " << rp->id << "\"},\n";
     }
@@ -603,9 +618,10 @@ dump_prog_py_obj (const rpc_program *prog)
 
 
 	 
-    aout << "PY_CLASS_DEF(" << ct << ", \"" << module << "." << pt << "\", "
+    aout << "PY_CLASS_DEF(" << type << ", \"" << module << "." 
+	 << objType << "\", "
 	 <<               "1, 0, -1,\n"
-	 << "             \"" << pt << " RPC program wrapper\", "
+	 << "             \"" << objType << " RPC program wrapper\", "
 	 <<               "methods, 0, 0, init, new, 0);\n\n";
   }
   
@@ -1098,9 +1114,6 @@ mktbl (const rpc_program *rs)
 	 << "  sizeof (" << name << "_tbl" << ") / sizeof ("
 	 << name << "_tbl[0]),\n"
 	 << "  \"" << name << "\"\n"
-	 << "};\n\n"
-	 << "const py_rpc_program py_" << name << " = {\n"
-	 << "  &" << name << ", py_" << name  << "_tbl\n"
 	 << "};\n\n";
   }
   aout << "\n";
@@ -1160,12 +1173,13 @@ dumpprog (const rpc_sym *s)
   for (const rpc_vers *rv = rs->vers.base (); rv < rs->vers.lim (); rv++) {
     u_int n = 0;
     str name = rpcprog (rs, rv);
-    aout << "const py_rpcgen_table_t " << name << "_tbl[] = {\n";
+    aout << "static const py_rpcgen_table_t " 
+	 << py_rpcprog_extension (rs, rv) << "[] = {\n";
     for (const rpc_proc *rp = rv->procs.base (); rp < rv->procs.lim (); rp++) {
       while (n++ < rp->val) {
 	aout << "  { typecheck_error, typecheck_error },\n";
       }
-      aout << "  {" << pyc_type (rp->arg) << "_typecheck, "
+      aout << "  { " << pyc_type (rp->arg) << "_typecheck, "
 	   << pyc_type (rp->res) << "_typecheck },\n";
     }
     aout << "};\n\n";

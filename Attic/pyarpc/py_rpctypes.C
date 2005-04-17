@@ -38,10 +38,16 @@ RPC_PRINT_GEN (py_u_int32_t, sb.fmt ("0x%x", obj.get ()))
 RPC_PRINT_DEFINE (py_u_int32_t)
 
 
-
-py_rpcgen_table_t
-py_rcgen_error = 
+py_rpcgen_table_t py_rcgen_error = 
 {
   typecheck_error,
   typecheck_error
 };
+
+int
+py_u_int32_t_typecheck (PyObject *o)
+{
+  if (!o)
+    return -1;
+  return (PyInt_Check (o) || PyLong_Check (o)) ? 1 : 0;
+}

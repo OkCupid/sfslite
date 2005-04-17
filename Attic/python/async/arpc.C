@@ -99,9 +99,9 @@ py_aclnt_t_init (py_aclnt_t *self, PyObject *args, PyObject *kwds)
     return -1;
   }
   py_axprt_t *p_x = (py_axprt_t *)x;
-  py_rpc_program_t *p_prog = (py_rpc_program_t *)prog;
+  py_rpc_program_t *pp = (py_rpc_program_t *)prog;
 
-  self->cli = aclnt::alloc (p_x->x, *p_prog->prog);
+  self->cli = aclnt::alloc (p_x->x, *pp->py_wrapper->prog);
   
   return 0;
 }

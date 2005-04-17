@@ -15,10 +15,6 @@ struct py_rpcgen_table_t {
 
 extern py_rpcgen_table_t py_rcgen_error;
 
-struct py_rpc_program {
-  const rpc_program *prog;
-  const struct py_rpcgen_table_t *pytab;
-};
 
 class py_rpc_base_t {
 public:
@@ -189,10 +185,14 @@ RPC_PRINT_TYPE_DECL (py_u_int32_t)
 RPC_PRINT_DECL (py_u_int32_t)
 
 inline int typecheck_error (PyObject *) { return -1; }
+int py_u_int32_t_typecheck (PyObject *o);
+inline int void_typecheck (PyObject *o) 
+{ return (!o || o == Py_None) ? 1 : 0; }
 
 struct py_rpc_program_t {
   PyObject_HEAD
   const rpc_program *prog;
+  const py_rpcgen_table_t *pytab;
 };
 
 #endif
