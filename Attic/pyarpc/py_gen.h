@@ -53,7 +53,7 @@ static PyTypeObject T##_Type = {                                          \
   0,                                                /* tp_setattro*/      \
   0,                                                /* tp_as_buffer */    \
   PY_TP_FLAGS(flags),                               /* tp_flags */        \
-  doc,                                              /* tp_doc */          \
+  PyDoc_STR(doc),                                   /* tp_doc */          \
   0,		                                    /* tp_traverse */     \
   0,		                                    /* tp_clear */        \
   0,		                                    /* tp_richcompare */  \
@@ -77,20 +77,7 @@ static PyTypeObject T##_Type = {                                          \
   PY_ABSTRACT_CLASS_NEW(T,Q)                                              \
   PY_CLASS_DEF(T, Q, 0, 0, -1, Q " base abstract object", 0, 0, 0, 0, new, 0)
 
-static inline void
-py_module_ins (PyObject *d, const char *name, long val)
-{
-  PyObject *v = PyInt_FromLong (val);
-  if (v) {
-    (void)PyDict_SetItemString (d, name, v);
-    Py_DECREF (v);
-  }
-}
+bool import_async_exceptions (PyObject **xdr, PyObject **rpc = NULL);
 
-static int
-py_module_ins(PyObject *module, const char *symbol, long value)
-{
-  return PyModule_AddIntConstant(module, symbol, value);
-}
 
 #endif

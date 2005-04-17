@@ -347,6 +347,18 @@ dump_allocator (const rpc_struct *rs)
 }
 
 static void
+dump_typchk (const rpc_struct *rs)
+{
+  str ptt = py_type (rs->id);
+  str pct = pyc_type (rs->id);
+  aout << "int\n"
+       << pct << "_typecheck (PyObject *obj)\n"
+       << "{\n"
+       << "  return PyObject_IsInstance (obj, (PyObject *)&" << ptt <<  ");\n"
+       << "}\n\n";
+}
+
+static void
 dump_xdr_func (const rpc_struct *rs)
 {
   aout << "bool_t\n"
@@ -856,6 +868,7 @@ dumpstruct (const rpc_sym *s)
   dump_getsetter_table (rs);
   dump_class_init_func (rs);
   dump_object_table (rs);
+  dump_typchk (rs);
 
   dump_rpc_traverse (rs);
   dump_xdr_func (rs);
@@ -1075,6 +1088,7 @@ dumptypedef (const rpc_sym *s)
 static void
 mktbl (const rpc_program *rs)
 {
+  // py_rpc_program
   for (const rpc_vers *rv = rs->vers.base (); rv < rs->vers.lim (); rv++) {
     str name = rpcprog (rs, rv);
     aout << "static const rpcgen_table " << name << "_tbl[] = {\n"
@@ -1100,7 +1114,8 @@ dump_procno_ins (const rpc_program *rs)
     for (const rpc_vers *rv = rs->vers.base (); rv < rs->vers.lim (); rv++) {
     for (const rpc_proc *rp = rv->procs.base (); rp < rv->procs.lim (); rp++) {
       aout << "  if ((rc = PyModule_AddIntConstant (mod, \""
-	   << rp->id << "\", (long )" << rp->id << ")) < 0) return rc;\n";
+	   << rp->id << "\", (long )" << rp->id << ")) < 0)\n"
+	   << "    return rc;\n";
     }
   }
   aout << "  return rc;\n"
@@ -1242,22 +1257,10 @@ dumpmodule (const symlist_t &lst)
        << "init" << module << " (void)\n"
        << "{\n"
        << "  PyObject* m;\n"
+       << "  PyObject *module;\n"
        << "\n"
-       << "  // import async.err and get the Type imformation for\n"
-       << "  // async.err.AsyncXDRException\n"
-       << "  PyObject *module = PyImport_ImportModule (\"async.err\");\n"
-       << "  if (!module) {\n"
+       << "  if (!import_async_exceptions (&AsyncXDR_Exception) < 0)\n"
        << "    return;\n"
-       << "  }\n"
-       << "  AsyncXDR_Exception = PyObject_GetAttrString (module,\n"
-       << "          \"AsyncXDRException\");\n"
-       << "  if (!AsyncXDR_Exception) {\n"
-       << "    Py_DECREF (module);\n"
-       << "    PyErr_SetString (PyExc_TypeError,\n"
-       << "                \"Cannot load exception types from aysnc.err\");\n"
-       << "    return;\n"
-       << "  }\n"
-       << "  Py_DECREF (module);\n"
        << "\n"
        << "  // import async.arpc and get the type information for\n"
        << "  // async.arpc.rpc_program\n"

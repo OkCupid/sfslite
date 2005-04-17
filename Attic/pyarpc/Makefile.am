@@ -3,7 +3,7 @@
 
 sfslib_LTLIBRARIES = libpyarpc.la
 
-libpyarpc_la_SOURCES = py_rpctypes.C
+libpyarpc_la_SOURCES = py_rpctypes.C py_gen.C
 
 sfsinclude_HEADERS = py_rpctypes.h py_gen.h
 

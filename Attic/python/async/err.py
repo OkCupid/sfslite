@@ -12,3 +12,10 @@ class AsyncXDRException (AsyncException):
         self.value = value
     def __str__(self):
         return repr(self.value)
+
+class AsyncRPCException (AsyncException):
+    """RPC program exception within async."""
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)

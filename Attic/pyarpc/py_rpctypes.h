@@ -6,6 +6,16 @@
 #include <Python.h>
 #include "structmember.h"
 #include "arpc.h"
+#include "rpctypes.h"
+
+struct py_rpcgen_table {
+  int (*typecheck) (PyObject *obj);
+};
+
+struct py_rpc_program {
+  rpc_program prog;
+  const struct py_rpcgen_table *pytab;
+};
 
 class py_rpc_base_t {
 public:

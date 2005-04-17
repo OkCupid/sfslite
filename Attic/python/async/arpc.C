@@ -8,6 +8,9 @@
 #include "py_rpctypes.h"
 #include "py_gen.h"
 
+static PyObject *AsyncXDR_Exception;
+static PyObject *AsyncRPC_Exception;
+
 
 struct py_axprt_t {
   PyObject_HEAD
@@ -103,8 +106,32 @@ py_aclnt_t_init (py_aclnt_t *self, PyObject *args, PyObject *kwds)
   return 0;
 }
 
+static PyObject *
+py_aclnt_t_call (py_aclnt_t *self, PyObject *args)
+{
+  int procno = 0;
+  PyObject *rpc_args = NULL;
+  PyObject *rpc_ret = NULL;
+  PyObject *cb = NULL ;
+  if (!PyArg_Parse (args, "(i|OOO)", &proc, &rpc_args, &rpc_ret, &cb))
+    return NULL;
+
+  
+
+  callbase *c;
+
+  Py_INCREF (Py_None);
+  return Py_None;
+}
+
+static PyMethodDef py_aclnt_t_methods[] = {
+  { "call", (PyCFunction)py_aclnt_t_call, METH_VARARGS,
+    PyDoc_STRING ("aclnt::call function from libasync") },
+  {NULL}
+};
+
 PY_CLASS_DEF(py_aclnt_t, "arpc.aclnt", 1, dealloc, -1, 
-	     "aclnt object wrapper", 0, 0, 0, init, new, 0);
+	     "aclnt object wrapper", methods, 0, 0, init, new, 0);
 
 static PyMethodDef module_methods[] = {
   { NULL }
@@ -121,6 +148,13 @@ initarpc (void)
       PyType_Ready (&py_axprt_stream_t_Type) < 0 ||
       PyType_Ready (&py_rpc_program_t_Type) < 0 ||
       PyType_Ready (&py_aclnt_t_Type) < 0)
+    return;
+
+  if (!import_async_exceptions (&AsyncXDR_Exception, &AsyncRPC_Exception))
+    return;
+
+  PyObject *errmod = PyImport_ImportModule ("async.err");
+  if (!errmod)
     return;
 
   m = Py_InitModule3 ("async.arpc", module_methods,
