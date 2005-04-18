@@ -65,8 +65,6 @@ template<size_t max = RPC_INFINITY>
 class py_rpc_str : public py_rpc_base_t 
 {
 public:
-  virtual ~py_rpc_str () {}
-
   char *get (size_t *sz) const
   {
     char *ret;
@@ -103,12 +101,10 @@ public:
 class py_u_int32_t : public py_rpc_base_t 
 {
 public:
-  virtual ~py_u_int32_t () {}
-  // XXX not sure about signed issues yet
-  u_int32_t get () const { return (PyInt_AsLong (_obj)); }
+  u_int32_t get () const { return (PyLong_AsUnsignedLong (_obj)); }
   bool set (u_int32_t i) {
     Py_XDECREF (_obj);
-    return (_obj = PyInt_FromLong (i));
+    return (_obj = PyLong_FromUnsignedLong (i));
   }
 };
 bool rpc_traverse (XDR *xdrs, py_u_int32_t &obj);

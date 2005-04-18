@@ -3,8 +3,8 @@ import ex1
 import async
 import socket
 
-def cb(e,r):
-    print "e=", e, "& r=", r
+def cb(err,res):
+    print "err=", err, "& res=", res
 
 
 sock = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
@@ -21,7 +21,7 @@ f.x = 'this is a test string'
 f.xx = 1010
 
 
-cli.call (ex1.FOO_FUNC, f, cb);
+cli.call (ex1.FOO_FUNC, f, cb)
 
 async.core.amain ()
 
