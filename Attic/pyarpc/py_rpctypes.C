@@ -32,16 +32,10 @@ type##_alloc ()							\
   return New type;						\
 }
 
-
 DEFXDR (py_u_int32_t);
 RPC_PRINT_GEN (py_u_int32_t, sb.fmt ("0x%x", obj.get ()))
 RPC_PRINT_DEFINE (py_u_int32_t)
 
-
-py_rpcgen_table_t py_rcgen_error = 
-{
-  convert_error
-};
 
 PyObject *
 convert_error (PyObject *in, PyObject *rpc_exception)
@@ -61,6 +55,13 @@ void_convert (PyObject *in, PyObject *rpc_exception)
 }
 
 PyObject *
+void_unwrap (void *o)
+{
+  Py_INCREF (Py_None);
+  return Py_None;
+}
+
+PyObject *
 py_u_int32_t_convert (PyObject *in, PyObject *rpc_exception)
 {
   PyObject *out = NULL;
@@ -75,3 +76,8 @@ py_u_int32_t_convert (PyObject *in, PyObject *rpc_exception)
   return out;
 }
 
+
+py_rpcgen_table_t py_rpcgen_error = 
+{
+  convert_error, convert_error, unwrap_error, dealloc_error
+};

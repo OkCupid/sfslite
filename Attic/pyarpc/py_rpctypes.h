@@ -11,9 +11,11 @@
 struct py_rpcgen_table_t {
   PyObject *(*convert_arg) (PyObject *arg, PyObject *rpc_exception);
   PyObject *(*convert_res) (PyObject *arg, PyObject *rpc_exception);
+  PyObject *(*unwrap_res) (void *in);
+  void (*dealloc_res) (void *in);
 };
 
-extern py_rpcgen_table_t py_rcgen_error;
+extern py_rpcgen_table_t py_rpcgen_error;
 
 
 class py_rpc_base_t {
@@ -37,7 +39,6 @@ public:
       _obj = NULL;
     }
   }
-
   PyObject *obj () { return _obj; }
 
   bool set_obj (PyObject *o)
@@ -46,6 +47,14 @@ public:
     _obj = o; // no INCREF since usually just constructed
     Py_XDECREF (tmp);
     return true;
+  }
+
+  PyObject *unwrap () 
+  {
+    PyObject *ret = _obj;
+    Py_INCREF (ret);
+    delete this;
+    return ret;
   }
 
 protected:
@@ -175,9 +184,36 @@ rpc_print (const strbuf &sb, const py_rpc_str<n> &pyobj,
   return sb;
 }
 
-#define DECLXDR(type)				\
-extern BOOL xdr_##type (XDR *, void *);		\
-extern void *type##_alloc ();
+inline PyObject *
+generic_py_xdr_unwrap (void *o)
+{
+  return reinterpret_cast<py_rpc_base_t *> (o)->unwrap ();
+}
+
+inline void
+generic_py_xdr_dealloc (void *o)
+{
+  delete reinterpret_cast<py_rpc_base_t *> (o);
+}
+
+#define PY_XDR_UNWRAP(type)                                     \
+inline PyObject *type##_unwrap (void *o)                        \
+{ return generic_py_xdr_unwrap (o); }
+
+#define PY_XDR_DEALLOC(type)                                    \
+inline void type##_dealloc (void *o)                            \
+{ generic_py_xdr_dealloc (o); }
+
+
+#define DECLXDR(type)				                \
+extern BOOL xdr_##type (XDR *, void *);		                \
+extern void *type##_alloc ();                                   \
+extern PyObject *type##_convert (PyObject *o, PyObject *e);     \
+PY_XDR_UNWRAP(type)                                             \
+PY_XDR_DEALLOC(type)
+
+PY_XDR_UNWRAP(py_rpc_str_t)
+PY_XDR_DEALLOC(py_rpc_str_t)
 
 DECLXDR(py_u_int32_t)
 PY_RPC_TYPE2STR_DECL (u_int32_t)
@@ -185,9 +221,12 @@ RPC_PRINT_TYPE_DECL (py_u_int32_t)
 RPC_PRINT_DECL (py_u_int32_t)
 
 PyObject *convert_error (PyObject *, PyObject *e);
-PyObject *py_u_int32_t_convert (PyObject *o, PyObject *e);
-PyObject *void_convert (PyObject *o, PyObject *e);
+inline PyObject *unwrap_error (void *o) { return NULL; }
+inline void dealloc_error (void *o) { return; }
 
+PyObject *void_convert (PyObject *o, PyObject *e);
+PyObject *void_unwrap (void *o);
+inline void void_dealloc (void *o) { return; }
 
 struct py_rpc_program_t {
   PyObject_HEAD

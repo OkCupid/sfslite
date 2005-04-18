@@ -332,7 +332,19 @@ dump_class_dealloc_func (const rpc_struct *rs)
   for (const rpc_decl *rd = rs->decls.base (); rd < rs->decls.lim (); rd++) {
     aout << "  self->" << rd->id << ".clear ();\n";
   }
-  aout << "}\n\n";
+  aout << "  self->ob_type->tp_free ((PyObject *) self);\n"
+       << "}\n\n";
+}
+
+static void
+dump_class_unwrap_func (const rpc_struct *rs)
+{
+  str ct = pyc_type (rs->id);
+  aout << "static PyObject *\n"
+       << ct << "_unwrap (" << ct << " *self)\n"
+       << "{\n"
+       << "  return (PyObject *) self;\n"
+       << "}\n\n";
 }
 
 static void
@@ -881,6 +893,7 @@ dumpstruct (const rpc_sym *s)
   // aout << "RPC_TYPE_DECL (" << rs->id << ")\n";
 
   dump_class_dealloc_func (rs);
+  dump_class_unwrap_func (rs);
   dump_class_new_func (rs);
   dump_class_members (rs);
   dump_class_method_decls (rs);
@@ -1182,10 +1195,14 @@ dumpprog (const rpc_sym *s)
 	 << py_rpcprog_extension (rs, rv) << "[] = {\n";
     for (const rpc_proc *rp = rv->procs.base (); rp < rv->procs.lim (); rp++) {
       while (n++ < rp->val) {
-	aout << "  { convert_error, convert_error },\n";
+	aout << " py_rpcgen_error,\n";
+	//aout << "  { convert_error, convert_error, wrap_error, "
+	//    << "dealloc_error },\n";
       }
       aout << "  { " << pyc_type (rp->arg) << "_convert, "
-	   << pyc_type (rp->res) << "_convert },\n";
+	   << pyc_type (rp->res) << "_convert, "
+	   << pyc_type (rp->res) << "_unwrap, "
+	   << pyc_type (rp->res) << "_dealloc },\n";
     }
     aout << "};\n\n";
   }
@@ -1296,7 +1313,7 @@ dumpmodule (const symlist_t &lst)
        << "  PyObject* m;\n"
        << "  PyObject *module;\n"
        << "\n"
-       << "  if (!import_async_exceptions (&AsyncXDR_Exception) < 0)\n"
+       << "  if (!import_async_exceptions (&AsyncXDR_Exception))\n"
        << "    return;\n"
        << "\n"
        << "  // import async.arpc and get the type information for\n"

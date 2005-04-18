@@ -109,14 +109,32 @@ py_aclnt_t_init (py_aclnt_t *self, PyObject *args, PyObject *kwds)
   return 0;
 }
 
+struct call_bundle_t {
+  call_bundle_t (PyObject *a, void *r, PyObject * (*u ) (void *), 
+		 void (*d) (void *),  PyObject *c)
+    : arg (a), res (r), unwrap_res (u), dealloc_res (d), cb (c) {}
+  PyObject *arg;
+  void *res;
+  PyObject * (*unwrap_res) (void *);
+  void (*dealloc_res) (void *);
+  PyObject *cb;
+};  
+
 static void
-py_aclnt_t_call_cb (PyObject *arg, PyObject *res, PyObject *cb, clnt_stat e)
+py_aclnt_t_call_cb (call_bundle_t *bun, clnt_stat e)
 {
-  PyObject *arglist = Py_BuildValue ("(iO)", (int )e, res);
-  PyObject_CallObject (cb, arglist);
-  Py_DECREF (arglist);
-  Py_XDECREF (arg);
-  Py_XDECREF (cb);
+  if (bun->cb) {
+    PyObject *res = bun->unwrap_res (bun->res); 
+    PyObject *arglist = Py_BuildValue ("(iO)", (int )e, res);
+    PyObject_CallObject (bun->cb, arglist);
+    Py_DECREF (arglist);
+  } else 
+    bun->dealloc_res (bun->res);
+
+  Py_XDECREF (bun->arg);
+  Py_XDECREF (bun->cb);
+
+  delete bun;
 }
 
 static PyObject *
@@ -128,6 +146,7 @@ py_aclnt_t_call (py_aclnt_t *self, PyObject *args)
   PyObject *cb = NULL ;
   PyObject *res = NULL;
   callbase *b = NULL;
+  call_bundle_t *bundle;
 
   if (!PyArg_ParseTuple (args, "i|OO", &procno, &rpc_args_in, &cb))
     return NULL;
@@ -135,7 +154,7 @@ py_aclnt_t_call (py_aclnt_t *self, PyObject *args)
   // now check all arguments
   if (procno >= self->py_prog->prog->nproc) {
     PyErr_SetString (AsyncRPC_Exception, "given RPC proc is out of range");
-    goto fail;
+    return NULL;
   }
 
   // XXX how do you tell if an object is callable?
@@ -151,16 +170,22 @@ py_aclnt_t_call (py_aclnt_t *self, PyObject *args)
 	  self->py_prog->pytab[procno].convert_arg (rpc_args_in,
 						    AsyncRPC_Exception)))
       goto fail;
-    Py_INCREF (rpc_args_out);
+    else
+      Py_INCREF (rpc_args_out);
   }
-
 
   res = (PyObject *)self->py_prog->prog->tbl[procno].alloc_res ();
 
   if (cb)
     Py_INCREF (cb);
+
+  bundle = New call_bundle_t (rpc_args_out, res,
+			      self->py_prog->pytab[procno].unwrap_res,
+			      self->py_prog->pytab[procno].dealloc_res,
+			      cb);
+
   b = self->cli->call (procno, rpc_args_out, res, 
-		       wrap (py_aclnt_t_call_cb, rpc_args_out, res, cb));
+		       wrap (py_aclnt_t_call_cb, bundle));
   if (!b) 
     goto fail;
 
@@ -169,7 +194,7 @@ py_aclnt_t_call (py_aclnt_t *self, PyObject *args)
   return Py_None;
  fail:
   Py_XDECREF (rpc_args_out);
-  Py_XDECREF (res);
+  self->py_prog->pytab[procno].dealloc_res (res);
   return NULL;
 }
 
@@ -206,20 +231,26 @@ all_ins (PyObject *m)
   INS (RPC_PROCUNAVAIL);
   INS (RPC_CANTDECODEARGS);
   INS (RPC_SYSTEMERROR);
-  INS (RPC_NOBROADCAST);
   INS (RPC_UNKNOWNHOST);
   INS (RPC_UNKNOWNPROTO);
+  INS (RPC_PROGNOTREGISTERED);
+  INS (RPC_FAILED);
+  return 1;
+
+  // XXX the below seem nonstandard
+#if 0
+  INS (RPC_NOBROADCAST);
   INS (RPC_UNKNOWNADDR);
   INS (RPC_RPCBFAILURE);
-  INS (RPC_PROGNOTREGISTERED);
   INS (RPC_N2AXLATEFAILURE);
-  INS (RPC_FAILED);
   INS (RPC_INTR);
   INS (RPC_TLIERROR);
   INS (RPC_UDERROR);
   INS (RPC_INPROGRESS);
   INS (RPC_STALERACHANDLE);
-  return 1;
+#endif
+
+
 }
 
 #ifndef PyMODINIT_FUNC	/* declarations for DLL import/export */
