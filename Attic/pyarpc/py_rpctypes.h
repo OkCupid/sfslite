@@ -9,8 +9,8 @@
 #include "rpctypes.h"
 
 struct py_rpcgen_table_t {
-  int (*typecheck_arg) (PyObject *obj);
-  int (*typecheck_res) (PyObject *obj);
+  PyObject *(*convert_arg) (PyObject *arg, PyObject *rpc_exception);
+  PyObject *(*convert_res) (PyObject *arg, PyObject *rpc_exception);
 };
 
 extern py_rpcgen_table_t py_rcgen_error;
@@ -184,10 +184,10 @@ PY_RPC_TYPE2STR_DECL (u_int32_t)
 RPC_PRINT_TYPE_DECL (py_u_int32_t)
 RPC_PRINT_DECL (py_u_int32_t)
 
-inline int typecheck_error (PyObject *) { return -1; }
-int py_u_int32_t_typecheck (PyObject *o);
-inline int void_typecheck (PyObject *o) 
-{ return (!o || o == Py_None) ? 1 : 0; }
+PyObject *convert_error (PyObject *, PyObject *e);
+PyObject *py_u_int32_t_convert (PyObject *o, PyObject *e);
+PyObject *void_convert (PyObject *o, PyObject *e);
+
 
 struct py_rpc_program_t {
   PyObject_HEAD

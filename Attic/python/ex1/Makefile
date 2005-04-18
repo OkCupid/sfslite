@@ -48,4 +48,4 @@ ex1c.C:	ex1.x
 	$(CXX) -g $(PYINC) $(SFSINC) -o $@ -c $< 
 
 clean:	
-	rm -f *.o *.pyc *.so *.core *_wrap.cxx ex1.C ex1c.C ex1c.h
+	rm -f *.o *.pyc *.so *.core *_wrap.cxx ex1.C ex1c.C ex1c.h ex1srv

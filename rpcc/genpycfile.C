@@ -347,14 +347,19 @@ dump_allocator (const rpc_struct *rs)
 }
 
 static void
-dump_typchk (const rpc_struct *rs)
+dump_convert (const rpc_struct *rs)
 {
   str ptt = py_type (rs->id);
   str pct = pyc_type (rs->id);
-  aout << "int\n"
-       << pct << "_typecheck (PyObject *obj)\n"
+  aout << "PyObject *\n"
+       << pct << "_convert (PyObject *obj, PyObject *ej)\n"
        << "{\n"
-       << "  return PyObject_IsInstance (obj, (PyObject *)&" << ptt <<  ");\n"
+       << "  if (!PyObject_IsInstance (obj, (PyObject *)&" << ptt <<  ")) {\n"
+       << "     PyErr_SetString (PyExc_TypeError, \"expected object of type "
+       <<                                         rs->id << "\");\n"
+       << "     return NULL;\n"
+       << "  }\n"
+       << "  return obj;\n"
        << "}\n\n";
 }
 
@@ -884,7 +889,7 @@ dumpstruct (const rpc_sym *s)
   dump_getsetter_table (rs);
   dump_class_init_func (rs);
   dump_object_table (rs);
-  dump_typchk (rs);
+  dump_convert (rs);
 
   dump_rpc_traverse (rs);
   dump_xdr_func (rs);
@@ -1177,10 +1182,10 @@ dumpprog (const rpc_sym *s)
 	 << py_rpcprog_extension (rs, rv) << "[] = {\n";
     for (const rpc_proc *rp = rv->procs.base (); rp < rv->procs.lim (); rp++) {
       while (n++ < rp->val) {
-	aout << "  { typecheck_error, typecheck_error },\n";
+	aout << "  { convert_error, convert_error },\n";
       }
-      aout << "  { " << pyc_type (rp->arg) << "_typecheck, "
-	   << pyc_type (rp->res) << "_typecheck },\n";
+      aout << "  { " << pyc_type (rp->arg) << "_convert, "
+	   << pyc_type (rp->res) << "_convert },\n";
     }
     aout << "};\n\n";
   }

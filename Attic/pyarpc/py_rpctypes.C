@@ -40,14 +40,38 @@ RPC_PRINT_DEFINE (py_u_int32_t)
 
 py_rpcgen_table_t py_rcgen_error = 
 {
-  typecheck_error,
-  typecheck_error
+  convert_error
 };
 
-int
-py_u_int32_t_typecheck (PyObject *o)
+PyObject *
+convert_error (PyObject *in, PyObject *rpc_exception)
 {
-  if (!o)
-    return -1;
-  return (PyInt_Check (o) || PyLong_Check (o)) ? 1 : 0;
+  PyErr_SetString (rpc_exception, "undefined RPC procedure called");
+  return NULL;
 }
+
+PyObject *
+void_convert (PyObject *in, PyObject *rpc_exception)
+{
+  if (in && in != Py_None) {
+    PyErr_SetString (PyExc_TypeError, "expected void argument");
+    return NULL;
+  }
+  return Py_None;
+}
+
+PyObject *
+py_u_int32_t_convert (PyObject *in, PyObject *rpc_exception)
+{
+  PyObject *out = NULL;
+  assert (in);
+  if (PyInt_Check (in))
+    out = PyLong_FromLong(PyInt_AsLong (in));
+  else if (!PyLong_Check (in)) {
+    PyErr_SetString (PyExc_TypeError, "expect an integer or long");
+  } else {
+    out = in;
+  }
+  return out;
+}
+

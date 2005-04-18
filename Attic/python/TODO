@@ -11,3 +11,5 @@ SFS Python Wrapper Todo
 	  around [ done 4/16/05 ]
 
 * PyDoc_STR -- use in all cases of documentating a class inline.
+
+* aclnt:call should return a cancelable callbase

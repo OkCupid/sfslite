@@ -19,12 +19,12 @@ SFSLIBDIR =	/usr/local/lib/sfslite/$(SFSTAG)
 SFSINC =	-I$(SFSINCDIR) -I/usr/local/include
 
 SFSLIB = 	-L$(SFSLIBDIR) -lasync -L$(SFSLIBDIR) -larpc \
-		-L$(SFSLIBDIR) -lsfscrypt -lgmp \
+		-L$(SFSLIBDIR) -lsfscrypt -L$(SFSLIBDIR) -lpyarpc -lgmp \
 		-Xlinker -rpath $(SFSLIBDIR)
 
 default:	all
 
-all:		core.so arpc.so
+all:		core.so arpc.so 
 
 .C.o:
 	$(CXX) -g $(PYINC) $(SFSINC) -o $@ -c $< 

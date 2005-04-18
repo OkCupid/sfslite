@@ -28,8 +28,8 @@ import_async_exceptions (PyObject **xdr, PyObject **rpc)
     if (!import_exception (module, "AsyncXDRException", xdr) ||
 	!import_exception (module, "AsyncRPCException", rpc))
       rc = false;
+    Py_DECREF (module);
   }
 
-  Py_DECREF (module);
   return rc;
 }

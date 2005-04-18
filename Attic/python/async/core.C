@@ -34,6 +34,11 @@ Core_delaycb (PyObject *self, PyObject *args)
   int s, us;
   if (!PyArg_Parse (args, "(iiO)", &s, &us, &handler))
     return NULL;
+  if (!PyCallable_Check (handler)) {
+    PyErr_SetString (PyExc_TypeError, "expected a calling object as 3rd arg");
+    return NULL;
+  }
+
   Py_XINCREF (handler);
   printf ("delay CB with args: %d, %d, %p, %p\n", s, us, self, handler);
   delaycb  (s, us, wrap (Core_delaycb_cb, handler));

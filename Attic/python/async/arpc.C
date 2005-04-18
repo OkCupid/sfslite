@@ -1,5 +1,3 @@
-
-
 // -*-c++-*-
 #include <Python.h>
 #include "structmember.h"
@@ -28,6 +26,7 @@ struct py_axprt_dgram_t : public py_axprt_t {
 
 struct py_aclnt_t {
   PyObject_HEAD
+  py_rpc_program_t *py_prog;
   ptr<aclnt> cli;
 };
 
@@ -83,6 +82,9 @@ py_aclnt_t_init (py_aclnt_t *self, PyObject *args, PyObject *kwds)
   PyObject *prog = NULL;
   PyObject *tmp;
   static char *kwlist[] = { "x", "prog", NULL };
+  
+  self->py_prog = NULL;
+
   if (!PyArg_ParseTupleAndKeywords (args, kwds, "OO", kwlist, &x, &prog))
     return -1;
 
@@ -99,34 +101,81 @@ py_aclnt_t_init (py_aclnt_t *self, PyObject *args, PyObject *kwds)
     return -1;
   }
   py_axprt_t *p_x = (py_axprt_t *)x;
-  py_rpc_program_t *pp = (py_rpc_program_t *)prog;
+  self->py_prog = (py_rpc_program_t *)prog;
+  Py_INCREF (self->py_prog);
 
-  self->cli = aclnt::alloc (p_x->x, *pp->py_wrapper->prog);
+  self->cli = aclnt::alloc (p_x->x, *self->py_prog->prog);
   
   return 0;
+}
+
+static void
+py_aclnt_t_call_cb (PyObject *arg, PyObject *res, PyObject *cb, clnt_stat e)
+{
+  PyObject *arglist = Py_BuildValue ("(iO)", (int )e, res);
+  PyObject_CallObject (cb, arglist);
+  Py_DECREF (arglist);
+  Py_XDECREF (arg);
+  Py_XDECREF (cb);
 }
 
 static PyObject *
 py_aclnt_t_call (py_aclnt_t *self, PyObject *args)
 {
   int procno = 0;
-  PyObject *rpc_args = NULL;
-  PyObject *rpc_ret = NULL;
+  PyObject *rpc_args_in = NULL;
+  PyObject *rpc_args_out = NULL;
   PyObject *cb = NULL ;
-  if (!PyArg_Parse (args, "(i|OOO)", &proc, &rpc_args, &rpc_ret, &cb))
+  PyObject *res = NULL;
+  callbase *b = NULL;
+
+  if (!PyArg_ParseTuple (args, "i|OO", &procno, &rpc_args_in, &cb))
     return NULL;
 
-  
+  // now check all arguments
+  if (procno >= self->py_prog->prog->nproc) {
+    PyErr_SetString (AsyncRPC_Exception, "given RPC proc is out of range");
+    goto fail;
+  }
 
-  callbase *c;
+  // XXX how do you tell if an object is callable?
+  if (cb && !PyCallable_Check (cb)) {
+    PyErr_SetString (PyExc_TypeError, "expected a callable object as 3rd arg");
+    goto fail;
+  }
 
+  if (!rpc_args_in) {
+    rpc_args_out = (PyObject *)self->py_prog->prog->tbl[procno].alloc_arg ();
+  } else {
+    if (!(rpc_args_out =
+	  self->py_prog->pytab[procno].convert_arg (rpc_args_in,
+						    AsyncRPC_Exception)))
+      goto fail;
+    Py_INCREF (rpc_args_out);
+  }
+
+
+  res = (PyObject *)self->py_prog->prog->tbl[procno].alloc_res ();
+
+  if (cb)
+    Py_INCREF (cb);
+  b = self->cli->call (procno, rpc_args_out, res, 
+		       wrap (py_aclnt_t_call_cb, rpc_args_out, res, cb));
+  if (!b) 
+    goto fail;
+
+  // XXX eventually return the callbase to cancel a call
   Py_INCREF (Py_None);
   return Py_None;
+ fail:
+  Py_XDECREF (rpc_args_out);
+  Py_XDECREF (res);
+  return NULL;
 }
 
 static PyMethodDef py_aclnt_t_methods[] = {
   { "call", (PyCFunction)py_aclnt_t_call, METH_VARARGS,
-    PyDoc_STRING ("aclnt::call function from libasync") },
+    PyDoc_STR ("aclnt::call function from libasync") },
   {NULL}
 };
 
@@ -136,6 +185,42 @@ PY_CLASS_DEF(py_aclnt_t, "arpc.aclnt", 1, dealloc, -1,
 static PyMethodDef module_methods[] = {
   { NULL }
 };
+
+#define INS(x)                                                       \
+if ((rc = PyModule_AddIntConstant (m, #x, (long )x)) < 0) return rc
+
+static int
+all_ins (PyObject *m)
+{
+  int rc;
+  INS (RPC_SUCCESS);
+  INS (RPC_CANTENCODEARGS);
+  INS (RPC_CANTDECODERES);
+  INS (RPC_CANTSEND);
+  INS (RPC_CANTRECV);
+  INS (RPC_TIMEDOUT);
+  INS (RPC_VERSMISMATCH);
+  INS (RPC_AUTHERROR);
+  INS (RPC_PROGUNAVAIL);
+  INS (RPC_PROGVERSMISMATCH);
+  INS (RPC_PROCUNAVAIL);
+  INS (RPC_CANTDECODEARGS);
+  INS (RPC_SYSTEMERROR);
+  INS (RPC_NOBROADCAST);
+  INS (RPC_UNKNOWNHOST);
+  INS (RPC_UNKNOWNPROTO);
+  INS (RPC_UNKNOWNADDR);
+  INS (RPC_RPCBFAILURE);
+  INS (RPC_PROGNOTREGISTERED);
+  INS (RPC_N2AXLATEFAILURE);
+  INS (RPC_FAILED);
+  INS (RPC_INTR);
+  INS (RPC_TLIERROR);
+  INS (RPC_UDERROR);
+  INS (RPC_INPROGRESS);
+  INS (RPC_STALERACHANDLE);
+  return 1;
+}
 
 #ifndef PyMODINIT_FUNC	/* declarations for DLL import/export */
 #define PyMODINIT_FUNC void
@@ -161,6 +246,9 @@ initarpc (void)
                       "arpc wrappers for libasync");
 
   if (m == NULL)
+    return;
+
+  if (all_ins (m) < 0)
     return;
 
   Py_INCREF (&py_axprt_t_Type);
