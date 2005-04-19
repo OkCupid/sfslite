@@ -337,6 +337,17 @@ dump_class_dealloc_func (const rpc_struct *rs)
 }
 
 static void
+dump_class_decref_func (const rpc_struct *rs)
+{
+  str ct = pyc_type (rs->id);
+  aout << "\nstatic void\n"
+       << ct << "_decref (void *self)\n"
+       << "{\n"
+       << "  Py_DECREF ((PyObject *)self);\n"
+       << "}\n";
+}
+
+static void
 dump_class_unwrap_func (const rpc_struct *rs)
 {
   str ct = pyc_type (rs->id);
@@ -363,15 +374,32 @@ dump_convert (const rpc_struct *rs)
 {
   str ptt = py_type (rs->id);
   str pct = pyc_type (rs->id);
-  aout << "PyObject *\n"
-       << pct << "_convert (PyObject *obj, PyObject *ej)\n"
+  aout << "static PyObject *\n"
+       << pct << "_convert_py2py (PyObject *obj)\n"
        << "{\n"
        << "  if (!PyObject_IsInstance (obj, (PyObject *)&" << ptt <<  ")) {\n"
        << "     PyErr_SetString (PyExc_TypeError, \"expected object of type "
        <<                                         rs->id << "\");\n"
        << "     return NULL;\n"
        << "  }\n"
+       << "  Py_INCREF (obj);\n"
        << "  return obj;\n"
+       << "}\n\n"
+       << "static void *\n"
+       << pct  << "_convert (PyObject *obj, PyObject *e)\n"
+       << "{\n"
+       << "  return " << pct << "_convert_py2py (obj);\n"
+       << "}\n\n";
+}
+
+static void
+dump_assign_py_to_c (const rpc_struct *rs)
+{
+  str pct = pyc_type (rs->id);
+  aout << "static bool\n"
+       << "assign_py_to_c (" << pct << " &targ, PyObject * src)\n"
+       << "{\n"
+       << "  return " << pct << "_convert_py2py (src);\n"
        << "}\n\n";
 }
 
@@ -892,6 +920,7 @@ dumpstruct (const rpc_sym *s)
   aout << "RPC_STRUCT_DECL (" << ct << ")\n";
   // aout << "RPC_TYPE_DECL (" << rs->id << ")\n";
 
+  dump_class_decref_func (rs);
   dump_class_dealloc_func (rs);
   dump_class_unwrap_func (rs);
   dump_class_new_func (rs);
@@ -903,6 +932,7 @@ dumpstruct (const rpc_sym *s)
   dump_class_init_func (rs);
   dump_object_table (rs);
   dump_convert (rs);
+  dump_assign_py_to_c (rs);
 
   dump_rpc_traverse (rs);
   dump_xdr_func (rs);
@@ -1202,7 +1232,8 @@ dumpprog (const rpc_sym *s)
       aout << "  { " << pyc_type (rp->arg) << "_convert, "
 	   << pyc_type (rp->res) << "_convert, "
 	   << pyc_type (rp->res) << "_unwrap, "
-	   << pyc_type (rp->res) << "_dealloc },\n";
+	   << pyc_type (rp->arg) << "_decref, "
+	   << pyc_type (rp->res) << "_decref },\n";
     }
     aout << "};\n\n";
   }

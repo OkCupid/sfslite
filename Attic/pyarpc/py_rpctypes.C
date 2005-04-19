@@ -24,24 +24,51 @@ type##_alloc ()							\
   return New type;						\
 }
 
-#define INT_DO_ALL_C(T, s)                                      \
+#define INT_CONVERT(T,P)                                        \
+PyObject *                                                      \
+T##_convert_py2py (PyObject *in)                                \
+{                                                               \
+  PyObject *out = NULL;                                         \
+  assert (in);                                                  \
+  if (PyInt_Check (in))                                         \
+    out = PyLong_From##P (PyInt_As##P (in));                    \
+  else if (!PyLong_Check (in)) {                                \
+    PyErr_SetString (PyExc_TypeError,                           \
+		     "expect an integer or long");              \
+  } else {                                                      \
+    out = in;                                                   \
+    Py_INCREF (out);                                            \
+  }                                                             \
+  return out;                                                   \
+}                                                               \
+static void *                                                   \
+T##_convert (PyObject *in, PyObject *rpc_exception)             \
+{                                                               \
+  PyObject *out = T##_convert_py2py (in);                       \
+  if (!out) return NULL;                                        \
+  rpc_base_t *ret = (rpc_base_t *)T##_alloc ();                 \
+  // Note out is INCREF'ed inside convert_py2py                 \
+  ret->set (out);                                               \
+  return ret;                                                   \
+}
+
+#define INT_DO_ALL_C(T, s, P)                                   \
 DEFXDR (py_##T);                                                \
 RPC_PRINT_GEN (py_##T, sb.fmt ("0x%" s , obj.get ()));          \
 RPC_PRINT_DEFINE (py_##T);                                      \
-INT_RPC_TRAVERSE(T)                    
+INT_RPC_TRAVERSE(T)                                             \
+INT_CONVERT(py_##T, P)                     
 
-INT_DO_ALL_C (u_int32_t, "x");
-INT_DO_ALL_C (int32_t, "d");
+INT_DO_ALL_C (u_int32_t, "x", UnsignedLong);
+INT_DO_ALL_C (int32_t, "d", Long);
 
 #if SIZEOF_LONG != 8
-INT_DO_ALL_C (u_int64_t, "qx");
-INT_DO_ALL_C (int64_t, "qd");
+INT_DO_ALL_C (u_int64_t, "qx", UnsignedLong );
+INT_DO_ALL_C (int64_t, "qd", Long);
 # else /* SIZEOF_LONG == 8 */
-INT_DO_ALL_C (u_int64_t, "lx");
-INT_DO_ALL_C (int64_t, "ld");
+INT_DO_ALL_C (u_int64_t, "lx", UnsignedLong);
+INT_DO_ALL_C (int64_t, "ld", Long );
 #endif /* SIZEOF_LONG == 8 */
-
-
 
 
 PyObject *
@@ -68,23 +95,8 @@ void_unwrap (void *o)
   return Py_None;
 }
 
-PyObject *
-py_u_int32_t_convert (PyObject *in, PyObject *rpc_exception)
-{
-  PyObject *out = NULL;
-  assert (in);
-  if (PyInt_Check (in))
-    out = PyLong_FromLong(PyInt_AsLong (in));
-  else if (!PyLong_Check (in)) {
-    PyErr_SetString (PyExc_TypeError, "expect an integer or long");
-  } else {
-    out = in;
-  }
-  return out;
-}
-
 
 py_rpcgen_table_t py_rpcgen_error = 
 {
-  convert_error, convert_error, unwrap_error, dealloc_error
+  convert_error, convert_error, unwrap_error, decref_error, decref_error
 };

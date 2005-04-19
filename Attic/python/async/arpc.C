@@ -110,13 +110,11 @@ py_aclnt_t_init (py_aclnt_t *self, PyObject *args, PyObject *kwds)
 }
 
 struct call_bundle_t {
-  call_bundle_t (PyObject *a, void *r, PyObject * (*u ) (void *), 
-		 void (*d) (void *),  PyObject *c)
-    : arg (a), res (r), unwrap_res (u), dealloc_res (d), cb (c) {}
+  call_bundle_t (PyObject *a, void *r, py_rpcgen_table_t *t, PyObject *c)
+    : arg (a), res (r), tab (t), cb (c) {}
   PyObject *arg;
   void *res;
-  PyObject * (*unwrap_res) (void *);
-  void (*dealloc_res) (void *);
+  py_rpcgen_table_t *tab;
   PyObject *cb;
 };  
 
@@ -124,14 +122,14 @@ static void
 py_aclnt_t_call_cb (call_bundle_t *bun, clnt_stat e)
 {
   if (bun->cb) {
-    PyObject *res = bun->unwrap_res (bun->res); 
+    PyObject *res = bun->tab->unwrap_res (bun->res); 
     PyObject *arglist = Py_BuildValue ("(iO)", (int )e, res);
     PyObject_CallObject (bun->cb, arglist);
     Py_DECREF (arglist);
   } else 
-    bun->dealloc_res (bun->res);
+    bun->tab->dealloc_res (bun->res);
 
-  Py_XDECREF (bun->arg);
+  bun->tab->dealloc_arg (bun->arg);
   Py_XDECREF (bun->cb);
 
   delete bun;
@@ -147,6 +145,7 @@ py_aclnt_t_call (py_aclnt_t *self, PyObject *args)
   PyObject *res = NULL;
   callbase *b = NULL;
   call_bundle_t *bundle;
+  py_rpcgen_table_t *pyt = &self->py_prog->pytab[procno];
 
   if (!PyArg_ParseTuple (args, "i|OO", &procno, &rpc_args_in, &cb))
     return NULL;
@@ -166,12 +165,13 @@ py_aclnt_t_call (py_aclnt_t *self, PyObject *args)
   if (!rpc_args_in) {
     rpc_args_out = (PyObject *)self->py_prog->prog->tbl[procno].alloc_arg ();
   } else {
-    if (!(rpc_args_out =
-	  self->py_prog->pytab[procno].convert_arg (rpc_args_in,
-						    AsyncRPC_Exception)))
+    // for primitive types, we need to convert to a wrapper type
+    // so that the XDR marshalling routines will not puke. 
+    // for more complex types, which are already C++ objects,
+    // this should not be a problem, and hence, convert
+    // is a no-op
+    if (!(rpc_args_out = pyt->convert_arg (rpc_args_in, AsyncRPC_Exception)))
       goto fail;
-    else
-      Py_INCREF (rpc_args_out);
   }
 
   res = (PyObject *)self->py_prog->prog->tbl[procno].alloc_res ();
@@ -179,10 +179,7 @@ py_aclnt_t_call (py_aclnt_t *self, PyObject *args)
   if (cb)
     Py_INCREF (cb);
 
-  bundle = New call_bundle_t (rpc_args_out, res,
-			      self->py_prog->pytab[procno].unwrap_res,
-			      self->py_prog->pytab[procno].dealloc_res,
-			      cb);
+  bundle = New call_bundle_t (rpc_args_out, res, pyt, cb);
 
   b = self->cli->call (procno, rpc_args_out, res, 
 		       wrap (py_aclnt_t_call_cb, bundle));
@@ -193,8 +190,8 @@ py_aclnt_t_call (py_aclnt_t *self, PyObject *args)
   Py_INCREF (Py_None);
   return Py_None;
  fail:
-  Py_XDECREF (rpc_args_out);
-  self->py_prog->pytab[procno].dealloc_res (res);
+  if (rpc_args_out) pyt->dealloc_arg (rpc_args_out);
+  if (res) pyt->dealloc_res (res);
   return NULL;
 }
 
