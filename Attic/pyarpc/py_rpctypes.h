@@ -17,7 +17,6 @@ struct py_rpcgen_table_t {
 
 extern py_rpcgen_table_t py_rpcgen_error;
 
-
 class py_rpc_base_t {
 public:
   py_rpc_base_t () : _obj (NULL) {}
@@ -98,16 +97,65 @@ public:
   }
 };
 
-class py_u_int32_t : public py_rpc_base_t 
+template<class T, size_t max>
+class py_rpc_vec : public py_rpc_base_t 
 {
 public:
-  u_int32_t get () const { return (PyLong_AsUnsignedLong (_obj)); }
-  bool set (u_int32_t i) {
-    Py_XDECREF (_obj);
-    return (_obj = PyLong_FromUnsignedLong (i));
+  py_rpc_vec () : _sz (-1) {}
+  PyListObject *list () { return reinterpret_cast<PyListObject *> (_obj); }
+
+  int size ()
+  {
+    int l = PyList_Type.tp_as_sequence->list_length (list ());
+    if (l > (int )max) {
+      PyErr_SetString (PyExc_OverflowError,
+		       "predeclared Length of rpc vector exceeded");
+      return -1;
+    }
+    _sz = l;
+    return l;
   }
+
+  PyObject *get (int i) 
+  {
+    assert (_sz >= 0 && i < _sz && i >= 0);
+    PyObject *r = PyList_Type.tp_as_sequence->list_item (list (), i);
+    if (!r) {
+      strbuf b;
+      b << "undefined object slot @ " << i;
+      PyErr_SetString (PyExc_IndexError, str (b));
+      return NULL;
+    }
+    if (!py_type_check<T> (r)) {
+      strbuf b;
+      b << "typecheck failed on slot " << i << " of vector\n";
+      PyErr_SetString (PyExc_TypeError, str (b));
+      return NULL;
+    }
+    return r;
+  }
+
+  bool resize (int i)
+  {
+    if (i > (int)max) {
+      PyErr_SetString (PyExc_OverflowError,
+		       "cannot resize rpc_vec; overflows preassigned length");
+      return false;
+    }
+    _sz = i;
+  }
+
+
+  bool set (PyObject *obj, int i)
+  {
+    assert (_sz >= 0 && i < _sz && i >= 0);
+    if (!py_type_check<T> (obj)) {
+
+    }
+  }
+  enum { maxsize = max };
+  int _sz;
 };
-bool rpc_traverse (XDR *xdrs, py_u_int32_t &obj);
 
 template<size_t n> inline void *
 py_rpc_str_alloc ()
@@ -200,7 +248,6 @@ inline PyObject *type##_unwrap (void *o)                        \
 inline void type##_dealloc (void *o)                            \
 { generic_py_xdr_dealloc (o); }
 
-
 #define DECLXDR(type)				                \
 extern BOOL xdr_##type (XDR *, void *);		                \
 extern void *type##_alloc ();                                   \
@@ -211,10 +258,33 @@ PY_XDR_DEALLOC(type)
 PY_XDR_UNWRAP(py_rpc_str_t)
 PY_XDR_DEALLOC(py_rpc_str_t)
 
-DECLXDR(py_u_int32_t)
-PY_RPC_TYPE2STR_DECL (u_int32_t)
-RPC_PRINT_TYPE_DECL (py_u_int32_t)
-RPC_PRINT_DECL (py_u_int32_t)
+#define INT_XDR_CLASS(ctype,ptype)                               \
+class py_##ctype : public py_rpc_base_t                          \
+{                                                                \
+public:                                                          \
+  ctype get () const { return (PyLong_As##ptype (_obj)); }       \
+  bool set (ctype i) {                                           \
+    Py_XDECREF (_obj);                                           \
+    return (_obj = PyLong_From##ptype (i));                      \
+  }                                                              \
+};
+
+#define RPC_TRAVERSE_DECL(ptype)                                 \
+bool rpc_traverse (XDR *xdrs, ptype &obj);
+
+#define INT_DO_ALL_H(ctype,ptype)                                \
+INT_XDR_CLASS(ctype, ptype)                                      \
+RPC_TRAVERSE_DECL(py_##ctype)                                    \
+DECLXDR(py_##ctype)                                              \
+PY_RPC_TYPE2STR_DECL(ctype)                                      \
+RPC_PRINT_TYPE_DECL(py_##ctype)                                  \
+RPC_PRINT_DECL(py_##ctype)                                     
+
+INT_DO_ALL_H(u_int32_t, UnsignedLong)
+INT_DO_ALL_H(int32_t, Long)
+INT_DO_ALL_H(u_int64_t, UnsignedLongLong)
+INT_DO_ALL_H(int64_t, LongLong)
+
 
 PyObject *convert_error (PyObject *, PyObject *e);
 inline PyObject *unwrap_error (void *o) { return NULL; }
@@ -229,5 +299,22 @@ struct py_rpc_program_t {
   const rpc_program *prog;
   const py_rpcgen_table_t *pytab;
 };
+
+template<class T, size_t max> inline bool
+rpc_traverse (T &t, py_rpc_vec<T,max> &obj)
+{
+  u_int32_t size = obj.size ();
+  if (!rpc_traverse (t, size))
+    return false;
+  if (size > obj.maxsize) {
+
+  }
+    
+
+    
+
+
+
+}
 
 #endif
