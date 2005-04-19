@@ -1,23 +1,15 @@
 
 #include "py_rpctypes.h"
 
-bool
-rpc_traverse (XDR *xdrs, py_u_int32_t &obj)
-{
-  switch (xdrs->x_op) {
-  case XDR_ENCODE:
-    return xdr_putint (xdrs, obj.get ());
-  case XDR_DECODE: 
-    {
-      u_int32_t tmp;
-      bool rc = xdr_getint (xdrs, tmp);
-      if (rc) 
-	obj.set (tmp);
-      return rc;
-    }
-  default:
-    return true;
-  }
+
+#define INT_RPC_TRAVERSE(T)                                       \
+bool                                                              \
+rpc_traverse (XDR *xdrs, py_##T &obj)                             \
+{                                                                 \
+  T raw = obj.get ();                                             \
+  bool rc = rpc_traverse (xdrs, raw);                             \
+  if (rc) obj.set (raw);                                          \
+  return rc;                                                      \
 }
 
 #define DEFXDR(type)						\
@@ -32,9 +24,24 @@ type##_alloc ()							\
   return New type;						\
 }
 
-DEFXDR (py_u_int32_t);
-RPC_PRINT_GEN (py_u_int32_t, sb.fmt ("0x%x", obj.get ()))
-RPC_PRINT_DEFINE (py_u_int32_t)
+#define INT_DO_ALL_C(T, s)                                      \
+DEFXDR (py_##T);                                                \
+RPC_PRINT_GEN (py_##T, sb.fmt ("0x%" s , obj.get ()));          \
+RPC_PRINT_DEFINE (py_##T);                                      \
+INT_RPC_TRAVERSE(T)                    
+
+INT_DO_ALL_C (u_int32_t, "x");
+INT_DO_ALL_C (int32_t, "d");
+
+#if SIZEOF_LONG != 8
+INT_DO_ALL_C (u_int64_t, "qx");
+INT_DO_ALL_C (int64_t, "qd");
+# else /* SIZEOF_LONG == 8 */
+INT_DO_ALL_C (u_int64_t, "lx");
+INT_DO_ALL_C (int64_t, "ld");
+#endif /* SIZEOF_LONG == 8 */
+
+
 
 
 PyObject *

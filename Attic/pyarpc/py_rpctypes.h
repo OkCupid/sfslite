@@ -107,6 +107,14 @@ public:
   int size ()
   {
     int l = PyList_Type.tp_as_sequence->list_length (list ());
+    if (l < 0) {
+      PyErr_String (PyExc_RuntimeError,
+		    "got negative list length from vector");
+      return -1;
+    }
+    return l;
+  }
+#if 0
     if (l > (int )max) {
       PyErr_SetString (PyExc_OverflowError,
 		       "predeclared Length of rpc vector exceeded");
@@ -114,7 +122,7 @@ public:
     }
     _sz = l;
     return l;
-  }
+#endif
 
   PyObject *get (int i) 
   {
@@ -300,21 +308,61 @@ struct py_rpc_program_t {
   const py_rpcgen_table_t *pytab;
 };
 
-template<class T, size_t max> inline bool
-rpc_traverse (T &t, py_rpc_vec<T,max> &obj)
+template<class T, class A> inline bool
+rpc_traverse_slot (T &t, A &a, int i)
 {
-  u_int32_t size = obj.size ();
+  PyErr_SetString (PyExc_RuntimeError,
+		   "no rpc_traverse_slot function found");
+  return false;
+}
+
+template<class A, size_t max> inline bool
+rpc_traverse_slot (XDR *xdrs, py_rpc_vec<A,max> &obj, int i)
+{
+  assert (i < obj.maxsize);
+  switch (xdrs->x_op) {
+  case XDR_ENCODE:
+    {
+      A *el = obj.get (i);
+      if (!el)
+	return false;
+      return rpc_traverse (xdr, *el);
+    }
+  case XDR_DECODE:
+    {
+      A el;
+      if (!rpc_traverse (xdr, el))
+	return false;
+      return obj.set (el, i);
+    }
+  default:
+    return false;
+  }
+}
+
+template<class T, class A, size_t max> inline bool
+rpc_traverse (T &t, py_rpc_vec<A,max> &obj)
+{
+  int isize = obj.size ();
+  if (isize < 0)
+    return false;
+  u_int32_t size = (u_int32_t)isize;
+
   if (!rpc_traverse (t, size))
     return false;
   if (size > obj.maxsize) {
-
+    PyErr_SetString (PyExc_OverflowError,
+		     "predeclared Length of rpc vector exceeded");
+    return false;
   }
-    
+  if (size < obj.size ())
+    obj.shrink (size);
 
-    
+  for (u_int i = 0; i < size; i++) 
+    if (!rpc_traverse_slot (t, obj, i))
+      return false;
 
-
-
+  return true;
 }
 
 #endif
