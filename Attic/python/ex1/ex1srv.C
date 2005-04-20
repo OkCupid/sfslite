@@ -42,6 +42,22 @@ ex1srv_t::dispatch (svccb *sbp)
       sbp->replyref (r);
       break;
     }
+  case FOO_BAR:
+    {
+      bar_t *b = sbp->Xtmpl getarg<bar_t> ();
+      strbuf buf;
+      u_int32_t s = 0;
+      for (u_int i = 0; i < b->y.size (); i++) 
+	s += b->y[i];
+      buf << "length=" << b->y.size () << "; sum=" << s << "\n";
+      str x = buf;
+      warn << "response: " << x << "\n";
+      foo_t foo;
+      foo.x = x;
+      foo.xx = s;
+      sbp->replyref (foo);
+      break;
+    }
   default:
     sbp->reject (PROC_UNAVAIL);
     break;

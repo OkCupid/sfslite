@@ -303,6 +303,25 @@ py_rpc_str_convert_py2py (PyObject *in)
   return in;
 }
 
+template<class T, size_t m> PyObject *
+py_rpc_str_convert_py2py (PyObject *in)
+{
+  if (!PyList_Check (in)) {
+    PyErr_SetString (PyExc_TypeError, "expected a list type");
+    return NULL;
+  }
+  if (PyList_Size (in) >= m) {
+    PyErr_SetString (PyExc_OverflowError, 
+		     "list execeeds predeclared list length");
+    return NULL;
+  }
+
+  // Would be nice to typecheck here; maybe use RPC traverse?
+
+  Py_INCREF (in);
+  return in;
+}
+
 void *convert_error (PyObject *o, PyObject *e);
 
 //
@@ -534,8 +553,8 @@ py_rpc_vec<T,m>::size ()
 {
   int l = PyList_Size (_obj);
   if (l < 0) {
-    PyErr_String (PyExc_RuntimeError,
-		  "got negative list length from vector");
+    PyErr_SetString (PyExc_RuntimeError,
+		     "got negative list length from vector");
     return -1;
   }
   _sz = l;
