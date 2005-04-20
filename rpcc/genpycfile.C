@@ -337,7 +337,7 @@ dump_class_dealloc_func (const rpc_struct *rs)
 }
 
 static void
-dump_class_decref_func (const rpc_struct *rs)
+dump_decref_func (const rpc_struct *rs)
 {
   str ct = pyc_type (rs->id);
   aout << "\nstatic void\n"
@@ -348,6 +348,29 @@ dump_class_decref_func (const rpc_struct *rs)
 }
 
 static void
+dump_alloc_temporary (const rpc_struct *rs)
+{
+  str ct = pyc_type (rs->id);
+  str pt = py_type (rs->id);
+  aout << "static " << ct << "*\n"
+       << "alloc_temporary (" << ct << "&t)\n"
+       << "{\n"
+       << "  return PyObject_New (" << ct << ", &" <<  pt << ");\n"
+       << "}\n\n";
+}
+
+static void
+dump_dealloc_temporary (const rpc_struct *rs)
+{
+  str ct = pyc_type (rs->id);
+  aout << "static void\n"
+       << "dealloc_temporary (" << ct << " *self)\n"
+       << "{\n"
+       << "  Py_DECREF (reinterpret_cast<PyObject *> (self));\n"
+       << "}\n\n";
+}
+
+static void
 dump_class_unwrap_func (const rpc_struct *rs)
 {
   str ct = pyc_type (rs->id);
@@ -355,6 +378,11 @@ dump_class_unwrap_func (const rpc_struct *rs)
        << ct << "_unwrap (" << ct << " *self)\n"
        << "{\n"
        << "  return (PyObject *) self;\n"
+       << "}\n\n"
+       << "PyObject *\n"
+       << "unwrap_tmpl (" << ct << " *self)\n"
+       << "{\n"
+       << "  return " << ct << "_unwrap (self);\n"
        << "}\n\n";
 }
 
@@ -396,10 +424,11 @@ static void
 dump_assign_py_to_c (const rpc_struct *rs)
 {
   str pct = pyc_type (rs->id);
-  aout << "static bool\n"
+  aout << "static " << pct << " *\n"
        << "assign_py_to_c (" << pct << " &targ, PyObject * src)\n"
        << "{\n"
-       << "  return " << pct << "_convert_py2py (src);\n"
+       << "  return reinterpret_cast<" << pct << " *> (" 
+       << pct << "_convert_py2py (src));\n"
        << "}\n\n";
 }
 
@@ -920,7 +949,7 @@ dumpstruct (const rpc_sym *s)
   aout << "RPC_STRUCT_DECL (" << ct << ")\n";
   // aout << "RPC_TYPE_DECL (" << rs->id << ")\n";
 
-  dump_class_decref_func (rs);
+  dump_decref_func (rs);
   dump_class_dealloc_func (rs);
   dump_class_unwrap_func (rs);
   dump_class_new_func (rs);
@@ -933,6 +962,8 @@ dumpstruct (const rpc_sym *s)
   dump_object_table (rs);
   dump_convert (rs);
   dump_assign_py_to_c (rs);
+  dump_alloc_temporary (rs);
+  dump_dealloc_temporary (rs);
 
   dump_rpc_traverse (rs);
   dump_xdr_func (rs);

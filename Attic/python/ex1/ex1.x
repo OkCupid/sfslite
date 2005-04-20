@@ -3,7 +3,6 @@
 struct foo_t {
 	string x<>;
 	unsigned xx;
-	hyper y<>;
 };
 
 program FOO_PROG {

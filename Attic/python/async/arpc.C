@@ -110,11 +110,11 @@ py_aclnt_t_init (py_aclnt_t *self, PyObject *args, PyObject *kwds)
 }
 
 struct call_bundle_t {
-  call_bundle_t (PyObject *a, void *r, py_rpcgen_table_t *t, PyObject *c)
+  call_bundle_t (void *a, void *r, const py_rpcgen_table_t *t, PyObject *c)
     : arg (a), res (r), tab (t), cb (c) {}
-  PyObject *arg;
+  void *arg;
   void *res;
-  py_rpcgen_table_t *tab;
+  const py_rpcgen_table_t *tab;
   PyObject *cb;
 };  
 
@@ -127,9 +127,9 @@ py_aclnt_t_call_cb (call_bundle_t *bun, clnt_stat e)
     PyObject_CallObject (bun->cb, arglist);
     Py_DECREF (arglist);
   } else 
-    bun->tab->dealloc_res (bun->res);
+    bun->tab->decref_res (bun->res);
 
-  bun->tab->dealloc_arg (bun->arg);
+  bun->tab->decref_arg (bun->arg);
   Py_XDECREF (bun->cb);
 
   delete bun;
@@ -140,12 +140,12 @@ py_aclnt_t_call (py_aclnt_t *self, PyObject *args)
 {
   int procno = 0;
   PyObject *rpc_args_in = NULL;
-  PyObject *rpc_args_out = NULL;
+  void *rpc_args_out = NULL;
   PyObject *cb = NULL ;
   PyObject *res = NULL;
   callbase *b = NULL;
   call_bundle_t *bundle;
-  py_rpcgen_table_t *pyt = &self->py_prog->pytab[procno];
+  const py_rpcgen_table_t *pyt = &self->py_prog->pytab[procno];
 
   if (!PyArg_ParseTuple (args, "i|OO", &procno, &rpc_args_in, &cb))
     return NULL;
@@ -190,8 +190,8 @@ py_aclnt_t_call (py_aclnt_t *self, PyObject *args)
   Py_INCREF (Py_None);
   return Py_None;
  fail:
-  if (rpc_args_out) pyt->dealloc_arg (rpc_args_out);
-  if (res) pyt->dealloc_res (res);
+  if (rpc_args_out) pyt->decref_arg (rpc_args_out);
+  if (res) pyt->decref_res (res);
   return NULL;
 }
 

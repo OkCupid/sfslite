@@ -31,7 +31,7 @@ T##_convert_py2py (PyObject *in)                                \
   PyObject *out = NULL;                                         \
   assert (in);                                                  \
   if (PyInt_Check (in))                                         \
-    out = PyLong_From##P (PyInt_As##P (in));                    \
+    out = PyLong_FromLong (PyInt_AsLong (in));                  \
   else if (!PyLong_Check (in)) {                                \
     PyErr_SetString (PyExc_TypeError,                           \
 		     "expect an integer or long");              \
@@ -41,14 +41,13 @@ T##_convert_py2py (PyObject *in)                                \
   }                                                             \
   return out;                                                   \
 }                                                               \
-static void *                                                   \
+void *                                                   \
 T##_convert (PyObject *in, PyObject *rpc_exception)             \
 {                                                               \
   PyObject *out = T##_convert_py2py (in);                       \
   if (!out) return NULL;                                        \
-  rpc_base_t *ret = (rpc_base_t *)T##_alloc ();                 \
-  // Note out is INCREF'ed inside convert_py2py                 \
-  ret->set (out);                                               \
+  py_rpc_base_t *ret = static_cast<py_rpc_base_t *> (T##_alloc ());      \
+  ret->set_obj (out);                                           \
   return ret;                                                   \
 }
 
@@ -71,14 +70,14 @@ INT_DO_ALL_C (int64_t, "ld", Long );
 #endif /* SIZEOF_LONG == 8 */
 
 
-PyObject *
+void *
 convert_error (PyObject *in, PyObject *rpc_exception)
 {
   PyErr_SetString (rpc_exception, "undefined RPC procedure called");
   return NULL;
 }
 
-PyObject *
+void *
 void_convert (PyObject *in, PyObject *rpc_exception)
 {
   if (in && in != Py_None) {
@@ -94,6 +93,35 @@ void_unwrap (void *o)
   Py_INCREF (Py_None);
   return Py_None;
 }
+
+void
+py_rpc_base_t::clear ()
+{
+  if (_obj) {
+    Py_XDECREF (_obj);
+    _obj = NULL;
+  }
+}
+
+bool
+py_rpc_base_t::set_obj (PyObject *o)
+{
+  PyObject *tmp = _obj;
+  _obj = o; // no INCREF since usually just constructed
+  Py_XDECREF (tmp);
+  return true;
+}
+
+PyObject *
+py_rpc_base_t::unwrap ()
+{
+  PyObject *ret = _obj;
+  Py_INCREF (ret);
+  if (!_onstack)
+    delete this;
+  return ret;
+}
+
 
 
 py_rpcgen_table_t py_rpcgen_error = 
