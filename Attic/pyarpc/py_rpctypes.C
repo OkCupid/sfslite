@@ -24,7 +24,7 @@ type##_alloc ()							\
   return New type;						\
 }
 
-#define INT_CONVERT(T,P)                                        \
+#define INT_CONVERT_PY2PY(T,P)                                  \
 PyObject *                                                      \
 T##_convert_py2py (PyObject *in)                                \
 {                                                               \
@@ -40,8 +40,10 @@ T##_convert_py2py (PyObject *in)                                \
     Py_INCREF (out);                                            \
   }                                                             \
   return out;                                                   \
-}                                                               \
-void *                                                   \
+}                                                               
+
+#define GENERIC_CONVERT(T)                                      \
+void *                                                          \
 T##_convert (PyObject *in, PyObject *rpc_exception)             \
 {                                                               \
   PyObject *out = T##_convert_py2py (in);                       \
@@ -55,8 +57,12 @@ T##_convert (PyObject *in, PyObject *rpc_exception)             \
 DEFXDR (py_##T);                                                \
 RPC_PRINT_GEN (py_##T, sb.fmt ("0x%" s , obj.get ()));          \
 RPC_PRINT_DEFINE (py_##T);                                      \
-INT_RPC_TRAVERSE(T)                                             \
-INT_CONVERT(py_##T, P)                     
+INT_CONVERT_PY2PY(py_##T, P)                                    \
+GENERIC_CONVERT(py_##T)
+
+#if 0
+INT_RPC_TRAVERSE(T)                          
+#endif
 
 INT_DO_ALL_C (u_int32_t, "x", UnsignedLong);
 INT_DO_ALL_C (int32_t, "d", Long);
@@ -128,3 +134,17 @@ py_rpcgen_table_t py_rpcgen_error =
 {
   convert_error, convert_error, unwrap_error, decref_error, decref_error
 };
+
+bool                                                    
+rpc_traverse (XDR *xdrs, py_u_int32_t &obj)            
+{                                                     
+  u_int32_t raw = obj.get ();                                          
+  bool rc = rpc_traverse (xdrs, raw);                         
+  if (rc) obj.set (raw); 
+  return rc;   
+}
+
+INT_RPC_TRAVERSE (int32_t);
+INT_RPC_TRAVERSE (u_int64_t);
+INT_RPC_TRAVERSE (int64_t);
+

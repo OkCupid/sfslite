@@ -93,17 +93,20 @@ pmshl (str id)
 }
 
 static str
-decltype (const rpc_decl *d)
+decltype (const rpc_decl *d, const str &a = NULL)
 {
-  if (d->type == "string")
-    return strbuf () << pyc_type ("rpc_str") << "<" << d->bound << ">";
-  else if (d->type == "opaque")
+  str addin = a;
+  if (!addin) addin = "";
+  strbuf b;
+  if (d->type == "string") {
+    b << pyc_type ("rpc_str") <<  addin << "<" << d->bound << ">";
+  } else if (d->type == "opaque")
     switch (d->qual) {
     case rpc_decl::ARRAY:
-      return strbuf () << pyc_type ("rpc_opaque") << "<" << d->bound << ">";
+      b << pyc_type ("rpc_opaque") << addin << "<" << d->bound << ">";
       break;
     case rpc_decl::VEC:
-      return strbuf () << pyc_type ("rpc_bytes") << "<" << d->bound << ">";
+      b << pyc_type ("rpc_bytes") << addin << "<" << d->bound << ">";
       break;
     default:
       panic ("bad rpc_decl qual for opaque (%d)\n", d->qual);
@@ -112,22 +115,23 @@ decltype (const rpc_decl *d)
   else
     switch (d->qual) {
     case rpc_decl::SCALAR:
-      return pyc_type (d->type);
+      b << pyc_type (d->type) << addin;
       break;
     case rpc_decl::PTR:
-      return strbuf () << pyc_type ("rpc_ptr") << "<" << d->type << ">";
+      b << pyc_type ("rpc_ptr") << addin << "<" << d->type << ">";
       break;
     case rpc_decl::ARRAY:
-      return strbuf () << pyc_type ("array") << "<" 
-		       << d->type << ", " << d->bound << ">";
+      b << pyc_type ("rpc_array") << addin 
+	<< "<" << d->type << ", " << d->bound << ">";
       break;
     case rpc_decl::VEC:
-      return strbuf () << pyc_type ("rpc_vec") << "<" << d->type 
-		       << ", " << d->bound << ">";
+      b << pyc_type ("rpc_vec") << addin
+	<< "<" << d->type << ", " << d->bound << ">";
       break;
     default:
       panic ("bad rpc_decl qual (%d)\n", d->qual);
     }
+  return b;
 }
 
 static void
@@ -720,6 +724,15 @@ dump_getter (const str &cl, const rpc_decl *d)
 }
 
 static str
+convert_py2py (const rpc_decl *d, const str &v)
+{
+  strbuf b;
+  b << decltype (d, "_convert_py2py") << " (" << v << ")";
+  return b;
+}
+
+#if 0
+static str
 py_typecheck (const rpc_decl *d, const str &v)
 {
   str s;
@@ -745,6 +758,7 @@ py_typecheck (const rpc_decl *d, const str &v)
   }
   return s;
 }
+#endif
 
 static void
 dump_setter (const str &cl, const rpc_decl *d)
@@ -753,10 +767,13 @@ dump_setter (const str &cl, const rpc_decl *d)
        << " (" << cl << " *self, PyObject *value, void *closure)\n"
        << "{\n"
        << "  if (value == NULL) {\n"
-       << "    PyErr_SetString(PyExc_TypeError, "
-       << "\"Cannot delete first attribute\");\n"
+       << "    PyErr_SetString(PyExc_RuntimeError, "
+       << "\"Unexpected NULL first attribute\");\n"
        << "    return -1;\n"
        << "  }\n"
+       << "  PyObject *o = " << convert_py2py (d, "value") << ";\n"
+       << "  if (!o) return -1;\n"
+    /*
        << "  if (! " << py_typecheck (d, "value") << ") {\n"
        << "    PyErr_SetString (PyExc_TypeError, \n"
        << "                     \"Expected an object of type " 
@@ -764,7 +781,9 @@ dump_setter (const str &cl, const rpc_decl *d)
        << "    return -1;\n"
        << "  }\n"
        << "  Py_INCREF (value);\n"
-       << "  self->" << d->id << ".set_obj (value);\n"
+    */
+
+       << "  self->" << d->id << ".set_obj (o);\n"
        << "\n"
        << "  return 0;\n"
        << "};\n\n";

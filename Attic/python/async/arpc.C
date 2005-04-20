@@ -145,7 +145,7 @@ py_aclnt_t_call (py_aclnt_t *self, PyObject *args)
   PyObject *res = NULL;
   callbase *b = NULL;
   call_bundle_t *bundle;
-  const py_rpcgen_table_t *pyt = &self->py_prog->pytab[procno];
+  const py_rpcgen_table_t *pyt;
 
   if (!PyArg_ParseTuple (args, "i|OO", &procno, &rpc_args_in, &cb))
     return NULL;
@@ -155,6 +155,8 @@ py_aclnt_t_call (py_aclnt_t *self, PyObject *args)
     PyErr_SetString (AsyncRPC_Exception, "given RPC proc is out of range");
     return NULL;
   }
+
+  pyt = &self->py_prog->pytab[procno];
 
   // XXX how do you tell if an object is callable?
   if (cb && !PyCallable_Check (cb)) {

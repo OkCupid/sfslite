@@ -112,7 +112,7 @@ class py_rpc_str : public py_rpc_base_t
 public:
   py_rpc_str () : py_rpc_base_t (&PyString_Type) {}
   char *get (size_t *sz) const;
-  const char * get () const ;
+  const char * get () const { return PyString_AsString (_obj); }
   bool set (char *buf, size_t len);
   bool safe_set_obj (PyObject *in);
   enum { maxsize = M };
@@ -277,6 +277,31 @@ extern void * T##_convert (PyObject *o, PyObject *e);
 extern PyObject * T##_convert_py2py (PyObject *in);
 
 CONVERT_DECL(void);
+
+template<size_t n> void *
+py_rpc_str_convert (PyObject *o, PyObject *e)
+{
+  PyObject *out = py_rpc_str_convert_py2py (in);
+  if (!out) return NULL;
+  py_rpc_base_t *ret = static_cast<py_rpc_base_t *> (py_rpc_str_alloc<n> ());
+  ret->set_obj (out);
+  return ret;  
+}
+
+template<size_t m> PyObject *
+py_rpc_str_convert_py2py (PyObject *in)
+{
+  if (!PyString_Check (in)) {
+    PyErr_SetString (PyExc_TypeError, "expected string type");
+    return NULL;
+  }
+  if (PyString_Size (in) >= m) {
+    PyErr_SetString (PyExc_OverflowError, "string exceeds predeclared limits");
+    return NULL;
+  }
+  Py_INCREF (in);
+  return in;
+}
 
 void *convert_error (PyObject *o, PyObject *e);
 
@@ -471,17 +496,11 @@ py_rpc_str<M>::get (size_t *sz) const
   }
   *sz = i;
   if (*sz >= maxsize) {
-    PyErr_SetString (PyExc_TypeError, 
+    PyErr_SetString (PyExc_OverflowError, 
 		     "Length of string exceeded\n");
     *sz = maxsize;
   }
   return ret;
-}
-template<size_t M> const char * 
-py_rpc_str<M>::get () const 
-{
-
-
 }
 
 template<size_t m> bool 
