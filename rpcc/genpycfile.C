@@ -118,15 +118,15 @@ decltype (const rpc_decl *d, const str &a = NULL)
       b << pyc_type (d->type) << addin;
       break;
     case rpc_decl::PTR:
-      b << pyc_type ("rpc_ptr") << addin << "<" << d->type << ">";
+      b << pyc_type ("rpc_ptr") << addin << "<" << pyc_type (d->type) << ">";
       break;
     case rpc_decl::ARRAY:
       b << pyc_type ("rpc_array") << addin 
-	<< "<" << d->type << ", " << d->bound << ">";
+	<< "<" << pyc_type (d->type) << ", " << d->bound << ">";
       break;
     case rpc_decl::VEC:
       b << pyc_type ("rpc_vec") << addin
-	<< "<" << d->type << ", " << d->bound << ">";
+	<< "<" << pyc_type (d->type) << ", " << d->bound << ">";
       break;
     default:
       panic ("bad rpc_decl qual (%d)\n", d->qual);
@@ -379,7 +379,7 @@ dump_class_unwrap_func (const rpc_struct *rs)
 {
   str ct = pyc_type (rs->id);
   aout << "static PyObject *\n"
-       << ct << "_unwrap (" << ct << " *self)\n"
+       << ct << "_unwrap (void *self)\n"
        << "{\n"
        << "  return (PyObject *) self;\n"
        << "}\n\n"

@@ -99,6 +99,7 @@ public:
   // not INC reference count
   bool set_obj (PyObject *o);
   PyObject *unwrap () ;
+  void set_onstack () { _onstack = true; }
 
 protected:
   PyObject *_obj;
@@ -146,7 +147,7 @@ private:
 //    functions help to navigate this difference.
 //
 
-template<class T> void unwrap_tmpl (T *t) { return t->unwrap (); }
+template<class T> PyObject *unwrap_tmpl (T *t) { return t->unwrap (); }
 
 static inline PyObject *
 generic_py_xdr_unwrap (void *o)
@@ -175,7 +176,7 @@ PY_XDR_UNWRAP(py_rpc_vec);
 // 
 
 template<class T> inline T * alloc_temporary (T &t) { 
-  t._onstack = true;
+  t.set_onstack ();
   return &t; 
 }
 template<class T> inline void dealloc_temporary (T *t) {}
@@ -304,7 +305,7 @@ py_rpc_str_convert_py2py (PyObject *in)
 }
 
 template<class T, size_t m> PyObject *
-py_rpc_str_convert_py2py (PyObject *in)
+py_rpc_vec_convert_py2py (PyObject *in)
 {
   if (!PyList_Check (in)) {
     PyErr_SetString (PyExc_TypeError, "expected a list type");
@@ -337,7 +338,7 @@ void *convert_error (PyObject *o, PyObject *e);
 // -- applies for simple wrapped classes found in this file;
 //    compiled complex classes need to specialize this template
 template<class T> T * assign_py_to_c (T &t, PyObject *o)
-{ return t.safe_set_obj (o) ? o : NULL; } 
+{ return t.safe_set_obj (o) ? &t : NULL; } 
 
 //
 //-----------------------------------------------------------------------
@@ -439,13 +440,13 @@ rpc_traverse_slot (XDR *xdrs, py_rpc_vec<A,max> &v, int i)
       A el, *elp;
       if (!(elp = v.get (i, &el)))
 	return false;
-      return rpc_traverse (xdr, *elp);
+      return rpc_traverse (xdrs, *elp);
     }
   case XDR_DECODE:
     {
       A el, *elp;
       elp = alloc_temporary<A> (el);
-      if (!rpc_traverse (xdr, *elp)) {
+      if (!rpc_traverse (xdrs, *elp)) {
 	dealloc_temporary<A> (elp);
 	return false;
       }
@@ -568,7 +569,7 @@ py_rpc_vec<T,m>::get (int i, T *out)
   PyObject *in = PyList_GetItem (_obj, i);
   if (!in)
     return false;
-  return assign_py_to_c (*in, out);
+  return assign_py_to_c (*out, in);
 }
 
 template<class T, size_t m> bool
@@ -577,7 +578,7 @@ py_rpc_vec<T,m>::set (PyObject *el, int i)
   int rc;
   if (i < _sz) {
     rc = PyList_SetItem (_obj, i, el);
-  } else if (i == sz) {
+  } else if (i == _sz) {
     rc = PyList_Append (_obj, el);
     _sz ++;
   } else {
