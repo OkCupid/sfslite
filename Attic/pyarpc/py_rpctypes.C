@@ -144,6 +144,16 @@ rpc_traverse (XDR *xdrs, py_u_int32_t &obj)
   return rc;   
 }
 
+bool
+py_rpc_base_t::init ()
+{
+  _obj = NULL;
+  _typ = NULL;
+  _onstack = false;
+  return true;
+}
+
+
 INT_RPC_TRAVERSE (int32_t);
 INT_RPC_TRAVERSE (u_int64_t);
 INT_RPC_TRAVERSE (int64_t);

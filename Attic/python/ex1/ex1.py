@@ -29,8 +29,8 @@ def call(cli):
 
 def call2(cli):
     bar = ex1.bar_t ()
-    bar.y.append ([1,2,3,4]);
-    cli.call (ex1.BAR_FUNC, bar, cb2)
+    bar.y = [1,2,3,4,5]
+    cli.call (ex1.FOO_BAR, bar, cb2)
 
 
 sock = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
@@ -42,7 +42,7 @@ print "file descriptor is", fd
 x = async.arpc.axprt_stream (fd)
 cli = async.arpc.aclnt (x, ex1.foo_prog_1 ())
 
-#call (cli);
+call2 (cli);
 
 
 async.core.amain ()

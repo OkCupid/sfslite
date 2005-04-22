@@ -91,6 +91,7 @@ public:
   py_rpc_base_t (PyObject *o) : _obj (o), _typ (NULL) { Py_XINCREF (_obj); }
   ~py_rpc_base_t () { Py_XDECREF (_obj); }
 
+  bool init () ;
   void alloc () { assert (_typ); _obj = _PyObject_New (_typ); }
   void clear ();
   PyObject *obj () { return _obj; }
@@ -116,6 +117,7 @@ public:
   const char * get () const { return PyString_AsString (_obj); }
   bool set (char *buf, size_t len);
   bool safe_set_obj (PyObject *in);
+  bool init ();
   enum { maxsize = M };
 };
 
@@ -130,6 +132,7 @@ public:
   bool set (PyObject *el, int i);
   bool safe_set_obj (PyObject *in);
   bool shrink (size_t sz);
+  bool init ();
   enum { maxsize = max };
 private:
   int _sz;
@@ -171,7 +174,7 @@ PY_XDR_UNWRAP(py_rpc_vec);
 
 //-----------------------------------------------------------------------
 // 
-// Allocate / Deallocate / Decref
+// Allocate / Deallocate / Decref / init
 //
 // 
 
@@ -180,6 +183,11 @@ template<class T> inline T * alloc_temporary (T &t) {
   return &t; 
 }
 template<class T> inline void dealloc_temporary (T *t) {}
+
+// for native types, we just call into the class, but compiled
+// types don't have methods in their structs, so they will simply
+// specialize this template
+template<class T> inline bool py_init (T &t) { return t.init (); }
 
 static inline void
 generic_py_xdr_decref (void *o)
@@ -204,6 +212,32 @@ PY_XDR_DEALLOC(py_rpc_str_t)
 
 #define ALLOC_DECL(T)                                           \
 extern void * T##_alloc ();
+
+template<size_t M> bool
+py_rpc_str<M>::init ()
+{
+  if (!py_rpc_base_t::init ())
+    return false;
+  _typ = &PyString_Type;
+  return true;
+}
+
+template<class T, size_t M> bool
+py_rpc_vec<T,M>::init ()
+{
+  if (!py_rpc_base_t::init ())
+    return false;
+  _typ = &PyList_Type;
+  PyObject *l = PyList_New (0);
+  if (!l) {
+    PyErr_SetString (PyExc_MemoryError, "allocation of new list failed");
+    return false;
+  }
+  if (!set_obj (l))
+    return false;
+  
+  return true;
+}
 
 //
 //
@@ -363,6 +397,13 @@ public:                                                          \
     PyObject *o = py_##ctype##_convert_py2py (i);                \
     if (!o) return false;                                        \
     return set_obj (o);                                          \
+  }                                                              \
+  bool init ()                                                   \
+  {                                                              \
+    if (!py_rpc_base_t::init ())                                 \
+      return false;                                              \
+    _typ = &PyLong_Type;                                         \
+    return true;                                                 \
   }                                                              \
 };
 

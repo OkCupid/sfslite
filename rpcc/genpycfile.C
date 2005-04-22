@@ -209,7 +209,7 @@ py_typecheck_unqual (const str &typ, const str &v)
   return b;
 }
 
-
+#if 0
 static str
 py_member_init (const rpc_decl *d)
 {
@@ -246,16 +246,37 @@ py_member_init (const rpc_decl *d)
   }
   panic ("bad data type: %s\n", d->type.cstr ());
 }
+#endif
 
 static void
 dump_init_frag (str prfx, const rpc_decl *d)
 {
-  aout << prfx << "if (!(self->" << d->id << ".set_obj ("
-       << py_member_init (d) << "))) {\n"
+  aout << prfx << "if (!py_init (self->" << d->id << ")) {\n"
        << prfx << "  Py_DECREF (self);\n"
        << prfx << "  return NULL;\n"
        << prfx << "}\n"
        << "\n";
+}
+
+static void
+dump_py_class_init (const rpc_struct *rs)
+{
+  bool first = true;
+  str ct = pyc_type (rs->id);
+  aout << "static bool\n"
+       << "py_init (" << ct << " &obj)\n"
+       << "{\n"
+       << "  return (";
+  for (const rpc_decl *rd = rs->decls.base (); rd < rs->decls.lim (); rd++) {
+    if (!first)
+      aout << " &&\n"
+	   << "          ";
+    else
+      first = false;
+    aout << "py_init (obj." << rd->id << ")";
+  }
+  aout << ");\n"
+       << "}\n\n";
 }
 
 static void
@@ -393,11 +414,12 @@ dump_class_unwrap_func (const rpc_struct *rs)
 static void
 dump_allocator (const rpc_struct *rs)
 {
+  str pct = pyc_type (rs->id);
+  str ppt = py_type (rs->id);
   aout << "void *\n"
        << pyc_type (rs->id) << "_alloc ()\n"
        << "{\n"
-       << "  return PyObject_New (" << pyc_type (rs->id)
-       << ", &"<< py_type (rs->id) << ");\n"
+       << "  return (void *)" << pct << "_new (&" << ppt << ", NULL, NULL);\n"
        << "}\n\n";
 }
 
@@ -983,6 +1005,7 @@ dumpstruct (const rpc_sym *s)
   dump_assign_py_to_c (rs);
   dump_alloc_temporary (rs);
   dump_dealloc_temporary (rs);
+  dump_py_class_init (rs);
 
   dump_rpc_traverse (rs);
   dump_xdr_func (rs);

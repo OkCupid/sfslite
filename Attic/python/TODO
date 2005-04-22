@@ -13,3 +13,9 @@ SFS Python Wrapper Todo
 * PyDoc_STR -- use in all cases of documentating a class inline.
 
 * aclnt:call should return a cancelable callbase
+
+* asrv implementation
+
+* it would be nice to have a full implementation of rpc_traverse,
+  and to use that for initialization, as opposed to rolling that
+  ad-hoc.  for now, we do the easier thing. 
