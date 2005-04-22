@@ -34,7 +34,7 @@ T##_convert_py2py (PyObject *in)                                \
     out = PyLong_FromLong (PyInt_AsLong (in));                  \
   else if (!PyLong_Check (in)) {                                \
     PyErr_SetString (PyExc_TypeError,                           \
-		     "expect an integer or long");              \
+		     "integer or long value expected");         \
   } else {                                                      \
     out = in;                                                   \
     Py_INCREF (out);                                            \
