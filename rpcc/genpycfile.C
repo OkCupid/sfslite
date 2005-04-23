@@ -737,11 +737,20 @@ dump_getter_decl (const str &cl, const rpc_decl *d)
 static void
 dump_getter (const str &cl, const rpc_decl *d)
 {
+  strbuf b;
+  b << "self->" << obj_in_class (d);
+  str obj = b;
   aout << "PyObject * " << cl << "_get" << d->id 
        << " (" << cl << " *self, void *closure)\n"
        << "{\n"
-       << "  Py_XINCREF (self->" << obj_in_class (d) << ");\n"
-       << "  return self->" << obj_in_class (d) << ";\n"
+       << "  PyObject *obj = " << obj << ";\n"
+       << "  if (!obj) {\n"
+       << "    PyErr_SetString (PyExc_UnboundLocalError,\n"
+       << "                     \"undefined class variable\");\n"
+       << "    return NULL;\n"
+       << "  }\n"
+       << "  Py_XINCREF (obj);\n"
+       << "  return obj;\n"
        << "}\n\n";
 }
 

@@ -13,7 +13,10 @@ def cb(err,res):
     print "err=", err, "& res=", res
 
 def cb2(err, foo):
-    print "err=", err, "& foo.x=" , foo.x, " & foo.xx=", foo.xx
+    if err == 0:
+    	print "err=", err, "& foo.x=" , foo.x, " & foo.xx=", foo.xx
+    else:
+    	print "error / bad result"
 
 #
 # make call a function, so that way we can test the refcounting on 
@@ -23,13 +26,13 @@ def cb2(err, foo):
 #
 def call(cli):
     f = ex1.foo_t ()
-    f.x = 'this is a test string'
+    #f.x = 'this is a test string'
     f.xx = 1010
     cli.call (ex1.FOO_FUNC, f, cb)
 
 def call2(cli):
     bar = ex1.bar_t ()
-    bar.y = [1,2,3,4,5]
+    bar.y = [1,2,3,4,5,'shit']
     cli.call (ex1.FOO_BAR, bar, cb2)
 
 
@@ -42,7 +45,7 @@ print "file descriptor is", fd
 x = async.arpc.axprt_stream (fd)
 cli = async.arpc.aclnt (x, ex1.foo_prog_1 ())
 
-call2 (cli);
+call (cli);
 
 
 async.core.amain ()

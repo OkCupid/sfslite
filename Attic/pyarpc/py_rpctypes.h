@@ -387,7 +387,15 @@ class py_##ctype : public py_rpc_base_t                          \
 {                                                                \
 public:                                                          \
   py_##ctype () : py_rpc_base_t (&PyLong_Type) {}                \
-  ctype get () const { return (PyLong_As##ptype (_obj)); }       \
+  ctype get () const                                             \
+  {                                                              \
+    if (!_obj) {                                                 \
+      PyErr_SetString (PyExc_UnboundLocalError,                  \
+                      "unbound int/long");                       \
+      return NULL;                                               \
+    }                                                            \
+    return (PyLong_As##ptype (_obj));                            \
+  }                                                              \
   bool set (ctype i) {                                           \
     Py_XDECREF (_obj);                                           \
     return (_obj = PyLong_From##ptype (i));                      \
@@ -552,7 +560,16 @@ py_rpc_str<M>::get (size_t *sz) const
 {
   char *ret;
   int i;
+
+  if (!_obj) {
+    PyErr_SetString (PyExc_UnboundLocalError, "undefined string");
+    return NULL;
+  }
+
+
   if ( PyString_AsStringAndSize (_obj, &ret, &i) < 0) {
+    PyErr_SetString (PyExc_RuntimeError,
+		     "failed to access string data");
     return NULL;
   }
   *sz = i;
@@ -607,6 +624,10 @@ template<class T, size_t m> T *
 py_rpc_vec<T,m>::get (int i, T *out) 
 {
   assert (i < _sz && i >= 0);
+  if (!_obj) {
+    PyErr_SetString (PyExc_UnboundLocalError, "unbound vector");
+    return NULL;
+  }
   PyObject *in = PyList_GetItem (_obj, i);
   if (!in)
     return false;
