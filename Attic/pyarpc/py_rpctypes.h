@@ -87,7 +87,6 @@ class pyw_base_t {
 public:
   pyw_base_t () : _obj (NULL), _typ (NULL) {}
   pyw_base_t (PyTypeObject *t) : _obj (NULL), _typ (t) {}
-  pyw_base_t (PyObject *o) : _obj (o), _typ (NULL) { Py_XINCREF (_obj); }
   ~pyw_base_t () { Py_XDECREF (_obj); }
 
   bool init () ;

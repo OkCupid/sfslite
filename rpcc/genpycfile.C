@@ -101,20 +101,19 @@ pmshl (str id)
 }
 
 static str
-decltype (const rpc_decl *d, const str &a = NULL)
+decltype (const rpc_decl *d)
 {
-  str addin = a;
-  if (!addin) addin = "";
+  str wt = pyw_type (d->type);
   strbuf b;
   if (d->type == "string") {
-    b << pyc_type ("rpc_str") <<  addin << "<" << d->bound << ">";
+    b << pyw_type ("rpc_str") << "<" << d->bound << ">";
   } else if (d->type == "opaque")
     switch (d->qual) {
     case rpc_decl::ARRAY:
-      b << pyc_type ("rpc_opaque") << addin << "<" << d->bound << ">";
+      b << pyw_type ("rpc_opaque") << "<" << d->bound << ">";
       break;
     case rpc_decl::VEC:
-      b << pyc_type ("rpc_bytes") << addin << "<" << d->bound << ">";
+      b << pyw_type ("rpc_bytes") << "<" << d->bound << ">";
       break;
     default:
       panic ("bad rpc_decl qual for opaque (%d)\n", d->qual);
@@ -123,18 +122,16 @@ decltype (const rpc_decl *d, const str &a = NULL)
   else
     switch (d->qual) {
     case rpc_decl::SCALAR:
-      b << pyc_type (d->type) << addin;
+      b << pyw_type (d->type) ;
       break;
     case rpc_decl::PTR:
-      b << pyc_type ("rpc_ptr") << addin << "<" << pyc_type (d->type) << ">";
+      b << pyw_type ("rpc_ptr") << "<" << pyc_type (d->type) << ">";
       break;
     case rpc_decl::ARRAY:
-      b << pyc_type ("rpc_array") << addin 
-	<< "<" << pyc_type (d->type) << ", " << d->bound << ">";
+      b << pyw_type ("rpc_array") << "<" << wt << ", " << d->bound << ">";
       break;
     case rpc_decl::VEC:
-      b << pyc_type ("rpc_vec") << addin
-	<< "<" << pyc_type (d->type) << ", " << d->bound << ">";
+      b << pyw_type ("rpc_vec") << "<" << wt << ", " << d->bound << ">";
       break;
     default:
       panic ("bad rpc_decl qual (%d)\n", d->qual);
@@ -276,7 +273,7 @@ get_inner_obj (const str &vn, const str &ct)
        << "    return false;\n"
        << "  }\n"
        << "  " << ct << " *" << vn 
-       << " = static_cast<" << ct << " *> (_obj);\n" ;
+       << " = reinterpret_cast<" << ct << " *> (_obj);\n" ;
 
   return bout;
 }
@@ -407,7 +404,7 @@ dump_convert (const rpc_struct *rs)
   
   aout << "template<> struct converter_t<" << wt << ">\n"
        << "{\n"
-       << "  static PyObject *convert (PyObject *in)\n"
+       << "  static PyObject *convert (PyObject *obj)\n"
        << "  {\n"
        << "    if (!PyObject_IsInstance (obj, (PyObject *)&" 
        <<                                           ptt <<  ")) {\n"
@@ -418,7 +415,7 @@ dump_convert (const rpc_struct *rs)
        << "    Py_INCREF (obj);\n"
        << "    return obj;\n"
        << "  }\n"
-       << "}\n\n";
+       << "};\n\n";
 }
 
 static void
@@ -441,7 +438,7 @@ rpc_trav_func (const str &a1, const str &obj, const rpc_decl *d)
 }
 
 static void
-dump_rpc_w_traverse (const rpc_struct *rs)
+dump_w_rpc_traverse (const rpc_struct *rs)
 {
   str ct = pyc_type (rs->id);
   str wt = pyw_type (rs->id);
@@ -705,12 +702,19 @@ dump_getter (const str &cl, const rpc_decl *d)
        << "}\n\n";
 }
 
-static str
-convert_py2py (const rpc_decl *d, const str &v)
+static str 
+py_converter (const str &s)
 {
   strbuf b;
-  b << decltype (d, "_convert_py2py") << " (" << v << ")";
+  // note the extra space for nested templates
+  b << "converter_t<" << s << " >::convert";
   return b;
+}
+
+static str
+py_converter (const rpc_decl *d)
+{
+  return py_converter (decltype (d));
 }
 
 #if 0
@@ -753,18 +757,8 @@ dump_setter (const str &cl, const rpc_decl *d)
        << "\"Unexpected NULL first attribute\");\n"
        << "    return -1;\n"
        << "  }\n"
-       << "  PyObject *o = " << convert_py2py (d, "value") << ";\n"
+       << "  PyObject *o = " << py_converter (d) << " (value);\n"
        << "  if (!o) return -1;\n"
-    /*
-       << "  if (! " << py_typecheck (d, "value") << ") {\n"
-       << "    PyErr_SetString (PyExc_TypeError, \n"
-       << "                     \"Expected an object of type " 
-       <<                        py_type (d) << "\");\n"
-       << "    return -1;\n"
-       << "  }\n"
-       << "  Py_INCREF (value);\n"
-    */
-
        << "  self->" << d->id << ".set_obj (o);\n"
        << "\n"
        << "  return 0;\n"
@@ -949,14 +943,15 @@ dump_class_py (const rpc_struct *rs)
 }
 
 static void
-dump_class_wrapper (const rpc_struct *rs)
+dump_w_class (const rpc_struct *rs)
 {
   str ct = pyc_type (rs->id);
   str wt = pyw_type (rs->id);
   str pt = py_type (rs->id);
   aout << "struct " << wt << " : public pyw_base_t<" << wt << ">\n"
        << "{\n"
-       << "  " << wt << " () : pyw_base_t<" << wt << "> (&" << pt << ") {}\n"
+       << "  " << wt << " () : pyw_base_t<" << wt << "> (&" << pt << ")\n"
+       << "  { alloc (); }\n\n"
        << "  bool init ();\n"
        << "  bool clear ();\n"
        << "};\n\n";
@@ -969,7 +964,6 @@ dumpstruct (const rpc_sym *s)
   str ct = pyc_type (rs->id);
 
   dump_class_py (rs);
-  dump_class_wrapper (rs);
   dump_class_dealloc_func (rs);
   dump_class_new_func (rs);
   dump_class_members (rs);
@@ -979,12 +973,14 @@ dumpstruct (const rpc_sym *s)
   dump_getsetter_table (rs);
   dump_class_init_func (rs);
   dump_object_table (rs);
+
+  dump_w_class (rs);
   dump_convert (rs);
   dump_hacked_trav (rs, "init");
   dump_hacked_trav (rs, "clear");
 
   dump_rpc_traverse (rs);
-  dump_rpc_w_traverse (rs);
+  dump_w_rpc_traverse (rs);
   dump_xdr_func (rs);
 }
 
@@ -1252,18 +1248,18 @@ dumpprog (const rpc_sym *s)
       aout << "  " << rp->id << " = " << rp->val << ",\n";
     aout << "};\n";
     aout << "#define " << rs->id << "_" << rv->val
-	 << "_APPLY_NOVOID(macro," << pyc_type ("void") << ")";
+	 << "_APPLY_NOVOID(macro," << pyw_type ("void") << ")";
     u_int n = 0;
     for (const rpc_proc *rp = rv->procs.base (); rp < rv->procs.lim (); rp++) {
       while (n++ < rp->val)
 	aout << " \\\n  macro (" << n-1 << ", false, false)";
-      aout << " \\\n  macro (" << rp->id << ", " << pyc_type (rp->arg)
-	   << ", " << pyc_type (rp->res) << ")";
+      aout << " \\\n  macro (" << rp->id << ", " << pyw_type (rp->arg)
+	   << ", " << pyw_type (rp->res) << ")";
     }
     aout << "\n";
     aout << "#define " << rs->id << "_" << rv->val << "_APPLY(macro) \\\n  "
 	 << rs->id << "_" << rv->val << "_APPLY_NOVOID(macro, "
-	 << pyc_type ("void") << ")\n";
+	 << pyw_type ("void") << ")\n";
   }
 
   // dump typechecker methods
@@ -1279,11 +1275,9 @@ dumpprog (const rpc_sym *s)
 	//aout << "  { convert_error, convert_error, wrap_error, "
 	//    << "dealloc_error },\n";
       }
-      aout << "  { " << pyc_type (rp->arg) << "_convert, "
-	   << pyc_type (rp->res) << "_convert, "
-	   << pyc_type (rp->res) << "_unwrap, "
-	   << pyc_type (rp->arg) << "_decref, "
-	   << pyc_type (rp->res) << "_decref },\n";
+      aout << "  { " << py_converter (pyw_type (rp->arg)) << ",\n"
+	   << "    " << py_converter (pyw_type (rp->res)) << ",\n"
+	   << "    unwrap<" << pyw_type (rp->res) << "> }\n";
     }
     aout << "};\n\n";
   }
