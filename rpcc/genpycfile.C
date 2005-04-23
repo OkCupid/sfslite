@@ -51,6 +51,14 @@ pyc_type (const str &s)
   return b;
 }
 
+static str
+pyw_type (const str &s)
+{
+  strbuf b;
+  b << "pyw_" << s;
+  return b;
+}
+
 static bool
 is_int_type (const str &s)
 {
@@ -251,21 +259,38 @@ py_member_init (const rpc_decl *d)
 static void
 dump_init_frag (str prfx, const rpc_decl *d)
 {
-  aout << prfx << "if (!py_init (self->" << d->id << ")) {\n"
+  aout << prfx << "if (!self->" << d->id << ".init ()) {\n"
        << prfx << "  Py_DECREF (self);\n"
        << prfx << "  return NULL;\n"
        << prfx << "}\n"
        << "\n";
 }
 
+static str
+get_inner_obj (const str &vn, const str &ct)
+{
+  strbuf bout;
+  bout << "  if (!_obj) {\n"
+       << "    PyErr_SetString (PyExc_RuntimeError,\n"
+       << "                     \"null wrapped obj unexpected\");\n"
+       << "    return false;\n"
+       << "  }\n"
+       << "  " << ct << " *" << vn 
+       << " = static_cast<" << ct << " *> (_obj);\n" ;
+
+  return bout;
+}
+
 static void
-dump_py_class_init (const rpc_struct *rs)
+dump_hacked_trav (const rpc_struct *rs, const str &f)
 {
   bool first = true;
   str ct = pyc_type (rs->id);
-  aout << "static bool\n"
-       << "py_init (" << ct << " &obj)\n"
+  str wt = pyw_type (rs->id);
+  aout << "bool\n"
+       << wt << "::" << f << "()\n"
        << "{\n"
+       << get_inner_obj ("o", ct)
        << "  return (";
   for (const rpc_decl *rd = rs->decls.base (); rd < rs->decls.lim (); rd++) {
     if (!first)
@@ -273,7 +298,7 @@ dump_py_class_init (const rpc_struct *rs)
 	   << "          ";
     else
       first = false;
-    aout << "py_init (obj." << rd->id << ")";
+    aout << "o->" << rd->id << "." << f << " ()";
   }
   aout << ");\n"
        << "}\n\n";
@@ -362,56 +387,6 @@ dump_class_dealloc_func (const rpc_struct *rs)
 }
 
 static void
-dump_decref_func (const rpc_struct *rs)
-{
-  str ct = pyc_type (rs->id);
-  aout << "\nstatic void\n"
-       << ct << "_decref (void *self)\n"
-       << "{\n"
-       << "  Py_DECREF ((PyObject *)self);\n"
-       << "}\n";
-}
-
-static void
-dump_alloc_temporary (const rpc_struct *rs)
-{
-  str ct = pyc_type (rs->id);
-  str pt = py_type (rs->id);
-  aout << "static " << ct << "*\n"
-       << "alloc_temporary (" << ct << "&t)\n"
-       << "{\n"
-       << "  return PyObject_New (" << ct << ", &" <<  pt << ");\n"
-       << "}\n\n";
-}
-
-static void
-dump_dealloc_temporary (const rpc_struct *rs)
-{
-  str ct = pyc_type (rs->id);
-  aout << "static void\n"
-       << "dealloc_temporary (" << ct << " *self)\n"
-       << "{\n"
-       << "  Py_DECREF (reinterpret_cast<PyObject *> (self));\n"
-       << "}\n\n";
-}
-
-static void
-dump_class_unwrap_func (const rpc_struct *rs)
-{
-  str ct = pyc_type (rs->id);
-  aout << "static PyObject *\n"
-       << ct << "_unwrap (void *self)\n"
-       << "{\n"
-       << "  return (PyObject *) self;\n"
-       << "}\n\n"
-       << "PyObject *\n"
-       << "unwrap_tmpl (" << ct << " *self)\n"
-       << "{\n"
-       << "  return " << ct << "_unwrap (self);\n"
-       << "}\n\n";
-}
-
-static void
 dump_allocator (const rpc_struct *rs)
 {
   str pct = pyc_type (rs->id);
@@ -428,54 +403,34 @@ dump_convert (const rpc_struct *rs)
 {
   str ptt = py_type (rs->id);
   str pct = pyc_type (rs->id);
-  aout << "static PyObject *\n"
-       << pct << "_convert_py2py (PyObject *obj)\n"
+  str wt = pyw_type (rs->id);
+  
+  aout << "template<> struct converter_t<" << wt << ">\n"
        << "{\n"
-       << "  if (!PyObject_IsInstance (obj, (PyObject *)&" << ptt <<  ")) {\n"
-       << "     PyErr_SetString (PyExc_TypeError, \"expected object of type "
-       <<                                         rs->id << "\");\n"
-       << "     return NULL;\n"
+       << "  static PyObject *convert (PyObject *in)\n"
+       << "  {\n"
+       << "    if (!PyObject_IsInstance (obj, (PyObject *)&" 
+       <<                                           ptt <<  ")) {\n"
+       << "       PyErr_SetString (PyExc_TypeError, \"expected object of type "
+       <<                                           rs->id << "\");\n"
+       << "       return NULL;\n"
+       << "    }\n"
+       << "    Py_INCREF (obj);\n"
+       << "    return obj;\n"
        << "  }\n"
-       << "  Py_INCREF (obj);\n"
-       << "  return obj;\n"
-       << "}\n\n"
-       << "static void *\n"
-       << pct  << "_convert (PyObject *obj, PyObject *e)\n"
-       << "{\n"
-       << "  return " << pct << "_convert_py2py (obj);\n"
-       << "}\n\n";
-}
-
-static void
-dump_assign_py_to_c (const rpc_struct *rs)
-{
-  str pct = pyc_type (rs->id);
-  aout << "static " << pct << " *\n"
-       << "assign_py_to_c (" << pct << " &targ, PyObject * src)\n"
-       << "{\n"
-       << "  return reinterpret_cast<" << pct << " *> (" 
-       << pct << "_convert_py2py (src));\n"
        << "}\n\n";
 }
 
 static void
 dump_xdr_func (const rpc_struct *rs)
 {
-  aout << "bool_t\n"
-       << "xdr_" << pyc_type (rs->id) << " (XDR *xdrs, void *objp)\n"
+  str ct = pyc_type (rs->id);
+  str wt = pyw_type (rs->id);
+  aout << "bool\n"
+       << "xdr_" << wt << " (XDR *xdrs, void *objp)\n"
        << "{\n"
-       << "  switch (xdrs->x_op) {\n"
-       << "  case XDR_ENCODE:\n"
-       << "  case XDR_DECODE:\n"
-       << "    return rpc_traverse (xdrs, *static_cast<" 
-       << pyc_type (rs->id) << " *> (objp));\n"
-       << "  case XDR_FREE:\n"
-       << "    Py_XDECREF (static_cast<PyObject *> (objp));\n"
-       << "    return true;\n"
-       << "  default:\n"
-       << "    panic (\"invalid xdr operation %d\\n\", xdrs->x_op);\n"
-       << "  }\n"
-       << "  return false;\n"
+       << "  return rpc_traverse (xdrs, *static_cast <" << wt << " *> "
+       << "(objp));\n"
        << "}\n\n";
 }
 
@@ -486,10 +441,29 @@ rpc_trav_func (const str &a1, const str &obj, const rpc_decl *d)
 }
 
 static void
+dump_rpc_w_traverse (const rpc_struct *rs)
+{
+  str ct = pyc_type (rs->id);
+  str wt = pyw_type (rs->id);
+
+  aout << "template<class T> bool\n"
+       << "rpc_traverse (T &t, " << wt << " &wo)\n"
+       << "{\n"
+       << "  " << ct << " *io = static_cast<" << ct << " *> (wo.get_obj ());\n"
+       << "  if (!io) {\n"
+       << "    PyErr_SetString (PyExc_UnboundLocalError,\n"
+       << "                     \"uninitialized XDR field\");\n"
+       << "    return false;\n"
+       << "  }\n"
+       << "  return rpc_traverse (t, *io);\n"
+       << "}\n\n";
+}
+
+static void
 dump_rpc_traverse (const rpc_struct *rs)
 {
 
-  aout << "\ntemplate<class T> "
+  aout << "template<class T> "
        << (rs->decls.size () > 1 ? "" : "inline ") << "bool\n"
        << "rpc_traverse (T &t, " << pyc_type (rs->id) << " &obj)\n"
        << "{\n";
@@ -499,7 +473,7 @@ dump_rpc_traverse (const rpc_struct *rs)
     aout << "  return rpc_traverse (t, obj." << rd->id << ")";
     rd++;
     while (rd < rs->decls.lim ()) { 
-      aout << "\n     && rpc_traverse (t, obj." << rd->id << ")";
+      aout << "\n         && rpc_traverse (t, obj." << rd->id << ")";
       rd++;
     }
     aout << ";\n";
@@ -507,29 +481,6 @@ dump_rpc_traverse (const rpc_struct *rs)
   else
     aout << "  return true;\n";
   aout << "}\n\n";
-
-  str typ = py_type (rs->id);
-
-#if 0
-  aout << "template<class T> bool\n"
-       << "rpc_traverse_" << typ << " (T &id, PyObjWrap &w)\n"
-       << "{\n"
-       << "  if (! " << py_typecheck_unqual (rs->id, "w.obj") << ") {\n"
-       << "    PyErr_SetString (PyExec_Type_Error, \n"
-       << "                     \"Type mismatch in rpc_traverse for type=" 
-       <<                       typ << "\");\n"
-       << "    return false;\n"
-       << "  }\n"
-       << "  if (!w.scalar) {\n"
-       << "    PyErr_SetString (PyExec_Type_Error,\n"
-       << "                     \"Expected a scalar object; got a vector!\")"
-       <<                 ";\n"
-       << "    return false;\n"
-       << "  }\n"
-       << "  return rpc_traverse (id, *static_cast<" << rs->id 
-       << " *> (obj));\n"
-       << "}\n\n";
-#endif
 }
 
 static void
@@ -986,22 +937,40 @@ dumpstruct_mthds (const rpc_sym *s)
 }
 
 static void
+dump_class_py (const rpc_struct *rs)
+{
+  str ct = pyc_type (rs->id);
+  aout << "struct " << ct << " {\n"
+       << "  PyObject_HEAD\n";
+  for (const rpc_decl *rd = rs->decls.base (); rd < rs->decls.lim (); rd++)
+    pdecl ("  ", rd);
+  aout << "};\n\n";
+  aout << "RPC_STRUCT_DECL (" << ct << ")\n\n";
+}
+
+static void
+dump_class_wrapper (const rpc_struct *rs)
+{
+  str ct = pyc_type (rs->id);
+  str wt = pyw_type (rs->id);
+  str pt = py_type (rs->id);
+  aout << "struct " << wt << " : public pyw_base_t<" << wt << ">\n"
+       << "{\n"
+       << "  " << wt << " () : pyw_base_t<" << wt << "> (&" << pt << ") {}\n"
+       << "  bool init ();\n"
+       << "  bool clear ();\n"
+       << "};\n\n";
+}
+
+static void
 dumpstruct (const rpc_sym *s)
 {
   const rpc_struct *rs = s->sstruct.addr ();
   str ct = pyc_type (rs->id);
-  aout << "\nstruct " << ct << " {\n"
-       << "  PyObject_HEAD\n";
-  for (const rpc_decl *rd = rs->decls.base (); rd < rs->decls.lim (); rd++)
-    pdecl ("  ", rd);
-  aout << "};\n";
-  //pmshl (rs->id);
-  aout << "RPC_STRUCT_DECL (" << ct << ")\n";
-  // aout << "RPC_TYPE_DECL (" << rs->id << ")\n";
 
-  dump_decref_func (rs);
+  dump_class_py (rs);
+  dump_class_wrapper (rs);
   dump_class_dealloc_func (rs);
-  dump_class_unwrap_func (rs);
   dump_class_new_func (rs);
   dump_class_members (rs);
   dump_class_method_decls (rs);
@@ -1011,12 +980,11 @@ dumpstruct (const rpc_sym *s)
   dump_class_init_func (rs);
   dump_object_table (rs);
   dump_convert (rs);
-  dump_assign_py_to_c (rs);
-  dump_alloc_temporary (rs);
-  dump_dealloc_temporary (rs);
-  dump_py_class_init (rs);
+  dump_hacked_trav (rs, "init");
+  dump_hacked_trav (rs, "clear");
 
   dump_rpc_traverse (rs);
+  dump_rpc_w_traverse (rs);
   dump_xdr_func (rs);
 }
 

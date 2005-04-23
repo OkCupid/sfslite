@@ -9,6 +9,11 @@ struct bar_t {
 	hyper y<>;
 };
 
+struct baz_t {
+	foo_t foos<4>;
+	bar_t bar;
+};
+
 program FOO_PROG {
 	version FOO_VERS {
 
@@ -20,5 +25,8 @@ program FOO_PROG {
 
 		foo_t
 		FOO_BAR (bar_t) = 2;
+
+		bar_t
+		FOO_BAZ (baz_t) = 3;
 	} = 1;
 } = 100;

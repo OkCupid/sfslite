@@ -4,7 +4,7 @@
 
 #define INT_RPC_TRAVERSE(T)                                       \
 bool                                                              \
-rpc_traverse (XDR *xdrs, py_##T &obj)                             \
+rpc_traverse (XDR *xdrs, pyw_##T &obj)                            \
 {                                                                 \
   T raw = obj.get ();                                             \
   bool rc = rpc_traverse (xdrs, raw);                             \
@@ -24,45 +24,11 @@ type##_alloc ()							\
   return New type;						\
 }
 
-#define INT_CONVERT_PY2PY(T,P)                                  \
-PyObject *                                                      \
-T##_convert_py2py (PyObject *in)                                \
-{                                                               \
-  PyObject *out = NULL;                                         \
-  assert (in);                                                  \
-  if (PyInt_Check (in))                                         \
-    out = PyLong_FromLong (PyInt_AsLong (in));                  \
-  else if (!PyLong_Check (in)) {                                \
-    PyErr_SetString (PyExc_TypeError,                           \
-		     "integer or long value expected");         \
-  } else {                                                      \
-    out = in;                                                   \
-    Py_INCREF (out);                                            \
-  }                                                             \
-  return out;                                                   \
-}                                                               
-
-#define GENERIC_CONVERT(T)                                      \
-void *                                                          \
-T##_convert (PyObject *in, PyObject *rpc_exception)             \
-{                                                               \
-  PyObject *out = T##_convert_py2py (in);                       \
-  if (!out) return NULL;                                        \
-  py_rpc_base_t *ret = static_cast<py_rpc_base_t *> (T##_alloc ());      \
-  ret->set_obj (out);                                           \
-  return ret;                                                   \
-}
-
 #define INT_DO_ALL_C(T, s, P)                                   \
-DEFXDR (py_##T);                                                \
-RPC_PRINT_GEN (py_##T, sb.fmt ("0x%" s , obj.get ()));          \
-RPC_PRINT_DEFINE (py_##T);                                      \
-INT_CONVERT_PY2PY(py_##T, P)                                    \
-GENERIC_CONVERT(py_##T)
-
-#if 0
-INT_RPC_TRAVERSE(T)                          
-#endif
+DEFXDR (pyw_##T);                                               \
+RPC_PRINT_GEN (pyw_##T, sb.fmt ("0x%" s , obj.get ()));         \
+RPC_PRINT_DEFINE (pyw_##T);                                     \
+INT_RPC_TRAVERSE(T);
 
 INT_DO_ALL_C (u_int32_t, "x", UnsignedLong);
 INT_DO_ALL_C (int32_t, "d", Long);
@@ -83,6 +49,12 @@ convert_error (PyObject *in, PyObject *rpc_exception)
   return NULL;
 }
 
+PyObject *
+unwrap_error (void *)
+{
+  return NULL;
+}
+
 void *
 void_convert (PyObject *in, PyObject *rpc_exception)
 {
@@ -100,61 +72,8 @@ void_unwrap (void *o)
   return Py_None;
 }
 
-void
-py_rpc_base_t::clear ()
-{
-  if (_obj) {
-    Py_XDECREF (_obj);
-    _obj = NULL;
-  }
-}
-
-bool
-py_rpc_base_t::set_obj (PyObject *o)
-{
-  PyObject *tmp = _obj;
-  _obj = o; // no INCREF since usually just constructed
-  Py_XDECREF (tmp);
-  return true;
-}
-
-PyObject *
-py_rpc_base_t::unwrap ()
-{
-  PyObject *ret = _obj;
-  Py_INCREF (ret);
-  if (!_onstack)
-    delete this;
-  return ret;
-}
-
-
-
 py_rpcgen_table_t py_rpcgen_error = 
 {
-  convert_error, convert_error, unwrap_error, decref_error, decref_error
+  convert_error, convert_error, unwrap_error
 };
-
-bool                                                    
-rpc_traverse (XDR *xdrs, py_u_int32_t &obj)            
-{                                                     
-  u_int32_t raw = obj.get ();                                          
-  bool rc = rpc_traverse (xdrs, raw);                         
-  if (rc) obj.set (raw); 
-  return rc;   
-}
-
-bool
-py_rpc_base_t::init ()
-{
-  _obj = NULL;
-  _typ = NULL;
-  _onstack = false;
-  return true;
-}
-
-
-INT_RPC_TRAVERSE (int32_t);
-INT_RPC_TRAVERSE (u_int64_t);
-INT_RPC_TRAVERSE (int64_t);
 

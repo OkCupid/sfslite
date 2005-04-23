@@ -158,7 +158,6 @@ py_aclnt_t_call (py_aclnt_t *self, PyObject *args)
 
   pyt = &self->py_prog->pytab[procno];
 
-  // XXX how do you tell if an object is callable?
   if (cb && !PyCallable_Check (cb)) {
     PyErr_SetString (PyExc_TypeError, "expected a callable object as 3rd arg");
     goto fail;

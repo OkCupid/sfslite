@@ -74,8 +74,6 @@ struct py_rpcgen_table_t {
   void *(*convert_arg) (PyObject *arg, PyObject *rpc_exception);
   void *(*convert_res) (PyObject *arg, PyObject *rpc_exception);
   PyObject *(*unwrap_res) (void *in);
-  void (*decref_arg) (void *in);
-  void (*decref_res) (void *in);
 };
 
 extern py_rpcgen_table_t py_rpcgen_error;
@@ -84,53 +82,52 @@ extern py_rpcgen_table_t py_rpcgen_error;
 // Class Definitions
 //
 
-class py_rpc_base_t {
+template<class T>
+class pyw_base_t {
 public:
-  py_rpc_base_t () : _obj (NULL), _typ (NULL), _onstack (false) {}
-  py_rpc_base_t (PyTypeObject *t) : _obj (NULL), _typ (t), _onstack (false) {}
-  py_rpc_base_t (PyObject *o) : _obj (o), _typ (NULL) { Py_XINCREF (_obj); }
-  ~py_rpc_base_t () { Py_XDECREF (_obj); }
+  pyw_base_t () : _obj (NULL), _typ (NULL) {}
+  pyw_base_t (PyTypeObject *t) : _obj (NULL), _typ (t) {}
+  pyw_base_t (PyObject *o) : _obj (o), _typ (NULL) { Py_XINCREF (_obj); }
+  ~pyw_base_t () { Py_XDECREF (_obj); }
 
   bool init () ;
   void alloc () { assert (_typ); _obj = _PyObject_New (_typ); }
-  void clear ();
+  bool clear ();
   PyObject *obj () { return _obj; }
 
   // takes a New reference (not a borrowed reference) and hence does
   // not INC reference count
   bool set_obj (PyObject *o);
+  bool safe_set_obj (PyObject *in);
+  PyObject *get_obj ();
   PyObject *unwrap () ;
-  void set_onstack () { _onstack = true; }
 
 protected:
   PyObject *_obj;
   PyTypeObject *_typ;
-  bool _onstack;
 };
 
 template<size_t M = RPC_INFINITY>
-class py_rpc_str : public py_rpc_base_t 
+class pyw_rpc_str : public pyw_base_t<pyw_rpc_str<M> > 
 {
 public:
-  py_rpc_str () : py_rpc_base_t (&PyString_Type) {}
+  pyw_rpc_str () : pyw_base_t<pyw_rpc_str<M> > (&PyString_Type) {}
   char *get (size_t *sz) const;
   const char * get () const { return PyString_AsString (_obj); }
   bool set (char *buf, size_t len);
-  bool safe_set_obj (PyObject *in);
   bool init ();
   enum { maxsize = M };
 };
 
 template<class T, size_t max>
-class py_rpc_vec : public py_rpc_base_t 
+class pyw_rpc_vec : public pyw_base_t<pyw_rpc_vec<T, max> > 
 {
 public:
-  py_rpc_vec () : py_rpc_base_t (&PyList_Type), _sz (0) {}
+  pyw_rpc_vec () : pyw_base_t<pyw_rpc_vec<T, max> > (&PyList_Type), _sz (0) {}
   PyListObject *list () { return static_cast<PyListObject *> (_obj); }
   int size ();
-  T *get (int i, T *out) ;
-  bool set (PyObject *el, int i);
-  bool safe_set_obj (PyObject *in);
+  bool get_slot (int i, T *out) ;
+  bool set_slot (PyObject *el, int i);
   bool shrink (size_t sz);
   bool init ();
   enum { maxsize = max };
@@ -150,23 +147,11 @@ private:
 //    functions help to navigate this difference.
 //
 
-template<class T> PyObject *unwrap_tmpl (T *t) { return t->unwrap (); }
-
-static inline PyObject *
-generic_py_xdr_unwrap (void *o)
-{
-  return static_cast<py_rpc_base_t *> (o)->unwrap ();
+template<class T> PyObject *unwrap (void *v) 
+{ 
+  return static_cast<T *> (v)->unwrap (); 
 }
 
-#define PY_XDR_UNWRAP(type)                                     \
-inline PyObject *type##_unwrap (void *o)                        \
-{ return generic_py_xdr_unwrap (o); }
-
-inline PyObject *unwrap_error (void *o) { return NULL; }
-PyObject *void_unwrap (void *o);
-
-PY_XDR_UNWRAP(py_rpc_str);
-PY_XDR_UNWRAP(py_rpc_vec);
 //
 // end of wrapping functions
 // 
@@ -174,58 +159,38 @@ PY_XDR_UNWRAP(py_rpc_vec);
 
 //-----------------------------------------------------------------------
 // 
-// Allocate / Deallocate / Decref / init
+// Allocate / Deallocate / Decref / init / clear
 //
 // 
-
-template<class T> inline T * alloc_temporary (T &t) { 
-  t.set_onstack ();
-  return &t; 
-}
-template<class T> inline void dealloc_temporary (T *t) {}
 
 // for native types, we just call into the class, but compiled
 // types don't have methods in their structs, so they will simply
 // specialize this template
 template<class T> inline bool py_init (T &t) { return t.init (); }
+template<class T> inline bool py_clear (T &t) { return t.clear (); }
 
-static inline void
-generic_py_xdr_decref (void *o)
+inline void *
+pyw_rpc_str_alloc ()
 {
-  delete static_cast<py_rpc_base_t *> (o);
+  return New pyw_rpc_str<RPC_INFINITY> ();
 }
-
-template<size_t n> inline void *
-py_rpc_str_alloc ()
-{
-  return New py_rpc_str<n> ();
-}
-
-inline void void_decref (void *o) { return; }
-inline void decref_error (void *o) { return; }
-
-#define PY_XDR_DEALLOC(T)                                       \
-inline void T##_decref (void *o)                                \
-{ generic_py_xdr_decref (o); }
-
-PY_XDR_DEALLOC(py_rpc_str_t)
 
 #define ALLOC_DECL(T)                                           \
 extern void * T##_alloc ();
 
 template<size_t M> bool
-py_rpc_str<M>::init ()
+pyw_rpc_str<M>::init ()
 {
-  if (!py_rpc_base_t::init ())
+  if (!pyw_base_t<pyw_rpc_str<M> >::init ())
     return false;
   _typ = &PyString_Type;
   return true;
 }
 
 template<class T, size_t M> bool
-py_rpc_vec<T,M>::init ()
+pyw_rpc_vec<T,M>::init ()
 {
-  if (!py_rpc_base_t::init ())
+  if (!pyw_base_t<pyw_rpc_vec<T,M > >::init ())
     return false;
   _typ = &PyList_Type;
   PyObject *l = PyList_New (0);
@@ -252,15 +217,15 @@ py_rpc_vec<T,M>::init ()
 extern BOOL xdr_##T (XDR *xdrs, void *objp);
 
 template<size_t n> inline bool
-xdr_py_rpc_str (XDR *xdrs, void *objp)
+xdr_pyw_rpc_str (XDR *xdrs, void *objp)
 {
-  return rpc_traverse (xdrs, *static_cast<py_rpc_str<n> *> (objp));
+  return rpc_traverse (xdrs, *static_cast<pyw_rpc_str<n> *> (objp));
 }
 
 template<class T, size_t n> inline bool
-xdr_py_rpc_vec (XDR *xdrs, void *objp)
+xdr_pyw_rpc_vec (XDR *xdrs, void *objp)
 {
-  return rpc_traverse (xdrs, *static_cast<py_rpc_vec<T,n> *> (objp));
+  return rpc_traverse (xdrs, *static_cast<pyw_rpc_vec<T,n> *> (objp));
 }
 
 //
@@ -271,12 +236,12 @@ xdr_py_rpc_vec (XDR *xdrs, void *objp)
 //
 
 #define PY_RPC_TYPE2STR_DECL(T)			\
-template<> struct rpc_type2str<py_##T> {	\
+template<> struct rpc_type2str<pyw_##T> {	\
   static const char *type () { return #T; }	\
 };
 
 template<size_t n> const strbuf &
-rpc_print (const strbuf &sb, const py_rpc_str<n> &pyobj,
+rpc_print (const strbuf &sb, const pyw_rpc_str<n> &pyobj,
 	   int recdepth = RPC_INFINITY,
 	   const char *name = NULL, const char *prefix = NULL)
 {
@@ -297,6 +262,12 @@ rpc_print (const strbuf &sb, const py_rpc_str<n> &pyobj,
 //
 //-----------------------------------------------------------------------
 
+//-----------------------------------------------------------------------
+// operators
+//   - multipurpose classes the hold lots of specialized template calls
+//     for the particular class
+//
+
 
 //-----------------------------------------------------------------------
 // convert
@@ -313,51 +284,59 @@ extern PyObject * T##_convert_py2py (PyObject *in);
 
 CONVERT_DECL(void);
 
-template<size_t n> void *
-py_rpc_str_convert (PyObject *o, PyObject *e)
+template<class T> struct converter_t {};
+
+template<class T> void *
+py_wrap (PyObject *o, PyObject *e)
 {
-  PyObject *out = py_rpc_str_convert_py2py (in);
+  PyObject *out = converter_t<T>::convert (in);
   if (!out) return NULL;
-  py_rpc_base_t *ret = static_cast<py_rpc_base_t *> (py_rpc_str_alloc<n> ());
+  T * ret = New T;
   ret->set_obj (out);
-  return ret;  
+  return static_cast<void *> (ret);
 }
 
-template<size_t m> PyObject *
-py_rpc_str_convert_py2py (PyObject *in)
+template<size_t m> struct converter_t<pyw_rpc_str<m> >
 {
-  if (!PyString_Check (in)) {
-    PyErr_SetString (PyExc_TypeError, "expected string type");
-    return NULL;
+  static PyObject * convert (PyObject *in)
+  {
+    if (!PyString_Check (in)) {
+      PyErr_SetString (PyExc_TypeError, "expected string type");
+      return NULL;
+    }
+    if (PyString_Size (in) >= m) {
+      PyErr_SetString (PyExc_OverflowError, 
+		       "string exceeds predeclared limits");
+      return NULL;
+    }
+    Py_INCREF (in);
+    return in;
   }
-  if (PyString_Size (in) >= m) {
-    PyErr_SetString (PyExc_OverflowError, "string exceeds predeclared limits");
-    return NULL;
-  }
-  Py_INCREF (in);
-  return in;
-}
+};
 
-template<class T, size_t m> PyObject *
-py_rpc_vec_convert_py2py (PyObject *in)
+template<class T, size_t m> struct converter_t<pyw_rpc_vec<T,m> >
 {
-  if (!PyList_Check (in)) {
-    PyErr_SetString (PyExc_TypeError, "expected a list type");
-    return NULL;
+  static PyObject * convert (PyObject *in)
+  {
+    if (!PyList_Check (in)) {
+      PyErr_SetString (PyExc_TypeError, "expected a list type");
+      return NULL;
+    }
+    if (PyList_Size (in) >= m) {
+      PyErr_SetString (PyExc_OverflowError, 
+		       "list execeeds predeclared list length");
+      return NULL;
+    }
+    
+    // Would be nice to typecheck here; maybe use RPC traverse?
+    
+    Py_INCREF (in);
+    return in;
   }
-  if (PyList_Size (in) >= m) {
-    PyErr_SetString (PyExc_OverflowError, 
-		     "list execeeds predeclared list length");
-    return NULL;
-  }
-
-  // Would be nice to typecheck here; maybe use RPC traverse?
-
-  Py_INCREF (in);
-  return in;
-}
+};
 
 void *convert_error (PyObject *o, PyObject *e);
+PyObject *unwrap_error (void *);
 
 //
 //-----------------------------------------------------------------------
@@ -383,10 +362,10 @@ template<class T> T * assign_py_to_c (T &t, PyObject *o)
 
 
 #define INT_XDR_CLASS(ctype,ptype)                               \
-class py_##ctype : public py_rpc_base_t                          \
+class pyw_##ctype : public pyw_base_t<pyw_##ctype>               \
 {                                                                \
 public:                                                          \
-  py_##ctype () : py_rpc_base_t (&PyLong_Type) {}                \
+  pyw_##ctype () : pyw_base_t<pyw_##ctype> (&PyLong_Type) {}     \
   ctype get () const                                             \
   {                                                              \
     if (!_obj) {                                                 \
@@ -400,36 +379,48 @@ public:                                                          \
     Py_XDECREF (_obj);                                           \
     return (_obj = PyLong_From##ptype (i));                      \
   }                                                              \
-  bool safe_set_obj (PyObject *i)                                \
-  {                                                              \
-    PyObject *o = py_##ctype##_convert_py2py (i);                \
-    if (!o) return false;                                        \
-    return set_obj (o);                                          \
-  }                                                              \
   bool init ()                                                   \
   {                                                              \
-    if (!py_rpc_base_t::init ())                                 \
+    if (!pyw_base_t<pyw_##ctype>::init ())                       \
       return false;                                              \
     _typ = &PyLong_Type;                                         \
     return true;                                                 \
   }                                                              \
 };
 
+inline PyObject *
+convert_int (PyObject *in)
+{
+  PyObject *out = NULL;
+  assert (in);
+  if (PyInt_Check (in))
+    out = PyLong_FromLong (PyInt_AsLong (in));
+  else if (!PyLong_Check (in)) {
+    PyErr_SetString (PyExc_TypeError,
+		     "integer or long value expected");
+  } else {
+    out = in;
+    Py_INCREF (out);
+  }
+  return out;
+}
+
+#define INT_CONVERTER(T)                                         \
+template<> struct converter_t<T> {                               \
+  PyObject *convert (PyObject *in) { return convert_int (in); }  \
+};
+
 #define RPC_TRAVERSE_DECL(ptype)                                 \
 bool rpc_traverse (XDR *xdrs, ptype &obj);
 
 #define INT_DO_ALL_H(ctype,ptype)                                \
-XDR_DECL(py_##ctype)                                             \
-ALLOC_DECL(py_##ctype)                                           \
-CONVERT_DECL(py_##ctype)                                         \
-CONVERT_PY2PY_DECL(py_##ctype)                                   \
-PY_XDR_UNWRAP(py_##ctype)                                        \
-PY_XDR_DEALLOC(py_##ctype)                                       \
+XDR_DECL(pyw_##ctype)                                            \
 INT_XDR_CLASS(ctype, ptype)                                      \
-RPC_TRAVERSE_DECL(py_##ctype)                                    \
+RPC_TRAVERSE_DECL(pyw_##ctype)                                   \
 PY_RPC_TYPE2STR_DECL(ctype)                                      \
-RPC_PRINT_TYPE_DECL(py_##ctype)                                  \
-RPC_PRINT_DECL(py_##ctype)                                     
+RPC_PRINT_TYPE_DECL(pyw_##ctype)                                 \
+RPC_PRINT_DECL(pyw_##ctype)                                      \
+INT_CONVERTER(pyw_##ctype);
 
 INT_DO_ALL_H(u_int32_t, UnsignedLong)
 INT_DO_ALL_H(int32_t, Long)
@@ -447,7 +438,7 @@ INT_DO_ALL_H(int64_t, LongLong)
 //
 
 template<size_t n> inline bool
-rpc_traverse (XDR *xdrs, py_rpc_str<n> &obj)
+rpc_traverse (XDR *xdrs, pyw_rpc_str<n> &obj)
 {
   switch (xdrs->x_op) {
   case XDR_ENCODE:
@@ -481,25 +472,23 @@ rpc_traverse_slot (T &t, A &a, int i)
 }
 
 template<class A, size_t max> inline bool
-rpc_traverse_slot (XDR *xdrs, py_rpc_vec<A,max> &v, int i)
+rpc_traverse_slot (XDR *xdrs, pyw_rpc_vec<A,max> &v, int i)
 {
   switch (xdrs->x_op) {
   case XDR_ENCODE:
     {
-      A el, *elp;
-      if (!(elp = v.get (i, &el)))
+      A el;
+      if (!v.get_slot (i, &el))
 	return false;
-      return rpc_traverse (xdrs, *elp);
+      return rpc_traverse (xdrs, el);
     }
   case XDR_DECODE:
     {
-      A el, *elp;
-      elp = alloc_temporary<A> (el);
-      if (!rpc_traverse (xdrs, *elp)) {
-	dealloc_temporary<A> (elp);
+      A el;
+      if (!rpc_traverse (xdrs, el)) {
 	return false;
       }
-      return v.set (unwrap_tmpl<A> (elp), i);
+      return v.set_slot (el.get_obj (), i);
     }
   default:
     return false;
@@ -507,7 +496,7 @@ rpc_traverse_slot (XDR *xdrs, py_rpc_vec<A,max> &v, int i)
 }
 
 template<class T, class A, size_t max> inline bool
-rpc_traverse (T &t, py_rpc_vec<A,max> &obj)
+rpc_traverse (T &t, pyw_rpc_vec<A,max> &obj)
 {
   int isize = obj.size ();
   if (isize < 0)
@@ -556,7 +545,7 @@ struct py_rpc_program_t {
 // rpc_str methods
 //
 template<size_t M> char *
-py_rpc_str<M>::get (size_t *sz) const
+pyw_rpc_str<M>::get (size_t *sz) const
 {
   char *ret;
   int i;
@@ -582,7 +571,7 @@ py_rpc_str<M>::get (size_t *sz) const
 }
 
 template<size_t m> bool 
-py_rpc_str<m>::set (char *buf, size_t len)
+pyw_rpc_str<m>::set (char *buf, size_t len)
 {
   Py_XDECREF (_obj);
   if (len > maxsize) {
@@ -593,13 +582,6 @@ py_rpc_str<m>::set (char *buf, size_t len)
   return (_obj = PyString_FromStringAndSize (buf, len));
 }
 
-template<size_t m>  bool
-py_rpc_str<m>::safe_set_obj (PyObject *in)
-{
-  PyObject *out = py_rpc_str_convert_py2py (in);
-  if (!out) return false;
-  return set_obj (out);
-}
 //
 //-----------------------------------------------------------------------
 
@@ -608,7 +590,7 @@ py_rpc_str<m>::safe_set_obj (PyObject *in)
 //
 
 template<class T, size_t m> int
-py_rpc_vec<T,m>::size ()
+pyw_rpc_vec<T,m>::size ()
 {
   int l = PyList_Size (_obj);
   if (l < 0) {
@@ -620,8 +602,8 @@ py_rpc_vec<T,m>::size ()
   return l;
 }
 
-template<class T, size_t m> T *
-py_rpc_vec<T,m>::get (int i, T *out) 
+template<class T, size_t m> bool
+pyw_rpc_vec<T,m>::get_slot (int i, T *out) 
 {
   assert (i < _sz && i >= 0);
   if (!_obj) {
@@ -631,14 +613,17 @@ py_rpc_vec<T,m>::get (int i, T *out)
   PyObject *in = PyList_GetItem (_obj, i);
   if (!in)
     return false;
-  return assign_py_to_c (*out, in);
+  return out->safe_set_obj (in);
 }
 
 template<class T, size_t m> bool
-py_rpc_vec<T,m>::set (PyObject *el, int i)
+pyw_rpc_vec<T,m>::set_slot (PyObject *el, int i)
 {
   int rc;
-  if (i < _sz) {
+  if (!el) {
+    PyErr_SetString (PyExc_UnboundLocalError, "NULL array slot assignment");
+    return false;
+  } else if (i < _sz) {
     rc = PyList_SetItem (_obj, i, el);
   } else if (i == _sz) {
     rc = PyList_Append (_obj, el);
@@ -651,7 +636,7 @@ py_rpc_vec<T,m>::set (PyObject *el, int i)
 }
 
 template<class T, size_t m> bool
-py_rpc_vec<T,m>::shrink (size_t n)
+pyw_rpc_vec<T,m>::shrink (size_t n)
 {
   assert (n <= _sz);
   _sz -= n;
@@ -661,6 +646,62 @@ py_rpc_vec<T,m>::shrink (size_t n)
 
 //
 //-----------------------------------------------------------------------
+
+//-----------------------------------------------------------------------
+//
+
+template<class T> bool
+pyw_base_t<T>::clear ()
+{
+  if (_obj) {
+    Py_XDECREF (_obj);
+    _obj = NULL;
+  }
+  return true;
+}
+
+template<class T> bool
+pyw_base_t<T>::set_obj (PyObject *o)
+{
+  PyObject *tmp = _obj;
+  _obj = o; // no INCREF since usually just constructed
+  Py_XDECREF (tmp);
+  return true;
+}
+
+template<class T> PyObject *
+pyw_base_t<T>::get_obj ()
+{
+  Py_XINCREF (_obj);
+  return _obj;
+}
+
+template<class T> PyObject *
+pyw_base_t<T>::unwrap ()
+{
+  PyObject *ret = get_obj ();
+  delete this;
+  return ret;
+}
+
+template<class T> bool
+pyw_base_t<T>::init ()
+{
+  _obj = NULL;
+  _typ = NULL;
+  return true;
+}
+
+template<class T> bool
+pyw_base_t<T>::safe_set_obj (PyObject *in)
+{
+  PyObject *out = converter_t<T>::convert (in);
+  return out ? set_obj (out) : false;
+}
+
+//
+//-----------------------------------------------------------------------
+
 
 // XXX trash heap
 #if 0
