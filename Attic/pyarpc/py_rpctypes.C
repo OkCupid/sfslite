@@ -12,20 +12,23 @@ rpc_traverse (XDR *xdrs, pyw_##T &obj)                            \
   return rc;                                                      \
 }
 
-#define DEFXDR(type)						\
-BOOL								\
-xdr_##type (XDR *xdrs, void *objp)				\
-{								\
-  return rpc_traverse (xdrs, *static_cast<type *> (objp));	\
-}								\
-void *								\
-type##_alloc ()							\
-{								\
-  return New type;						\
+#define ALLOC_DEFN(T)                                           \
+void *                                                          \
+T##_alloc ()                                                    \
+{                                                               \
+   return New T;                                                \
 }
 
+#define XDR_DEFN(T)						\
+BOOL								\
+xdr_##T (XDR *xdrs, void *objp)				        \
+{								\
+  return rpc_traverse (xdrs, *static_cast<T *> (objp));	        \
+}								\
+
 #define INT_DO_ALL_C(T, s, P)                                   \
-DEFXDR (pyw_##T);                                               \
+ALLOC_DEFN (pyw_##T);                                           \
+XDR_DEFN (pyw_##T);                                             \
 RPC_PRINT_GEN (pyw_##T, sb.fmt ("0x%" s , obj.get ()));         \
 RPC_PRINT_DEFINE (pyw_##T);                                     \
 INT_RPC_TRAVERSE(T);
@@ -41,6 +44,20 @@ INT_DO_ALL_C (u_int64_t, "lx", UnsignedLong);
 INT_DO_ALL_C (int64_t, "ld", Long );
 #endif /* SIZEOF_LONG == 8 */
 
+//
+// Allocat pyw_void type
+//
+ALLOC_DEFN(pyw_void);
+XDR_DEFN(pyw_void);
+RPC_PRINT_GEN (pyw_void, sb.fmt ("<void>"));
+RPC_PRINT_DEFINE (pyw_void);
+
+bool
+rpc_traverse (XDR *xdrs, pyw_void &v)
+{
+  return true;
+}
+
 
 void *
 convert_error (PyObject *in, PyObject *rpc_exception)
@@ -55,22 +72,6 @@ unwrap_error (void *)
   return NULL;
 }
 
-void *
-void_convert (PyObject *in, PyObject *rpc_exception)
-{
-  if (in && in != Py_None) {
-    PyErr_SetString (PyExc_TypeError, "expected void argument");
-    return NULL;
-  }
-  return Py_None;
-}
-
-PyObject *
-void_unwrap (void *o)
-{
-  Py_INCREF (Py_None);
-  return Py_None;
-}
 
 py_rpcgen_table_t py_rpcgen_error = 
 {

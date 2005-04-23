@@ -386,12 +386,12 @@ dump_class_dealloc_func (const rpc_struct *rs)
 static void
 dump_allocator (const rpc_struct *rs)
 {
-  str pct = pyc_type (rs->id);
+  str wt = pyw_type (rs->id);
   str ppt = py_type (rs->id);
   aout << "void *\n"
-       << pyc_type (rs->id) << "_alloc ()\n"
+       << wt << "_alloc ()\n"
        << "{\n"
-       << "  return (void *)" << pct << "_new (&" << ppt << ", NULL, NULL);\n"
+       << "  return (void *)New " << wt << ";\n"
        << "}\n\n";
 }
 
@@ -423,7 +423,7 @@ dump_xdr_func (const rpc_struct *rs)
 {
   str ct = pyc_type (rs->id);
   str wt = pyw_type (rs->id);
-  aout << "bool\n"
+  aout << "BOOL\n"
        << "xdr_" << wt << " (XDR *xdrs, void *objp)\n"
        << "{\n"
        << "  return rpc_traverse (xdrs, *static_cast <" << wt << " *> "
@@ -446,7 +446,8 @@ dump_w_rpc_traverse (const rpc_struct *rs)
   aout << "template<class T> bool\n"
        << "rpc_traverse (T &t, " << wt << " &wo)\n"
        << "{\n"
-       << "  " << ct << " *io = static_cast<" << ct << " *> (wo.get_obj ());\n"
+       << "  " << ct << " *io = reinterpret_cast<" << ct 
+       <<                         " *> (wo.get_obj ());\n"
        << "  if (!io) {\n"
        << "    PyErr_SetString (PyExc_UnboundLocalError,\n"
        << "                     \"uninitialized XDR field\");\n"
@@ -837,11 +838,32 @@ print_print (str type)
        << " *> (_objp),\n"
     "             _recdepth, _name, _prefix);\n"
     "}\n";
+}
 
+static void
+print_py_dump (str type)
+{
   aout << "void\n"
     "dump_" << type << " (const " << type << " *objp)\n"
     "{\n"
     "  rpc_print (warnx, *objp);\n"
+    "}\n\n";
+}
+
+static void
+print_w_struct (const rpc_struct *s)
+{
+  str wt = pyw_type (s->id);
+  str ct = pyc_type (s->id);
+  aout <<
+    "const strbuf &\n"
+    "rpc_print (const strbuf &sb, const " << wt << " &w, "
+    "int recdepth,\n"
+    "           const char *name, const char *prefix)\n"
+    "{\n"
+    "  const " << ct << " *o = reinterpret_cast<const " 
+       << ct << " *>(w.get_const_obj ());\n"
+    "  return o ? rpc_print (sb, *o, recdepth, name, prefix) : sb;\n"
     "}\n\n";
 }
 
@@ -889,6 +911,8 @@ print_struct (const rpc_struct *s)
     "  return sb;\n"
     "}\n";
   print_print (ct);
+  print_py_dump (ct);
+  print_print (pyw_type (s->id));
 }
 
 static void
@@ -907,6 +931,7 @@ dumpprint (const rpc_sym *s)
   switch (s->type) {
   case rpc_sym::STRUCT:
     print_struct (s->sstruct.addr ());
+    print_w_struct (s->sstruct.addr ());
     break;
   case rpc_sym::UNION:
     print_union (s->sunion.addr ());
@@ -1275,9 +1300,9 @@ dumpprog (const rpc_sym *s)
 	//aout << "  { convert_error, convert_error, wrap_error, "
 	//    << "dealloc_error },\n";
       }
-      aout << "  { " << py_converter (pyw_type (rp->arg)) << ",\n"
-	   << "    " << py_converter (pyw_type (rp->res)) << ",\n"
-	   << "    unwrap<" << pyw_type (rp->res) << "> }\n";
+      aout << "  { vconvert<" << pyw_type (rp->arg) << ">,\n"
+	   << "    vconvert<" << pyw_type (rp->res) << ">,\n"
+	   << "    unwrap<" << pyw_type (rp->res) << "> },\n";
     }
     aout << "};\n\n";
   }

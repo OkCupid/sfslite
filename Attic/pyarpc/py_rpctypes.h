@@ -90,7 +90,15 @@ public:
   ~pyw_base_t () { Py_XDECREF (_obj); }
 
   bool init () ;
-  void alloc () { assert (_typ); _obj = _PyObject_New (_typ); }
+  void alloc () 
+  { 
+    if (_typ) 
+      _obj = _PyObject_New (_typ); 
+    else {
+      _obj = Py_None;
+      Py_INCREF (Py_None);
+    }
+  }
   bool clear ();
   PyObject *obj () { return _obj; }
 
@@ -99,6 +107,7 @@ public:
   bool set_obj (PyObject *o);
   bool safe_set_obj (PyObject *in);
   PyObject *get_obj ();
+  const PyObject *get_const_obj () const { return _obj; }
   PyObject *unwrap () ;
 
 protected:
@@ -134,6 +143,17 @@ private:
   int _sz;
 };
 
+class pyw_void : public pyw_base_t<pyw_void>
+{
+public:
+  pyw_void () : pyw_base_t<pyw_void> (NULL)
+  {
+    _obj = Py_None;
+    Py_INCREF (_obj);
+  }
+  bool init () { return true; }
+
+};
 
 
 //-----------------------------------------------------------------------
@@ -202,6 +222,8 @@ pyw_rpc_vec<T,M>::init ()
   
   return true;
 }
+
+ALLOC_DECL(pyw_void);
 
 //
 //
@@ -275,20 +297,13 @@ rpc_print (const strbuf &sb, const pyw_rpc_str<n> &pyobj,
 //     for wrapped objects, it will allocate the wrapper, and 
 //     add the object into the wrapper
 //
-#define CONVERT_DECL(T)                                        \
-extern void * T##_convert (PyObject *o, PyObject *e);             
-
-#define CONVERT_PY2PY_DECL(T)                                  \
-extern PyObject * T##_convert_py2py (PyObject *in);
-
-CONVERT_DECL(void);
 
 template<class T> struct converter_t {};
 
 template<class T> void *
 py_wrap (PyObject *o, PyObject *e)
 {
-  PyObject *out = converter_t<T>::convert (in);
+  PyObject *out = converter_t<T>::convert (in, e);
   if (!out) return NULL;
   T * ret = New T;
   ret->set_obj (out);
@@ -334,23 +349,27 @@ template<class T, size_t m> struct converter_t<pyw_rpc_vec<T,m> >
   }
 };
 
+template<> struct converter_t<pyw_void>
+{
+  static PyObject * convert (PyObject *in)
+  {
+    if (in && in != Py_None) {
+      PyErr_SetString (PyExc_TypeError, "expected void argument");
+      return NULL;
+    }
+    Py_INCREF (Py_None);
+    return Py_None;
+  }
+};
+
+template<class T> void *
+vconvert (PyObject *in, PyObject *ignore)
+{
+  return static_cast<void *> (converter_t<T>::convert (in));
+}
+
 void *convert_error (PyObject *o, PyObject *e);
 PyObject *unwrap_error (void *);
-
-//
-//-----------------------------------------------------------------------
-
-//-----------------------------------------------------------------------
-// assign_py_to_c
-//
-//  - given a python PyObject, assign it to its corresponding
-//    C type
-//  - calls convert eventually
-
-// -- applies for simple wrapped classes found in this file;
-//    compiled complex classes need to specialize this template
-template<class T> T * assign_py_to_c (T &t, PyObject *o)
-{ return t.safe_set_obj (o) ? &t : NULL; } 
 
 //
 //-----------------------------------------------------------------------
@@ -406,7 +425,8 @@ convert_int (PyObject *in)
 
 #define INT_CONVERTER(T)                                         \
 template<> struct converter_t<T> {                               \
-  PyObject *convert (PyObject *in) { return convert_int (in); }  \
+  static PyObject *convert (PyObject *in)                        \
+   { return convert_int (in); }                                  \
 };
 
 #define RPC_TRAVERSE_DECL(ptype)                                 \
@@ -419,12 +439,20 @@ RPC_TRAVERSE_DECL(pyw_##ctype)                                   \
 PY_RPC_TYPE2STR_DECL(ctype)                                      \
 RPC_PRINT_TYPE_DECL(pyw_##ctype)                                 \
 RPC_PRINT_DECL(pyw_##ctype)                                      \
-INT_CONVERTER(pyw_##ctype);
+INT_CONVERTER(pyw_##ctype);                                      \
+ALLOC_DECL(pyw_##ctype);
 
-INT_DO_ALL_H(u_int32_t, UnsignedLong)
-INT_DO_ALL_H(int32_t, Long)
-INT_DO_ALL_H(u_int64_t, UnsignedLongLong)
-INT_DO_ALL_H(int64_t, LongLong)
+INT_DO_ALL_H(u_int32_t, UnsignedLong);
+INT_DO_ALL_H(int32_t, Long);
+INT_DO_ALL_H(u_int64_t, UnsignedLongLong);
+INT_DO_ALL_H(int64_t, LongLong);
+
+RPC_TRAVERSE_DECL(pyw_void);
+RPC_PRINT_TYPE_DECL (pyw_void);
+RPC_PRINT_DECL(pyw_void);
+PY_RPC_TYPE2STR_DECL(void);
+XDR_DECL(pyw_void);
+ALLOC_DECL(pyw_void);
 
 //
 //-----------------------------------------------------------------------
