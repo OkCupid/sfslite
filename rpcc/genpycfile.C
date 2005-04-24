@@ -754,14 +754,10 @@ dump_setter (const str &cl, const rpc_decl *d)
        << "{\n"
        << "  if (value == NULL) {\n"
        << "    PyErr_SetString(PyExc_RuntimeError, "
-       << "\"Unexpected NULL first attribute\");\n"
+       << "\"Unexpected NULL arg to setter\");\n"
        << "    return -1;\n"
        << "  }\n"
-       << "  PyObject *o = " << py_converter (d) << " (value);\n"
-       << "  if (!o) return -1;\n"
-       << "  self->" << d->id << ".set_obj (o);\n"
-       << "\n"
-       << "  return 0;\n"
+       << "  return self->" << d->id << ".safe_set_obj (value) ? 0 : -1;\n"
        << "};\n\n";
 }
 
