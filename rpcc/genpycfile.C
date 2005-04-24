@@ -273,7 +273,7 @@ get_inner_obj (const str &vn, const str &ct)
        << "    return false;\n"
        << "  }\n"
        << "  " << ct << " *" << vn 
-       << " = reinterpret_cast<" << ct << " *> (_obj);\n" ;
+       << " = casted_obj ();\n" ;
 
   return bout;
 }
@@ -446,8 +446,7 @@ dump_w_rpc_traverse (const rpc_struct *rs)
   aout << "template<class T> bool\n"
        << "rpc_traverse (T &t, " << wt << " &wo)\n"
        << "{\n"
-       << "  " << ct << " *io = reinterpret_cast<" << ct 
-       <<                         " *> (wo.get_obj ());\n"
+       << "  " << ct << " *io = wo.casted_obj ();\n"
        << "  if (!io) {\n"
        << "    PyErr_SetString (PyExc_UnboundLocalError,\n"
        << "                     \"uninitialized XDR field\");\n"
@@ -861,8 +860,7 @@ print_w_struct (const rpc_struct *s)
     "int recdepth,\n"
     "           const char *name, const char *prefix)\n"
     "{\n"
-    "  const " << ct << " *o = reinterpret_cast<const " 
-       << ct << " *>(w.get_const_obj ());\n"
+    "  const " << ct << " *o = w.const_casted_obj ();\n"
     "  return o ? rpc_print (sb, *o, recdepth, name, prefix) : sb;\n"
     "}\n\n";
 }
@@ -973,9 +971,11 @@ dump_w_class (const rpc_struct *rs)
   str ct = pyc_type (rs->id);
   str wt = pyw_type (rs->id);
   str pt = py_type (rs->id);
-  aout << "struct " << wt << " : public pyw_base_t<" << wt << ">\n"
+  aout << "struct " << wt << " : public pyw_base_t<" << wt << ", "
+       << ct << " >\n"
        << "{\n"
-       << "  " << wt << " () : pyw_base_t<" << wt << "> (&" << pt << ")\n"
+       << "  " << wt << " () : pyw_base_t<" << wt << ", " 
+       <<                             ct << " > (&" << pt << ")\n"
        << "  { alloc (); }\n\n"
        << "  bool init ();\n"
        << "  bool clear ();\n"
