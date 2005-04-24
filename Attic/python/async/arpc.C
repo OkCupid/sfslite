@@ -110,11 +110,10 @@ py_aclnt_t_init (py_aclnt_t *self, PyObject *args, PyObject *kwds)
 }
 
 struct call_bundle_t {
-  call_bundle_t (void *a, void *r, const py_rpcgen_table_t *t, PyObject *c)
-    : arg (a), res (r), tab (t), cb (c) {}
-  void *arg;
-  void *res;
-  const py_rpcgen_table_t *tab;
+  call_bundle_t (pyw_base_t *a, pyw_base_t *r, PyObject *c)
+    : arg (a), res (r), cb (c) {}
+  pyw_base_t *arg;
+  pyw_base_t *res;
   PyObject *cb;
 };  
 
@@ -122,14 +121,20 @@ static void
 py_aclnt_t_call_cb (call_bundle_t *bun, clnt_stat e)
 {
   if (bun->cb) {
-    PyObject *res = bun->tab->unwrap_res (bun->res); 
-    PyObject *arglist = Py_BuildValue ("(iO)", (int )e, res);
-    PyObject_CallObject (bun->cb, arglist);
-    Py_DECREF (arglist);
+    PyObject *res = bun->res->unwrap ();
+    if (res) {
+      // unwrap returns non-NULL only if the result was actually
+      // set; note that in the case of an XDR marshalling failure,
+      // it will not be set.  However, unwrap will still delete the
+      // wrapper object as required.
+      PyObject *arglist = Py_BuildValue ("(iO)", (int )e, res);
+      PyObject_CallObject (bun->cb, arglist);
+      Py_DECREF (arglist);
+    }
   } else 
-    bun->tab->decref_res (bun->res);
+    delete bun->res;
 
-  bun->tab->decref_arg (bun->arg);
+  delete bun->arg;
   Py_XDECREF (bun->cb);
 
   delete bun;
@@ -140,12 +145,13 @@ py_aclnt_t_call (py_aclnt_t *self, PyObject *args)
 {
   int procno = 0;
   PyObject *rpc_args_in = NULL;
-  void *rpc_args_out = NULL;
+  pyw_base_t *rpc_args_out = NULL;
   PyObject *cb = NULL ;
-  PyObject *res = NULL;
+  pyw_base_t *res = NULL;
   callbase *b = NULL;
   call_bundle_t *bundle;
   const py_rpcgen_table_t *pyt;
+  const rpcgen_table *tbl;
 
   if (!PyArg_ParseTuple (args, "i|OO", &procno, &rpc_args_in, &cb))
     return NULL;
@@ -157,6 +163,7 @@ py_aclnt_t_call (py_aclnt_t *self, PyObject *args)
   }
 
   pyt = &self->py_prog->pytab[procno];
+  tbl = &self->py_prog->prog->tbl[procno];
 
   if (cb && !PyCallable_Check (cb)) {
     PyErr_SetString (PyExc_TypeError, "expected a callable object as 3rd arg");
@@ -164,23 +171,24 @@ py_aclnt_t_call (py_aclnt_t *self, PyObject *args)
   }
 
   if (!rpc_args_in) {
-    rpc_args_out = (PyObject *)self->py_prog->prog->tbl[procno].alloc_arg ();
+    if (!(rpc_args_out = static_cast<pyw_base_t *> (tbl->alloc_arg ()))) {
+      PyErr_SetString (PyExc_MemoryError, "out of memory in alloc_arg");
+      goto fail;
+    }
   } else {
-    // for primitive types, we need to convert to a wrapper type
-    // so that the XDR marshalling routines will not puke. 
-    // for more complex types, which are already C++ objects,
-    // this should not be a problem, and hence, convert
-    // is a no-op
-    if (!(rpc_args_out = pyt->convert_arg (rpc_args_in, AsyncRPC_Exception)))
+    if (!(rpc_args_out = pyt->wrap_arg (rpc_args_in, AsyncRPC_Exception)))
       goto fail;
   }
 
-  res = (PyObject *)self->py_prog->prog->tbl[procno].alloc_res ();
-
+  if (!(res = static_cast<pyw_base_t *> (tbl->alloc_res ()))) {
+    PyErr_SetString (PyExc_MemoryError, "out of memory in alloc_res");
+    goto fail;
+  }
+    
   if (cb)
     Py_INCREF (cb);
 
-  bundle = New call_bundle_t (rpc_args_out, res, pyt, cb);
+  bundle = New call_bundle_t (rpc_args_out, res, cb);
 
   b = self->cli->call (procno, rpc_args_out, res, 
 		       wrap (py_aclnt_t_call_cb, bundle));
@@ -191,8 +199,8 @@ py_aclnt_t_call (py_aclnt_t *self, PyObject *args)
   Py_INCREF (Py_None);
   return Py_None;
  fail:
-  if (rpc_args_out) pyt->decref_arg (rpc_args_out);
-  if (res) pyt->decref_res (res);
+  if (rpc_args_out) delete rpc_args_out ;
+  if (res) delete res;
   return NULL;
 }
 

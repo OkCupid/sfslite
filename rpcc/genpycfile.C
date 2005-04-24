@@ -971,12 +971,15 @@ dump_w_class (const rpc_struct *rs)
   str ct = pyc_type (rs->id);
   str wt = pyw_type (rs->id);
   str pt = py_type (rs->id);
-  aout << "struct " << wt << " : public pyw_base_t<" << wt << ", "
+  aout << "struct " << wt << " : public pyw_tmpl_t<" << wt << ", "
        << ct << " >\n"
        << "{\n"
-       << "  " << wt << " () : pyw_base_t<" << wt << ", " 
+       << "  " << wt << " () : pyw_tmpl_t<" << wt << ", " 
        <<                             ct << " > (&" << pt << ")\n"
-       << "  { alloc (); }\n\n"
+       << "    { alloc (); }\n"
+       << "  " << wt << "(PyObject *o) :\n" 
+       << "    pyw_tmpl_t<" << wt << ", " << ct << " > (o, &" 
+       <<                  pt << ") {}\n"
        << "  bool init ();\n"
        << "  bool clear ();\n"
        << "};\n\n";
@@ -1300,9 +1303,7 @@ dumpprog (const rpc_sym *s)
 	//aout << "  { convert_error, convert_error, wrap_error, "
 	//    << "dealloc_error },\n";
       }
-      aout << "  { vconvert<" << pyw_type (rp->arg) << ">,\n"
-	   << "    vconvert<" << pyw_type (rp->res) << ">,\n"
-	   << "    unwrap<" << pyw_type (rp->res) << "> },\n";
+      aout << "  { py_wrap<" << pyw_type (rp->arg) << "> },\n";
     }
     aout << "};\n\n";
   }

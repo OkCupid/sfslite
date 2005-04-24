@@ -59,22 +59,76 @@ rpc_traverse (XDR *xdrs, pyw_void &v)
 }
 
 
-void *
-convert_error (PyObject *in, PyObject *rpc_exception)
+pyw_base_t *
+wrap_error (PyObject *in, PyObject *rpc_exception)
 {
   PyErr_SetString (rpc_exception, "undefined RPC procedure called");
-  return NULL;
-}
-
-PyObject *
-unwrap_error (void *)
-{
   return NULL;
 }
 
 
 py_rpcgen_table_t py_rpcgen_error = 
 {
-  convert_error, convert_error, unwrap_error
+  wrap_error
 };
 
+
+bool
+pyw_base_t::clear ()
+{
+  if (_obj) {
+    Py_XDECREF (_obj);
+    _obj = NULL;
+  }
+  return true;
+}
+
+bool
+pyw_base_t::set_obj (PyObject *o)
+{
+  PyObject *tmp = _obj;
+  _obj = o; // no INCREF since usually just constructed
+  Py_XDECREF (tmp);
+  return true;
+}
+
+PyObject *
+pyw_base_t::get_obj ()
+{
+  Py_XINCREF (_obj);
+  return _obj;
+}
+
+
+PyObject *
+pyw_base_t::unwrap ()
+{
+  PyObject *ret = get_obj ();
+  delete this;
+  return ret;
+}
+
+bool
+pyw_base_t::init ()
+{
+  _obj = NULL;
+  _typ = NULL;
+  return true;
+}
+
+
+bool
+pyw_base_t::alloc ()
+{
+  if (_typ) {
+    _obj = _typ->tp_new (_typ, NULL, NULL);
+    if (!_obj) {
+      PyErr_SetString (PyExc_MemoryError, "out of memory in allocator");
+      return false;
+    }
+  } else {
+    _obj = Py_None;
+    Py_INCREF (Py_None);
+  }
+  return true;
+}

@@ -70,45 +70,34 @@
 //    - standard from DM's XDR library.
 //
 
-struct py_rpcgen_table_t {
-  void *(*convert_arg) (PyObject *arg, PyObject *rpc_exception);
-  void *(*convert_res) (PyObject *arg, PyObject *rpc_exception);
-  PyObject *(*unwrap_res) (void *in);
-};
-
-extern py_rpcgen_table_t py_rpcgen_error;
 
 //-----------------------------------------------------------------------
 // Class Definitions
 //
 
-template<class W, class P>
 class pyw_base_t {
 public:
   pyw_base_t () : _obj (NULL), _typ (NULL) {}
   pyw_base_t (PyTypeObject *t) : _obj (NULL), _typ (t) {}
+  pyw_base_t (PyObject *o, PyTypeObject *t) : _obj (o), _typ (t) {}
   ~pyw_base_t () { Py_XDECREF (_obj); }
 
-  bool init () ;
-  void alloc () 
-  { 
-    if (_typ) 
-      _obj = _PyObject_New (_typ); 
-    else {
-      _obj = Py_None;
-      Py_INCREF (Py_None);
-    }
-  }
+  // sometimes we allocate room for objects via Python's memory
+  // allocation routines.  Doing so does not do "smart" initialization,
+  // as C++ would do when you call "new."  We can mimic this behavior,
+  // though, with a call to tp_alloc (), and then by calling the init()
+  // functions.  Note that the init functions should not at all access
+  // memory, since memory will be garbage.
+  bool init (); 
+
+  bool alloc ();
   bool clear ();
   PyObject *obj () { return _obj; }
-  P *casted_obj () { return reinterpret_cast<P *> (_obj); }
-  const P *const_casted_obj () const 
-  { return reinterpret_cast<const P *> (_obj); }
 
   // takes a New reference (not a borrowed reference) and hence does
   // not INC reference count
   bool set_obj (PyObject *o);
-  bool safe_set_obj (PyObject *in);
+
   PyObject *get_obj ();
   const PyObject *get_const_obj () const { return _obj; }
   PyObject *unwrap () ;
@@ -118,12 +107,27 @@ protected:
   PyTypeObject *_typ;
 };
 
+template<class W, class P>
+class pyw_tmpl_t : public pyw_base_t {
+public:
+  pyw_tmpl_t (PyTypeObject *t) : pyw_base_t (t) {}
+  pyw_tmpl_t (PyObject *o, PyTypeObject *t) : pyw_base_t (o, t) {}
+
+  P *casted_obj () { return reinterpret_cast<P *> (_obj); }
+  const P *const_casted_obj () const 
+  { return reinterpret_cast<const P *> (_obj); }
+
+  bool safe_set_obj (PyObject *in);
+};
+
 template<size_t M = RPC_INFINITY>
-class pyw_rpc_str : public pyw_base_t<pyw_rpc_str<M>, PyStringObject > 
+class pyw_rpc_str : public pyw_tmpl_t<pyw_rpc_str<M>, PyStringObject > 
 {
 public:
   pyw_rpc_str () : 
-    pyw_base_t<pyw_rpc_str<M>, PyStringObject > (&PyString_Type) {}
+    pyw_tmpl_t<pyw_rpc_str<M>, PyStringObject > (&PyString_Type) {}
+  pyw_rpc_str (PyObject *o) : 
+    pyw_tmpl_t<pyw_rpc_str<M>, PyStringObject > (o, &PyString_Type) {}
   char *get (size_t *sz) const;
   const char * get () const { return PyString_AsString (_obj); }
   bool set (char *buf, size_t len);
@@ -132,11 +136,15 @@ public:
 };
 
 template<class T, size_t max>
-class pyw_rpc_vec : public pyw_base_t<pyw_rpc_vec<T, max>, PyListObject > 
+class pyw_rpc_vec : public pyw_tmpl_t<pyw_rpc_vec<T, max>, PyListObject > 
 {
 public:
   pyw_rpc_vec () : 
-    pyw_base_t<pyw_rpc_vec<T, max>, PyListObject > (&PyList_Type), _sz (0) {}
+    pyw_tmpl_t<pyw_rpc_vec<T, max>, PyListObject > (&PyList_Type), _sz (0) {}
+  pyw_rpc_vec (PyObject *o) : 
+    pyw_tmpl_t<pyw_rpc_vec<T, max>, PyListObject > (o, &PyList_Type), _sz (0) 
+  {}
+
   int size ();
   bool get_slot (int i, T *out) ;
   bool set_slot (PyObject *el, int i);
@@ -147,37 +155,36 @@ private:
   int _sz;
 };
 
-class pyw_void : public pyw_base_t<pyw_void, PyObject>
+class pyw_void : public pyw_tmpl_t<pyw_void, PyObject>
 {
 public:
-  pyw_void () : pyw_base_t<pyw_void, PyObject> (NULL)
+  pyw_void () : pyw_tmpl_t<pyw_void, PyObject> (NULL)
   {
     _obj = Py_None;
     Py_INCREF (_obj);
   }
+  pyw_void (PyObject *o) : pyw_tmpl_t<pyw_void, PyObject> (o, NULL) {}
   bool init () { return true; }
 
 };
 
 
+
 //-----------------------------------------------------------------------
-// 
-// Wrap/Unwrap functions
+// py_rpcgen_table_t
 //
-//  - wrapped basic types need to be able to give up their wrapped
-//    objects and deallocate themselves, while complex, compiled
-//    XDR types are native Python objects, and do not.  These
-//    functions help to navigate this difference.
-//
+//   we need to add just one more method to the basic rpcgen_table,
+//   which is for wrapping generic Python objects in their appropriate
+//   typed C++ wrappers.
+//  
 
-template<class T> PyObject *unwrap (void *v) 
-{ 
-  return static_cast<T *> (v)->unwrap (); 
-}
+struct py_rpcgen_table_t {
+  pyw_base_t *(*wrap_arg) (PyObject *arg, PyObject *rpc_exception);
+};
+
+extern py_rpcgen_table_t py_rpcgen_error;
 
 //
-// end of wrapping functions
-// 
 //-----------------------------------------------------------------------
 
 //-----------------------------------------------------------------------
@@ -204,7 +211,7 @@ extern void * T##_alloc ();
 template<size_t M> bool
 pyw_rpc_str<M>::init ()
 {
-  if (!pyw_base_t<pyw_rpc_str<M>, PyStringObject >::init ())
+  if (!pyw_tmpl_t<pyw_rpc_str<M>, PyStringObject >::init ())
     return false;
   _typ = &PyString_Type;
   return true;
@@ -213,7 +220,7 @@ pyw_rpc_str<M>::init ()
 template<class T, size_t M> bool
 pyw_rpc_vec<T,M>::init ()
 {
-  if (!pyw_base_t<pyw_rpc_vec<T,M >, PyListObject >::init ())
+  if (!pyw_tmpl_t<pyw_rpc_vec<T,M >, PyListObject >::init ())
     return false;
   _typ = &PyList_Type;
   PyObject *l = PyList_New (0);
@@ -304,14 +311,17 @@ rpc_print (const strbuf &sb, const pyw_rpc_str<n> &pyobj,
 
 template<class W> struct converter_t {};
 
-template<class W> void *
-py_wrap (PyObject *o, PyObject *e)
+template<class W> pyw_base_t *
+py_wrap (PyObject *in, PyObject *dummy)
 {
-  PyObject *out = converter_t<W>::convert (in, e);
+  PyObject *out = converter_t<W>::convert (in);
   if (!out) return NULL;
-  W * ret = New W;
-  ret->set_obj (out);
-  return static_cast<void *> (ret);
+  W * ret = New W (out);
+  if (!ret) {
+    PyErr_SetString (PyExc_MemoryError, "out of memory in py_wrap");
+    return NULL;
+  }
+  return ret;
 }
 
 template<size_t m> 
@@ -367,14 +377,8 @@ template<> struct converter_t<pyw_void>
   }
 };
 
-template<class T> void *
-vconvert (PyObject *in, PyObject *ignore)
-{
-  return static_cast<void *> (converter_t<T>::convert (in));
-}
-
-void *convert_error (PyObject *o, PyObject *e);
 PyObject *unwrap_error (void *);
+pyw_base_t *wrap_error (PyObject *o, PyObject *e);
 
 //
 //-----------------------------------------------------------------------
@@ -385,11 +389,11 @@ PyObject *unwrap_error (void *);
 
 
 #define INT_XDR_CLASS(ctype,ptype)                               \
-class pyw_##ctype : public pyw_base_t<pyw_##ctype, PyLongObject> \
+class pyw_##ctype : public pyw_tmpl_t<pyw_##ctype, PyLongObject> \
 {                                                                \
 public:                                                          \
   pyw_##ctype ()                                                 \
-    : pyw_base_t<pyw_##ctype, PyLongObject> (&PyLong_Type) {}    \
+    : pyw_tmpl_t<pyw_##ctype, PyLongObject> (&PyLong_Type) {}    \
   ctype get () const                                             \
   {                                                              \
     if (!_obj) {                                                 \
@@ -405,7 +409,7 @@ public:                                                          \
   }                                                              \
   bool init ()                                                   \
   {                                                              \
-    if (!pyw_base_t<pyw_##ctype, PyLongObject>::init ())         \
+    if (!pyw_tmpl_t<pyw_##ctype, PyLongObject>::init ())         \
       return false;                                              \
     _typ = &PyLong_Type;                                         \
     return true;                                                 \
@@ -684,49 +688,7 @@ pyw_rpc_vec<T,m>::shrink (size_t n)
 //
 
 template<class W, class P> bool
-pyw_base_t<W,P>::clear ()
-{
-  if (_obj) {
-    Py_XDECREF (_obj);
-    _obj = NULL;
-  }
-  return true;
-}
-
-template<class W, class P> bool
-pyw_base_t<W,P>::set_obj (PyObject *o)
-{
-  PyObject *tmp = _obj;
-  _obj = o; // no INCREF since usually just constructed
-  Py_XDECREF (tmp);
-  return true;
-}
-
-template<class W, class P> PyObject *
-pyw_base_t<W,P>::get_obj ()
-{
-  Py_XINCREF (_obj);
-  return _obj;
-}
-
-template<class W, class P> PyObject *
-pyw_base_t<W,P>::unwrap ()
-{
-  PyObject *ret = get_obj ();
-  delete this;
-  return ret;
-}
-
-template<class W, class P> bool
-pyw_base_t<W,P>::init ()
-{
-  _obj = NULL;
-  _typ = NULL;
-  return true;
-}
-
-template<class W, class P> bool
-pyw_base_t<W,P>::safe_set_obj (PyObject *in)
+pyw_tmpl_t<W,P>::safe_set_obj (PyObject *in)
 {
   PyObject *out = converter_t<W>::convert (in);
   return out ? set_obj (out) : false;
@@ -735,15 +697,5 @@ pyw_base_t<W,P>::safe_set_obj (PyObject *in)
 //
 //-----------------------------------------------------------------------
 
-
-// XXX trash heap
-#if 0
-template<class T> inline bool
-assign_py_to_c (T &t, PyObject *o)
-{
-  PyErr_SetString (PyExc_RuntimeError, "assign_py_to_c not defined");
-  return false;
-}
-#endif
 
 #endif
