@@ -1074,7 +1074,7 @@ punionmacro (str prefix, const rpc_union *rs, const rpc_utag *rt)
   if (rt->tag.type == "void")
     aout << prefix << "voidaction; \\\n";
   else
-    aout << prefix << "action (" << rt->tag.type << ", "
+    aout << prefix << "action (" << pyw_type (rt->tag.type) << ", "
 	 << rt->tag.id << "); \\\n";
   aout << prefix << "break; \\\n";
 }
@@ -1093,6 +1093,7 @@ dumpunion (const rpc_sym *s)
 
   const rpc_union *rs = s->sunion.addr ();
   aout << "\nstruct " << rs->id << " {\n"
+       << "  PyObject_HEAD\n"
        << "  const " << rs->tagtype << " " << rs->tagid << ";\n"
        << "  union {\n"
        << "    union_entry_base _base;\n";
