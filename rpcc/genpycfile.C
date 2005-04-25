@@ -1087,14 +1087,17 @@ punionmacrodefault (str prefix, const rpc_union *rs)
 }
 
 static void
-dumpunion (const rpc_sym *s)
+sfs_dumpunion (const rpc_sym *s)
 {
   bool hasdefault = false;
 
+
   const rpc_union *rs = s->sunion.addr ();
-  aout << "\nstruct " << rs->id << " {\n"
+  str wt = pyc_type (rs->id);
+  str twt = pyc_type (rs->tagtype);
+  aout << "\nstruct " << wt << " {\n"
        << "  PyObject_HEAD\n"
-       << "  const " << rs->tagtype << " " << rs->tagid << ";\n"
+       << "  const " << twt << " " << rs->tagid << ";\n"
        << "  union {\n"
        << "    union_entry_base _base;\n";
   for (const rpc_utag *rt = rs->cases.base (); rt < rs->cases.lim (); rt++) {
@@ -1110,68 +1113,101 @@ dumpunion (const rpc_sym *s)
   }
   aout << "  };\n\n";
 
-  aout << "#define rpcunion_tag_" << rs->id << " " << rs->tagid << "\n";
-  aout << "#define rpcunion_switch_" << rs->id
+  aout << "#define rpcunion_tag_" << wt << " " << rs->tagid << "\n";
+  aout << "#define rpcunion_switch_" << wt 
        << "(swarg, action, voidaction, defaction) \\\n";
   py_pswitch ("  ", rs, "swarg", punionmacro, " \\\n", punionmacrodefault);
 
   aout << "\n"
-       << "  " << rs->id << " (" << rs->tagtype << " _tag = ("
-       << rs->tagtype << ") 0) : " << rs->tagid << " (_tag)\n"
+       << "  " << wt << " (" << twt << " _tag = ("
+       << twt << ") 0) : " << rs->tagid << " (_tag)\n"
        << "    { _base.init (); set_" << rs->tagid << " (_tag); }\n"
 
-       << "  " << rs->id << " (" << "const " << rs->id << " &_s)\n"
+       << "  " << wt << " (" << "const " << wt << " &_s)\n"
        << "    : " << rs->tagid << " (_s." << rs->tagid << ")\n"
        << "    { _base.init (_s._base); }\n"
-       << "  ~" << rs->id << " () { _base.destroy (); }\n"
-       << "  " << rs->id << " &operator= (const " << rs->id << " &_s) {\n"
-       << "    const_cast<" << rs->tagtype << " &> ("
+       << "  ~" << wt << " () { _base.destroy (); }\n"
+       << "  " << wt << " &operator= (const " << wt << " &_s) {\n"
+       << "    const_cast<" << twt << " &> ("
        << rs->tagid << ") = _s." << rs->tagid << ";\n"
        << "    _base.assign (_s._base);\n"
        << "    return *this;\n"
        << "  }\n\n";
 
-  aout << "  void set_" << rs->tagid << " (" << rs->tagtype << " _tag) {\n"
-       << "    const_cast<" << rs->tagtype << " &> (" << rs->tagid
+  aout << "  void set_" << rs->tagid << " (" << twt << " _tag) {\n"
+       << "    const_cast<" << twt << " &> (" << rs->tagid
        << ") = _tag;\n"
-       << "    rpcunion_switch_" << rs->id << "\n"
+       << "    rpcunion_switch_" << wt << "\n"
        << "      (_tag, RPCUNION_SET, _base.destroy (), _base.destroy ());\n"
        << "  }\n";
 
-#if 0
-  aout << "  void Xstompcast () {\n"
-       << "    rpcunion_switch_" << rs->id << "\n"
-       << "      (" << rs->tagid << ", RPCUNION_STOMPCAST,\n"
-       << "       _base.destroy (), _base.destroy ());\n"
-       << "  }\n";
-#endif
   aout << "};\n";
 
   aout << "\ntemplate<class T> bool\n"
-       << "rpc_traverse (T &t, " << rs->id << " &obj)\n"
+       << "rpc_traverse (T &t, " << wt << " &obj)\n"
        << "{\n"
-       << "  " << rs->tagtype << " tag = obj." << rs->tagid << ";\n"
+       << "  " << twt << " tag = obj." << rs->tagid << ";\n"
        << "  if (!rpc_traverse (t, tag))\n"
        << "    return false;\n"
        << "  if (tag != obj." << rs->tagid << ")\n"
        << "    obj.set_" << rs->tagid << " (tag);\n\n"
-       << "  rpcunion_switch_" << rs->id << "\n"
+       << "  rpcunion_switch_" << wt << "\n"
        << "    (obj." << rs->tagid << ", RPCUNION_TRAVERSE, "
        << "return true, return false);\n"
        << "}\n"
        << "inline bool\n"
        << "rpc_traverse (const stompcast_t &s, " << rs->id << " &obj)\n"
        << "{\n"
-       << "  rpcunion_switch_" << rs->id << "\n"
+       << "  rpcunion_switch_" << wt << "\n"
        << "    (obj." << rs->tagid << ", RPCUNION_REC_STOMPCAST,\n"
        << "     obj._base.destroy (); return true, "
        << "obj._base.destroy (); return true;);\n"
        << "}\n";
-  pmshl (rs->id);
-  // aout << "RPC_TYPE_DECL (" << rs->id << ")\n";
-  aout << "RPC_UNION_DECL (" << rs->id << ")\n";
+  aout << "RPC_UNION_DECL (" << wt << ")\n";
 
   aout << "\n";
+}
+
+static void
+dump_union_dealloc_func (const rpc_union *u)
+{
+  str ct = pyc_type (u->id);
+  aout << "static void\n"
+       << ct << "_dealloc (" << ct << " *self)\n"
+       << "{\n"
+       << "  _base.destroy ();\n"
+       << "  self->ob_type->tp_free ((PyObject *) self);\n"
+       << "}\n\n";
+}
+
+static void
+dump_union_new_func (const rpc_union *u)
+{
+  
+  str ct = pyc_type (u->id);
+  aout << "static PyObject *\n"
+       << ct << "_new (PyTypeObject *type, PyObject *args, PyObject *kwds)\n"
+       << "{\n"
+       << "  " << ct << " *self;\n"
+       << "  if (!(self = (" << ct << " *)type->tp_alloc (type, 0)))\n"
+       << "    return NULL;\n"
+       << "  int arg = 0;\n"
+       << "  if (!PyArg_ParseTuple (args, \"|i\", &arg))\n"
+       << "    return NULL;\n"
+       << "  self->_base.init ();\n"
+       << "  self->set_" << u->tagid << " (arg);\n"
+       << "  return self;\n"
+       << "}\n\n";
+
+}
+
+static void
+dumpunion (const rpc_sym *s)
+{
+  const rpc_union *u = s->sunion.addr ();
+  sfs_dumpunion (s);
+  dump_union_dealloc_func (u);
+  dump_union_new_func (u);
 }
 
 static void
