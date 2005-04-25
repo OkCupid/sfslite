@@ -14,6 +14,17 @@ struct baz_t {
 	bar_t bar;
 };
 
+enum aa_t { A1 = 1, A2 = 2, A3 = 3 };
+
+union bb_t switch (aa_t aa) {
+	case A1:
+		foo_t f;
+	case A2:
+		baz_t b;
+	default:
+		int i;
+};
+
 program FOO_PROG {
 	version FOO_VERS {
 
@@ -28,5 +39,8 @@ program FOO_PROG {
 
 		bar_t
 		FOO_BAZ (baz_t) = 3;
+
+		int
+		FOO_BB (bb_t) = 4;
 	} = 1;
 } = 100;

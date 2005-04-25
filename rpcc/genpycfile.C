@@ -480,6 +480,7 @@ dump_rpc_traverse (const rpc_struct *rs)
   aout << "}\n\n";
 }
 
+#if 0
 static void
 dump_class_member_frag (str prefix, str typ, const rpc_decl *d)
 {
@@ -488,27 +489,19 @@ dump_class_member_frag (str prefix, str typ, const rpc_decl *d)
        << "\"" << d->id << " field of object of type " << typ << "\"},\n"
     ;
 }
-
-static void
-dump_class_members (const rpc_struct *rs)
-{
-  aout << "static PyMemberDef " << pyc_type (rs->id) << "_members[] = {\n";
-
-  // use get/setters for now
-#if 0 
-  for (const rpc_decl *rd = rs->decls.base (); rd < rs->decls.lim (); rd++) {
-    dump_class_member_frag ("  ", pyc_type (rs->id), rd);
-  }
 #endif
 
-  aout << "  {NULL}\n"
+static void
+dump_class_members (const str &t)
+{
+  aout << "static PyMemberDef " << t << "_members[] = {\n"
+       << "  {NULL}\n"
        << "};\n\n" ;
 }
 
 static void
-dump_class_method_decls (const rpc_struct *rs)
+dump_class_method_decls (const str &ct)
 {
-  str ct = pyc_type (rs->id);
   aout << "PyObject * " << ct << "_pydump (" << ct << " *self);\n"
        << "PyObject * " << ct << "_str2xdr (" << ct 
        << " *self, PyObject *args);\n"
@@ -572,9 +565,8 @@ dump_class_methods (const rpc_struct *rs)
 }
 
 static void
-dump_class_methods_struct (const rpc_struct *rs)
+dump_class_methods_struct (const str &ct)
 {
-  str ct = pyc_type (rs->id);
   aout << "static PyMethodDef " << ct << "_methods[] = {\n"
        << "  {\"dump\", (PyCFunction)" << ct << "_pydump, "
        <<        " METH_NOARGS,\n"
@@ -676,9 +668,9 @@ dump_prog_py_obj (const rpc_program *prog)
 }
 
 static void
-dump_getter_decl (const str &cl, const rpc_decl *d)
+dump_getter_decl (const str &cl, const str &id)
 {
-  aout << "PyObject * " << cl << "_get" << d->id 
+  aout << "PyObject * " << cl << "_get" << id 
        << " (" << cl << " *self, void *closure);\n";
 }
 
@@ -764,17 +756,17 @@ dump_setter (const str &cl, const rpc_decl *d)
 
 
 static void
-dump_setter_decl (const str &cl, const rpc_decl *d)
+dump_setter_decl (const str &cl, const str &id)
 {
-  aout << "int " << cl << "_set" << d->id 
+  aout << "int " << cl << "_set" << id
        << " (" << cl << " *self, PyObject *value, void *closure);\n";
 }
 
 static void
-dump_getsetter_decl (const str &cl, const rpc_decl *d)
+dump_getsetter_decl (const str &cl, const str &id)
 {
-  dump_getter_decl (cl, d);
-  dump_setter_decl (cl, d);
+  dump_getter_decl (cl, id);
+  dump_setter_decl (cl, id);
 }
 
 static void
@@ -785,10 +777,20 @@ dump_getsetter (const str &cl, const rpc_decl *d)
 }
 
 static void
-dump_getsetters_decls (const rpc_struct *rs)
+dump_getsetter_decls (const rpc_struct *rs)
 {
   for (const rpc_decl *rd = rs->decls.base (); rd < rs->decls.lim (); rd++)
-    dump_getsetter_decl (pyc_type (rs->id), rd);
+    dump_getsetter_decl (pyc_type (rs->id), rd->id);
+  aout << "\n\n";
+}
+
+static void
+dump_union_getsetter_decls (const rpc_union *u)
+{
+  str ct = pyc_type (u->id);
+  dump_getsetter_decl (ct, u->tagid);
+  for (const rpc_utag *rd = u->cases.base (); rd < u->cases.lim (); rd ++)
+    dump_getsetter_decl (ct, rd->tag.id);
   aout << "\n\n";
 }
 
@@ -800,12 +802,13 @@ dump_getsetters (const rpc_struct *rs)
 }
 
 static void
-dump_getsetter_table_row (const str &prfx, const str &typ, const rpc_decl *d)
+dump_getsetter_table_row (const str &prfx, const str &typ, const str &id,
+			  const str &txt)
 {
-  aout << prfx << "{\"" << d->id << "\", "
-       <<            "(getter)" << typ << "_get" << d->id << ", "
-       <<            "(setter)" << typ << "_set" << d->id << ", "
-       <<            "\"class variable: " << d->id << "\", "
+  aout << prfx << "{\"" << id << "\", "
+       <<            "(getter)" << typ << "_get" << id << ", "
+       <<            "(setter)" << typ << "_set" << id << ",\n"
+       << prfx << " \"" << txt << ": " << id << "\", "
        <<            "NULL },\n" ;
 }
 
@@ -815,7 +818,19 @@ dump_getsetter_table (const rpc_struct *rs)
   str ct = pyc_type (rs->id);
   aout << "static PyGetSetDef " << ct << "_getsetters[] = {\n";
   for (const rpc_decl *rd = rs->decls.base (); rd < rs->decls.lim (); rd++)
-    dump_getsetter_table_row ("  ", ct, rd);
+    dump_getsetter_table_row ("  ", ct, rd->id, "class variable");
+  aout << "  {NULL}\n"
+       << "};\n\n";
+}
+
+static void
+dump_union_getsetter_table (const rpc_union *u)
+{
+  str ct = pyc_type (u->id);
+  aout << "static PyGetSetDef " << ct << "_getsetters[] = {\n";
+  dump_getsetter_table_row ("  ", ct, u->tagid, "union switch element");
+  for (const rpc_utag *rd = u->cases.base (); rd < u->cases.lim (); rd ++)
+    dump_getsetter_table_row ("  ", ct, rd->tag.id, "union case");
   aout << "  {NULL}\n"
        << "};\n\n";
 }
@@ -910,8 +925,60 @@ print_struct (const rpc_struct *s)
 }
 
 static void
-print_union (const rpc_union *u)
+print_case (str prefix, const rpc_union *rs, const rpc_utag *rt)
 {
+  if (rt->tag.type != "void")
+    aout
+      << prefix << "sb << sep;\n"
+      << prefix << "rpc_print (sb, *obj." << rt->tag.id << ", "
+      " recdepth, \"" << rt->tag.id << "\", npref);\n";
+  aout << prefix << "break;\n";
+}
+
+static void
+print_break (str prefix, const rpc_union *rs)
+{
+  aout << prefix << "break;\n";
+}
+
+
+static void
+print_union (const rpc_union *s)
+{
+  str ct = pyc_type (s->id);
+  aout <<
+    "const strbuf &\n"
+    "rpc_print (const strbuf &sb, const " << ct << " &obj, "
+    "int recdepth,\n"
+    "           const char *name, const char *prefix)\n"
+    "{\n"
+    "  if (name) {\n"
+    "    if (prefix)\n"
+    "      sb << prefix;\n"
+    "    sb << \"" << s->id << " \" << name << \" = \";\n"
+    "  };\n"
+    "  const char *sep;\n"
+    "  str npref;\n"
+    "  if (prefix) {\n"
+    "    npref = strbuf (\"%s  \", prefix);\n"
+    "    sep = \"\";\n"
+    "    sb << \"{\\n\";\n"
+    "  }\n"
+    "  else {\n"
+    "    sep = \", \";\n"
+    "    sb << \"{ \";\n"
+    "  }\n"
+    "  rpc_print (sb, obj." << s->tagid << ", recdepth, "
+    "\"" << s->tagid << "\", npref);\n";
+  pswitch ("  ", s, "obj." << s->tagid, print_case, "\n", print_break);
+  aout <<
+    "  if (prefix)\n"
+    "    sb << prefix << \"};\\n\";\n"
+    "  else\n"
+    "    sb << \" }\";\n"
+    "  return sb;\n"
+    "}\n";
+  print_print (ct);
 }
 
 static void
@@ -990,10 +1057,10 @@ dumpstruct (const rpc_sym *s)
   dump_class_py (rs);
   dump_class_dealloc_func (rs);
   dump_class_new_func (rs);
-  dump_class_members (rs);
-  dump_class_method_decls (rs);
-  dump_class_methods_struct (rs);
-  dump_getsetters_decls (rs);
+  dump_class_members (ct);
+  dump_class_method_decls (ct);
+  dump_class_methods_struct (ct);
+  dump_getsetter_decls (rs);
   dump_getsetter_table (rs);
   dump_class_init_func (rs);
   dump_object_table (rs);
@@ -1116,7 +1183,7 @@ sfs_dumpunion (const rpc_sym *s)
   aout << "#define rpcunion_tag_" << wt << " " << rs->tagid << "\n";
   aout << "#define rpcunion_switch_" << wt 
        << "(swarg, action, voidaction, defaction) \\\n";
-  py_pswitch ("  ", rs, "swarg", punionmacro, " \\\n", punionmacrodefault);
+  pswitch ("  ", rs, "swarg", punionmacro, " \\\n", punionmacrodefault);
 
   aout << "\n"
        << "  " << wt << " (" << twt << " _tag = ("
@@ -1205,9 +1272,15 @@ static void
 dumpunion (const rpc_sym *s)
 {
   const rpc_union *u = s->sunion.addr ();
+  str ct = pyc_type (u->id);
   sfs_dumpunion (s);
   dump_union_dealloc_func (u);
   dump_union_new_func (u);
+  dump_class_members (ct);
+  dump_class_method_decls (ct);
+  dump_class_methods_struct (ct);
+  dump_union_getsetter_decls (u);
+  dump_union_getsetter_table (u);
 }
 
 static void
