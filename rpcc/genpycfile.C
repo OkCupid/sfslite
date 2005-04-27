@@ -29,6 +29,8 @@ typedef
 enum { PASS_ONE = 1, PASS_TWO = 2, PASS_THREE = 3, N_PASSES = 4}
 pass_num_t;
 
+qhash<str,str> enum_tab;
+
 static void
 dump_obj_wrap ()
 {
@@ -95,7 +97,7 @@ static str
 union_tag_cast (const rpc_union *u, const str &v)
 {
   strbuf b;
-  b << "(" << u->tagtype << " )" << v;
+  b << "(" << pyc_type (u->tagtype) << " )" << v;
   return b;
 }
 
@@ -402,7 +404,8 @@ dump_union_init_func (const rpc_union *u)
        << "  if (!PyArg_ParseTuple (args, \"|i\", &state)) {\n"
        << "    return -1;\n"
        << "  }\n"
-       << "  self->set_" << u->tagid << " ((" << u->tagtype << " )state);\n"
+       << "  self->set_" << u->tagid << " ((" << pyc_type (u->tagtype) 
+       << " )state);\n"
        << "  return 0;\n"
        << "}\n\n";
 }
@@ -422,10 +425,10 @@ dump_class_dealloc_func (const rpc_struct *rs)
 }
 
 static void
-dump_allocator (const rpc_struct *rs)
+dump_allocator (const str &id)
 {
-  str wt = pyw_type (rs->id);
-  str ppt = py_type (rs->id);
+  str wt = pyw_type (id);
+  str ppt = py_type (id);
   aout << "void *\n"
        << wt << "_alloc ()\n"
        << "{\n"
@@ -547,9 +550,9 @@ dump_class_method_decls (const str &ct)
 }
 
 static void
-dump_class_methods (const rpc_struct *rs)
+dump_class_methods (const str &id)
 {
-  str ct = pyc_type (rs->id);
+  str ct = pyc_type (id);
   aout << "PyObject *\n" 
        << ct << "_pydump (" << ct << " *self)\n"
        << "{\n"
@@ -831,13 +834,14 @@ dump_union_tag_setter (const rpc_union *u)
        << "\"Unexpected NULL arg to setter\");\n"
        << "    return -1;\n"
        << "  }\n"
-       << "  " << u->tagtype << " t = " << union_tag_cast (u, "0") << ";\n"
+       << "  " << pyc_type (u->tagtype) 
+       << " t = " << union_tag_cast (u, "0") << ";\n"
        << "  if (PyInt_Check (value)) {\n"
-       << "    t = " << union_tag_cast (u, "PyInt_AsInt (value)") << ";\n"
+       << "    t = " << union_tag_cast (u, "PyInt_AsLong (value)") << ";\n"
        << "  } else if (PyLong_Check (value)) {\n"
        << "    t = " << union_tag_cast (u, "PyLong_AsLong (value)") << ";\n"
        << "  } else {\n"
-       << "    PyErr_SetString (PyExc_TypError, "
+       << "    PyErr_SetString (PyExc_TypeError, "
        << "\"Non-integral type given as switch tag\");\n"
        << "    return -1;\n"
        << "  }\n"
@@ -905,10 +909,10 @@ dump_union_getter (const rpc_union *u, const rpc_utag *t)
 static void
 dump_union_is_def_case (const rpc_union *u)
 {
-  str cl = pyw_type (u->id);
+  str cl = pyc_type (u->id);
   aout << "bool\n"
        << cl << "_is_def_case (const " 
-       << pyw_type (u->tagtype) << " &tag)\n"
+       << pyc_type (u->tagtype) << " &tag)\n"
        << "{\n"
        << "  return ";
   bool first = true;
@@ -919,7 +923,7 @@ dump_union_is_def_case (const rpc_union *u)
       aout << "\n         && ";
     else
       first = false;
-    aout << u->tagid << " != " << rd->swval;
+    aout << "tag != " << rd->swval;
   }
   if (first)
     aout << "true";
@@ -1136,11 +1140,47 @@ print_union (const rpc_union *s)
     "  return sb;\n"
     "}\n";
   print_print (ct);
+  print_py_dump (ct);
+  print_print (pyw_type (s->id));
 }
 
 static void
-print_enum (const rpc_enum *e)
+print_enum (const rpc_enum *s)
 {
+  str ct = pyc_type (s->id);
+  aout <<
+    "const strbuf &\n"
+    "rpc_print (const strbuf &sb, const " << ct << " &obj, "
+    "int recdepth,\n"
+    "           const char *name, const char *prefix)\n"
+    "{\n"
+    "  char *p;\n"
+    "  switch (obj) {\n";
+  for (const rpc_const *cp = s->tags.base (),
+	 *ep = s->tags.lim (); cp < ep; cp++)
+    aout <<
+      "  case " << cp->id << ":\n"
+      "    p = \"" << cp->id << "\";\n"
+      "    break;\n";
+  aout <<
+    "  default:\n"
+    "    p = NULL;\n"
+    "    break;\n"
+    "  }\n"
+    "  if (name) {\n"
+    "    if (prefix)\n"
+    "      sb << prefix;\n"
+    "    sb << \"" << s->id << " \" << name << \" = \";\n"
+    "  };\n"
+    "  if (p)\n"
+    "    sb << p;\n"
+    "  else\n"
+    "    sb << int (obj);\n"
+    "  if (prefix)\n"
+    "    sb << \";\\n\";\n"
+    "  return sb;\n"
+    "};\n";
+  print_print (ct);
 }
 
 static void
@@ -1169,8 +1209,8 @@ dumpstruct_mthds (const rpc_sym *s)
 {
   const rpc_struct *rs = s->sstruct.addr ();
   dump_getsetters (rs);
-  dump_allocator (rs);
-  dump_class_methods (rs);
+  dump_allocator (rs->id);
+  dump_class_methods (rs->id);
 }
 
 static void
@@ -1178,6 +1218,8 @@ dumpunion_mthds (const rpc_sym *s)
 {
   const rpc_union *u = s->sunion.addr ();
   dump_union_getsetters (u);
+  dump_allocator (u->id);
+  dump_class_methods (u->id);
 }
 
 static void
@@ -1324,11 +1366,11 @@ sfs_dumpunion (const rpc_sym *s)
 
 
   const rpc_union *rs = s->sunion.addr ();
-  str wt = pyc_type (rs->id);
-  str twt = pyc_type (rs->tagtype);
-  aout << "\nstruct " << wt << " {\n"
+  str ct = pyc_type (rs->id);
+  str tct = pyc_type (rs->tagtype);
+  aout << "\nstruct " << ct << " {\n"
        << "  PyObject_HEAD\n"
-       << "  const " << twt << " " << rs->tagid << ";\n"
+       << "  const " << tct << " " << rs->tagid << ";\n"
        << "  union {\n"
        << "    union_entry_base _base;\n";
   for (const rpc_utag *rt = rs->cases.base (); rt < rs->cases.lim (); rt++) {
@@ -1344,57 +1386,63 @@ sfs_dumpunion (const rpc_sym *s)
   }
   aout << "  };\n\n";
 
-  aout << "#define rpcunion_tag_" << wt << " " << rs->tagid << "\n";
-  aout << "#define rpcunion_switch_" << wt 
+  aout << "#define rpcunion_tag_" << ct << " " << rs->tagid << "\n";
+  aout << "#define rpcunion_switch_" << ct 
        << "(swarg, action, voidaction, defaction) \\\n";
   pswitch ("  ", rs, "swarg", punionmacro, " \\\n", punionmacrodefault);
 
   aout << "\n"
-       << "  " << wt << " (" << twt << " _tag = ("
-       << twt << ") 0) : " << rs->tagid << " (_tag)\n"
+       << "  " << ct << " (" << tct << " _tag = ("
+       << tct << ") 0) : " << rs->tagid << " (_tag)\n"
        << "    { _base.init (); set_" << rs->tagid << " (_tag); }\n"
 
-       << "  " << wt << " (" << "const " << wt << " &_s)\n"
+       << "  " << ct << " (" << "const " << ct << " &_s)\n"
        << "    : " << rs->tagid << " (_s." << rs->tagid << ")\n"
        << "    { _base.init (_s._base); }\n"
-       << "  ~" << wt << " () { _base.destroy (); }\n"
-       << "  " << wt << " &operator= (const " << wt << " &_s) {\n"
-       << "    const_cast<" << twt << " &> ("
+       << "  ~" << ct << " () { _base.destroy (); }\n"
+       << "  " << ct << " &operator= (const " << ct << " &_s) {\n"
+       << "    const_cast<" << tct << " &> ("
        << rs->tagid << ") = _s." << rs->tagid << ";\n"
        << "    _base.assign (_s._base);\n"
        << "    return *this;\n"
        << "  }\n\n";
 
-  aout << "  void set_" << rs->tagid << " (" << twt << " _tag) {\n"
-       << "    const_cast<" << twt << " &> (" << rs->tagid
+  aout << "  void set_" << rs->tagid << " (" << tct << " _tag) {\n"
+       << "    const_cast<" << tct << " &> (" << rs->tagid
        << ") = _tag;\n"
-       << "    rpcunion_switch_" << wt << "\n"
+       << "    rpcunion_switch_" << ct << "\n"
        << "      (_tag, RPCUNION_SET, _base.destroy (), _base.destroy ());\n"
        << "  }\n";
 
   aout << "};\n";
 
   aout << "\ntemplate<class T> bool\n"
-       << "rpc_traverse (T &t, " << wt << " &obj)\n"
+       << "rpc_traverse (T &t, " << ct << " &obj)\n"
        << "{\n"
-       << "  " << twt << " tag = obj." << rs->tagid << ";\n"
+       << "  " << tct << " tag = obj." << rs->tagid << ";\n"
        << "  if (!rpc_traverse (t, tag))\n"
        << "    return false;\n"
        << "  if (tag != obj." << rs->tagid << ")\n"
        << "    obj.set_" << rs->tagid << " (tag);\n\n"
-       << "  rpcunion_switch_" << wt << "\n"
+       << "  rpcunion_switch_" << ct << "\n"
        << "    (obj." << rs->tagid << ", RPCUNION_TRAVERSE, "
        << "return true, return false);\n"
        << "}\n"
+    ;
+
+  // No Stompcasting for now
+#if 0
        << "inline bool\n"
-       << "rpc_traverse (const stompcast_t &s, " << rs->id << " &obj)\n"
+       << "rpc_traverse (const stompcast_t &s, " << ct << " &obj)\n"
        << "{\n"
-       << "  rpcunion_switch_" << wt << "\n"
+       << "  rpcunion_switch_" << ct << "\n"
        << "    (obj." << rs->tagid << ", RPCUNION_REC_STOMPCAST,\n"
        << "     obj._base.destroy (); return true, "
        << "obj._base.destroy (); return true;);\n"
        << "}\n";
-  aout << "RPC_UNION_DECL (" << wt << ")\n";
+#endif
+
+  aout << "RPC_UNION_DECL (" << ct << ")\n";
 
   aout << "\n";
 }
@@ -1406,7 +1454,7 @@ dump_union_dealloc_func (const rpc_union *u)
   aout << "static void\n"
        << ct << "_dealloc (" << ct << " *self)\n"
        << "{\n"
-       << "  _base.destroy ();\n"
+       << "  self->_base.destroy ();\n"
        << "  self->ob_type->tp_free ((PyObject *) self);\n"
        << "}\n\n";
 }
@@ -1426,8 +1474,9 @@ dump_union_new_func (const rpc_union *u)
        << "  if (!PyArg_ParseTuple (args, \"|i\", &arg))\n"
        << "    return NULL;\n"
        << "  self->_base.init ();\n"
-       << "  self->set_" << u->tagid << " ((" << u->tagtype << " )arg);\n"
-       << "  return self;\n"
+       << "  self->set_" << u->tagid
+       << " (" << union_tag_cast (u, "arg") << ");\n"
+       << "  return reinterpret_cast<PyObject *> (self);\n"
        << "}\n\n";
 
 }
@@ -1461,36 +1510,54 @@ dumpenum (const rpc_sym *s)
   int ctr = 0;
   str lastval;
   const rpc_enum *rs = s->senum.addr ();
+  str ct = pyc_type (rs->id);
 
-  aout << "enum " << rs->id << " {\n";
+  aout << "enum " << ct << " {\n";
   for (const rpc_const *rc = rs->tags.base (); rc < rs->tags.lim (); rc++) {
+    if (enum_tab[rc->id]) {
+      warn << "duplicate enum key: " << rc->id << "\n";
+    }
+    str ev;
+    strbuf b;
     if (rc->val) {
       lastval = rc->val;
       ctr = 1;
+      b << rc->val;
+      ev = b;
       aout << "  " << rc->id << " = " << rc->val << ",\n";
     }
     else if (lastval && (isdigit (lastval[0]) || lastval[0] == '-'
-			 || lastval[0] == '+'))
-      aout << "  " << rc->id << " = "
-	   << strtol (lastval, NULL, 0) + ctr++ << ",\n";
-    else if (lastval)
-      aout << "  " << rc->id << " = " << lastval << " + " << ctr++ << ",\n";
-    else
-      aout << "  " << rc->id << " = " << ctr++ << ",\n";
+			 || lastval[0] == '+')) {
+     
+      long l = strtol (lastval, NULL, 0) + ctr ++;
+      b << l;
+      ev = b;
+      aout << "  " << rc->id << " = " << ev << ",\n";
+    } else if (lastval) {
+      b << lastval << " + " << ctr ++;
+      ev = b;
+      aout << "  " << rc->id << " = " << ev << ",\n";
+    } else {
+      b << ctr ++ ;
+      ev = b;
+      aout << "  " << rc->id << " = " << ev << ",\n";
+    }
+    enum_tab.insert (rc->id, ev);
   }
   aout << "};\n";
-  pmshl (rs->id);
-  aout << "RPC_ENUM_DECL (" << rs->id << ")\n";
+  aout << "RPC_ENUM_DECL (" << ct << ")\n";
 
   aout << "\ntemplate<class T> inline bool\n"
-       << "rpc_traverse (T &t, " << rs->id << " &obj)\n"
+       << "rpc_traverse (T &t, " << ct << " &obj)\n"
        << "{\n"
        << "  u_int32_t val = obj;\n"
        << "  if (!rpc_traverse (t, val))\n"
        << "    return false;\n"
-       << "  obj = " << rs->id << " (val);\n"
+       << "  obj = " << ct << " (val);\n"
        << "  return true;\n"
        << "}\n";
+  //  dump_w_rpc_traverse (rs->id);
+  //  dump_xdr_func (rs->id);
 }
 
 static void
@@ -1519,6 +1586,29 @@ mktbl (const rpc_program *rs)
   aout << "\n";
 }
 
+
+static void 
+dump_procno_ins1 (const str &k, const str &v)
+{
+  aout << "  if ((rc = PyModule_AddIntConstant (mod, \""
+       << k << "\", (long ) (" << v << "))) < 0)\n"
+       << "    return rc;\n";
+}
+
+static void 
+dump_procno_ins1 (const str &k, u_int32_t v)
+{
+  strbuf b;
+  b << v;
+  dump_procno_ins1 (k, b);
+}
+
+static void
+dump_procno_trav (const str &s, str *v)
+{
+  dump_procno_ins1 (s, *v);
+}
+
 static void
 dump_procno_ins (const rpc_program *rs)
 {
@@ -1526,13 +1616,12 @@ dump_procno_ins (const rpc_program *rs)
        << "py_module_all_ins (PyObject *mod)\n"
        << "{\n"
        << "  int rc = 0;\n";
-    for (const rpc_vers *rv = rs->vers.base (); rv < rs->vers.lim (); rv++) {
+  for (const rpc_vers *rv = rs->vers.base (); rv < rs->vers.lim (); rv++) {
     for (const rpc_proc *rp = rv->procs.base (); rp < rv->procs.lim (); rp++) {
-      aout << "  if ((rc = PyModule_AddIntConstant (mod, \""
-	   << rp->id << "\", (long )" << rp->id << ")) < 0)\n"
-	   << "    return rc;\n";
+      dump_procno_ins1 (rp->id, rp->val);
     }
   }
+  enum_tab.traverse (wrap (dump_procno_trav));
   aout << "  return rc;\n"
        << "}\n\n";
 
@@ -1695,7 +1784,7 @@ dumpmodule (const symlist_t &lst)
        << "  PyObject *module;\n"
        << "\n"
        << "  if (!import_async_exceptions (&AsyncXDR_Exception, NULL, "
-       <<                                  "AsyncUnion_Exception))\n"
+       <<                                  "&AsyncUnion_Exception))\n"
        << "    return;\n"
        << "\n"
        << "  // import async.arpc and get the type information for\n"
