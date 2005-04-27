@@ -77,7 +77,8 @@ static PyTypeObject T##_Type = {                                          \
   PY_ABSTRACT_CLASS_NEW(T,Q)                                              \
   PY_CLASS_DEF(T, Q, 0, 0, -1, Q " base abstract object", 0, 0, 0, 0, new, 0)
 
-bool import_async_exceptions (PyObject **xdr, PyObject **rpc = NULL);
+bool import_async_exceptions (PyObject **xdr, PyObject **rpc = NULL,
+			      PyObject **u = NULL);
 
 
 #endif

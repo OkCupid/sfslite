@@ -847,6 +847,32 @@ dump_union_tag_setter (const rpc_union *u)
 }
 
 static void
+dump_union_setter (const rpc_union *u, const rpc_utag *t)
+{
+  str cl = pyc_type (u->id);
+  aout << "int\n" << cl << "_set" << t->tag.id 
+       << " (" << cl << " *self, PyObject *value, void *closure)\n"
+       << "{\n"
+       << "  if (value == NULL) {\n"
+       << "    PyErr_SetString (PyExc_RuntimeError, "
+       << "\"Unexpected NULL arg to setter\");\n"
+       << "    return -1;\n"
+       << "  }\n";
+  if (t->swval) {
+    aout << "  self->set_" << u->tagid << " (" << t->swval << ");\n";
+  } else {
+    aout << "  if (!" << cl << "_is_def_case (self->" << u->tagid << ")) {\n"
+	 << "    PyErr_SetString (AsyncUnion_Exception,\n"
+	 << "                     \"implicit switch to default case\");\n"
+	 << "    return -1;\n"
+	 << "  }\n";
+  }
+  aout << "  return self->" << t->tag.id 
+       << "->safe_set_obj (value) ? 0 : -1;\n"
+       << "}\n\n";
+}
+
+static void
 dump_union_getter (const rpc_union *u, const rpc_utag *t)
 {
   str cl = pyc_type (u->id);
@@ -855,13 +881,13 @@ dump_union_getter (const rpc_union *u, const rpc_utag *t)
        << "{\n";
   if (t->swval) 
     aout << "  if (self->" << u->tagid << " != " << t->swval << ") {\n"
-	 << "    PyErr_SetString (PyExc_UnboundLocalError,\n"
+	 << "    PyErr_SetString (AsyncUnion_Exception,\n"
 	 << "                    \"union does not have switch type: "
 	 <<                       t->swval << "\");\n";
   else
-    aout << "  if (" << cl << "_is_def_case (self->" << u->tagid << ")) {\n"
-	 << "    PyErr_SetString (PyExc_UnboundLocalError,\n"
-	 << "                     \"expected default case\");\n";
+    aout << "  if (!" << cl << "_is_def_case (self->" << u->tagid << ")) {\n"
+	 << "    PyErr_SetString (AsyncUnion_Exception,\n"
+	 << "                     \"union not set to default case\");\n";
   
   aout << "    return NULL;\n"
        << "  }\n"
@@ -912,6 +938,7 @@ static void
 dump_union_getsetter (const rpc_union *u, const rpc_utag *t)
 {
   dump_union_getter (u, t);
+  dump_union_setter (u, t);
 }
 
 static void
@@ -1667,7 +1694,8 @@ dumpmodule (const symlist_t &lst)
        << "  PyObject* m;\n"
        << "  PyObject *module;\n"
        << "\n"
-       << "  if (!import_async_exceptions (&AsyncXDR_Exception))\n"
+       << "  if (!import_async_exceptions (&AsyncXDR_Exception, NULL, "
+       <<                                  "AsyncUnion_Exception))\n"
        << "    return;\n"
        << "\n"
        << "  // import async.arpc and get the type information for\n"
@@ -1768,6 +1796,7 @@ genpyc (str fname)
        << "\n"
        << "\n"
        << "static PyObject *AsyncXDR_Exception;\n"
+       << "static PyObject *AsyncUnion_Exception;\n"
        << "static PyTypeObject *py_rpc_program;\n"
        << "\n";
 

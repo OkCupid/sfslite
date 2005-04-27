@@ -19,3 +19,10 @@ class AsyncRPCException (AsyncException):
         self.value = value
     def __str__(self):
         return repr(self.value)
+
+class AsyncUnionException (AsyncException,PyExc_UnboundLocalError):
+    """Accessing union member that was not switched to."""
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)
