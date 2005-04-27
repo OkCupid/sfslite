@@ -91,6 +91,14 @@ py_type (const str &in)
   return pyc_type (b);
 }
 
+static str
+union_tag_cast (const rpc_union *u, const str &v)
+{
+  strbuf b;
+  b << "(" << u->tagtype << " )" << v;
+  return b;
+}
+
 
 static void
 pmshl (str id)
@@ -279,6 +287,21 @@ get_inner_obj (const str &vn, const str &ct)
 }
 
 static void
+dump_union_init_and_clear (const rpc_union *u)
+{
+  str ct = pyc_type (u->id);
+  str wt = pyw_type (u->id);
+  aout << "bool\n"
+       << wt << "::init ()\n"
+       << "{\n"
+       << get_inner_obj ("o", ct)
+       << "  o->_base.destroy ();\n"
+       << "  return true;\n"
+       << "}\n\n"
+       << "bool " << wt << "::clear () { return init (); }\n\n";
+}
+
+static void
 dump_hacked_trav (const rpc_struct *rs, const str &f)
 {
   bool first = true;
@@ -325,8 +348,7 @@ dump_class_init_func (const rpc_struct *rs)
   str ct = pyc_type (rs->id);
   aout << "static int\n"
        << ct << "_init (" << ct << " *self, PyObject *args, PyObject *kwds)\n"
-       << "{\n"
-       << "  PyObject *tmp;\n";
+       << "{\n";
   for (const rpc_decl *rd = rs->decls.base (); rd < rs->decls.lim (); rd++) {
     aout << "  PyObject *" << rd->id << " = NULL;\n";
   }
@@ -370,6 +392,22 @@ dump_class_init_func (const rpc_struct *rs)
 }
 
 static void
+dump_union_init_func (const rpc_union *u)
+{
+  str ct = pyc_type (u->id);
+  aout << "static int\n"
+       << ct << "_init (" << ct << " *self, PyObject *args, PyObject *kwds)\n"
+       << "{\n"
+       << "  int state = 0;\n"
+       << "  if (!PyArg_ParseTuple (args, \"|i\", &state)) {\n"
+       << "    return -1;\n"
+       << "  }\n"
+       << "  self->set_" << u->tagid << " ((" << u->tagtype << " )state);\n"
+       << "  return 0;\n"
+       << "}\n\n";
+}
+
+static void
 dump_class_dealloc_func (const rpc_struct *rs)
 {
   str ct = pyc_type (rs->id);
@@ -396,11 +434,11 @@ dump_allocator (const rpc_struct *rs)
 }
 
 static void
-dump_convert (const rpc_struct *rs)
+dump_convert (const str &id)
 {
-  str ptt = py_type (rs->id);
-  str pct = pyc_type (rs->id);
-  str wt = pyw_type (rs->id);
+  str ptt = py_type (id);
+  str pct = pyc_type (id);
+  str wt = pyw_type (id);
   
   aout << "template<> struct converter_t<" << wt << ">\n"
        << "{\n"
@@ -409,7 +447,7 @@ dump_convert (const rpc_struct *rs)
        << "    if (!PyObject_IsInstance (obj, (PyObject *)&" 
        <<                                           ptt <<  ")) {\n"
        << "       PyErr_SetString (PyExc_TypeError, \"expected object of type "
-       <<                                           rs->id << "\");\n"
+       <<                                           id << "\");\n"
        << "       return NULL;\n"
        << "    }\n"
        << "    Py_INCREF (obj);\n"
@@ -419,10 +457,10 @@ dump_convert (const rpc_struct *rs)
 }
 
 static void
-dump_xdr_func (const rpc_struct *rs)
+dump_xdr_func (const str &id)
 {
-  str ct = pyc_type (rs->id);
-  str wt = pyw_type (rs->id);
+  str ct = pyc_type (id);
+  str wt = pyw_type (id);
   aout << "BOOL\n"
        << "xdr_" << wt << " (XDR *xdrs, void *objp)\n"
        << "{\n"
@@ -438,10 +476,10 @@ rpc_trav_func (const str &a1, const str &obj, const rpc_decl *d)
 }
 
 static void
-dump_w_rpc_traverse (const rpc_struct *rs)
+dump_w_rpc_traverse (const str &id)
 {
-  str ct = pyc_type (rs->id);
-  str wt = pyw_type (rs->id);
+  str ct = pyc_type (id);
+  str wt = pyw_type (id);
 
   aout << "template<class T> bool\n"
        << "rpc_traverse (T &t, " << wt << " &wo)\n"
@@ -582,11 +620,11 @@ dump_class_methods_struct (const str &ct)
 }
 
 static void
-dump_object_table (const rpc_struct *rs)
+dump_object_table (const str &id)
 {
-  str t = py_type (rs->id);
-  str ct = pyc_type (rs->id);
-  str pt = rs->id;
+  str t = py_type (id);
+  str ct = pyc_type (id);
+  str pt = id;
 
   aout << "PY_CLASS_DEF(" << ct << ", \"" << module << "." << pt 
        <<               "\", 1, dealloc, "
@@ -709,35 +747,6 @@ py_converter (const rpc_decl *d)
   return py_converter (decltype (d));
 }
 
-#if 0
-static str
-py_typecheck (const rpc_decl *d, const str &v)
-{
-  str s;
-  if (d->type == "string" || d->type == "opaque") {
-    s = py_typecheck_unqual (d->type, v);
-  } else {
-    switch (d->qual) {
-    case rpc_decl::PTR:
-    case rpc_decl::SCALAR: 
-      s =  py_typecheck_unqual (d->type, v);
-      break;
-    case rpc_decl::VEC:
-    case rpc_decl::ARRAY: 
-      { 
-	strbuf b;
-	b << "PyList_Check (" << v << ")";
-	s = b;
-      }
-      break;
-    default:
-      break;
-    }
-  }
-  return s;
-}
-#endif
-
 static void
 dump_setter (const str &cl, const rpc_decl *d)
 {
@@ -792,6 +801,62 @@ dump_union_getsetter_decls (const rpc_union *u)
   for (const rpc_utag *rd = u->cases.base (); rd < u->cases.lim (); rd ++)
     dump_getsetter_decl (ct, rd->tag.id);
   aout << "\n\n";
+}
+
+static void
+dump_union_tag_getter (const rpc_union *u)
+{
+  str cl = pyc_type (u->id);
+  aout << "PyObject *\n" 
+       << cl << "_get" << u->tagid
+       << " (" << cl << " *self, void *closure)\n"
+       << "{\n"
+       << "  PyObject *obj = Py_BuildValue (\"i\", int(self->"
+       <<                                 u->tagid << "));\n"
+       << "  return obj;\n"
+       << "}\n\n";
+
+}
+
+static void
+dump_union_tag_setter (const rpc_union *u)
+{
+  str cl = pyc_type (u->id);
+  aout << "int\n" 
+       << cl << "_set" << u->tagid 
+       << " (" << cl << " *self, PyObject *value, void *closure)\n"
+       << "{\n"
+       << "  if (value == NULL) {\n"
+       << "    PyErr_SetString(PyExc_RuntimeError, "
+       << "\"Unexpected NULL arg to setter\");\n"
+       << "    return -1;\n"
+       << "  }\n"
+       << "  " << u->tagtype << " t = " << union_tag_cast (u, "0") << ";\n"
+       << "  if (PyInt_Check (value)) {\n"
+       << "    t = " << union_tag_cast (u, "PyInt_AsInt (value)") << ";\n"
+       << "  } else if (PyLong_Check (value)) {\n"
+       << "    t = " << union_tag_cast (u, "PyLong_AsLong (value)") << ";\n"
+       << "  } else {\n"
+       << "    PyErr_SetString (PyExc_TypError, "
+       << "\"Non-integral type given as switch tag\");\n"
+       << "    return -1;\n"
+       << "  }\n"
+       << "  self->set_" << u->tagid << " (t);\n"
+       << "  return 0;\n"
+       << "}\n\n";
+}
+
+static void
+dump_union_tag_getsetter (const rpc_union *u)
+{
+  dump_union_tag_getter (u);
+  dump_union_tag_setter (u);
+}
+
+static void
+dump_union_getsetters (const rpc_union *u)
+{
+  dump_union_tag_getsetter (u);
 }
 
 static void
@@ -1017,6 +1082,13 @@ dumpstruct_mthds (const rpc_sym *s)
 }
 
 static void
+dumpunion_mthds (const rpc_sym *s)
+{
+  const rpc_union *u = s->sunion.addr ();
+  dump_union_getsetters (u);
+}
+
+static void
 dump_class_py (const rpc_struct *rs)
 {
   str ct = pyc_type (rs->id);
@@ -1029,11 +1101,11 @@ dump_class_py (const rpc_struct *rs)
 }
 
 static void
-dump_w_class (const rpc_struct *rs)
+dump_w_class (const str &id)
 {
-  str ct = pyc_type (rs->id);
-  str wt = pyw_type (rs->id);
-  str pt = py_type (rs->id);
+  str ct = pyc_type (id);
+  str wt = pyw_type (id);
+  str pt = py_type (id);
   aout << "struct " << wt << " : public pyw_tmpl_t<" << wt << ", "
        << ct << " >\n"
        << "{\n"
@@ -1063,16 +1135,16 @@ dumpstruct (const rpc_sym *s)
   dump_getsetter_decls (rs);
   dump_getsetter_table (rs);
   dump_class_init_func (rs);
-  dump_object_table (rs);
+  dump_object_table (rs->id);
 
-  dump_w_class (rs);
-  dump_convert (rs);
+  dump_w_class (rs->id);
+  dump_convert (rs->id);
   dump_hacked_trav (rs, "init");
   dump_hacked_trav (rs, "clear");
 
   dump_rpc_traverse (rs);
-  dump_w_rpc_traverse (rs);
-  dump_xdr_func (rs);
+  dump_w_rpc_traverse (rs->id);
+  dump_xdr_func (rs->id);
 }
 
 void
@@ -1262,7 +1334,7 @@ dump_union_new_func (const rpc_union *u)
        << "  if (!PyArg_ParseTuple (args, \"|i\", &arg))\n"
        << "    return NULL;\n"
        << "  self->_base.init ();\n"
-       << "  self->set_" << u->tagid << " (arg);\n"
+       << "  self->set_" << u->tagid << " ((" << u->tagtype << " )arg);\n"
        << "  return self;\n"
        << "}\n\n";
 
@@ -1281,6 +1353,14 @@ dumpunion (const rpc_sym *s)
   dump_class_methods_struct (ct);
   dump_union_getsetter_decls (u);
   dump_union_getsetter_table (u);
+  dump_union_init_func (u);
+  dump_object_table (u->id);
+
+  dump_w_class (u->id);
+  dump_convert (u->id);
+  dump_union_init_and_clear (u);
+  dump_w_rpc_traverse (u->id);
+  dump_xdr_func (u->id);
 }
 
 static void
@@ -1436,6 +1516,8 @@ dumpsym (const rpc_sym *s, pass_num_t pass)
   case rpc_sym::UNION:
     if (pass == PASS_ONE)
       dumpunion (s);
+    else if (pass == PASS_THREE)
+      dumpunion_mthds (s);
     break;
   case rpc_sym::ENUM:
     if (pass == PASS_ONE)
