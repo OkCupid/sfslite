@@ -847,6 +847,61 @@ dump_union_tag_setter (const rpc_union *u)
 }
 
 static void
+dump_union_getter (const rpc_union *u, const rpc_utag *t)
+{
+  str cl = pyc_type (u->id);
+  aout << "PyObject *\n"
+       << cl << "_get" << t->tag.id << " (" << cl << " *self, void *closure)\n"
+       << "{\n";
+  if (t->swval) 
+    aout << "  if (self->" << u->tagid << " != " << t->swval << ") {\n"
+	 << "    PyErr_SetString (PyExc_UnboundLocalError,\n"
+	 << "                    \"union does not have switch type: "
+	 <<                       t->swval << "\");\n";
+  else
+    aout << "  if (" << cl << "_is_def_case (self->" << u->tagid << ")) {\n"
+	 << "    PyErr_SetString (PyExc_UnboundLocalError,\n"
+	 << "                     \"expected default case\");\n";
+  
+  aout << "    return NULL;\n"
+       << "  }\n"
+       << "  PyObject *obj = self->" << t->tag.id << "->obj ();\n"
+       << "  if (!obj) {\n"
+       << "    PyErr_SetString (PyExc_UnboundLocalError,\n"
+       << "                     \"unbound XDR variable\");\n"
+       << "    return NULL;\n"
+       << "  }\n"
+       << "  Py_XINCREF (obj);\n"
+       << "  return obj;\n"
+       << "}\n\n";
+}
+
+static void
+dump_union_is_def_case (const rpc_union *u)
+{
+  str cl = pyw_type (u->id);
+  aout << "bool\n"
+       << cl << "_is_def_case (const " 
+       << pyw_type (u->tagtype) << " &tag)\n"
+       << "{\n"
+       << "  return ";
+  bool first = true;
+  for (const rpc_utag *rd = u->cases.base (); rd < u->cases.lim (); rd++) {
+    if (!rd->swval)
+      continue;
+    if (!first)
+      aout << "\n         && ";
+    else
+      first = false;
+    aout << u->tagid << " != " << rd->swval;
+  }
+  if (first)
+    aout << "true";
+  aout << ";\n"
+       << "}\n\n";
+}
+
+static void
 dump_union_tag_getsetter (const rpc_union *u)
 {
   dump_union_tag_getter (u);
@@ -854,9 +909,19 @@ dump_union_tag_getsetter (const rpc_union *u)
 }
 
 static void
+dump_union_getsetter (const rpc_union *u, const rpc_utag *t)
+{
+  dump_union_getter (u, t);
+}
+
+static void
 dump_union_getsetters (const rpc_union *u)
 {
   dump_union_tag_getsetter (u);
+  dump_union_is_def_case (u);
+  for (const rpc_utag *rd = u->cases.base (); rd < u->cases.lim (); rd++) {
+    dump_union_getsetter (u, rd);
+  }
 }
 
 static void
