@@ -327,12 +327,13 @@ dump_hacked_trav (const rpc_struct *rs, const str &f)
 }
 
 static void
-dump_class_new_func (const rpc_struct *rs)
+dump_class_uncasted_new_func (const rpc_struct *rs)
 {
   str ct = pyc_type (rs->id);
-  aout << "\nstatic PyObject *\n"
+  aout << "static " << ct << " *\n"
        << ct
-       << "_new (PyTypeObject *type, PyObject *args, PyObject *kwds)\n"
+       << "_uncasted_new (PyTypeObject *type, "
+       <<                 "PyObject *args, PyObject *kwds)\n"
        << "{\n"
        << "  " << ct << " *self;\n"
        << "  if (!(self = (" << ct << " *)type->tp_alloc (type, 0)))\n"
@@ -340,7 +341,20 @@ dump_class_new_func (const rpc_struct *rs)
   for (const rpc_decl *rd = rs->decls.base (); rd < rs->decls.lim (); rd++) {
     dump_init_frag ("  ", rd);
   }
-  aout << "  return (PyObject *)self;\n"
+  aout << "  return self;\n"
+       << "}\n\n";
+}
+
+static void
+dump_class_new_func (const str &id)
+{
+  str ct = pyc_type (id);
+  aout << "static PyObject *\n"
+       << ct 
+       << "_new (PyTypeObject *type, PyObject *args, PyObject *kwds)\n"
+       << "{\n"
+       << "  " << ct << " *o = " << ct << "_uncasted_new (type, args, kwds);\n"
+       << "  return reinterpret_cast<PyObject *> (o);\n"
        << "}\n\n";
 }
 
@@ -1262,7 +1276,8 @@ dumpstruct (const rpc_sym *s)
 
   dump_class_py (rs);
   dump_class_dealloc_func (rs);
-  dump_class_new_func (rs);
+  dump_class_uncasted_new_func (rs);
+  dump_class_new_func (rs->id);
   dump_class_members (ct);
   dump_class_method_decls (ct);
   dump_class_methods_struct (ct);
@@ -1460,12 +1475,13 @@ dump_union_dealloc_func (const rpc_union *u)
 }
 
 static void
-dump_union_new_func (const rpc_union *u)
+dump_union_uncasted_new_func (const rpc_union *u)
 {
   
   str ct = pyc_type (u->id);
-  aout << "static PyObject *\n"
-       << ct << "_new (PyTypeObject *type, PyObject *args, PyObject *kwds)\n"
+  aout << "static " << ct << " *\n"
+       << ct << "_uncasted_new (PyTypeObject *type, "
+       <<                       "PyObject *args, PyObject *kwds)\n"
        << "{\n"
        << "  " << ct << " *self;\n"
        << "  if (!(self = (" << ct << " *)type->tp_alloc (type, 0)))\n"
@@ -1476,7 +1492,7 @@ dump_union_new_func (const rpc_union *u)
        << "  self->_base.init ();\n"
        << "  self->set_" << u->tagid
        << " (" << union_tag_cast (u, "arg") << ");\n"
-       << "  return reinterpret_cast<PyObject *> (self);\n"
+       << "  return self;\n"
        << "}\n\n";
 
 }
@@ -1488,7 +1504,8 @@ dumpunion (const rpc_sym *s)
   str ct = pyc_type (u->id);
   sfs_dumpunion (s);
   dump_union_dealloc_func (u);
-  dump_union_new_func (u);
+  dump_union_uncasted_new_func (u);
+  dump_class_new_func (u->id);
   dump_class_members (ct);
   dump_class_method_decls (ct);
   dump_class_methods_struct (ct);

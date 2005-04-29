@@ -69,7 +69,7 @@ static PyTypeObject T##_Type = {                                          \
   0,                                                /* tp_descr_set */    \
   0,                                                /* tp_dictoffset */   \
   (initproc)T##_##init,                             /* tp_init */         \
-  0,                                                /* tp_alloc */        \
+  PyType_GenericAlloc,                              /* tp_alloc */        \
   T##_##new                                         /* tp_new */          \
 };                                                               
 
