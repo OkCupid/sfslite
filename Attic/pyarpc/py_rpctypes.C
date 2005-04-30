@@ -29,7 +29,7 @@ xdr_##T (XDR *xdrs, void *objp)				        \
 #define INT_DO_ALL_C(T, s, P)                                   \
 ALLOC_DEFN (pyw_##T);                                           \
 XDR_DEFN (pyw_##T);                                             \
-RPC_PRINT_GEN (pyw_##T, sb.fmt ("0x%" s , obj.get ()));         \
+PY_RPC_PRINT_GEN (pyw_##T, sb.fmt ("0x%" s , obj.get ()));      \
 RPC_PRINT_DEFINE (pyw_##T);                                     \
 INT_RPC_TRAVERSE(T);
 
@@ -87,6 +87,7 @@ bool
 pyw_base_t::set_obj (PyObject *o)
 {
   PyObject *tmp = _obj;
+  Py_INCREF (o);
   _obj = o; // no INCREF since usually just constructed
   Py_XDECREF (tmp);
   return true;
@@ -131,4 +132,27 @@ pyw_base_t::alloc ()
     Py_INCREF (Py_None);
   }
   return true;
+}
+
+
+bool
+pyw_base_t::pyw_print_err (const strbuf &b, const str &prfx) const
+{
+  str s;
+  switch (_err) {
+  case PYW_ERR_NONE:
+    return false;
+  case PYW_ERR_TYPE:
+    s = "TYPE";
+    break;
+  case PYW_ERR_BOUNDS:
+    s = "BOUNDS";
+    break;
+  default:
+    s = "unspeficied";
+    break;
+  }
+  b << "<" << s << "-ERROR>;\n";
+  return true;
+
 }

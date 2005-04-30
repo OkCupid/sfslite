@@ -14,6 +14,11 @@ struct baz_t {
 	bar_t bar;
 };
 
+struct giz_t {
+	baz_t baz;
+	unsigned u;
+};
+
 enum aa_t { A1 = 1, A2 = 2, A3 = 3 };
 
 union bb_t switch (aa_t aa) {

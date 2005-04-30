@@ -19,3 +19,5 @@ SFS Python Wrapper Todo
 * it would be nice to have a full implementation of rpc_traverse,
   and to use that for initialization, as opposed to rolling that
   ad-hoc.  for now, we do the easier thing. 
+
+* deep-copy so that objects are copyable.

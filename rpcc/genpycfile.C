@@ -224,45 +224,6 @@ py_typecheck_unqual (const str &typ, const str &v)
   return b;
 }
 
-#if 0
-static str
-py_member_init (const rpc_decl *d)
-{
-  str pt = py_type (d->type);
-  str ct = pyc_type (d->type);
-  // XXX
-  // for now, don't distinguish between VEC's and ARRAY's
-  if (d->type == "string" || d->type == "opaque") 
-    return "PyString_FromString (\"\")";
-  else {
-    switch (d->qual) {
-    case rpc_decl::SCALAR:
-      {
-	if (is_int_type (d->type)) {
-	  return "PyInt_FromLong (0)";
-	} else if (is_long_type (d->type)) {
-	  return "PyLong_FromLong (0)";
-	} else if (is_double_type (d->type)) {
-	  return "PyFloat_FromDouble (0.0)";
-	} else {
-	  strbuf b;
-	  b << "PyObject_New (" << ct << ", " << pt << ")";
-	  return b;
-	}
-      }
-    case rpc_decl::PTR:
-      return "Py_None";
-    case rpc_decl::VEC:
-    case rpc_decl::ARRAY:
-      return "PyList_New (0)";
-    default:
-      panic ("Bad rpc_decl qual (%d)\n", d->qual);
-    }
-  }
-  panic ("bad data type: %s\n", d->type.cstr ());
-}
-#endif
-
 static void
 dump_init_frag (str prfx, const rpc_decl *d)
 {
@@ -289,40 +250,59 @@ get_inner_obj (const str &vn, const str &ct)
 }
 
 static void
+dump_w_class_init_func (const str &wt, const str &pt)
+{
+  aout << "bool\n"
+       << wt << "::init ()\n"
+       << "{\n"
+       << "  _typ = &" << pt << ";\n"
+       << "  return alloc ();\n"
+       << "}\n\n";
+}
+
+static void
 dump_union_init_and_clear (const rpc_union *u)
 {
   str ct = pyc_type (u->id);
   str wt = pyw_type (u->id);
+  str pt = py_type (u->id);
+
+  dump_w_class_init_func (wt, pt);
+  
   aout << "bool\n"
-       << wt << "::init ()\n"
+       << wt << "::clear ()\n"
        << "{\n"
        << get_inner_obj ("o", ct)
        << "  o->_base.destroy ();\n"
+       << "  Py_DECREF (_obj);\n"
+       << "  _obj = NULL;\n"
        << "  return true;\n"
-       << "}\n\n"
-       << "bool " << wt << "::clear () { return init (); }\n\n";
+       << "}\n\n" ;
 }
 
 static void
-dump_hacked_trav (const rpc_struct *rs, const str &f)
+dump_w_class_clear_func (const rpc_struct *rs)
 {
   bool first = true;
   str ct = pyc_type (rs->id);
   str wt = pyw_type (rs->id);
   aout << "bool\n"
-       << wt << "::" << f << "()\n"
+       << wt << "::clear ()\n"
        << "{\n"
        << get_inner_obj ("o", ct)
-       << "  return (";
+       << "  bool ret = ";
   for (const rpc_decl *rd = rs->decls.base (); rd < rs->decls.lim (); rd++) {
     if (!first)
       aout << " &&\n"
-	   << "          ";
+	   << "             ";
     else
       first = false;
-    aout << "o->" << rd->id << "." << f << " ()";
+    aout << "o->" << rd->id << ".clear ()";
   }
-  aout << ");\n"
+  aout << ";\n"
+       << "  Py_DECREF (_obj);\n"
+       << "  _obj = NULL;\n"
+       << "  return ret;\n"
        << "}\n\n";
 }
 
@@ -572,6 +552,7 @@ dump_class_methods (const str &id)
        << "{\n"
        << "  dump_" << ct << " (self);\n"
        << "  Py_INCREF (Py_None);\n"
+       << "  PyErr_Clear ();\n"
        << "  return Py_None;\n"
        << "}\n\n"
        << "PyObject *\n"
@@ -1046,6 +1027,7 @@ print_w_struct (const rpc_struct *s)
     "int recdepth,\n"
     "           const char *name, const char *prefix)\n"
     "{\n"
+    "  if (w.pyw_print_err (sb, prefix)) return sb;\n"
     "  const " << ct << " *o = w.const_casted_obj ();\n"
     "  return o ? rpc_print (sb, *o, recdepth, name, prefix) : sb;\n"
     "}\n\n";
@@ -1260,13 +1242,19 @@ dump_w_class (const str &id)
        << "  " << wt << " () : pyw_tmpl_t<" << wt << ", " 
        <<                             ct << " > (&" << pt << ")\n"
        << "    { alloc (); }\n"
-       << "  " << wt << "(PyObject *o) :\n" 
+       << "  " << wt << " (PyObject *o) :\n" 
        << "    pyw_tmpl_t<" << wt << ", " << ct << " > (o, &" 
        <<                  pt << ") {}\n"
+       << "  " << wt << " (pyw_err_t e) :\n"
+       << "    pyw_tmpl_t<" << wt << ", " << ct << " > (e, &" << pt << ") {}\n"
+       << "  " << wt << " (const " << wt << " &p) :\n"
+       << "    pyw_tmpl_t<" << wt << ", " << ct << " > (p) {}\n"
        << "  bool init ();\n"
        << "  bool clear ();\n"
-       << "};\n\n";
+       << "};\n\n"
+       << "PY_RPC_TYPE2STR_DECL(" << id << ");\n\n";
 }
+
 
 static void
 dumpstruct (const rpc_sym *s)
@@ -1288,8 +1276,8 @@ dumpstruct (const rpc_sym *s)
 
   dump_w_class (rs->id);
   dump_convert (rs->id);
-  dump_hacked_trav (rs, "init");
-  dump_hacked_trav (rs, "clear");
+  dump_w_class_init_func (pyw_type (rs->id), py_type (rs->id));
+  dump_w_class_clear_func (rs);
 
   dump_rpc_traverse (rs);
   dump_w_rpc_traverse (rs->id);
