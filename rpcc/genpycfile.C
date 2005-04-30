@@ -902,6 +902,12 @@ dump_union_getter (const rpc_union *u, const rpc_utag *t)
 }
 
 static void
+dump_union_is_valid_case (const rpc_union *u)
+{
+
+}
+
+static void
 dump_union_is_def_case (const rpc_union *u)
 {
   str cl = pyc_type (u->id);
@@ -943,6 +949,7 @@ dump_union_getsetter (const rpc_union *u, const rpc_utag *t)
 static void
 dump_union_getsetters (const rpc_union *u)
 {
+  dump_union_is_valid_case (u);
   dump_union_tag_getsetter (u);
   dump_union_is_def_case (u);
   for (const rpc_utag *rd = u->cases.base (); rd < u->cases.lim (); rd++) {
