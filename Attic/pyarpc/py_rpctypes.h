@@ -148,7 +148,7 @@ public:
     pyw_tmpl_t<pyw_rpc_str<M>, PyStringObject > (o) {}
 
   char *get (size_t *sz) const;
-  const char * get () const { return PyString_AsString (_obj); }
+  const char * get () const ;
   bool set (char *buf, size_t len);
   bool init ();
   enum { maxsize = M };
@@ -305,6 +305,7 @@ rpc_print (const strbuf &sb, const pyw_rpc_str<n> &pyobj,
 	   const char *name = NULL, const char *prefix = NULL)
 {
   const char *obj = pyobj.get ();
+  if (!obj) obj = "<NULL>";
   if (pyobj.pyw_print_err (sb, prefix)) return sb;
 
   if (prefix)
@@ -661,6 +662,13 @@ struct py_rpc_program_t {
 //-----------------------------------------------------------------------
 // rpc_str methods
 //
+template<size_t M> const char *
+pyw_rpc_str<M>::get () const 
+{
+  size_t dummy;
+  return get (&dummy);
+}
+
 template<size_t M> char *
 pyw_rpc_str<M>::get (size_t *sz) const
 {
