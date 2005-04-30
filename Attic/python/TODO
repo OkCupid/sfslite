@@ -21,3 +21,7 @@ SFS Python Wrapper Todo
   ad-hoc.  for now, we do the easier thing. 
 
 * deep-copy so that objects are copyable.
+
+* generic type-safe C lists; will take a fair amount of work, considering
+  we will need the append, pop functions etc. basically, we should be
+  wrapping DM's rpc_vectors in python types.
