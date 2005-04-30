@@ -58,6 +58,12 @@ ex1srv_t::dispatch (svccb *sbp)
       sbp->replyref (foo);
       break;
     }
+  case FOO_BB:
+    {
+      bb_t *b = sbp->Xtmpl getarg<bb_t> ();
+      sbp->replyref (30);
+      break;
+    }
   default:
     sbp->reject (PROC_UNAVAIL);
     break;

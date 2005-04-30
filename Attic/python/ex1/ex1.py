@@ -35,6 +35,20 @@ def call2(cli):
     bar.y = [1,2,3,4,5,'shit']
     cli.call (ex1.FOO_BAR, bar, cb2)
 
+def call3(cli):
+    z = ex1.bb_t ()
+    z.aa = ex1.A2;
+    z.b.foos = [ex1.foo_t () for i in range(0,2) ]
+    z.b.foos[0].x = "foos[0] = 4"
+    z.b.foos[0].xx = 4
+    z.b.foos[1].x = "foos[1] = 5"
+    z.b.foos[1].xx = 5
+    z.b.bar.y = [ 100, 200, 300, 400 ];
+    z.dump ()
+    cli.call (ex1.FOO_BB, z, cb)
+    
+
+
 
 sock = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
 sock.connect (('127.0.0.1', 3000))
@@ -43,7 +57,7 @@ fd = sock.fileno ()
 x = async.arpc.axprt_stream (fd)
 cli = async.arpc.aclnt (x, ex1.foo_prog_1 ())
 
-call (cli);
+call3 (cli);
 
 
 async.core.amain ()
