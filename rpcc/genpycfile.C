@@ -25,22 +25,12 @@
 
 str module;
 
-typedef 
-enum { PASS_ONE = 1, PASS_TWO = 2, PASS_THREE = 3, N_PASSES = 4}
-pass_num_t;
+typedef enum 
+{ 
+  PASS_ONE = 1, PASS_TWO = 2, PASS_THREE = 3, N_PASSES = 4
+} pass_num_t;
 
 qhash<str,str> enum_tab;
-
-static void
-dump_obj_wrap ()
-{
-  aout << "struct PyObjWrap {\n"
-       << "  bool scalar;         // =true if scalar\n"
-       << "  bool fixed;          // =true if fixed\n"
-       << "  int bound;           // max # of elements in vec\n"
-       << "  PyObject *obj;       // actual object\n"
-       << "};\n\n";
-}
 
 static str
 pyc_type (const str &s)
@@ -1237,12 +1227,11 @@ dump_class_py (const rpc_struct *rs)
   aout << "RPC_STRUCT_DECL (" << ct << ")\n\n";
 }
 
+
+
 static void
-dump_w_class (const str &id)
+dump_w_class (const str &ct, const str &wt, const str &pt, const str &id)
 {
-  str ct = pyc_type (id);
-  str wt = pyw_type (id);
-  str pt = py_type (id);
   aout << "struct " << wt << " : public pyw_tmpl_t<" << wt << ", "
        << ct << " >\n"
        << "{\n"
@@ -1262,6 +1251,14 @@ dump_w_class (const str &id)
        << "PY_RPC_TYPE2STR_DECL(" << id << ");\n\n";
 }
 
+static void
+dump_w_class (const str &id)
+{
+  str ct = pyc_type (id);
+  str wt = pyw_type (id);
+  str pt = py_type (id);
+  dump_w_class (ct, wt, pt, id);
+}
 
 static void
 dumpstruct (const rpc_sym *s)
@@ -1517,12 +1514,26 @@ dumpunion (const rpc_sym *s)
 }
 
 static void
-dumpenum (const rpc_sym *s)
+dump_py_enum_class (const rpc_enum *rs)
+{
+  str ct = rs->id;
+  str pt = pyc_type (rs->id);
+
+  aout << "struct " << pt << " {\n"
+       << "  PyObject_HEAD\n"
+       << "  " << ct << " val;\n"
+       << "};\n"
+       << "RPC_ENUM_DECL (" << pt << ")\n"
+       << "\n";
+}
+
+
+static void
+dump_c_enum (const rpc_enum *rs)
 {
   int ctr = 0;
   str lastval;
-  const rpc_enum *rs = s->senum.addr ();
-  str ct = pyc_type (rs->id);
+  str ct = rs->id;
 
   aout << "enum " << ct << " {\n";
   for (const rpc_const *rc = rs->tags.base (); rc < rs->tags.lim (); rc++) {
@@ -1557,7 +1568,6 @@ dumpenum (const rpc_sym *s)
     enum_tab.insert (rc->id, ev);
   }
   aout << "};\n";
-  aout << "RPC_ENUM_DECL (" << ct << ")\n";
 
   aout << "\ntemplate<class T> inline bool\n"
        << "rpc_traverse (T &t, " << ct << " &obj)\n"
@@ -1567,9 +1577,23 @@ dumpenum (const rpc_sym *s)
        << "    return false;\n"
        << "  obj = " << ct << " (val);\n"
        << "  return true;\n"
-       << "}\n";
+       << "}\n\n";
+
   //  dump_w_rpc_traverse (rs->id);
   //  dump_xdr_func (rs->id);
+}
+
+static void
+dumpenum (const rpc_sym *s)
+{
+  const rpc_enum *rs = s->senum.addr ();
+
+  // dump the C "enum" representation of the enum
+  dump_c_enum (rs);
+
+  // dump the object wrapper
+  dump_w_class (pyc_type (rs->id), pyw_type (rs->id), "PyIntObject", rs->id);
+
 }
 
 static void

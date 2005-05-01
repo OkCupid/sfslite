@@ -32,47 +32,15 @@
 // define the following functions, as required by the XDR 
 // interface.
 //
-//   T_decref (T *self)
-//    - in the case of Python Objects, deference; in the case
-//      of native types, we'll simply call a deconstructor function;
-//
 //   void * T_alloc ()
 //    - allocate an object of the given variety
-//
-//   PyObject *T_unwrap()
-//    - for complex types, simply return the type;  for wrapped
-//      simple types, incref and return the wrapped python object
-//      while destroying the wrapper.
-//
-//   void *T_convert (PyObject *o, PyObject *e)
-//    - checks to make sure that the passed in object o is of the 
-//      appropriate type. if not, exceptions are set, and NULL
-//      is returned.  If so, and if it is a complex XDR type,
-//      then the object itself is increfed and returned.
-//      That is, it accepts a borrwed reference and returns new
-//      reference the the requested object. If the passed in
-//      object is a basic type, then a new wrapper is created,
-//      pointing to a converted version of the interior object.
-//
-//   PyObject *T_convert_py2py (PyObject *o)
-//    - optional
-//
-//   T * assign_py_to_c (T &t, PyObject *i)
-//     - assign t = *i, roughly, returning the pointer to the
-//       new object used. For simple types (with wrapped-in Python
-//       objects), it will make a new reference of i, assign t._obj to i, 
-//       and then return &t. For complex types, which are are Python
-//       objects, recall, it will ensure that the input i is of the
-//       right type, INCREF i, and then return i.
-//
 //   bool xdr_T (XDR *x, void *objp)
 //   template<class X> bool rpc_traverse (X &x, T &t)
 //    - standard from DM's XDR library.
 //
 
-
 //-----------------------------------------------------------------------
-// Class Definitions
+// Wrapper Class Definitions
 //
 
 typedef enum { PYW_ERR_NONE = 0,
@@ -191,6 +159,16 @@ public:
   pyw_void (PyObject *o) : pyw_tmpl_t<pyw_void, PyObject> (o, NULL) {}
   bool init () { return true; }
 
+};
+
+template<class T, T *typ>
+class pyw_enum_t : public pyw_tmpl_t<pyw_enum_t<T, typ>, T>
+{
+public:
+  pyw_enum_t () : pyw_tmpl_t<pyw_enum_t<T, typ>, T> (typ) {}
+  pyw_enum_t (PyObject *o) : pyw_tmpl_t<pyw_enum_t<T, typ>, T> (o, typ) {}
+  pyw_enum_t (const pyw_enum_t<T, typ> &p) :
+    pyw_tmpl_t<pyw_enum_t<T, typ>, T> (p) {}
 };
 
 
