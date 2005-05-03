@@ -87,7 +87,8 @@ static str
 union_tag_cast (const rpc_union *u, const str &v)
 {
   strbuf b;
-  b << "(" << pyc_type (u->tagtype) << " )" << v;
+  str tct = u->tagtype;
+  b << "(" << tct << " )" << v;
   return b;
 }
 
@@ -388,8 +389,8 @@ dump_union_init_func (const rpc_union *u)
        << "  if (!PyArg_ParseTuple (args, \"|i\", &state)) {\n"
        << "    return -1;\n"
        << "  }\n"
-       << "  self->set_" << u->tagid << " ((" << pyc_type (u->tagtype) 
-       << " )state);\n"
+       << "  self->set_" << u->tagid << " ("
+       << union_tag_cast (u, "state") << ");\n"
        << "  return 0;\n"
        << "}\n\n";
 }
@@ -819,7 +820,7 @@ dump_union_tag_setter (const rpc_union *u)
        << "\"Unexpected NULL arg to setter\");\n"
        << "    return -1;\n"
        << "  }\n"
-       << "  " << pyc_type (u->tagtype) 
+       << "  " << u->tagtype
        << " t = " << union_tag_cast (u, "0") << ";\n"
        << "  if (PyInt_Check (value)) {\n"
        << "    t = " << union_tag_cast (u, "PyInt_AsLong (value)") << ";\n"
@@ -903,7 +904,7 @@ dump_union_is_def_case (const rpc_union *u)
   str cl = pyc_type (u->id);
   aout << "bool\n"
        << cl << "_is_def_case (const " 
-       << pyc_type (u->tagtype) << " &tag)\n"
+       << u->tagtype << " &tag)\n"
        << "{\n"
        << "  return ";
   bool first = true;
@@ -1140,7 +1141,7 @@ print_union (const rpc_union *s)
 static void
 print_enum (const rpc_enum *s)
 {
-  str ct = pyc_type (s->id);
+  str ct = s->id ; 
   aout <<
     "const strbuf &\n"
     "rpc_print (const strbuf &sb, const " << ct << " &obj, "
@@ -1374,7 +1375,7 @@ sfs_dumpunion (const rpc_sym *s)
 
   const rpc_union *rs = s->sunion.addr ();
   str ct = pyc_type (rs->id);
-  str tct = pyc_type (rs->tagtype);
+  str tct = rs->tagtype ; // pyc_type (rs->tagtype);
   aout << "\nstruct " << ct << " {\n"
        << "  PyObject_HEAD\n"
        << "  const " << tct << " " << rs->tagid << ";\n"
@@ -1592,7 +1593,11 @@ dumpenum (const rpc_sym *s)
   dump_c_enum (rs);
 
   // dump the object wrapper
-  dump_w_class (pyc_type (rs->id), pyw_type (rs->id), "PyIntObject", rs->id);
+  dump_w_class (rs->id, pyw_type (rs->id), "PyInt_Type", rs->id);
+
+  dump_w_init_class_func ();
+
+  
 
 }
 
