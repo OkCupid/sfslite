@@ -82,14 +82,18 @@ py_type (const str &in)
   b << in << "_Type";
   return pyc_type (b);
 }
+static str
+enum_cast (const str &i, const str &v)
+{
+  strbuf b;
+  b << "(" << i << " )" << v;
+  return b;
+}
 
 static str
 union_tag_cast (const rpc_union *u, const str &v)
 {
-  strbuf b;
-  str tct = u->tagtype;
-  b << "(" << tct << " )" << v;
-  return b;
+  return enum_cast (u->tagtype, v);
 }
 
 
@@ -249,6 +253,12 @@ dump_w_class_init_func (const str &wt, const str &pt)
        << "  _typ = &" << pt << ";\n"
        << "  return alloc ();\n"
        << "}\n\n";
+}
+
+static void
+dump_w_enum_clear_func (const str &wt)
+{
+  aout << "bool " << wt << "::clear () { return true; }\n\n";
 }
 
 static void
@@ -419,6 +429,72 @@ dump_allocator (const str &id)
        << "{\n"
        << "  return (void *)New " << wt << ";\n"
        << "}\n\n";
+}
+
+static void
+dump_enum_in_range (const rpc_enum *e)
+{
+  const str id = e->id;
+  aout << "bool\n"
+       << id << "_is_in_range (" << id << " t)\n"
+       << "{\n"
+       << "  return ";
+  bool first = true;
+  for (const rpc_const *rc = e->tags.base (); rc < e->tags.lim (); rc++) {
+    if (first) {
+      first = false;
+    } else {
+      aout << " ||\n         ";
+    }
+    aout << "t == " << rc->id;
+  }
+  aout << ";\n"
+       << "}\n\n";
+}
+
+static void
+dump_w_enum_convert (const str &id)
+{
+  const str wt = pyw_type (id);
+
+  aout << "template<> struct converter_t<" << wt << ">\n"
+       << "{\n"
+       << "  static bool convert (PyObject *obj, " << id << " *res)\n"
+       << "  {\n"
+       << "    if (obj == NULL) {\n"
+       << "      PyErr_SetString(PyExc_RuntimeError, "
+       << "\"Unexpected NULL arg to setter\");\n"
+       << "      return false;\n"
+       << "    }\n"
+       << "    " << id << " t = "
+       << enum_cast (id, "0") << ";\n"
+       << "    if (PyInt_Check (obj)) {\n"
+       << "      t = " << enum_cast (id, "PyInt_AsLong (obj)") << ";\n"
+       << "    } else if (PyLong_Check (obj)) {\n"
+       << "      t = " << enum_cast (id, "PyLong_AsLong (obj)") << ";\n"
+       << "    } else {\n"
+       << "      PyErr_SetString (PyExc_TypeError,\n"
+       << "                       \"Non-integral type given as switch tag\")"
+       <<                         ";\n"
+       << "      return false;\n"
+       << "    }\n"
+       << "    if (!" << id << "_is_in_range (t)) {\n"
+       << "       PyErr_SetString (PyExc_OverflowError, "
+       <<         "\"Enum value is not in range\");\n"
+       << "       return false;\n"
+       << "    }\n"
+       << "    *res = t;\n"
+       << "    return true;\n"
+       << "  }\n\n"
+
+       << "  static PyObject *convert (PyObject *obj)\n"
+       << "  {\n"
+       << "    " << id << " t;\n"
+       << "    if (!convert (obj, &t))\n"
+       << "      return NULL;\n"
+       << "    return Py_BuildValue (\"i\", int (t));\n"
+       << "  }\n"
+       << "};\n\n";
 }
 
 static void
@@ -811,26 +887,15 @@ static void
 dump_union_tag_setter (const rpc_union *u)
 {
   str cl = pyc_type (u->id);
+  const str tt = u->tagtype;
+  const str twt = pyw_type (tt);
   aout << "int\n" 
        << cl << "_set" << u->tagid 
        << " (" << cl << " *self, PyObject *value, void *closure)\n"
        << "{\n"
-       << "  if (value == NULL) {\n"
-       << "    PyErr_SetString(PyExc_RuntimeError, "
-       << "\"Unexpected NULL arg to setter\");\n"
+       << "  " << tt  << " t;\n"
+       << "  if (!converter_t<" << twt << ">::convert (value, &t))\n"
        << "    return -1;\n"
-       << "  }\n"
-       << "  " << u->tagtype
-       << " t = " << union_tag_cast (u, "0") << ";\n"
-       << "  if (PyInt_Check (value)) {\n"
-       << "    t = " << union_tag_cast (u, "PyInt_AsLong (value)") << ";\n"
-       << "  } else if (PyLong_Check (value)) {\n"
-       << "    t = " << union_tag_cast (u, "PyLong_AsLong (value)") << ";\n"
-       << "  } else {\n"
-       << "    PyErr_SetString (PyExc_TypeError, "
-       << "\"Non-integral type given as switch tag\");\n"
-       << "    return -1;\n"
-       << "  }\n"
        << "  self->set_" << u->tagid << " (t);\n"
        << "  return 0;\n"
        << "}\n\n";
@@ -1588,15 +1653,21 @@ static void
 dumpenum (const rpc_sym *s)
 {
   const rpc_enum *rs = s->senum.addr ();
+  const str py_typ_obj = "PyInt_Type";
+  const str wt = pyw_type (rs->id);
 
   // dump the C "enum" representation of the enum
   dump_c_enum (rs);
 
   // dump the object wrapper
-  dump_w_class (rs->id, pyw_type (rs->id), "PyInt_Type", rs->id);
+  dump_w_class (rs->id, wt, py_typ_obj, rs->id);
 
-  dump_w_init_class_func ();
+  dump_w_class_init_func (wt,  py_typ_obj);
+  dump_w_enum_clear_func (wt);
+  dump_enum_in_range (rs);
+  dump_w_enum_convert (rs->id);
 
+  dump_allocator (rs->id);
   
 
 }
