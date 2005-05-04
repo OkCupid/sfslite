@@ -348,6 +348,25 @@ rpc_print (const strbuf &sb, const T &obj, int recdepth,	\
   return sb;							\
 }
 
+#define PY_XDR_OBJ_WARN(T,w)                                    \
+PyObject *                                                      \
+T##_##w (T *self)                                               \
+{                                                               \
+   dump_to (self, w);                                           \
+   Py_INCREF (Py_None);                                         \
+   PyErr_Clear ();                                              \
+   return Py_None;                                              \
+}
+
+#define PY_XDR_OBJ_WARN_DECL(T,w)                               \
+PyObject * T##_##w (T *self) ;
+
+template<class T, class S> void
+dump_to (const T *obj, S s)
+{
+  rpc_print (s, *obj);
+}
+
 
 //
 //-----------------------------------------------------------------------

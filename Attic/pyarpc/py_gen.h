@@ -70,7 +70,7 @@ static PyTypeObject T##_Type = {                                          \
   0,                                                /* tp_dictoffset */   \
   (initproc)T##_##init,                             /* tp_init */         \
   PyType_GenericAlloc,                              /* tp_alloc */        \
-  T##_##new                                         /* tp_new */          \
+  (newfunc)T##_##new                                /* tp_new */          \
 };                                                               
 
 #define PY_ABSTRACT_CLASS(T,Q)                                            \

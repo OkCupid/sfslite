@@ -255,11 +255,6 @@ dump_w_class_init_func (const str &wt, const str &pt)
        << "}\n\n";
 }
 
-static void
-dump_w_enum_clear_func (const str &wt)
-{
-  aout << "bool " << wt << "::clear () { return true; }\n\n";
-}
 
 static void
 dump_union_init_and_clear (const rpc_union *u)
@@ -279,6 +274,21 @@ dump_union_init_and_clear (const rpc_union *u)
        << "  _obj = NULL;\n"
        << "  return true;\n"
        << "}\n\n" ;
+}
+
+static void
+dump_w_enum_clear_func (const str &id)
+{
+  const str wt = pyw_type (id);
+
+  aout << "bool\n"
+       << wt << "::clear ()\n"
+       << "{\n"
+       << "  Py_XDECREF (_obj);\n"
+       << "  _obj = NULL;\n"
+       << "  return true;\n"
+       << "}\n\n" ;
+
 }
 
 static void
@@ -336,6 +346,20 @@ dump_class_new_func (const str &id)
        << "{\n"
        << "  " << ct << " *o = " << ct << "_uncasted_new (type, args, kwds);\n"
        << "  return reinterpret_cast<PyObject *> (o);\n"
+       << "}\n\n";
+}
+
+static void
+dump_enum_new_func (const str &id)
+{
+  str ct = pyc_type (id);
+  aout << "static " << ct << " *\n"
+       << ct << "_new (PyTypeObject *type, PyObject *args, PyObject *kwds)\n"
+       << "{\n"
+       << "  " << ct << " *self;\n"
+       << "  if (!(self = (" << ct << " *)type->tp_alloc (type, 0)))\n"
+       << "    return NULL;\n"
+       << "  return self;\n"
        << "}\n\n";
 }
 
@@ -409,7 +433,7 @@ static void
 dump_class_dealloc_func (const rpc_struct *rs)
 {
   str ct = pyc_type (rs->id);
-  aout << "\nstatic void\n"
+  aout << "static void\n"
        << ct << "_dealloc (" << ct << " *self)\n"
        << "{\n";
   for (const rpc_decl *rd = rs->decls.base (); rd < rs->decls.lim (); rd++) {
@@ -448,7 +472,17 @@ dump_enum_in_range (const rpc_enum *e)
     }
     aout << "t == " << rc->id;
   }
+
   aout << ";\n"
+       << "}\n\n"
+       << "bool\n"
+       << id << "_is_in_range_set_error (" << id << " t)\n"
+       << "{\n"
+       << "  bool rc = " << id << "_is_in_range (t);\n"
+       << "  if (!rc)\n"
+       << "    PyErr_SetString (PyExc_OverflowError, "
+       <<                       "\"Enum value is not in range\");\n"
+       << "  return rc;\n"
        << "}\n\n";
 }
 
@@ -478,9 +512,7 @@ dump_w_enum_convert (const str &id)
        <<                         ";\n"
        << "      return false;\n"
        << "    }\n"
-       << "    if (!" << id << "_is_in_range (t)) {\n"
-       << "       PyErr_SetString (PyExc_OverflowError, "
-       <<         "\"Enum value is not in range\");\n"
+       << "    if (!" << id << "_is_in_range_set_error (t)) {\n"
        << "       return false;\n"
        << "    }\n"
        << "    *res = t;\n"
@@ -604,25 +636,19 @@ dump_class_members (const str &t)
 static void
 dump_class_method_decls (const str &ct)
 {
-  aout << "PyObject * " << ct << "_pydump (" << ct << " *self);\n"
-       << "PyObject * " << ct << "_str2xdr (" << ct 
+  aout << "PyObject * " << ct << "_str2xdr (" << ct 
        << " *self, PyObject *args);\n"
-       << "PyObject * " << ct << "_xdr2str (" << ct << " *self);\n\n";
+       << "PyObject * " << ct << "_xdr2str (" << ct << " *self);\n"
+       << "PY_XDR_OBJ_WARN_DECL (" << ct << ", warn);\n"
+       << "PY_XDR_OBJ_WARN_DECL (" << ct << ", warnx);\n\n";
 }
 
 static void
 dump_class_methods (const str &id)
 {
   str ct = pyc_type (id);
-  aout << "PyObject *\n" 
-       << ct << "_pydump (" << ct << " *self)\n"
-       << "{\n"
-       << "  dump_" << ct << " (self);\n"
-       << "  Py_INCREF (Py_None);\n"
-       << "  PyErr_Clear ();\n"
-       << "  return Py_None;\n"
-       << "}\n\n"
-       << "PyObject *\n"
+
+  aout << "PyObject *\n"
        << ct << "_xdr2str (" << ct << " *self)\n"
        << "{\n"
        << "  str ret = xdr2str (*self);\n"
@@ -664,16 +690,21 @@ dump_class_methods (const str &id)
        << " succ:\n"
        << "  Py_INCREF (Py_None);\n"
        << "  return Py_None;\n"
-       << "}\n\n";
+       << "}\n\n"
+       << "PY_XDR_OBJ_WARN (" << ct << ", warn);\n"
+       << "PY_XDR_OBJ_WARN (" << ct << ", warnx);\n\n";
 }
 
 static void
 dump_class_methods_struct (const str &ct)
 {
   aout << "static PyMethodDef " << ct << "_methods[] = {\n"
-       << "  {\"dump\", (PyCFunction)" << ct << "_pydump, "
+       << "  {\"warn\", (PyCFunction)" << ct << "_warn, "
        <<        " METH_NOARGS,\n"
        << "   \"RPC-pretty print this method to stderr via async::warn\"},\n"
+       << "  {\"warnx\", (PyCFunction)" << ct << "_warnx, "
+       <<        " METH_NOARGS,\n"
+       << "   \"RPC-pretty print this method to stderr via async::warnx\"},\n"
        << "  {\"xdr2str\", (PyCFunction)" << ct << "_xdr2str, "
        <<        " METH_NOARGS,\n"
        << "   \"Export RPC structure to a regular string buffer\"},\n"
@@ -1069,21 +1100,12 @@ print_print (str type)
     "}\n";
 }
 
-static void
-print_py_dump (str type)
-{
-  aout << "void\n"
-    "dump_" << type << " (const " << type << " *objp)\n"
-    "{\n"
-    "  rpc_print (warnx, *objp);\n"
-    "}\n\n";
-}
 
 static void
-print_w_struct (const rpc_struct *s)
+print_w_struct (const str &id)
 {
-  str wt = pyw_type (s->id);
-  str ct = pyc_type (s->id);
+  str wt = pyw_type (id);
+  str ct = pyc_type (id);
   aout <<
     "const strbuf &\n"
     "rpc_print (const strbuf &sb, const " << wt << " &w, "
@@ -1140,7 +1162,6 @@ print_struct (const rpc_struct *s)
     "  return sb;\n"
     "}\n";
   print_print (ct);
-  print_py_dump (ct);
   print_print (pyw_type (s->id));
 }
 
@@ -1199,7 +1220,6 @@ print_union (const rpc_union *s)
     "  return sb;\n"
     "}\n";
   print_print (ct);
-  print_py_dump (ct);
   print_print (pyw_type (s->id));
 }
 
@@ -1238,8 +1258,17 @@ print_enum (const rpc_enum *s)
     "  if (prefix)\n"
     "    sb << \";\\n\";\n"
     "  return sb;\n"
-    "};\n";
+    "};\n\n"
+    "const strbuf &\n"
+    "rpc_print (const strbuf &sb, const " << pyc_type (ct) << " &obj, "
+    "int recdepth,\n"
+    "           const char *name, const char *prefix)\n"
+    "{\n"
+    "  return rpc_print (sb, obj.value, recdepth, name, prefix);\n"
+    "}\n\n";
+
   print_print (ct);
+  print_print (pyw_type (s->id));
 }
 
 static void
@@ -1248,13 +1277,14 @@ dumpprint (const rpc_sym *s)
   switch (s->type) {
   case rpc_sym::STRUCT:
     print_struct (s->sstruct.addr ());
-    print_w_struct (s->sstruct.addr ());
+    print_w_struct (s->sstruct.addr ()->id);
     break;
   case rpc_sym::UNION:
     print_union (s->sunion.addr ());
     break;
   case rpc_sym::ENUM:
     print_enum (s->senum.addr ());
+    print_w_struct (s->senum.addr ()->id);
     break;
   case rpc_sym::TYPEDEF:
     print_print (pyc_type (s->stypedef->id));
@@ -1313,8 +1343,31 @@ dump_w_class (const str &ct, const str &wt, const str &pt, const str &id)
        << "    pyw_tmpl_t<" << wt << ", " << ct << " > (p) {}\n"
        << "  bool init ();\n"
        << "  bool clear ();\n"
-       << "};\n\n"
-       << "PY_RPC_TYPE2STR_DECL(" << id << ");\n\n";
+       << "};\n\n";
+}
+
+static void
+dump_type2str_decl (const str &prfx, const str &id)
+{
+  aout << prfx << "RPC_TYPE2STR_DECL (" << id << ");\n";
+}
+
+static void
+dump_py_type2str_decl (const str &id) 
+{
+  dump_type2str_decl ("PY_", id);
+}
+
+static void
+dump_type2str_decl (const str &id)
+{
+  dump_type2str_decl ("", id);
+}
+
+static void
+dump_rpc_print_decl (const str &id)
+{
+  aout << "RPC_PRINT_DECL (" << id << ");\n";
 }
 
 static void
@@ -1324,6 +1377,12 @@ dump_w_class (const str &id)
   str wt = pyw_type (id);
   str pt = py_type (id);
   dump_w_class (ct, wt, pt, id);
+}
+
+static void
+dump_print_decls (const str &id)
+{
+  dump_py_type2str_decl (id);
 }
 
 static void
@@ -1345,6 +1404,8 @@ dumpstruct (const rpc_sym *s)
   dump_object_table (rs->id);
 
   dump_w_class (rs->id);
+  dump_print_decls (rs->id);
+
   dump_convert (rs->id);
   dump_w_class_init_func (pyw_type (rs->id), py_type (rs->id));
   dump_w_class_clear_func (rs);
@@ -1433,10 +1494,9 @@ punionmacrodefault (str prefix, const rpc_union *rs)
 }
 
 static void
-sfs_dumpunion (const rpc_sym *s)
+dump_c_union (const rpc_sym *s)
 {
   bool hasdefault = false;
-
 
   const rpc_union *rs = s->sunion.addr ();
   str ct = pyc_type (rs->id);
@@ -1560,7 +1620,7 @@ dumpunion (const rpc_sym *s)
 {
   const rpc_union *u = s->sunion.addr ();
   str ct = pyc_type (u->id);
-  sfs_dumpunion (s);
+  dump_c_union (s);
   dump_union_dealloc_func (u);
   dump_union_uncasted_new_func (u);
   dump_class_new_func (u->id);
@@ -1573,26 +1633,13 @@ dumpunion (const rpc_sym *s)
   dump_object_table (u->id);
 
   dump_w_class (u->id);
+  dump_print_decls (u->id);
+
   dump_convert (u->id);
   dump_union_init_and_clear (u);
   dump_w_rpc_traverse (u->id);
   dump_xdr_func (u->id);
 }
-
-static void
-dump_py_enum_class (const rpc_enum *rs)
-{
-  str ct = rs->id;
-  str pt = pyc_type (rs->id);
-
-  aout << "struct " << pt << " {\n"
-       << "  PyObject_HEAD\n"
-       << "  " << ct << " val;\n"
-       << "};\n"
-       << "RPC_ENUM_DECL (" << pt << ")\n"
-       << "\n";
-}
-
 
 static void
 dump_c_enum (const rpc_enum *rs)
@@ -1645,9 +1692,92 @@ dump_c_enum (const rpc_enum *rs)
        << "  return true;\n"
        << "}\n\n";
 
-  //  dump_w_rpc_traverse (rs->id);
-  //  dump_xdr_func (rs->id);
 }
+
+static void
+dump_enum_py (const rpc_enum *e)
+{
+  str ct = pyc_type (e->id);
+  aout << "struct " << ct << " {\n"
+       << "  PyObject_HEAD\n"
+       << "  " << e->id << " value;\n"
+       << "};\n"
+       << "RPC_ENUM_DECL (" << ct << ")\n"
+       << "\n";
+}
+
+#if 0
+static void
+dump_enum_dealloc_func (const rpc_enum *e)
+{
+  str ct = pyc_type (e->id);
+  aout << "static void\n"
+       << ct << "_dealloc (" << ct << " *self)\n"
+       << "{\n"
+       << "  self->ob_type_tp_free ((PyObject *) self);\n"
+       << "}\n\n";
+}
+#endif
+
+static void
+dump_int_to_enum_converter (const rpc_enum *e)
+{
+  str et = e->id;
+  aout << "static bool\n"
+       << et << "_int2enum (int in, " << et << " *out)\n"
+       << "{\n"
+       << "  " << et << " tmp = " << enum_cast (et, "in") << ";\n"
+       << "  if (!" << et << "_is_in_range_set_error (tmp))\n"
+       << "    return false;\n"
+       << "  *out = tmp;\n"
+       << "  return true;\n"
+       << "}\n\n";
+}
+
+static void
+dump_enum_init_func (const rpc_enum *e)
+{
+  str ct = pyc_type (e->id);
+  aout << "static int\n"
+       << ct << "_init (" << ct << " *self, PyObject *args, PyObject *k)\n"
+       << "{\n"
+       << "  int i = 0;\n"
+       << "  if (!PyArg_ParseTuple (args, \"i\", &i))\n"
+       << "    return -1;\n"
+       << "  if (!" << e->id << "_int2enum (i, &self->value))\n"
+       << "     return -1;\n"
+       << "  return 0;\n"
+       << "}\n\n";
+}
+
+static void
+dump_enum_object_table (const str &id)
+{
+  const str ct = pyc_type (id);
+  const str pt = id;
+  aout << "PY_CLASS_DEF (" << ct << ", \"" << module << "." << pt 
+       <<                "\", 1, 0, -1, \"" << pt << " object\",\n"
+       << "              methods, members, 0, init, new, 0);\n"
+       << "\n";
+}
+
+static void
+dump_enum_rpc_traverse (const str &id)
+{
+  aout << "template<class T> bool\n"
+       << "rpc_traverse (T &t, " << pyc_type (id) << " &o)\n"
+       << "{\n"
+       << "  return rpc_traverse (t, o.value);\n"
+       << "}\n\n";
+}
+
+static void
+dumpenum_mthds (const rpc_enum *rs)
+{
+  dump_allocator (rs->id);
+  dump_class_methods (rs->id);
+}
+
 
 static void
 dumpenum (const rpc_sym *s)
@@ -1655,21 +1785,41 @@ dumpenum (const rpc_sym *s)
   const rpc_enum *rs = s->senum.addr ();
   const str py_typ_obj = "PyInt_Type";
   const str wt = pyw_type (rs->id);
+  const str ct = pyc_type (rs->id);
 
   // dump the C "enum" representation of the enum
   dump_c_enum (rs);
 
-  // dump the object wrapper
-  dump_w_class (rs->id, wt, py_typ_obj, rs->id);
-
-  dump_w_class_init_func (wt,  py_typ_obj);
-  dump_w_enum_clear_func (wt);
+  // convert used throughout
   dump_enum_in_range (rs);
+  dump_int_to_enum_converter (rs);
+
+  // dump the python object manipulatable in python
+  dump_enum_py (rs);
+  dump_enum_new_func (rs->id);
+  // dump_enum_dealloc_func (rs);
+  dump_class_members (ct);
+  dump_class_method_decls (ct);
+  dump_class_methods_struct (ct);
+  dump_enum_init_func (rs);
+  dump_enum_object_table (rs->id);
+
+  // dump the object wrapper
+  dump_w_class (rs->id);
+  dump_print_decls (rs->id);
+  dump_type2str_decl (rs->id);
+  dump_rpc_print_decl (rs->id);
+
+  aout << "\n";
+
+  dump_w_class_init_func (wt, py_type (rs->id));
+  dump_w_enum_clear_func (rs->id);
   dump_w_enum_convert (rs->id);
 
-  dump_allocator (rs->id);
-  
-
+  dump_w_rpc_traverse (rs->id);
+  dump_enum_rpc_traverse (rs->id);
+  dump_xdr_func (rs->id);
+  dumpenum_mthds (rs);
 }
 
 static void
@@ -1872,6 +2022,9 @@ get_c_classes (const rpc_sym *s)
 	ret.push_back (rpcprog (p, rv));
       }
     }
+    break;
+  case rpc_sym::ENUM:
+    ret.push_back (s->senum.addr ()->id);
     break;
   default:
     break;
