@@ -413,6 +413,29 @@ dump_class_init_func (const rpc_struct *rs)
 }
 
 static void
+dump_str_func (const str &id)
+{
+  str ct = pyc_type (id);
+  aout << "static PyObject *\n"
+       << ct << "_str (" << ct << " *obj)\n"
+       << "{\n"
+       << "  return pretty_print_to_py_str_obj (obj);\n"
+       << "}\n\n";
+}
+
+static void
+dump_print_func (const str &id)
+{
+  str ct = pyc_type (id);
+  aout << "static int\n"
+       << ct << "_print (" << ct << " *obj, FILE *fp, int flags)\n"
+       << "{\n"
+       << "  return pretty_print_to_fd (obj, fp);\n"
+       << "}\n\n";
+
+}
+
+static void
 dump_union_init_func (const rpc_union *u)
 {
   str ct = pyc_type (u->id);
@@ -722,10 +745,11 @@ dump_object_table (const str &id)
   str ct = pyc_type (id);
   str pt = id;
 
-  aout << "PY_CLASS_DEF(" << ct << ", \"" << module << "." << pt 
-       <<               "\", 1, dealloc, "
-       <<               "-1, \"" << pt << " object\",\n"
-       << "             methods, members, getsetters, init, new, 0);\n"
+  aout << "PY_CLASS_DEF2(" << ct << ", \"" << module << "." << pt 
+       <<                "\", 1, dealloc, "
+       <<                "-1, \"" << pt << " object\",\n"
+       << "              methods, members, getsetters, init, new, 0,\n"
+       << "              str, 0, print);\n"
        << "\n";
 }
 
@@ -1401,6 +1425,8 @@ dumpstruct (const rpc_sym *s)
   dump_getsetter_decls (rs);
   dump_getsetter_table (rs);
   dump_class_init_func (rs);
+  dump_str_func (rs->id);
+  dump_print_func (rs->id);
   dump_object_table (rs->id);
 
   dump_w_class (rs->id);
@@ -1630,6 +1656,8 @@ dumpunion (const rpc_sym *s)
   dump_union_getsetter_decls (u);
   dump_union_getsetter_table (u);
   dump_union_init_func (u);
+  dump_str_func (u->id);
+  dump_print_func (u->id);
   dump_object_table (u->id);
 
   dump_w_class (u->id);
@@ -1802,6 +1830,8 @@ dumpenum (const rpc_sym *s)
   dump_class_method_decls (ct);
   dump_class_methods_struct (ct);
   dump_enum_init_func (rs);
+  dump_str_func (rs->id);
+  dump_print_func (rs->id);
   dump_enum_object_table (rs->id);
 
   // dump the object wrapper
@@ -2147,6 +2177,7 @@ genpyc (str fname)
        << "#include \"crypt.h\"\n"
        << "#include \"py_rpctypes.h\"\n"
        << "#include \"py_gen.h\"\n"
+       << "#include \"py_util.h\"\n"
        << "\n"
        << "\n"
        << "static PyObject *AsyncXDR_Exception;\n"

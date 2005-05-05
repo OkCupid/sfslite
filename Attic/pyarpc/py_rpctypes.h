@@ -99,6 +99,9 @@ public:
   const P *const_casted_obj () const 
   { return reinterpret_cast<const P *> (_obj); }
 
+  // aborted, but we'll keep it in here anyways.
+  bool copy_from (const pyw_tmpl_t<W,P> &t);
+
   bool safe_set_obj (PyObject *in);
 };
 
@@ -477,12 +480,19 @@ public:                                                          \
     : pyw_tmpl_t<pyw_##ctype, PyLongObject> (p) {}               \
   ctype get () const                                             \
   {                                                              \
+    ctype c = 0;                                                 \
+    (void )get (&c);                                             \
+    return c;                                                    \
+  }                                                              \
+  bool get (ctype *t) const                                      \
+  {                                                              \
     if (!_obj) {                                                 \
       PyErr_SetString (PyExc_UnboundLocalError,                  \
                       "unbound int/long");                       \
-      return NULL;                                               \
+      return false;                                              \
     }                                                            \
-    return (PyLong_As##ptype (_obj));                            \
+    *t = PyLong_As##ptype (_obj);                                \
+    return true;                                                 \
   }                                                              \
   bool set (ctype i) {                                           \
     Py_XDECREF (_obj);                                           \
@@ -779,6 +789,18 @@ pyw_tmpl_t<W,P>::safe_set_obj (PyObject *in)
   bool ret = out ? set_obj (out) : false;
   Py_XDECREF (out);
   return ret;
+}
+
+template<class W, class P> bool
+pyw_tmpl_t<W,P>::copy_from (const pyw_tmpl_t<W,P> &src)
+{
+  const P *in = reinterpret_cast<const P *> (src.get_const_obj ());
+  PyObject *n = py_obj_copy (in);
+  if (!n)
+    return false;
+  bool rc = set_obj (n);
+  Py_XDECREF (n);
+  return rc;
 }
 
 //

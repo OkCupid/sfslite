@@ -6,3 +6,4 @@ $Id$
 import async.core
 import async.err
 import async.arpc
+import async.util

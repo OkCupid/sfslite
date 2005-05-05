@@ -6,9 +6,15 @@
 bool                                                              \
 rpc_traverse (XDR *xdrs, pyw_##T &obj)                            \
 {                                                                 \
-  T raw = obj.get ();                                             \
-  bool rc = rpc_traverse (xdrs, raw);                             \
-  if (rc) obj.set (raw);                                          \
+  T tmp;                                                          \
+  switch (xdrs->x_op) {                                           \
+  case XDR_ENCODE:                                                \
+    if (!obj.get (&tmp)) return false;                            \
+  default:                                                        \
+    break;                                                        \
+  }                                                               \
+  bool rc = rpc_traverse (xdrs, tmp);                             \
+  if (rc) obj.set (tmp);                                          \
   return rc;                                                      \
 }
 
@@ -88,7 +94,7 @@ pyw_base_t::set_obj (PyObject *o)
 {
   PyObject *tmp = _obj;
   Py_INCREF (o);
-  _obj = o; // no INCREF since usually just constructed
+  _obj = o;
   Py_XDECREF (tmp);
   return true;
 }

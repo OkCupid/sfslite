@@ -23,13 +23,15 @@ T##_new (PyTypeObject *type, PyObject *args, PyObject *kwds)     \
   self = (T *)type->tp_alloc (type, 0);                          \
   return (PyObject *)self;                                       \
 }
-  
+
 
 #define PY_TP_FLAGS(flags) \
   (flags == -1 ? (Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE) : flags)
 
-#define PY_CLASS_DEF(T, pyname, basicsize, dealloc, flags, doc, methods,  \
-                     members, getsetters, init, new, base)                \
+
+#define PY_CLASS_DEF2(T, pyname, basicsize, dealloc, flags, doc, methods, \
+                      members, getsetters, init, new, base, str,          \
+                      repr, print)                                        \
 int T##_0 = 0;                                                            \
 static PyTypeObject T##_Type = {                                          \
   PyObject_HEAD_INIT(&PyType_Type)                                        \
@@ -38,17 +40,17 @@ static PyTypeObject T##_Type = {                                          \
   (basicsize ? sizeof (T) : 0),                     /* tp_basicsize*/     \
   0,                                                /* tp_itemsize*/      \
   (destructor)T##_##dealloc,                        /* tp_dealloc*/       \
-  0,                                                /* tp_print*/         \
+  (printfunc)T##_##print,                           /* tp_print*/         \
   0,                                                /* tp_getattr*/       \
   0,                                                /* tp_setattr*/       \
   0,                                                /* tp_compare*/       \
-  0,                                                /* tp_repr*/          \
+  (reprfunc)T##_##repr,                             /* tp_repr*/          \
   0,                                                /* tp_as_number*/     \
   0,                                                /* tp_as_sequence*/   \
   0,                                                /* tp_as_mapping*/    \
   0,                                                /* tp_hash */         \
   0,                                                /* tp_call */         \
-  0,                                                /* tp_str */          \
+  (reprfunc)T##_##str,                              /* tp_str */          \
   0,                                                /* tp_getattro*/      \
   0,                                                /* tp_setattro*/      \
   0,                                                /* tp_as_buffer */    \
@@ -72,6 +74,11 @@ static PyTypeObject T##_Type = {                                          \
   PyType_GenericAlloc,                              /* tp_alloc */        \
   (newfunc)T##_##new                                /* tp_new */          \
 };                                                               
+
+#define PY_CLASS_DEF(T, pyname, basicsize, dealloc, flags, doc, methods,  \
+                      members, getsetters, init, new, base)               \
+PY_CLASS_DEF2(T,pyname,basicsize,dealloc,flags,doc,methods,members,       \
+              getsetters, init, new, base, 0, 0, 0)
 
 #define PY_ABSTRACT_CLASS(T,Q)                                            \
   PY_ABSTRACT_CLASS_NEW(T,Q)                                              \
