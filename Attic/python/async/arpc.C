@@ -33,8 +33,12 @@ struct py_aclnt_t {
 struct py_asrv_t {
   PyObject_HEAD
   py_rpc_program_t *py_prog;
-  PyObject *cb;
   ptr<asrv> srv;
+};
+
+struct py_svccb_t {
+  PyObject_HEAD
+  svccb *sbp;
 };
 
 PY_ABSTRACT_CLASS(py_rpc_program_t, "arpc.prc_program");
@@ -90,14 +94,20 @@ py_asrv_t_dealloc (py_asrv_t *self)
 }
 
 static void
-py_asrv_t_dispatch (ptr<pp_t<py_asrv_t> > srv, svccb *sbp)
+py_asrv_t_dispatch (ptr<pop_t> cb, svccb *sbp)
 {
+  py_svccb_t *py_sbp =  PyObject_New (py_svccb_t, &py_svccb_t_Type);
+  if (!py_sbp) {
+    PyErr_SetString (PyExc_MemoryError, "allocated failed");
+    py_sbp->_errp
   if (!sbp) {
-    // call back with a new py_svccb_t saying that the 
-    // channel is EOF'ed
-    return;
+    bun->_eof = true;
+  } else {
+    bun->_procno = sbp->proc ();
+    pyw_base_t *arg = sbp->Xtmpl getarg<pyw_base_t> ();
+    if (arg)
+      bun->_arg = arg->get_obj ();
   }
-  
 }
 
 static int
@@ -136,12 +146,8 @@ py_asrv_t_init (py_asrv_t *self, PyObject *argv, PyObject *kwds)
   self->py_prog = (py_rpc_program_t *)prog;
   Py_INCREF (self->py_prog);
   
-  self->cb = cb;
-  Py_XINCREF (self->cb);
-
   self->srv = asrv::alloc (p_x->x, *self->py_prog->prog,
-			   wrap (py_asrv_t_dispatch, 
-				 pp_t<py_asrv_t>::alloc(self)));
+			   wrap (py_asrv_t_dispatch, pop_t::alloc (cb)));
   return 0;
 }
 
