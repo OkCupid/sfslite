@@ -37,5 +37,15 @@ pretty_print_to_fd (const T *in, FILE *fp)
   return 0;
 }
 
+template<class T>
+struct pp_t {
+  py_ptr_t (T *o) : _p (o) { Py_INCREF (pyobj ()); }
+  ~py_ptr_t () { Py_DECREF (pyobj ()); }
+  PyObject *pyobj () { return reinterpret_cast<PyObject *> (_p); }
+  T * obj () { return _p; }
+  static pp_t<T> alloc (T *t) { return New refcounted<pp_t<T> > (t); }
+private:
+  T *const _p;
+};
 
 #endif

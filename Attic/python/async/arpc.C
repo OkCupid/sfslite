@@ -30,6 +30,13 @@ struct py_aclnt_t {
   ptr<aclnt> cli;
 };
 
+struct py_asrv_t {
+  PyObject_HEAD
+  py_rpc_program_t *py_prog;
+  PyObject *cb;
+  ptr<asrv> srv;
+};
+
 PY_ABSTRACT_CLASS(py_rpc_program_t, "arpc.prc_program");
 PY_ABSTRACT_CLASS(py_axprt_t, "arpc.axprt");
 
@@ -73,6 +80,68 @@ py_aclnt_t_dealloc (py_aclnt_t *self)
 {
   self->cli = NULL;
   self->ob_type->tp_free ((PyObject *)self);
+}
+
+static void
+py_asrv_t_dealloc (py_asrv_t *self)
+{
+  self->srv = NULL;
+  self->ob_type->tp_free ((PyObject *)self);
+}
+
+static void
+py_asrv_t_dispatch (ptr<pp_t<py_asrv_t> > srv, svccb *sbp)
+{
+  if (!sbp) {
+    // need to destroy the callback associated with this server
+    srv->obj ()->srv = NULL;
+    return;
+  }
+}
+
+static int
+py_asrv_t_init (py_asrv_t *self, PyObject *argv, PyObject *kwds)
+{
+  PyObject *x = NULL;
+  PyObject *prog = NULL;
+  PyObject *cb = NULL;
+  PyObject *tmp;
+  static char *kwlist[] = { "x", "prog", "cb", NULL };
+
+  self->py_prog = NULL;
+  if (!PyArg_ParseTupleAndKeywords (args, kwds, "OOO", kwlist, 
+				    &x, &prog, &cb))
+    return -1;
+
+  if (!x || !PyObject_IsInstance (x, (PyObject *)&py_axprt_t_Type)) {
+    PyErr_SetString (PyExc_TypeError,
+		     "asrv expects arg 1 as an axprt transport");
+    return -1;
+  }
+
+  if (!prog || 
+      !PyObject_IsInstance (prog, (PyObject *)&py_rpc_program_t_Type)) {
+    PyErr_SetString (PyExc_TypeError,
+		     "asrv expects arg 2 as an rpc_program");
+    return -1;
+  }
+
+  if (cb && !PyCallable_Check (cb)) {
+    PyErr_SetString (PyExc_TypeError,
+		     "asrv expects arg 3 as a callback");
+    return -1;
+  }
+  py_axprt_t *p_x = (py_axprt_t *)x;
+  self->py_prog = (py_rpc_program_t *)prog;
+  Py_INCREF (self->py_prog);
+  
+  self->cb = cb;
+  Py_XINCREF (self->cb);
+
+  self->srv = asrv::alloc (p_x->x, *self->py_prog->prog,
+			   wrap (py_asrv_t_dispatch, 
+				 pp_t<py_asrv_t>::alloc(self)));
+  return 0;
 }
 
 static int
