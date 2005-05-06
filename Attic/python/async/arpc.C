@@ -93,10 +93,11 @@ static void
 py_asrv_t_dispatch (ptr<pp_t<py_asrv_t> > srv, svccb *sbp)
 {
   if (!sbp) {
-    // need to destroy the callback associated with this server
-    srv->obj ()->srv = NULL;
+    // call back with a new py_svccb_t saying that the 
+    // channel is EOF'ed
     return;
   }
+  
 }
 
 static int
