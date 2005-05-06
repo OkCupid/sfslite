@@ -39,16 +39,17 @@ pretty_print_to_fd (const T *in, FILE *fp)
 
 template<class T>
 struct pp_t {
-  pop_t (T *o) : _p (o) { Py_INCREF (pyobj ()); }
-  ~pop_t () { Py_DECREF (pyobj ()); }
+  pp_t (T *o) : _p (o) { Py_INCREF (pyobj ()); }
+  ~pp_t () { Py_DECREF (pyobj ()); }
   PyObject *pyobj () { return reinterpret_cast<PyObject *> (_p); }
   T * obj () { return _p; }
-  static pop_t<T> alloc (T *t) 
+  static ptr<pp_t<T> > alloc (T *t) 
   { return t ? New refcounted<pp_t<T> > (t) : NULL ; }
 private:
   T *const _p;
 };
 
 typedef pp_t<PyObject> pop_t;
+
 
 #endif

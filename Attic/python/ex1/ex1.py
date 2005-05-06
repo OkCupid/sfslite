@@ -8,6 +8,7 @@
 import ex1
 import async
 import socket
+import sys
 
 def cb(err,res):
     print "err=", err, "& res=", res
@@ -44,14 +45,16 @@ def call3(cli):
     z.b.foos[1].x = "foos[1] = 5"
     z.b.foos[1].xx = 5
     z.b.bar.y = [ 100, 200, 300, 400 ];
-    z.dump ()
+    z.warnx ()
     cli.call (ex1.FOO_BB, z, cb)
-    
 
+port = 3000
+if len (sys.argv) > 1:
+    port = int (sys.argv[1])
 
 
 sock = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
-sock.connect (('127.0.0.1', 3000))
+sock.connect (('127.0.0.1', port))
 fd = sock.fileno ()
 
 x = async.arpc.axprt_stream (fd)

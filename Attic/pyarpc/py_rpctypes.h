@@ -184,8 +184,11 @@ public:
 //   typed C++ wrappers.
 //  
 
+typedef pyw_base_t * (*wrap_fn_t) (PyObject *, PyObject *);
+
 struct py_rpcgen_table_t {
-  pyw_base_t *(*wrap_arg) (PyObject *arg, PyObject *rpc_exception);
+  wrap_fn_t wrap_arg;
+  wrap_fn_t wrap_res;
 };
 
 extern py_rpcgen_table_t py_rpcgen_error;
@@ -478,6 +481,8 @@ public:                                                          \
     : pyw_tmpl_t<pyw_##ctype, PyLongObject> (e, &PyLong_Type) {} \
   pyw_##ctype (const pyw_##ctype &p)                             \
     : pyw_tmpl_t<pyw_##ctype, PyLongObject> (p) {}               \
+  pyw_##ctype (PyObject *o)                                      \
+    : pyw_tmpl_t<pyw_##ctype, PyLongObject> (o, &PyLong_Type) {} \
   ctype get () const                                             \
   {                                                              \
     ctype c = 0;                                                 \

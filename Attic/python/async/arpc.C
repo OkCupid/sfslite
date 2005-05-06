@@ -1,4 +1,5 @@
 // -*-c++-*-
+
 #include <Python.h>
 #include "structmember.h"
 #include "async.h"
@@ -16,47 +17,54 @@ struct py_axprt_t {
   void dealloc () { x = NULL; }
 };
 
-struct py_axprt_stream_t : public py_axprt_t {
-
+struct py_axprt_stream_t : public py_axprt_t 
+{
+  PyObject *sock;
 };
 
-struct py_axprt_dgram_t : public py_axprt_t {
-
-};
+struct py_axprt_dgram_t : public py_axprt_t {};
 
 struct py_aclnt_t {
   PyObject_HEAD
   py_rpc_program_t *py_prog;
+  PyObject *x;
   ptr<aclnt> cli;
 };
 
 struct py_asrv_t {
   PyObject_HEAD
-  py_rpc_program_t *py_prog;
+  PyObject *x;
   ptr<asrv> srv;
 };
 
 struct py_svccb_t {
   PyObject_HEAD
   svccb *sbp;
+  wrap_fn_t wrap_res;
 };
 
 PY_ABSTRACT_CLASS(py_rpc_program_t, "arpc.prc_program");
 PY_ABSTRACT_CLASS(py_axprt_t, "arpc.axprt");
 
+
+//-----------------------------------------------------------------------
+//
+//  axprt_stream
+//
+
 PY_CLASS_NEW(py_axprt_stream_t);
-PY_CLASS_NEW(py_aclnt_t);
 
 static int
 py_axprt_stream_t_init (py_axprt_stream_t *self, PyObject *args, 
 			PyObject *kwds)
 {
-  static char *kwlist[] = { "fd", "defps", NULL };
+  static char *kwlist[] = { "fd", "defps", "sock", NULL };
   int fd;
   int defps = 0;
+  PyObject *sock = NULL;
 
-  if (! PyArg_ParseTupleAndKeywords (args, kwds, "i|i", kwlist,
-				     &fd, &defps))
+  if (! PyArg_ParseTupleAndKeywords (args, kwds, "i|Oi", kwlist,
+				     &fd, &sock, &defps))
     return -1;
 
   if (defps) {
@@ -64,54 +72,225 @@ py_axprt_stream_t_init (py_axprt_stream_t *self, PyObject *args,
   } else {
     self->x = axprt_stream::alloc (fd);
   }
-  
+
+  Py_XINCREF (sock);
+  self->sock = sock;
+
   return 0;
 }
 
 static void
 py_axprt_stream_t_dealloc (py_axprt_stream_t *self)
 {
+  warnx << "~stream\n";
   self->x = NULL;
+  Py_XDECREF (self->sock);
   self->ob_type->tp_free ((PyObject *)self);
 }
 
 PY_CLASS_DEF(py_axprt_stream_t, "arpc.axprt_stream", 1, dealloc, -1,
 	     "py_axprt_stream_t object", 0, 0, 0, init, new, 
 	     &py_axprt_t_Type);
+//
+//-----------------------------------------------------------------------
+
+//-----------------------------------------------------------------------
+//
+//  svccb
+//
 
 static void
-py_aclnt_t_dealloc (py_aclnt_t *self)
+py_svccb_t_dealloc (py_svccb_t *self)
 {
-  self->cli = NULL;
+  if (self->sbp) {
+    self->sbp->reject (PROC_UNAVAIL);
+    self->sbp = NULL;
+  }
   self->ob_type->tp_free ((PyObject *)self);
 }
+
+PY_CLASS_NEW (py_svccb_t);
+
+static PyObject *
+py_svccb_t_eof (py_svccb_t *o)
+{
+  PyObject *ret;
+  ret = o->sbp ? Py_True : Py_False;
+  Py_INCREF (ret);
+  return ret;
+}
+
+static bool
+sbp_check (py_svccb_t *o)
+{
+  if (!o->sbp) {
+    PyErr_SetString (AsyncRPC_Exception, "no svccb active");
+    return false;
+  }
+  return true;
+}
+
+static PyObject *
+py_svccb_t_proc (py_svccb_t *o)
+{
+  long l = 0;
+  if (o->sbp)
+    l = long (o->sbp->proc ());
+  return PyInt_FromLong (l);
+}
+
+static PyObject *
+py_svccb_t_getarg (py_svccb_t *o)
+{
+  if (!sbp_check (o)) return NULL;
+  pyw_base_t *arg = o->sbp->Xtmpl getarg<pyw_base_t> ();
+  if (!arg) {
+    // XXX maybe return Py_None?
+    PyErr_SetString (AsyncRPC_Exception, "no argument given");
+    return NULL;
+  }
+
+  // keeps the arg around in case we need to call this guy again
+  // Obviously, get_obj () increases the reference count, so
+  // we're returning a new reference
+  return arg->get_obj ();
+}
+
+static PyObject *
+py_svccb_t_getres (py_svccb_t *o)
+{
+  if (!sbp_check (o)) return NULL;
+  pyw_base_t *res = o->sbp->Xtmpl getres<pyw_base_t> ();
+  return res->unwrap ();
+}
+
+static PyObject *
+py_svccb_t_reject (py_svccb_t *o, PyObject *args)
+{
+  if (!sbp_check (o)) return NULL;
+  int stat = 0;
+  char auth = 0;
+  if (!PyArg_ParseTuple (args, "i|b", &stat, &auth))
+    return NULL;
+  if (auth) {
+    o->sbp->reject (auth_stat (stat));
+  } else {
+    o->sbp->reject (accept_stat (stat));
+  }
+  o->sbp = NULL;
+
+  Py_INCREF (Py_None);
+  return Py_None;
+}
+
+static PyObject *
+py_svccb_t_ignore (py_svccb_t *o)
+{
+  if (!sbp_check (o)) return NULL;
+
+  o->sbp->ignore ();
+  o->sbp = NULL;
+
+  Py_INCREF (Py_None);
+  return Py_None;
+}
+
+static PyObject *
+py_svccb_t_reply (py_svccb_t *o, PyObject *args)
+{
+  if (!sbp_check (o)) return NULL;
+  PyObject *obj = NULL;
+  if (!PyArg_ParseTuple (args, "O", &obj))
+    return NULL;
+
+  pyw_base_t *res = o->wrap_res (obj, AsyncRPC_Exception);
+  if (!res)
+    return NULL;
+
+  o->sbp->reply (res);
+  o->sbp = NULL;
+
+  Py_INCREF (Py_None);
+  return Py_None;
+}
+
+static PyMethodDef py_svccb_t_methods[] = {
+  { "reply", (PyCFunction)py_svccb_t_reply, METH_VARARGS,
+    PyDoc_STR ("svccb::reply from libasync") },
+  { "ignore", (PyCFunction)py_svccb_t_ignore, METH_NOARGS,
+    PyDoc_STR ("svccb::ignore from libasync") },
+  { "eof", (PyCFunction)py_svccb_t_eof, METH_NOARGS,
+    PyDoc_STR ("check if server is at EOF") },
+  { "proc", (PyCFunction)py_svccb_t_proc, METH_NOARGS,
+    PyDoc_STR ("svccb::proc from libasync") },
+  { "getarg", (PyCFunction)py_svccb_t_getarg, METH_NOARGS,
+    PyDoc_STR ("svccb::getarg from libasync") },
+  { "getres", (PyCFunction)py_svccb_t_getres, METH_NOARGS,
+    PyDoc_STR ("svccb::getres from libasync") },
+  { "reject", (PyCFunction)py_svccb_t_reject, METH_NOARGS,
+    PyDoc_STR ("svccb::reject from libasync") },
+  {NULL}
+};
+
+PY_CLASS_DEF (py_svccb_t, "arpc.svccb", 1, dealloc, -1,
+	      "svccb object wrapper", methods, 0, 0, 0, new, 0);
+
+//
+//
+//-----------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------
+//
+//  asrv
+//
 
 static void
 py_asrv_t_dealloc (py_asrv_t *self)
 {
+  Py_DECREF (self->x);
   self->srv = NULL;
   self->ob_type->tp_free ((PyObject *)self);
 }
+  
+PY_CLASS_NEW(py_asrv_t);
+
+struct py_asrvbun_t {
+
+  py_asrvbun_t (py_rpc_program_t *p, PyObject *c)
+    : prog (p), cb (c) { Py_INCREF (prog); Py_XINCREF (cb); }
+
+  ~py_asrvbun_t () { Py_DECREF (prog); Py_XDECREF (cb); }
+
+  py_rpc_program_t *prog;
+  PyObject *cb;
+};
 
 static void
-py_asrv_t_dispatch (ptr<pop_t> cb, svccb *sbp)
+py_asrv_t_dispatch (ptr<py_asrvbun_t> bun, svccb *sbp)
 {
+  if (!bun->cb) {
+    sbp->ignore ();
+    return;
+  }
+
   py_svccb_t *py_sbp =  PyObject_New (py_svccb_t, &py_svccb_t_Type);
+
   if (!py_sbp) {
-    PyErr_SetString (PyExc_MemoryError, "allocated failed");
-    py_sbp->_errp
-  if (!sbp) {
-    bun->_eof = true;
+    sbp->reject (PROC_UNAVAIL);
   } else {
-    bun->_procno = sbp->proc ();
-    pyw_base_t *arg = sbp->Xtmpl getarg<pyw_base_t> ();
-    if (arg)
-      bun->_arg = arg->get_obj ();
+    py_sbp->sbp = sbp;
+    py_sbp->wrap_res = bun->prog->pytab[sbp->proc ()].wrap_res;
+    PyObject *arglist = Py_BuildValue ("(O)", py_sbp);
+    PyObject *pres = PyObject_CallObject (bun->cb, arglist);
+    Py_XDECREF (pres);
+    Py_DECREF (arglist);
+    Py_DECREF (py_sbp);
   }
 }
 
 static int
-py_asrv_t_init (py_asrv_t *self, PyObject *argv, PyObject *kwds)
+py_asrv_t_init (py_asrv_t *self, PyObject *args, PyObject *kwds)
 {
   PyObject *x = NULL;
   PyObject *prog = NULL;
@@ -119,7 +298,6 @@ py_asrv_t_init (py_asrv_t *self, PyObject *argv, PyObject *kwds)
   PyObject *tmp;
   static char *kwlist[] = { "x", "prog", "cb", NULL };
 
-  self->py_prog = NULL;
   if (!PyArg_ParseTupleAndKeywords (args, kwds, "OOO", kwlist, 
 				    &x, &prog, &cb))
     return -1;
@@ -129,6 +307,9 @@ py_asrv_t_init (py_asrv_t *self, PyObject *argv, PyObject *kwds)
 		     "asrv expects arg 1 as an axprt transport");
     return -1;
   }
+
+  self->x = x;
+  Py_INCREF (x);
 
   if (!prog || 
       !PyObject_IsInstance (prog, (PyObject *)&py_rpc_program_t_Type)) {
@@ -143,13 +324,36 @@ py_asrv_t_init (py_asrv_t *self, PyObject *argv, PyObject *kwds)
     return -1;
   }
   py_axprt_t *p_x = (py_axprt_t *)x;
-  self->py_prog = (py_rpc_program_t *)prog;
-  Py_INCREF (self->py_prog);
+  py_rpc_program_t *p_p = reinterpret_cast<py_rpc_program_t *> (prog);
+  ptr<py_asrvbun_t> bun = New refcounted<py_asrvbun_t> (p_p, cb);
   
-  self->srv = asrv::alloc (p_x->x, *self->py_prog->prog,
-			   wrap (py_asrv_t_dispatch, pop_t::alloc (cb)));
+  self->srv = asrv::alloc (p_x->x, *p_p->prog,
+			   wrap (py_asrv_t_dispatch, bun));
   return 0;
 }
+
+PY_CLASS_DEF(py_asrv_t, "arpc.asrv", 1, dealloc, -1,
+	     "asrv object wrapper", 0, 0, 0, init, new, 0);
+
+//
+//-----------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------
+//
+//  aclnt
+//
+
+PY_CLASS_NEW(py_aclnt_t);
+
+static void
+py_aclnt_t_dealloc (py_aclnt_t *self)
+{
+  Py_DECREF (self->x);
+  self->cli = NULL;
+  self->ob_type->tp_free ((PyObject *)self);
+}
+
 
 static int
 py_aclnt_t_init (py_aclnt_t *self, PyObject *args, PyObject *kwds)
@@ -169,6 +373,9 @@ py_aclnt_t_init (py_aclnt_t *self, PyObject *args, PyObject *kwds)
 		     "aclnt expects arg 1 as an axprt transport");
     return -1;
   }
+
+  self->x = x;
+  Py_INCREF (x);
 
   if (!prog || 
       !PyObject_IsInstance (prog, (PyObject *)&py_rpc_program_t_Type)) {
@@ -204,8 +411,10 @@ py_aclnt_t_call_cb (call_bundle_t *bun, clnt_stat e)
       // it will not be set.  However, unwrap will still delete the
       // wrapper object as required.
       PyObject *arglist = Py_BuildValue ("(iO)", (int )e, res);
-      PyObject_CallObject (bun->cb, arglist);
+      PyObject *pres = PyObject_CallObject (bun->cb, arglist);
+      Py_XDECREF (pres);
       Py_DECREF (arglist);
+      Py_DECREF (res);  // Py_BuildValue raises the refcount on res
     }
   } else 
     delete bun->res;
@@ -289,12 +498,13 @@ static PyMethodDef py_aclnt_t_methods[] = {
 PY_CLASS_DEF(py_aclnt_t, "arpc.aclnt", 1, dealloc, -1, 
 	     "aclnt object wrapper", methods, 0, 0, init, new, 0);
 
+//
+//-----------------------------------------------------------------------
+
+
 static PyMethodDef module_methods[] = {
   { NULL }
 };
-
-#define INS(x)                                                       \
-if ((rc = PyModule_AddIntConstant (m, #x, (long )x)) < 0) return rc
 
 static int
 all_ins (PyObject *m)
@@ -317,6 +527,20 @@ all_ins (PyObject *m)
   INS (RPC_UNKNOWNPROTO);
   INS (RPC_PROGNOTREGISTERED);
   INS (RPC_FAILED);
+  INS (SUCCESS);
+  INS (PROG_UNAVAIL);
+  INS (PROG_MISMATCH);
+  INS (PROC_UNAVAIL);
+  INS (GARBAGE_ARGS);
+  INS (SYSTEM_ERR);
+  INS (AUTH_OK);
+  INS (AUTH_BADCRED);
+  INS (AUTH_REJECTEDCRED);
+  INS (AUTH_BADVERF);
+  INS (AUTH_REJECTEDVERF);
+  INS (AUTH_TOOWEAK);
+  INS (AUTH_INVALIDRESP);
+  INS (AUTH_FAILED);
   return 1;
 
   // XXX the below seem nonstandard
@@ -345,14 +569,14 @@ initarpc (void)
   if (PyType_Ready (&py_axprt_t_Type) < 0 ||
       PyType_Ready (&py_axprt_stream_t_Type) < 0 ||
       PyType_Ready (&py_rpc_program_t_Type) < 0 ||
-      PyType_Ready (&py_aclnt_t_Type) < 0)
+      PyType_Ready (&py_aclnt_t_Type) < 0 ||
+      PyType_Ready (&py_asrv_t_Type) < 0 ||
+      PyType_Ready (&py_svccb_t_Type) < 0)
     return;
 
-  if (!import_async_exceptions (&AsyncXDR_Exception, &AsyncRPC_Exception))
-    return;
-
-  PyObject *errmod = PyImport_ImportModule ("async.err");
-  if (!errmod)
+  if (!import_async_exceptions (&AsyncXDR_Exception, 
+				&AsyncRPC_Exception,
+				NULL))
     return;
 
   m = Py_InitModule3 ("async.arpc", module_methods,
@@ -372,5 +596,7 @@ initarpc (void)
   PyModule_AddObject (m, "axprt_stream", (PyObject *)&py_axprt_stream_t_Type);
   PyModule_AddObject (m, "rpc_program", (PyObject *)&py_rpc_program_t_Type);
   PyModule_AddObject (m, "aclnt", (PyObject *)&py_aclnt_t_Type);
+  PyModule_AddObject (m, "asrv", (PyObject *)&py_asrv_t_Type);
+  PyModule_AddObject (m, "svccb", (PyObject *)&py_svccb_t_Type);
 }
 

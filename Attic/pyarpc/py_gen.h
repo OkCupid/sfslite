@@ -87,5 +87,7 @@ PY_CLASS_DEF2(T,pyname,basicsize,dealloc,flags,doc,methods,members,       \
 bool import_async_exceptions (PyObject **xdr, PyObject **rpc = NULL,
 			      PyObject **u = NULL);
 
+#define INS(x)                                                       \
+if ((rc = PyModule_AddIntConstant (m, #x, (long )x)) < 0) return rc
 
 #endif

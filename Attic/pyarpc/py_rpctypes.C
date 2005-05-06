@@ -75,7 +75,7 @@ wrap_error (PyObject *in, PyObject *rpc_exception)
 
 py_rpcgen_table_t py_rpcgen_error = 
 {
-  wrap_error
+  wrap_error, wrap_error
 };
 
 

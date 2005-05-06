@@ -1962,7 +1962,8 @@ dumpprog (const rpc_sym *s)
 	//aout << "  { convert_error, convert_error, wrap_error, "
 	//    << "dealloc_error },\n";
       }
-      aout << "  { py_wrap<" << pyw_type (rp->arg) << "> },\n";
+      aout << "  { py_wrap<" << pyw_type (rp->arg) << ">, "
+	   << " py_wrap<" << pyw_type (rp->res) << "> },\n";
     }
     aout << "};\n\n";
   }
