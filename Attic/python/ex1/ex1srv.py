@@ -8,9 +8,13 @@ import signal
 active_srvs = [];
 
 def dispatch (srv, sbp):
+    print "in dispatch"
     if sbp.eof ():
+        print "EOF !!"
         active_srvs.remove (srv)
         return
+    print "procno=", sbp.proc ()
+    sbp.getarg ().warn ()
     if sbp.proc () == ex1.FOO_NULL:
         sbp.reply (None)
     elif sbp.proc () == ex1.FOO_BAR:

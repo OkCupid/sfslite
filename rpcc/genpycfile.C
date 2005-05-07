@@ -1631,7 +1631,7 @@ dump_union_uncasted_new_func (const rpc_union *u)
        << "  if (!(self = (" << ct << " *)type->tp_alloc (type, 0)))\n"
        << "    return NULL;\n"
        << "  int arg = 0;\n"
-       << "  if (!PyArg_ParseTuple (args, \"|i\", &arg))\n"
+       << "  if (args && !PyArg_ParseTuple (args, \"|i\", &arg))\n"
        << "    return NULL;\n"
        << "  self->_base.init ();\n"
        << "  self->set_" << u->tagid

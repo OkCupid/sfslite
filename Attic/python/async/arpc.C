@@ -115,7 +115,7 @@ static PyObject *
 py_svccb_t_eof (py_svccb_t *o)
 {
   PyObject *ret;
-  ret = o->sbp ? Py_True : Py_False;
+  ret = o->sbp ? Py_False : Py_True;
   Py_INCREF (ret);
   return ret;
 }
