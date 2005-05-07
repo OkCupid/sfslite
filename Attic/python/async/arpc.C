@@ -14,13 +14,10 @@ static PyObject *AsyncRPC_Exception;
 struct py_axprt_t {
   PyObject_HEAD
   ptr<axprt> x;
-  void dealloc () { x = NULL; }
-};
-
-struct py_axprt_stream_t : public py_axprt_t 
-{
   PyObject *sock;
 };
+
+struct py_axprt_stream_t : public py_axprt_t {};
 
 struct py_axprt_dgram_t : public py_axprt_t {};
 
@@ -34,6 +31,7 @@ struct py_aclnt_t {
 struct py_asrv_t {
   PyObject_HEAD
   PyObject *x;
+  py_rpc_program_t *py_prog;
   ptr<asrv> srv;
 };
 
@@ -227,7 +225,7 @@ static PyMethodDef py_svccb_t_methods[] = {
     PyDoc_STR ("svccb::getarg from libasync") },
   { "getres", (PyCFunction)py_svccb_t_getres, METH_NOARGS,
     PyDoc_STR ("svccb::getres from libasync") },
-  { "reject", (PyCFunction)py_svccb_t_reject, METH_NOARGS,
+  { "reject", (PyCFunction)py_svccb_t_reject, METH_VARARGS,
     PyDoc_STR ("svccb::reject from libasync") },
   {NULL}
 };
@@ -248,6 +246,7 @@ PY_CLASS_DEF (py_svccb_t, "arpc.svccb", 1, dealloc, -1,
 static void
 py_asrv_t_dealloc (py_asrv_t *self)
 {
+  warn << "~asrv\n";
   Py_DECREF (self->x);
   self->srv = NULL;
   self->ob_type->tp_free ((PyObject *)self);
@@ -255,19 +254,22 @@ py_asrv_t_dealloc (py_asrv_t *self)
   
 PY_CLASS_NEW(py_asrv_t);
 
-struct py_asrvbun_t {
+struct asrvbun_t {
 
-  py_asrvbun_t (py_rpc_program_t *p, PyObject *c)
+  asrvbun_t (py_rpc_program_t *p, PyObject *c)
     : prog (p), cb (c) { Py_INCREF (prog); Py_XINCREF (cb); }
 
-  ~py_asrvbun_t () { Py_DECREF (prog); Py_XDECREF (cb); }
+  ~asrvbun_t () { Py_DECREF (prog); Py_XDECREF (cb); }
+
+  static ptr<asrvbun_t> alloc (py_rpc_program_t *p, PyObject *c) 
+  { return New refcounted<asrvbun_t> (p, c); }
 
   py_rpc_program_t *prog;
   PyObject *cb;
 };
 
 static void
-py_asrv_t_dispatch (ptr<py_asrvbun_t> bun, svccb *sbp)
+py_asrv_t_dispatch (ptr<asrvbun_t> bun, svccb *sbp)
 {
   if (!bun->cb) {
     sbp->ignore ();
@@ -280,7 +282,8 @@ py_asrv_t_dispatch (ptr<py_asrvbun_t> bun, svccb *sbp)
     sbp->reject (PROC_UNAVAIL);
   } else {
     py_sbp->sbp = sbp;
-    py_sbp->wrap_res = bun->prog->pytab[sbp->proc ()].wrap_res;
+    if (sbp)
+      py_sbp->wrap_res = bun->prog->pytab[sbp->proc ()].wrap_res;
     PyObject *arglist = Py_BuildValue ("(O)", py_sbp);
     PyObject *pres = PyObject_CallObject (bun->cb, arglist);
     Py_XDECREF (pres);
@@ -288,6 +291,57 @@ py_asrv_t_dispatch (ptr<py_asrvbun_t> bun, svccb *sbp)
     Py_DECREF (py_sbp);
   }
 }
+
+
+static PyObject *
+py_asrv_t_setcb (py_asrv_t *self, PyObject *args, PyObject *kwds)
+{
+  PyObject *cb = NULL;
+  static char *kwlist[] = { "cb", NULL };
+  
+  if (args && !PyArg_ParseTupleAndKeywords (args, kwds, "|O", kwlist, &cb))
+    return NULL;
+
+  if (cb && cb == Py_None)
+    cb = NULL;
+
+  if (!cb) {
+    self->srv->setcb (NULL);
+  } else {
+    if (!PyCallable_Check (cb)) {
+      PyErr_SetString (PyExc_TypeError, "callable expected");
+      return NULL;
+    }
+    self->srv->setcb (wrap (py_asrv_t_dispatch,
+			    asrvbun_t::alloc (self->py_prog, cb)));
+  }
+
+  Py_INCREF (Py_None);
+  return Py_None;
+}
+
+static PyObject *
+py_asrv_t_clearcb (py_asrv_t *self)
+{
+  return py_asrv_t_setcb (self, NULL, NULL);
+}
+
+static PyObject *
+py_asrv_t_stop (py_asrv_t *self)
+{
+  self->srv->stop();
+  Py_INCREF (Py_None);
+  return Py_None;
+}
+
+static PyObject *
+py_asrv_t_start (py_asrv_t *self)
+{
+  self->srv->start ();
+  Py_INCREF (Py_None);
+  return Py_None;
+}
+
 
 static int
 py_asrv_t_init (py_asrv_t *self, PyObject *args, PyObject *kwds)
@@ -298,6 +352,7 @@ py_asrv_t_init (py_asrv_t *self, PyObject *args, PyObject *kwds)
   PyObject *tmp;
   static char *kwlist[] = { "x", "prog", "cb", NULL };
 
+  self->py_prog = NULL;
   if (!PyArg_ParseTupleAndKeywords (args, kwds, "OOO", kwlist, 
 				    &x, &prog, &cb))
     return -1;
@@ -324,16 +379,30 @@ py_asrv_t_init (py_asrv_t *self, PyObject *args, PyObject *kwds)
     return -1;
   }
   py_axprt_t *p_x = (py_axprt_t *)x;
-  py_rpc_program_t *p_p = reinterpret_cast<py_rpc_program_t *> (prog);
-  ptr<py_asrvbun_t> bun = New refcounted<py_asrvbun_t> (p_p, cb);
-  
-  self->srv = asrv::alloc (p_x->x, *p_p->prog,
-			   wrap (py_asrv_t_dispatch, bun));
+  self->py_prog = reinterpret_cast<py_rpc_program_t *> (prog);
+  Py_INCREF (self->py_prog);
+
+  self->srv = asrv::alloc (p_x->x, *self->py_prog->prog,
+			   wrap (py_asrv_t_dispatch, 
+				 asrvbun_t::alloc (self->py_prog, cb)));
   return 0;
 }
 
+static PyMethodDef py_asrv_t_methods[] = {
+  { "setcb", (PyCFunction)py_asrv_t_setcb, METH_VARARGS,
+    PyDoc_STR ("asrv::setcb function from libasync") },
+  { "stop", (PyCFunction)py_asrv_t_stop, METH_NOARGS,
+    PyDoc_STR ("asrv::stop function from libasync") },
+  { "start", (PyCFunction)py_asrv_t_start, METH_NOARGS,
+    PyDoc_STR ("asrv::start function from libasync") },
+  { "clearcb", (PyCFunction)py_asrv_t_clearcb, METH_NOARGS,
+    PyDoc_STR ("asrv::setcb (NULL) from libasync") },
+  {NULL}
+};
+
+
 PY_CLASS_DEF(py_asrv_t, "arpc.asrv", 1, dealloc, -1,
-	     "asrv object wrapper", 0, 0, 0, init, new, 0);
+	     "asrv object wrapper", methods, 0, 0, init, new, 0);
 
 //
 //-----------------------------------------------------------------------
@@ -383,8 +452,8 @@ py_aclnt_t_init (py_aclnt_t *self, PyObject *args, PyObject *kwds)
 		     "aclnt expects arg 2 as an rpc_program");
     return -1;
   }
-  py_axprt_t *p_x = (py_axprt_t *)x;
-  self->py_prog = (py_rpc_program_t *)prog;
+  py_axprt_t *p_x = reinterpret_cast<py_axprt_t *> (x);
+  self->py_prog = reinterpret_cast<py_rpc_program_t *> (prog);
   Py_INCREF (self->py_prog);
 
   self->cli = aclnt::alloc (p_x->x, *self->py_prog->prog);
@@ -392,37 +461,37 @@ py_aclnt_t_init (py_aclnt_t *self, PyObject *args, PyObject *kwds)
   return 0;
 }
 
-struct call_bundle_t {
-  call_bundle_t (pyw_base_t *a, pyw_base_t *r, PyObject *c)
-    : arg (a), res (r), cb (c) {}
+struct aclntbun_t {
+
+  aclntbun_t (pyw_base_t *a, pyw_base_t *r, PyObject *c)
+    : arg (a), res (r), cb (c) 
+  {
+    Py_XINCREF (c);
+  }
+
+  ~aclntbun_t ()
+  {
+    Py_XDECREF (cb);
+    if (arg) delete arg;
+    if (res) delete res;
+  }
+
   pyw_base_t *arg;
   pyw_base_t *res;
   PyObject *cb;
 };  
 
 static void
-py_aclnt_t_call_cb (call_bundle_t *bun, clnt_stat e)
+py_aclnt_t_call_cb (ptr<aclntbun_t> bun, clnt_stat e)
 {
   if (bun->cb) {
-    PyObject *res = bun->res->unwrap ();
-    if (res) {
-      // unwrap returns non-NULL only if the result was actually
-      // set; note that in the case of an XDR marshalling failure,
-      // it will not be set.  However, unwrap will still delete the
-      // wrapper object as required.
-      PyObject *arglist = Py_BuildValue ("(iO)", (int )e, res);
-      PyObject *pres = PyObject_CallObject (bun->cb, arglist);
-      Py_XDECREF (pres);
-      Py_DECREF (arglist);
-      Py_DECREF (res);  // Py_BuildValue raises the refcount on res
-    }
-  } else 
-    delete bun->res;
-
-  delete bun->arg;
-  Py_XDECREF (bun->cb);
-
-  delete bun;
+    PyObject *res = bun->res->safe_get_obj ();
+    PyObject *arglist = Py_BuildValue ("(iO)", (int )e, res);
+    PyObject *pres = PyObject_CallObject (bun->cb, arglist);
+    Py_XDECREF (pres);
+    Py_DECREF (arglist);
+    Py_DECREF (res);  // Py_BuildValue raises the refcount on res
+  } 
 }
 
 static PyObject *
@@ -434,9 +503,9 @@ py_aclnt_t_call (py_aclnt_t *self, PyObject *args)
   PyObject *cb = NULL ;
   pyw_base_t *res = NULL;
   callbase *b = NULL;
-  call_bundle_t *bundle;
   const py_rpcgen_table_t *pyt;
   const rpcgen_table *tbl;
+  ptr<aclntbun_t> bundle;
 
   if (!PyArg_ParseTuple (args, "i|OO", &procno, &rpc_args_in, &cb))
     return NULL;
@@ -469,11 +538,8 @@ py_aclnt_t_call (py_aclnt_t *self, PyObject *args)
     PyErr_SetString (PyExc_MemoryError, "out of memory in alloc_res");
     goto fail;
   }
-    
-  if (cb)
-    Py_INCREF (cb);
 
-  bundle = New call_bundle_t (rpc_args_out, res, cb);
+  bundle = New refcounted<aclntbun_t> (rpc_args_out, res, cb);
 
   b = self->cli->call (procno, rpc_args_out, res, 
 		       wrap (py_aclnt_t_call_cb, bundle));

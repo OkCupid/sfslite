@@ -100,6 +100,16 @@ pyw_base_t::set_obj (PyObject *o)
 }
 
 PyObject *
+pyw_base_t::safe_get_obj ()
+{
+  PyObject *o = _obj;
+  if (!o) 
+    o = Py_None;
+  Py_INCREF (o);
+  return o;
+}
+
+PyObject *
 pyw_base_t::get_obj ()
 {
   Py_XINCREF (_obj);

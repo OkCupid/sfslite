@@ -78,6 +78,7 @@ public:
   bool set_obj (PyObject *o);
 
   PyObject *get_obj ();
+  PyObject *safe_get_obj ();
   const PyObject *get_const_obj () const { return _obj; }
   PyObject *unwrap () ;
 

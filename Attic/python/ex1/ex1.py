@@ -9,9 +9,13 @@ import ex1
 import async
 import socket
 import sys
+import posix
 
 def cb(err,res):
     print "err=", err, "& res=", res
+    print "Calling exit"
+    async.core.exit ()
+    print "after exit!!"
 
 def cb2(err, foo):
     if err == 0:
@@ -57,11 +61,11 @@ sock = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
 sock.connect (('127.0.0.1', port))
 fd = sock.fileno ()
 
-x = async.arpc.axprt_stream (fd)
+x = async.arpc.axprt_stream (fd, sock)
 cli = async.arpc.aclnt (x, ex1.foo_prog_1 ())
 
 call3 (cli);
 
-
+async.util.fixsignals ()
 async.core.amain ()
 

@@ -113,6 +113,16 @@ Core_sigcb (PyObject *self, PyObject *args)
   return Py_None;
 }
 
+static PyObject *
+Core_exit (PyObject *self, PyObject *args)
+{
+  int i = 0;
+  if (!PyArg_ParseTuple (args, "|i", &i))
+    return NULL;
+  exit (i);
+  return NULL;
+}
+
 static struct PyMethodDef core_methods[] = {
   { "amain",  Core_amain , METH_NOARGS,
     PyDoc_STR ("amain () from libasync") },
@@ -124,6 +134,8 @@ static struct PyMethodDef core_methods[] = {
     PyDoc_STR ("sigcb from libasync") },
   { "make_async", Core_make_async, METH_VARARGS,
     PyDoc_STR ("make_async from libasync") },
+  { "exit", Core_exit, METH_VARARGS,
+    PyDoc_STR ("async exit function") },
   { NULL, NULL, NULL, NULL }
 };
 

@@ -11,12 +11,18 @@ def dispatch (srv, sbp):
     print "in dispatch"
     if sbp.eof ():
         print "EOF !!"
+        
+        # note: need to do this explicitly, since we have a circular
+        # data structure: srv -> dispatch (C) -> dispatch (py) -> srv
+        srv.clearcb ();
         active_srvs.remove (srv)
         return
     print "procno=", sbp.proc ()
     sbp.getarg ().warn ()
+    
     if sbp.proc () == ex1.FOO_NULL:
         sbp.reply (None)
+        
     elif sbp.proc () == ex1.FOO_BAR:
         bar = sbp.getarg ()
         s = 0
@@ -27,9 +33,25 @@ def dispatch (srv, sbp):
         f.x = 'the sum is ' + `s`
         f.xx = s
         sbp.reply (f)
+        
+    elif sbp.proc () == ex1.FOO_BB:
+        bb = sbp.getarg ()
+        r = 0
+        if bb.aa == ex1.A2:
+            s = 0
+            for f in bb.b.foos:
+                s += f.xx
+            for y in bb.b.bar.y:
+                s += y
+            r = s
+        elif bb.aa == ex1.A1:
+            r = bb.f.xx
+        else:
+            r = bb.i
+        sbp.reply (r)
+        
     else:
         sbp.reject (async.arpc.PROC_UNAVAIL)
-
 
 def newcon(sock):
     print "calling newcon"
@@ -52,8 +74,6 @@ sock.bind (('127.0.0.1', port))
 sock.listen (10);
 async.core.fdcb (sock.fileno (), async.core.selread, lambda : newcon (sock))
 
-async.core.sigcb (signal.SIGINT, sys.exit)
-signal.signal (signal.SIGINT, sys.exit)
-
+async.util.fixsignals ()
 async.core.amain ()
 
