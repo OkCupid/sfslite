@@ -185,15 +185,20 @@ py_rpc_ptr_t::alloc ()
 void
 py_rpc_ptr_t::clear ()
 {
-  Py_XDECREF (p);
+  PyObject *tmp = p;
   p = NULL;
+  Py_XDECREF (tmp);
 }
 
 void
 py_rpc_ptr_t::set_typ (PyTypeObject *o)
 {
-  Py_INCREF (reinterpret_cast<PyObject *> (o));
-  typ = o;
+  if (typ) {
+    assert (o == typ);
+  } else {
+    Py_INCREF (reinterpret_cast<PyObject *> (o));
+    typ = o;
+  }
 }
 
 
@@ -249,16 +254,14 @@ py_rpc_ptr_t_init (py_rpc_ptr_t *self, PyObject *args, PyObject *kwds)
 }
 
 static PyObject *
-py_rpc_ptr_t_set (py_rpc_ptr_t *self, PyObject *args, PyObject *kwds)
+py_rpc_ptr_t_set (py_rpc_ptr_t *self, PyObject *args)
 {
   PyObject *o = NULL;
-  static char *kwlist[] = { "obj", NULL };
-  if (!PyArg_ParseTupleAndKeywords (args, kwds, "O", kwlist, &o))
+  if (!PyArg_ParseTuple (args, "O",  &o))
     return NULL;
 
   if (!py_rpc_ptr_t_set_internal (self, o))
     return NULL;
-
   Py_INCREF (Py_None);
   return Py_None;
 }
@@ -301,8 +304,27 @@ static PyMethodDef py_rpc_ptr_t_methods[] = {
  {NULL}
 };
 
+static PyObject *
+py_rpc_ptr_t_getp (py_rpc_ptr_t *self, void *closure)
+{
+  return py_rpc_ptr_t_get (self);
+}
+
+static int
+py_rpc_ptr_t_setp (py_rpc_ptr_t *self, PyObject *value, void *closure)
+{
+  return py_rpc_ptr_t_set_internal (self, value) ? 0 : -1;
+}
+
+static PyGetSetDef py_rpc_ptr_t_getsetters[] = {
+  {"p", (getter)py_rpc_ptr_t_getp, (setter)py_rpc_ptr_t_setp,
+   "magic pointer shortcut", NULL },
+  {NULL}
+};
+
+
 PY_CLASS_DEF3(py_rpc_ptr_t, "async.rpc_ptr", 1, dealloc, -1, 
-	      "RPC ptr object", methods, 0, 0, init, new, 0, 
+	      "RPC ptr object", methods, 0, getsetters, init, new, 0, 
 	      0,0,0)
 
 //

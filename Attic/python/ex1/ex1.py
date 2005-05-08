@@ -54,13 +54,14 @@ def call3(cli):
 
 def call4(cli):
     z = ex1.fooz_t ()
-    z.baz = ex1.baz_t ()
-    z.baz.get().foos = [ex1.foo_t () for i in range (0,2) ]
-    z.baz.get().foos[0].x = "foos[0] = 4"
-    z.baz.get().foos[0].xx = 4
-    z.baz.get().foos[1].x = "foos[1] = 5"
-    z.baz.get().foos[1].xx = 5
-    z.baz.get().bar.y = [ 100, 200, 300, 400 ];
+    z.baz.alloc ()
+    z.baz.p = ex1.baz_t ()
+    z.baz.p.foos = [ex1.foo_t () for i in range (0,2) ]
+    z.baz.p.foos[0].x = "foos[0] = 4"
+    z.baz.p.foos[0].xx = 4
+    z.baz.p.foos[1].x = "foos[1] = 5"
+    z.baz.p.foos[1].xx = 5
+    z.baz.p.bar.y = [ 100, 200, 300, 400 ];
     z.warnx ()
     cli.call (ex1.FOO_FOOZ, z, cb)
 

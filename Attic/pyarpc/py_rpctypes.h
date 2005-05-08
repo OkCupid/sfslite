@@ -281,13 +281,8 @@ pyw_rpc_vec<T,M>::init ()
 template<class T, PyTypeObject *t> T *
 pyw_rpc_ptr<T,t>::palloc ()
 {
-  if (!_obj)
-    alloc ();
-  py_rpc_ptr_t *pp = casted_obj ();
-  pp->set_typ (t);
-  if (!pp)
-    return NULL;
-  return reinterpret_cast<T *> (pp->alloc ());
+  assert (_obj);
+  return reinterpret_cast<T *> (casted_obj ()->alloc ());
 }
 
 template<class T, PyTypeObject *t> bool
@@ -296,6 +291,9 @@ pyw_rpc_ptr<T,t>::init ()
   if (!pyw_tmpl_t<pyw_rpc_ptr<T,t>, py_rpc_ptr_t>::init ())
     return false;
   _typ = &py_rpc_ptr_t_Type; // note, not type t!!!
+  if (!alloc ())
+    return false;
+  casted_obj ()->set_typ (t);   // this is where we use t !
   return true;
 }
 
@@ -787,7 +785,8 @@ rpc_traverse (C &c, pyw_rpc_ptr<T,t> &obj)
       return false;
     return rpc_traverse (c, *x);
   }
-  p->clear ();
+  if (p)
+    p->clear ();
   return true;
 }
 
