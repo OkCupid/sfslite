@@ -147,7 +147,7 @@ main (int argc, char **argv)
   vec<char *> av;
   char *fname = NULL;
   char *basename;
-  enum { BAD, HEADER, CFILE, PYTHON, PYC } mode = BAD;
+  enum { BAD, HEADER, CFILE, PYTHON, PYC, PYH } mode = BAD;
   void (*fn) (str) = NULL;
   int len;
 
@@ -170,8 +170,10 @@ main (int argc, char **argv)
       mode = CFILE;
     else if (!strcmp (arg, "-python") && mode == BAD)
       mode = PYTHON;
-    else if (!strcmp (arg, "-q") && mode == BAD)
+    else if (!strcmp (arg, "-pyc") && mode == BAD)
       mode = PYC;
+    else if (!strcmp (arg, "-pyh") && mode == BAD)
+      mode = PYH;
     else if (!strcmp (arg, "-o") && !outfile && ++an < argc)
       outfile = argv[an];
     else if (!strncmp (arg, "-o", 2) && !outfile && arg[2])
@@ -222,6 +224,12 @@ main (int argc, char **argv)
     fn = genpyc;
     if (!outfile)
       outfile = strbuf ("%.*sC", len -1, basename);
+    break;
+  case PYH:
+    av[2] = "-DRPCC_PYH";
+    fn = genpyh;
+    if (!outfile)
+      outfile = strbuf ("%.*sh", len -1, basename);
     break;
   default:
     usage ();

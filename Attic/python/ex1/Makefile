@@ -27,8 +27,11 @@ SFSLIB_C = 	-L$(SFSLIBDIR) -lsfscrypt -L$(SFSLIBDIR) -larpc \
 
 default:	ex1.so
 
-ex1.C:	ex1.x
-	$(RPCC) -q -o $@ $<
+ex1.C:	ex1.x ex1.h
+	$(RPCC) -pyc -o $@ $<
+
+ex1.h:	ex1.x
+	$(RPCC) -pyh -o $@ $<
 
 ex1srv: ex1c.o ex1srv.o
 	$(CXX) -static ex1c.o ex1srv.o $(SFSLIB_C) -o $@
@@ -48,4 +51,4 @@ ex1c.C:	ex1.x
 	$(CXX) -g $(PYINC) $(SFSINC) -o $@ -c $< 
 
 clean:	
-	rm -f *.o *.pyc *.so *.core *_wrap.cxx ex1.C ex1c.C ex1c.h ex1srv
+	rm -f *.o *.pyc *.so *.core *_wrap.cxx ex1.C ex1c.C ex1c.h ex1srv ex1.h

@@ -29,11 +29,14 @@ T##_new (PyTypeObject *type, PyObject *args, PyObject *kwds)     \
   (flags == -1 ? (Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE) : flags)
 
 
-#define PY_CLASS_DEF2(T, pyname, basicsize, dealloc, flags, doc, methods, \
+#define PY_CLASS_DECL(T)                                                  \
+extern PyTypeObject T##_Type
+
+#define PY_CLASS_DEF3(T, pyname, basicsize, dealloc, flags, doc, methods, \
                       members, getsetters, init, new, base, str,          \
                       repr, print)                                        \
 int T##_0 = 0;                                                            \
-static PyTypeObject T##_Type = {                                          \
+PyTypeObject T##_Type = {                                                 \
   PyObject_HEAD_INIT(&PyType_Type)                                        \
   0,                                                /* ob_size*/          \
   pyname ,                                          /* tp_name*/          \
@@ -74,6 +77,13 @@ static PyTypeObject T##_Type = {                                          \
   PyType_GenericAlloc,                              /* tp_alloc */        \
   (newfunc)T##_##new                                /* tp_new */          \
 };                                                               
+
+#define PY_CLASS_DEF2(T, pyname, basicsize, dealloc, flags, doc, methods, \
+                      members, getsetters, init, new, base, str,          \
+                      repr, print)                                        \
+static PY_CLASS_DEF3(T, pyname, basicsize, dealloc, flags, doc, methods,  \
+                     members, getsetters, init, new, base, str,           \
+                     repr, print)
 
 #define PY_CLASS_DEF(T, pyname, basicsize, dealloc, flags, doc, methods,  \
                       members, getsetters, init, new, base)               \

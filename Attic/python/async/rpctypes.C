@@ -1,22 +1,18 @@
 
 #include "py_rpctypes.h"
+#include "py_gen.h"
+
+// $Id$
 
 static void
 py_rpc_ptr_t_dealloc (py_rpc_ptr_t *self)
 {
+  Py_DECREF (self->typ);
   Py_XDECREF (self->p);
   self->ob_type->tp_free (reinterpret_cast<PyObject *> (self));
 }
 
-static py_rpc_ptr_t *
-py_rpc_ptr_t_new (PyTypeObject *type, PyObject *args, PyObject *kwds)
-{
-  py_rpc_ptr_t *self;
-  if (!(self = (py_rpc_ptr_t *)type->tp_alloc (type, 0)))
-    return NULL;
-  self->p = NULL;
-  return self;
-}
+PY_CLASS_NEW(py_rpc_ptr_t);
 
 static bool
 py_rpc_ptr_t_set_internal (py_rpc_ptr_t *self, PyObject *o)
@@ -34,31 +30,33 @@ py_rpc_ptr_t_set_internal (py_rpc_ptr_t *self, PyObject *o)
   return true;
 }
 
-static py_rpc_ptr_t *
+static int
 py_rpc_ptr_t_init (py_rpc_ptr_t *self, PyObject *args, PyObject *kwds)
 {
   PyObject *t = NULL;
   PyObject *o = NULL;
   static char *kwlist[] = { "typ", "obj", NULL };
-  if (!PyArg_ParseTupleAndKeywords (arg, kwds, "O|O", &typ, &o))
+  if (!PyArg_ParseTupleAndKeywords (args, kwds, "O|O", kwlist, &t, &o))
     return -1;
 
-  if (!PyType_Check (typ)) {
+  if (!PyType_Check (t)) {
     PyErr_SetString (PyExc_TypeError, "expected a python type object");
     return -1;
   }
+  self->typ = reinterpret_cast<PyTypeObject *> (t);
+  Py_INCREF (self->typ);
 
   if (!py_rpc_ptr_t_set_internal (self, o))
     return -1;
   return 0;
 }
 
-static py_rpc_ptr_t *
+static PyObject *
 py_rpc_ptr_t_set (py_rpc_ptr_t *self, PyObject *args, PyObject *kwds)
 {
   PyObject *o = NULL;
   static char *kwlist[] = { "obj", NULL };
-  if (!PyArg_ParseTupleAndKeywords (arg, kwds, "O", &o))
+  if (!PyArg_ParseTupleAndKeywords (args, kwds, "O", kwlist, &o))
     return NULL;
 
   if (!py_rpc_ptr_t_set_internal (self, o))
@@ -77,24 +75,35 @@ py_rpc_ptr_t_get (py_rpc_ptr_t *self)
 }
 
 static PyObject *
-py_rpc_ptr_t_alloc (py_rpc_str_t *self)
+py_rpc_ptr_t_alloc (py_rpc_ptr_t *self)
 {
-  if (!(self->p = self->typ->tp_new (self->typ, NULL, NULL))) {
-    return PyErr_NoMemory ();
-  }
+  if (!self->alloc ())
+    return NULL;
+  
   Py_INCREF (Py_None);
   return Py_None;
 }
 
-static PyMethodDef py_baz_t_methods[] = {
+static PyObject *
+py_rpc_ptr_t_clear (py_rpc_ptr_t *self)
+{
+  self->clear ();
+  Py_INCREF (Py_None);
+  return Py_None;
+}
+
+static PyMethodDef py_rpc_ptr_t_methods[] = {
   { "get", (PyCFunction)py_rpc_ptr_t_get,  METH_NOARGS,
     PyDoc_STR ("get the objet that an RPC pointer points to") },
-  { "alloc", (PyCFuncion)py_rpc_ptr_t_alloc, METH_NOARGS,
+  { "alloc", (PyCFunction)py_rpc_ptr_t_alloc, METH_NOARGS,
     PyDoc_STR ("allocate the object that the pointer points to") },
   { "set", (PyCFunction)py_rpc_ptr_t_set, METH_VARARGS,
     PyDoc_STR ("set the object that the pointer points to") },
+  { "clear", (PyCFunction)py_rpc_ptr_t_clear, METH_NOARGS,
+    PyDoc_STR ("clear out the pointer") },
  {NULL}
 };
 
-PY_CLASS_DEF(py_rpc_ptr_t, "async.rpc_ptr", 1, dealloc, -1, 
-	     "RPC ptr object", methods, 0, 0, init, new, 0)
+PY_CLASS_DEF3(py_rpc_ptr_t, "async.rpc_ptr", 1, dealloc, -1, 
+	      "RPC ptr object", methods, 0, 0, init, new, 0, 
+	      0,0,0)

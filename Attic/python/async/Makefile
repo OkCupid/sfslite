@@ -24,7 +24,7 @@ SFSLIB = 	-L$(SFSLIBDIR) -lasync -L$(SFSLIBDIR) -larpc \
 
 default:	all
 
-all:		core.so arpc.so 
+all:		core.so arpc.so rpctypes.so
 
 .C.o:
 	$(CXX) -g $(PYINC) $(SFSINC) -o $@ -c $< 

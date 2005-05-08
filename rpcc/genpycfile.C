@@ -479,6 +479,14 @@ dump_allocator (const str &id)
 }
 
 static void
+dump_enum_in_range_decl (const rpc_enum *e)
+{
+  const str id = e->id;
+  aout << "bool " << id << "_is_in_range (" << id << " t);\n"
+       << "bool " << id << "_is_in_range_set_error (" << id << " t);\n\n";
+}
+
+static void
 dump_enum_in_range (const rpc_enum *e)
 {
   const str id = e->id;
@@ -739,7 +747,16 @@ dump_class_methods_struct (const str &ct)
 }
 
 static void
-dump_object_table (const str &id)
+dump_type_object_decl (const str &id)
+{
+  str t = py_type (id);
+  str ct = pyc_type (id);
+  str pt = id;
+  aout << "PY_CLASS_DECL(" << ct << ");\n\n";
+}
+
+static void
+dump_type_object (const str &id)
 {
   str t = py_type (id);
   str ct = pyc_type (id);
@@ -1336,7 +1353,7 @@ dumpunion_mthds (const rpc_sym *s)
 }
 
 static void
-dump_class_py (const rpc_struct *rs)
+dump_py_struct (const rpc_struct *rs)
 {
   str ct = pyc_type (rs->id);
   aout << "struct " << ct << " {\n"
@@ -1407,6 +1424,24 @@ static void
 dump_print_decls (const str &id)
 {
   dump_py_type2str_decl (id);
+  aout << "\n";
+}
+
+static void
+dumpstruct_hdr (const rpc_sym *s)
+{
+  const rpc_struct *rs = s->sstruct.addr ();
+  str ct = pyc_type (rs->id);
+
+  dump_py_struct (rs);
+  dump_type_object_decl (rs->id);
+  dump_w_class (rs->id);
+  dump_convert (rs->id);
+
+  dump_print_decls (rs->id);
+
+  dump_rpc_traverse (rs);
+  dump_w_rpc_traverse (rs->id);
 }
 
 static void
@@ -1415,7 +1450,6 @@ dumpstruct (const rpc_sym *s)
   const rpc_struct *rs = s->sstruct.addr ();
   str ct = pyc_type (rs->id);
 
-  dump_class_py (rs);
   dump_class_dealloc_func (rs);
   dump_class_uncasted_new_func (rs);
   dump_class_new_func (rs->id);
@@ -1427,17 +1461,12 @@ dumpstruct (const rpc_sym *s)
   dump_class_init_func (rs);
   dump_str_func (rs->id);
   dump_print_func (rs->id);
-  dump_object_table (rs->id);
+  dump_type_object (rs->id);
 
-  dump_w_class (rs->id);
-  dump_print_decls (rs->id);
 
-  dump_convert (rs->id);
   dump_w_class_init_func (pyw_type (rs->id), py_type (rs->id));
   dump_w_class_clear_func (rs);
 
-  dump_rpc_traverse (rs);
-  dump_w_rpc_traverse (rs->id);
   dump_xdr_func (rs->id);
 }
 
@@ -1642,11 +1671,24 @@ dump_union_uncasted_new_func (const rpc_union *u)
 }
 
 static void
-dumpunion (const rpc_sym *s)
+dumpunion_hdr (const rpc_sym *s)
 {
   const rpc_union *u = s->sunion.addr ();
   str ct = pyc_type (u->id);
   dump_c_union (s);
+  dump_type_object_decl (u->id);
+  dump_w_class (u->id);
+  dump_print_decls (u->id);
+  dump_convert (u->id);
+  dump_w_rpc_traverse (u->id);
+}
+
+
+static void
+dumpunion (const rpc_sym *s)
+{
+  const rpc_union *u = s->sunion.addr ();
+  str ct = pyc_type (u->id);
   dump_union_dealloc_func (u);
   dump_union_uncasted_new_func (u);
   dump_class_new_func (u->id);
@@ -1658,14 +1700,9 @@ dumpunion (const rpc_sym *s)
   dump_union_init_func (u);
   dump_str_func (u->id);
   dump_print_func (u->id);
-  dump_object_table (u->id);
+  dump_type_object (u->id);
 
-  dump_w_class (u->id);
-  dump_print_decls (u->id);
-
-  dump_convert (u->id);
   dump_union_init_and_clear (u);
-  dump_w_rpc_traverse (u->id);
   dump_xdr_func (u->id);
 }
 
@@ -1723,7 +1760,7 @@ dump_c_enum (const rpc_enum *rs)
 }
 
 static void
-dump_enum_py (const rpc_enum *e)
+dump_py_enum (const rpc_enum *e)
 {
   str ct = pyc_type (e->id);
   aout << "struct " << ct << " {\n"
@@ -1779,7 +1816,7 @@ dump_enum_init_func (const rpc_enum *e)
 }
 
 static void
-dump_enum_object_table (const str &id)
+dump_enum_type_object (const str &id)
 {
   const str ct = pyc_type (id);
   const str pt = id;
@@ -1806,60 +1843,74 @@ dumpenum_mthds (const rpc_enum *rs)
   dump_class_methods (rs->id);
 }
 
-
 static void
-dumpenum (const rpc_sym *s)
+dumpenum_hdr (const rpc_sym *s)
 {
   const rpc_enum *rs = s->senum.addr ();
-  const str py_typ_obj = "PyInt_Type";
   const str wt = pyw_type (rs->id);
   const str ct = pyc_type (rs->id);
 
-  // dump the C "enum" representation of the enum
   dump_c_enum (rs);
-
-  // convert used throughout
-  dump_enum_in_range (rs);
-  dump_int_to_enum_converter (rs);
-
-  // dump the python object manipulatable in python
-  dump_enum_py (rs);
-  dump_enum_new_func (rs->id);
-  // dump_enum_dealloc_func (rs);
-  dump_class_members (ct);
+  dump_type_object_decl (rs->id);
+  dump_py_enum (rs);
   dump_class_method_decls (ct);
-  dump_class_methods_struct (ct);
-  dump_enum_init_func (rs);
-  dump_str_func (rs->id);
-  dump_print_func (rs->id);
-  dump_enum_object_table (rs->id);
 
   // dump the object wrapper
   dump_w_class (rs->id);
   dump_print_decls (rs->id);
   dump_type2str_decl (rs->id);
   dump_rpc_print_decl (rs->id);
+  dump_enum_in_range_decl (rs);
+  dump_w_enum_convert (rs->id);
+  dump_w_rpc_traverse (rs->id);
+  dump_enum_rpc_traverse (rs->id);
 
-  aout << "\n";
+}
+
+
+static void
+dumpenum (const rpc_sym *s)
+{
+  const rpc_enum *rs = s->senum.addr ();
+  const str wt = pyw_type (rs->id);
+  const str ct = pyc_type (rs->id);
+
+
+  // convert used throughout
+  dump_enum_in_range (rs);
+  dump_int_to_enum_converter (rs);
+
+  dump_enum_new_func (rs->id);
+  // dump_enum_dealloc_func (rs);
+  dump_class_members (ct);
+  dump_class_methods_struct (ct);
+  dump_enum_init_func (rs);
+  dump_str_func (rs->id);
+  dump_print_func (rs->id);
+  dump_enum_type_object (rs->id);
 
   dump_w_class_init_func (wt, py_type (rs->id));
   dump_w_enum_clear_func (rs->id);
-  dump_w_enum_convert (rs->id);
 
-  dump_w_rpc_traverse (rs->id);
-  dump_enum_rpc_traverse (rs->id);
   dump_xdr_func (rs->id);
   dumpenum_mthds (rs);
 }
 
 static void
-dumptypedef (const rpc_sym *s)
+dumptypedef_hdr (const rpc_sym *s)
 {
   const rpc_decl *rd = s->stypedef.addr ();
   pdecl ("typedef ", rd);
   pmshl (rd->id);
   aout << "RPC_TYPEDEF_DECL (" << rd->id << ")\n";
 }
+
+static void
+dumptypedef (const rpc_sym *s)
+{
+
+}
+
 static void
 mktbl (const rpc_program *rs)
 {
@@ -1974,13 +2025,39 @@ dumpprog (const rpc_sym *s)
 }
 
 static void
-dumpsym (const rpc_sym *s, pass_num_t pass)
+dumphdr (const rpc_sym *s)
 {
   switch (s->type) {
   case rpc_sym::CONST:
     aout << "enum { " << s->sconst->id
 	 << " = " << s->sconst->val << " };\n";
     break;
+  case rpc_sym::STRUCT:
+    dumpstruct_hdr (s);
+    break;
+  case rpc_sym::UNION:
+    dumpunion_hdr (s);
+    break;
+  case rpc_sym::ENUM:
+    dumpenum_hdr (s);
+    break;
+  case rpc_sym::TYPEDEF:
+    dumptypedef_hdr (s);
+    break;
+  case rpc_sym::PROGRAM:
+    break;
+  case rpc_sym::LITERAL:
+    aout << *s->sliteral << "\n";
+    break;
+  default:
+    break;
+  }
+}
+
+static void
+dumpsym (const rpc_sym *s, pass_num_t pass)
+{
+  switch (s->type) {
   case rpc_sym::STRUCT:
     if (pass == PASS_ONE)
       dumpstruct (s);
@@ -2006,8 +2083,6 @@ dumpsym (const rpc_sym *s, pass_num_t pass)
       dumpprog (s);
     break;
   case rpc_sym::LITERAL:
-    if (pass == PASS_ONE)
-      aout << *s->sliteral << "\n";
     break;
   default:
     break;
@@ -2165,6 +2240,21 @@ dumpmodule (const symlist_t &lst)
   aout << "}\n"
        << "\n";
 }
+static str
+makehdrname (str fname)
+{
+  strbuf hdr;
+  const char *p;
+
+  if ((p = strrchr (fname, '/')))
+    p++;
+  else p = fname;
+
+  hdr.buf (p, strlen (p) - 1);
+  hdr.cat ("h");
+
+  return hdr;
+}
 
 void
 genpyc (str fname)
@@ -2174,13 +2264,8 @@ genpyc (str fname)
 
   aout << "// -*-c++-*-\n"
        << "/* This file was automatically generated by rpcc. */\n\n"
-       << "#include \"py_rpctypes.h\"\n"
-       << "#include \"py_gen.h\"\n"
-       << "#include \"py_util.h\"\n"
-       << "#include \"xdrmisc.h\"\n"
-       << "#include \"crypt.h\"\n"
        << "\n"
-       << "\n"
+       << "#include \"" << makehdrname (fname) << "\"\n\n"
        << "static PyObject *AsyncXDR_Exception;\n"
        << "static PyObject *AsyncUnion_Exception;\n"
        << "static PyTypeObject *py_rpc_program;\n"
@@ -2213,6 +2298,59 @@ genpyc (str fname)
       }
     }
   }
-
   dumpmodule (symlist);
+}
+
+static str
+makeguard (str fname)
+{
+  strbuf guard;
+  const char *p;
+
+  if ((p = strrchr (fname, '/')))
+    p++;
+  else p = fname;
+
+  guard << "__PY_RPCC_";
+  while (char c = *p++) {
+    if (isalnum (c))
+      c = toupper (c);
+    else
+      c = '_';
+    guard << c;
+  }
+  guard << "_INCLUDED__";
+
+  return guard;
+}
+
+void
+genpyh (str fname)
+{
+  str guard = makeguard (fname);
+
+  aout << "// -*-c++-*-\n"
+       << "/* This file was automatically generated by rpcc. */\n\n"
+       << "#include \"py_rpctypes.h\"\n"
+       << "#include \"py_gen.h\"\n"
+       << "#include \"py_util.h\"\n"
+       << "#include \"xdrmisc.h\"\n"
+       << "#include \"crypt.h\"\n"
+       << "#ifndef " << guard << "\n"
+       << "#define " << guard << " 1\n\n";
+
+  int last = rpc_sym::LITERAL;
+  for (const rpc_sym *s = symlist.base (); s < symlist.lim (); s++) {
+    if (last != s->type
+	|| last == rpc_sym::PROGRAM
+	|| last == rpc_sym::TYPEDEF
+	|| last == rpc_sym::STRUCT
+	|| last == rpc_sym::UNION
+	|| last == rpc_sym::ENUM)
+      aout << "\n";
+    last = s->type;
+    dumphdr (s);
+  }
+
+  aout << "#endif /* !" << guard << " */\n";
 }

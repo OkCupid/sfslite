@@ -172,3 +172,19 @@ pyw_base_t::pyw_print_err (const strbuf &b, const str &prfx) const
   return true;
 
 }
+
+PyObject *
+py_rpc_ptr_t::alloc ()
+{
+  if (!p && !(p = typ->tp_new (typ, NULL, NULL))) 
+    return PyErr_NoMemory ();
+  return p;
+}
+
+void
+py_rpc_ptr_t::clear ()
+{
+  Py_XDECREF (p);
+  p = NULL;
+}
+
