@@ -76,7 +76,7 @@ is_number (const str &s)
 }
 
 static str
-py_type (const str &in)
+py_type_obj (const str &in)
 {
   strbuf b;
   b << in << "_Type";
@@ -130,7 +130,8 @@ decltype (const rpc_decl *d)
       b << pyw_type (d->type) ;
       break;
     case rpc_decl::PTR:
-      b << pyw_type ("rpc_ptr") << "<" << pyc_type (d->type) << ">";
+      b << pyw_type ("rpc_ptr") << "<" << pyc_type (d->type) 
+	<< ", &" << py_type_obj (d->type) << ">";
       break;
     case rpc_decl::ARRAY:
       b << pyw_type ("rpc_array") << "<" << wt << ", " << d->bound << ">";
@@ -153,7 +154,7 @@ pdecl (str prefix, const rpc_decl *d)
 
 
 static str
-py_type (const rpc_decl *d)
+py_type_obj (const rpc_decl *d)
 {
   if (d->type == "string" || d->type == "opaque") {
     return "PyString_Type";
@@ -168,7 +169,7 @@ py_type (const rpc_decl *d)
       else if (is_double_type (d->type))
 	return "PyDouble_Type";
       else
-	return py_type (d->type);
+	return py_type_obj (d->type);
     case rpc_decl::VEC:
     case rpc_decl::ARRAY:
       return "PyList_Type";
@@ -214,7 +215,7 @@ py_typecheck_unqual (const str &typ, const str &v)
   } else if (is_number (typ)) {
     b << "PyNumber_Check (" << v << ")";
   } else {
-    b << "PyObject_IsInstance (" << v << ", " << py_type (typ) << ")";
+    b << "PyObject_IsInstance (" << v << ", " << py_type_obj (typ) << ")";
   }
   return b;
 }
@@ -261,7 +262,7 @@ dump_union_init_and_clear (const rpc_union *u)
 {
   str ct = pyc_type (u->id);
   str wt = pyw_type (u->id);
-  str pt = py_type (u->id);
+  str pt = py_type_obj (u->id);
 
   dump_w_class_init_func (wt, pt);
   
@@ -470,7 +471,7 @@ static void
 dump_allocator (const str &id)
 {
   str wt = pyw_type (id);
-  str ppt = py_type (id);
+  str ppt = py_type_obj (id);
   aout << "void *\n"
        << wt << "_alloc ()\n"
        << "{\n"
@@ -563,7 +564,7 @@ dump_w_enum_convert (const str &id)
 static void
 dump_convert (const str &id)
 {
-  str ptt = py_type (id);
+  str ptt = py_type_obj (id);
   str pct = pyc_type (id);
   str wt = pyw_type (id);
   
@@ -749,7 +750,7 @@ dump_class_methods_struct (const str &ct)
 static void
 dump_type_object_decl (const str &id)
 {
-  str t = py_type (id);
+  str t = py_type_obj (id);
   str ct = pyc_type (id);
   str pt = id;
   aout << "PY_CLASS_DECL(" << ct << ");\n\n";
@@ -758,7 +759,7 @@ dump_type_object_decl (const str &id)
 static void
 dump_type_object (const str &id)
 {
-  str t = py_type (id);
+  str t = py_type_obj (id);
   str ct = pyc_type (id);
   str pt = id;
 
@@ -1416,7 +1417,7 @@ dump_w_class (const str &id)
 {
   str ct = pyc_type (id);
   str wt = pyw_type (id);
-  str pt = py_type (id);
+  str pt = py_type_obj (id);
   dump_w_class (ct, wt, pt, id);
 }
 
@@ -1464,7 +1465,7 @@ dumpstruct (const rpc_sym *s)
   dump_type_object (rs->id);
 
 
-  dump_w_class_init_func (pyw_type (rs->id), py_type (rs->id));
+  dump_w_class_init_func (pyw_type (rs->id), py_type_obj (rs->id));
   dump_w_class_clear_func (rs);
 
   dump_xdr_func (rs->id);
@@ -1889,7 +1890,7 @@ dumpenum (const rpc_sym *s)
   dump_print_func (rs->id);
   dump_enum_type_object (rs->id);
 
-  dump_w_class_init_func (wt, py_type (rs->id));
+  dump_w_class_init_func (wt, py_type_obj (rs->id));
   dump_w_enum_clear_func (rs->id);
 
   dump_xdr_func (rs->id);
@@ -2154,10 +2155,18 @@ dumpmodule (const symlist_t &lst)
        << "  PyObject* m;\n"
        << "  PyObject *module;\n"
        << "\n"
-       << "  if (!import_async_exceptions (&AsyncXDR_Exception, NULL, "
-       <<                                  "&AsyncUnion_Exception))\n"
+       << "  if (!import_async_exceptions (&AsyncXDR_Exception, NULL,\n"
+       << "                                &AsyncUnion_Exception))\n"
        << "    return;\n"
        << "\n"
+#if 0
+       << "  // import async.rpctypes to get types for rpc ptrs, etc\n"
+       << "  PyObject *tmpmod = NULL;\n"
+       << "  if (!(tmpmod = PyImport_ImportModule (\"async.rpctypes\")));\n"
+       << "    return;\n"
+       << "  Py_XDECREF (tmpmod);\n"
+       << "\n"
+#endif
        << "  // import async.arpc and get the type information for\n"
        << "  // async.arpc.rpc_program\n"
        << "  module = PyImport_ImportModule (\"async.arpc\");\n"
@@ -2191,7 +2200,7 @@ dumpmodule (const symlist_t &lst)
     str cls;
     while (clss.size ()) {
       cls = clss.pop_back ();
-      aout <<  "  " << py_type (cls) << ".tp_base = py_rpc_program;\n";
+      aout <<  "  " << py_type_obj (cls) << ".tp_base = py_rpc_program;\n";
     }
   }
 
@@ -2207,9 +2216,9 @@ dumpmodule (const symlist_t &lst)
       if (first)
 	first = false;
       else {
-	aout << " ||\n     ";
+	aout << " ||\n      ";
       }
-      aout << "PyType_Ready (&" << py_type (cls) << ") < 0";
+      aout << "PyType_Ready (&" << py_type_obj (cls) << ") < 0";
     }
   }
   aout << ")\n"
@@ -2231,9 +2240,9 @@ dumpmodule (const symlist_t &lst)
     str cls;
     while (clss.size ()) {
       cls = clss.pop_back ();
-      aout << "  Py_INCREF (&" << py_type (cls) << ");\n"
+      aout << "  Py_INCREF (&" << py_type_obj (cls) << ");\n"
 	   << "  PyModule_AddObject (m, \"" << cls
-	   << "\", (PyObject *)&" << py_type (cls) << ");\n";
+	   << "\", (PyObject *)&" << py_type_obj (cls) << ");\n";
     }
   }
   

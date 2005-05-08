@@ -19,6 +19,10 @@ struct giz_t {
 	unsigned u;
 };
 
+struct fooz_t {
+	baz_t *baz;
+};
+
 enum aa_t { A1 = 1, A2 = 2, A3 = 3 };
 
 union bb_t switch (aa_t aa) {
@@ -47,5 +51,8 @@ program FOO_PROG {
 
 		int
 		FOO_BB (bb_t) = 4;
+
+		fooz_t
+		FOO_FOOZ (fooz_t) = 5;
 	} = 1;
 } = 100;

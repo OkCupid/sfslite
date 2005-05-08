@@ -1,6 +1,7 @@
 
-import ex1
+import async.rpctypes
 import async
+import ex1
 import socket
 import sys
 import signal
@@ -49,6 +50,9 @@ def dispatch (srv, sbp):
         else:
             r = bb.i
         sbp.reply (r)
+
+    elif sbp.proc () == ex1.FOO_FOOZ:
+        sbp.reply (sbp.getarg ())
         
     else:
         sbp.reject (async.arpc.PROC_UNAVAIL)

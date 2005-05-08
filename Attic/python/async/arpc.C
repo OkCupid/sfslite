@@ -485,7 +485,7 @@ static void
 py_aclnt_t_call_cb (ptr<aclntbun_t> bun, clnt_stat e)
 {
   if (bun->cb) {
-    PyObject *res = bun->res->safe_get_obj ();
+    PyObject *res = bun->res->safe_get_obj ( e != 0 );
     PyObject *arglist = Py_BuildValue ("(iO)", (int )e, res);
     PyObject *pres = PyObject_CallObject (bun->cb, arglist);
     Py_XDECREF (pres);

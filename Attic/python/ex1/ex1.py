@@ -5,8 +5,8 @@
 # $Id$
 #
 
-import ex1
 import async
+import ex1
 import socket
 import sys
 import posix
@@ -19,9 +19,9 @@ def cb(err,res):
 
 def cb2(err, foo):
     if err == 0:
-    	print "err=", err, "& foo.x=" , foo.x, " & foo.xx=", foo.xx
+        foo.warn ()
     else:
-    	print "error / bad result"
+    	print "error / bad result:", err
 
 #
 # make call a function, so that way we can test the refcounting on 
@@ -52,6 +52,21 @@ def call3(cli):
     z.warnx ()
     cli.call (ex1.FOO_BB, z, cb)
 
+def call4(cli):
+    z = ex1.fooz_t ()
+    z.baz = ex1.baz_t ()
+    z.baz.get().foos = [ex1.foo_t () for i in range (0,2) ]
+    z.baz.get().foos[0].x = "foos[0] = 4"
+    z.baz.get().foos[0].xx = 4
+    z.baz.get().foos[1].x = "foos[1] = 5"
+    z.baz.get().foos[1].xx = 5
+    z.baz.get().bar.y = [ 100, 200, 300, 400 ];
+    z.warnx ()
+    cli.call (ex1.FOO_FOOZ, z, cb)
+
+
+    
+
 port = 3000
 if len (sys.argv) > 1:
     port = int (sys.argv[1])
@@ -64,7 +79,7 @@ fd = sock.fileno ()
 x = async.arpc.axprt_stream (fd, sock)
 cli = async.arpc.aclnt (x, ex1.foo_prog_1 ())
 
-call3 (cli);
+call4 (cli);
 
 async.util.fixsignals ()
 async.core.amain ()

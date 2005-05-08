@@ -19,6 +19,8 @@ struct py_rpc_ptr_t {
   PyObject *p;
   PyObject *alloc ();
   void clear ();
+  operator bool () const { return p ; }
+  void set_typ (PyTypeObject *o);
 };
 extern PyTypeObject py_rpc_ptr_t_Type;
 
@@ -95,7 +97,7 @@ public:
   bool set_obj (PyObject *o);
 
   PyObject *get_obj ();
-  PyObject *safe_get_obj ();
+  PyObject *safe_get_obj (bool fail = false);
   const PyObject *get_const_obj () const { return _obj; }
   PyObject *unwrap () ;
 
@@ -197,12 +199,15 @@ class pyw_rpc_ptr : public pyw_tmpl_t<pyw_rpc_ptr<T,t>, py_rpc_ptr_t>
 {
 public:
   pyw_rpc_ptr () 
-    : pyw_tmpl_t<pyw_rpc_ptr<T,t>, py_rpc_ptr_t> (t) {}
+    : pyw_tmpl_t<pyw_rpc_ptr<T,t>, py_rpc_ptr_t> (&py_rpc_ptr_t_Type) {}
   pyw_rpc_ptr (PyObject *o) 
-    : pyw_tmpl_t<pyw_rpc_ptr<T,t>, py_rpc_ptr_t> (o, t) {}
+    : pyw_tmpl_t<pyw_rpc_ptr<T,t>, py_rpc_ptr_t> (o, &py_rpc_ptr_t_Type) {}
   pyw_rpc_ptr (const pyw_rpc_ptr<T,t> &p) :
     pyw_tmpl_t<pyw_rpc_ptr<T,t>, py_rpc_ptr_t> (p) {}
   bool init ();
+  T * palloc ();
+  operator bool() const 
+  { return const_casted_obj () && const_casted_obj ()->p ; }
 };
 
 
@@ -273,12 +278,24 @@ pyw_rpc_vec<T,M>::init ()
   return rc;
 }
 
+template<class T, PyTypeObject *t> T *
+pyw_rpc_ptr<T,t>::palloc ()
+{
+  if (!_obj)
+    alloc ();
+  py_rpc_ptr_t *pp = casted_obj ();
+  pp->set_typ (t);
+  if (!pp)
+    return NULL;
+  return reinterpret_cast<T *> (pp->alloc ());
+}
+
 template<class T, PyTypeObject *t> bool
 pyw_rpc_ptr<T,t>::init ()
 {
   if (!pyw_tmpl_t<pyw_rpc_ptr<T,t>, py_rpc_ptr_t>::init ())
     return false;
-  _typ = t;
+  _typ = &py_rpc_ptr_t_Type; // note, not type t!!!
   return true;
 }
 
@@ -369,7 +386,8 @@ rpc_print (const strbuf &sb, const pyw_rpc_ptr<T,t> &obj,
     sb << "...\n";
   else {
     sb << "&";
-    rpc_print (sb, *obj, recdepth - 1, NULL, prefix);
+    rpc_print (sb, * reinterpret_cast<T *> (obj.const_casted_obj ()->p), 
+	       recdepth - 1, NULL, prefix);
   }
   return sb;
 }
@@ -405,7 +423,7 @@ template<class T, size_t n> struct rpc_namedecl<pyw_rpc_vec<T, n> > {
 		     << rpc_dynsize (n);
   }
 };
-template<class T> struct rpc_namedecl<pyw_rpc_ptr<T,t> > {
+template<class T, PyTypeObject *t> struct rpc_namedecl<pyw_rpc_ptr<T,t> > {
   static str decl (const char *name) {
     return rpc_namedecl<T>::decl (str (strbuf () << "*" << name));
   }
@@ -528,13 +546,12 @@ template<class T, PyTypeObject *t> struct converter_t<pyw_rpc_ptr<T, t> >
   {
     py_rpc_ptr_t *ret = NULL;
     if (PyObject_IsInstance (in, (PyObject *)t)) {
-      ret = (py_rpc_ptr_t *)py_rpc_ptr_t_Type.tp_alloc (&py_rpc_ptr_T_type, 
-							NULL, NULL);
-      Py_INCREF (in);
-      Py_INCREF ((PyObject *)t);
-      p->typ = t;
-      p->p = in;
-    } else if (PyObject_IsInstance (in, (PyObject *)py_rpc_ptr_t_Type)) {
+      if ((ret = PyObject_New (py_rpc_ptr_t, &py_rpc_ptr_t_Type))) {
+	Py_INCREF (in);
+	ret->set_typ (t);
+	ret->p = in;
+      }
+    } else if (PyObject_IsInstance (in, (PyObject *)&py_rpc_ptr_t_Type)) {
       if (!PyObject_IsInstance (in, (PyObject *)t)) {
 	PyErr_SetString (PyExc_TypeError, "rpc_ptr of wrong type passed");
       } else {
@@ -760,15 +777,15 @@ rpc_traverse (C &c, pyw_rpc_ptr<T,t> &obj)
 {
   bool nonnil = false;
   py_rpc_ptr_t *p = obj.casted_obj ();
-  if (p && p->p)
+  if (p && *p)
     nonnil = true;
-  if (rpc_traverse (t, nonnil))
+  if (!rpc_traverse (c, nonnil))
     return false;
   if (nonnil) {
-    T *x = reinterpret_cast<T *> (p->alloc ());
+    T *x = obj.palloc ();
     if (!x)
       return false;
-    return rpc_traverse (t, *x);
+    return rpc_traverse (c, *x);
   }
   p->clear ();
   return true;
