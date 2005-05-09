@@ -153,7 +153,8 @@ pyw_base_t::alloc ()
 
 
 bool
-pyw_base_t::pyw_print_err (const strbuf &b, const str &prfx) const
+pyw_base_err_t::print_err (const strbuf &b, int recdepth, 
+			   const char *name, const str &prfx) const
 {
   str s;
   switch (_err) {
