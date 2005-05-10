@@ -1154,7 +1154,7 @@ print_w_struct (const str &id)
     "int recdepth,\n"
     "           const char *name, const char *prefix)\n"
     "{\n"
-    "  if (w.pyw_print_err (sb, prefix)) return sb;\n"
+    "  if (w.print_err (sb, recdepth, name, prefix)) return sb;\n"
     "  const " << ct << " *o = w.const_casted_obj ();\n"
     "  return o ? rpc_print (sb, *o, recdepth, name, prefix) : sb;\n"
     "}\n\n";

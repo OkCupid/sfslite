@@ -161,8 +161,11 @@ public:
 class pyw_rpc_byte_t : public pyw_base_err_t 
 {
 public:
-  pyw_rpc_byte_t (pyw_err_t &e) : pyw_base_err_t (e), byt (0) {}
-  char byt;
+  pyw_rpc_byte_t (pyw_err_t e) : pyw_base_err_t (e), _byt (0) {}
+  inline void set_byte (char c) { _byt = c; }
+  inline char get_byte () const { return _byt; }
+private:
+  char _byt;
 };
 
 template<size_t M = RPC_INFINITY>
@@ -176,6 +179,8 @@ public:
   bool get_char (int i, pyw_rpc_byte_t *c) const;
   pyw_rpc_byte_t operator[] (u_int i) const;
   bool init_trav () const;
+  bool init ();
+  size_t size () const { return _sz; }
 private:
   mutable const char *_str;
   mutable size_t _sz;
@@ -298,6 +303,16 @@ pyw_rpc_str<M>::init ()
   if (!pyw_tmpl_t<pyw_rpc_str<M>, PyStringObject >::init ())
     return false;
   _typ = &PyString_Type;
+  return true;
+}
+
+template<size_t M> bool
+pyw_rpc_bytes<M>::init ()
+{
+  if (!pyw_rpc_str<M>::init ())
+    return false;
+  _str = NULL;
+  _sz = 0;
   return true;
 }
 
@@ -457,7 +472,7 @@ pyw_rpc_bytes<m>::operator[] (u_int i) const
   if (i >= size ())
     return pyw_rpc_byte_t (PYW_ERR_BOUNDS);
   pyw_rpc_byte_t ret (PYW_ERR_NONE);
-  get_char (i, &ret.byt);
+  get_char (i, &ret);
   return ret;
 }
 
@@ -467,7 +482,7 @@ rpc_print (const strbuf &sb, const pyw_rpc_byte_t &obj,
 	   const char *name = NULL, const char *prefix = NULL)
 {
   if (obj.print_err (sb, recdepth, name, prefix)) return sb;
-  return rpc_print (sb, obj.byt, recdepth, name, prefix);
+  return rpc_print (sb, obj.get_byte (), recdepth, name, prefix);
 }
 	   
 
@@ -496,8 +511,7 @@ rpc_print (const strbuf &sb, const pyw_rpc_bytes<n> &obj,
   if (!obj.init_trav ()) {
     return sb;
   }
-  bool rc = rpc_print_array_vec (sb, obj, recdepth, name, prefix);
-  return rc;
+  return rpc_print_array_vec (sb, obj, recdepth, name, prefix);
 }
 
 
@@ -593,14 +607,43 @@ struct converter_t<pyw_rpc_str<m> >
       PyErr_SetString (PyExc_TypeError, "expected string type");
       return NULL;
     }
-    if (PyString_Size (in) > m) {
+    char *dat = PyString_AsString (in);
+    if (!dat) {
+      PyErr_SetString (PyExc_RuntimeError, "AsString failed");
+      return NULL;
+    }
+    size_t len = strlen (dat);
+    if (len > m) {
       PyErr_SetString (PyExc_OverflowError, 
 		       "string exceeds predeclared limits");
+      return NULL;
+    }
+    PyObject *out = PyString_FromString (dat); // will cut off at first '\0'
+    if (!out) 
+      return PyErr_NoMemory ();
+
+    return out;
+  }
+};
+
+template<size_t m>
+struct converter_t<pyw_rpc_bytes<m> >
+{
+  static PyObject *convert (PyObject *in)
+  {
+    if (!PyString_Check (in)) {
+      PyErr_SetString (PyExc_TypeError, "expected string type");
+      return NULL;
+    }
+    if (PyString_Size (in) > m) {
+      PyErr_SetString (PyExc_OverflowError, 
+		       "bytes exceed predeclared limits");
       return NULL;
     }
     Py_INCREF (in);
     return in;
   }
+
 };
 
 template<class T, size_t m> struct converter_t<pyw_rpc_vec<T,m> >
@@ -799,6 +842,27 @@ rpc_traverse (XDR *xdrs, pyw_rpc_str<n> &obj)
   }
 }
 
+template<size_t n> inline bool
+rpc_traverse (XDR *xdrs, pyw_rpc_bytes<n> &obj)
+{
+  switch (xdrs->x_op) {
+  case XDR_ENCODE:
+    return rpc_traverse (xdrs, *static_cast<pyw_rpc_str<n> *> (&obj));
+  case XDR_DECODE:
+    {
+      u_int32_t size;
+      if (!xdr_getint (xdrs, size) || size > n)
+	return false;
+      char *dp = (char *) XDR_INLINE (xdrs, size + 3 & ~3);
+      if (!dp)
+	return false;
+      return obj.set (dp, size);
+    }
+  default:
+    return true;
+  }
+}
+
 template<class T, class A> inline bool
 rpc_traverse_slot (T &t, A &a, int i)
 {
@@ -895,21 +959,21 @@ struct py_rpc_program_t {
 //-----------------------------------------------------------------------
 
 //-----------------------------------------------------------------------
-// rpc_str methods
+// rpc_str and rpc_bytes methods
 //
-template<size_t M> const char *
-pyw_rpc_str<M>::get () const 
-{
-  size_t dummy;
-  return get (&dummy);
-}
 
 template<size_t M> bool
 pyw_rpc_bytes<M>::init_trav () const
 {
-  return (_obj && PyString_AsStringAndSize (_obj, &_str, &_sz));
+  char *c;
+  int i;
+  if (_obj && PyString_AsStringAndSize (_obj, &c, &i)) {
+    _str = c;
+    _sz = i;
+    return true;
+  } else
+    return false;
 }
-
 
 template<size_t M> bool
 pyw_rpc_bytes<M>::get_char (int i, pyw_rpc_byte_t *c) const
@@ -919,8 +983,15 @@ pyw_rpc_bytes<M>::get_char (int i, pyw_rpc_byte_t *c) const
     c->set_err (PYW_ERR_BOUNDS);
     return false;
   }
-  c->_byt = _str[i];
+  c->set_byte (_str[i]);
   return true;
+}
+
+template<size_t M> const char *
+pyw_rpc_str<M>::get () const 
+{
+  size_t dummy;
+  return get (&dummy);
 }
 
 template<size_t M> char *
@@ -962,6 +1033,8 @@ pyw_rpc_str<m>::set (char *buf, size_t len)
 
 //
 //-----------------------------------------------------------------------
+
+//
 
 //-----------------------------------------------------------------------
 // py_rpc_vec methods
