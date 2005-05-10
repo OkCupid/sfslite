@@ -138,24 +138,34 @@ public:
   bool safe_set_obj (PyObject *in);
 };
 
-template<size_t M = RPC_INFINITY>
-class pyw_rpc_str : public pyw_tmpl_t<pyw_rpc_str<M>, PyStringObject > 
-{
+template<class W, size_t m = RPC_INFINITY>
+class pyw_tmpl_str_t : public pyw_tmpl_t<W, PyStringObject> {
 public:
-  pyw_rpc_str () : 
-    pyw_tmpl_t<pyw_rpc_str<M>, PyStringObject > (&PyString_Type) {}
-  pyw_rpc_str (PyObject *o) : 
-    pyw_tmpl_t<pyw_rpc_str<M>, PyStringObject > (o, &PyString_Type) {}
-  pyw_rpc_str (pyw_err_t e) :
-    pyw_tmpl_t<pyw_rpc_str<M>, PyStringObject > (e, &PyString_Type) {}
-  pyw_rpc_str (const pyw_rpc_str<M> &o) :
-    pyw_tmpl_t<pyw_rpc_str<M>, PyStringObject > (o) {}
+  pyw_tmpl_str_t () :
+    pyw_tmpl_t<W, PyStringObject> (&PyString_Type)  {}
+  pyw_tmpl_str_t (PyObject *o) :
+    pyw_tmpl_t<W, PyStringObject> (o, &PyString_Type) {}
+  pyw_tmpl_str_t (pyw_err_t e) :
+    pyw_tmpl_t<W, PyStringObject> (e, &PyString_Type) {}
+  pyw_tmpl_str_t (const pyw_tmpl_str_t<W, m> &o) :
+    pyw_tmpl_t<W, PyStringObject> (o) {}
 
   char *get (size_t *sz) const;
   const char * get () const ;
   bool set (char *buf, size_t len);
   bool init ();
-  enum { maxsize = M };
+  enum { maxsize = m };
+};
+
+template<size_t M = RPC_INFINITY>
+class pyw_rpc_str : public pyw_tmpl_str_t<pyw_rpc_str<M>, M >
+{
+public:
+  pyw_rpc_str () : pyw_tmpl_str_t<pyw_rpc_str<M>, M > () {}
+  pyw_rpc_str (PyObject *o) : pyw_tmpl_str_t<pyw_rpc_str<M>, M > (o) {}
+  pyw_rpc_str (pyw_err_t e) : pyw_tmpl_str_t<pyw_rpc_str<M>, M > (e) {}
+  pyw_rpc_str (const pyw_rpc_str<M> &o) 
+    : pyw_tmpl_str_t<pyw_rpc_str<M>, M > (o) {}
 };
 
 class pyw_rpc_byte_t : public pyw_base_err_t 
@@ -169,13 +179,14 @@ private:
 };
 
 template<size_t M = RPC_INFINITY>
-class pyw_rpc_bytes : public pyw_rpc_str<M>
+class pyw_rpc_bytes : public pyw_tmpl_str_t<pyw_rpc_bytes<M>, M>
 {
 public:
-  pyw_rpc_bytes () : pyw_rpc_str<M> () {}
-  pyw_rpc_bytes (PyObject *o) : pyw_rpc_str<M> (o) {}
-  pyw_rpc_bytes (pyw_err_t e) : pyw_rpc_str<M> (e) {}
-  pyw_rpc_bytes (const pyw_rpc_bytes<M> &o) : pyw_rpc_str<M> (o) {}
+  pyw_rpc_bytes () : pyw_tmpl_str_t<pyw_rpc_bytes<M>, M > () {}
+  pyw_rpc_bytes (PyObject *o) : pyw_tmpl_str_t<pyw_rpc_bytes<M>, M > (o) {}
+  pyw_rpc_bytes (pyw_err_t e) : pyw_tmpl_str_t<pyw_rpc_bytes<M>, M > (e) {}
+  pyw_rpc_bytes (const pyw_rpc_bytes<M> &o) 
+    : pyw_tmpl_str_t<pyw_rpc_bytes<M>, M > (o) {}
   bool get_char (int i, pyw_rpc_byte_t *c) const;
   pyw_rpc_byte_t operator[] (u_int i) const;
   bool init_trav () const;
@@ -297,19 +308,19 @@ pyw_rpc_bytes_alloc ()
   return New pyw_rpc_bytes<RPC_INFINITY> ();
 }
 
-template<size_t M> bool
-pyw_rpc_str<M>::init ()
+template<class W, size_t m> bool
+pyw_tmpl_str_t<W,m>::init ()
 {
-  if (!pyw_tmpl_t<pyw_rpc_str<M>, PyStringObject >::init ())
+  if (!pyw_tmpl_t<W, PyStringObject >::init ())
     return false;
   _typ = &PyString_Type;
   return true;
 }
 
-template<size_t M> bool
-pyw_rpc_bytes<M>::init ()
+template<size_t m> bool
+pyw_rpc_bytes<m>::init ()
 {
-  if (!pyw_rpc_str<M>::init ())
+  if (!pyw_tmpl_str_t<pyw_rpc_bytes<m>, m>::init ())
     return false;
   _str = NULL;
   _sz = 0;
@@ -407,6 +418,22 @@ template<> struct rpc_type2str<pyw_##T> {	\
   static const char *type () { return #T; }	\
 };
 
+inline bool
+rpc_isstruct (pyw_rpc_byte_t)
+{
+  return false;
+}
+
+template<size_t m> struct rpc_type2str<pyw_rpc_bytes<m> > {
+  static const char *type () { return "opaque"; }
+};
+
+template<size_t n> struct rpc_namedecl<pyw_rpc_bytes<n> > {
+  static str decl (const char *name) {
+    return rpc_namedecl<rpc_bytes<n> >::decl (name);
+  }
+};
+
 template<size_t n> const strbuf &
 rpc_print (const strbuf &sb, const pyw_rpc_str<n> &pyobj,
 	   int recdepth = RPC_INFINITY,
@@ -484,9 +511,6 @@ rpc_print (const strbuf &sb, const pyw_rpc_byte_t &obj,
   if (obj.print_err (sb, recdepth, name, prefix)) return sb;
   return rpc_print (sb, obj.get_byte (), recdepth, name, prefix);
 }
-	   
-
-
 
 #define RPC_ARRAYVEC_DECL(TEMP)                                 \
 template<class T, size_t n> const strbuf &			\
@@ -513,7 +537,6 @@ rpc_print (const strbuf &sb, const pyw_rpc_bytes<n> &obj,
   }
   return rpc_print_array_vec (sb, obj, recdepth, name, prefix);
 }
-
 
 template<class T, size_t n> struct rpc_namedecl<pyw_rpc_vec<T, n> > {
   static str decl (const char *name) {
@@ -816,16 +839,21 @@ ALLOC_DECL(pyw_void);
 // RPC traversal
 //
 
+template<class W, size_t m> inline bool
+rpc_encode (XDR *xdrs, pyw_tmpl_str_t<W,m> &obj)
+{
+  size_t sz;
+  char *dat = obj.get (&sz);
+  return dat && xdr_putint (xdrs, sz) && xdr_putpadbytes (xdrs, dat, sz);
+}
+
 template<size_t n> inline bool
 rpc_traverse (XDR *xdrs, pyw_rpc_str<n> &obj)
 {
   switch (xdrs->x_op) {
   case XDR_ENCODE:
     {
-      size_t sz;
-      char *dat = obj.get (&sz);
-      return dat && xdr_putint (xdrs, sz)
-	&& xdr_putpadbytes (xdrs, dat, sz);
+      return rpc_encode (xdrs, obj);
     }
   case XDR_DECODE:
     {
@@ -847,7 +875,9 @@ rpc_traverse (XDR *xdrs, pyw_rpc_bytes<n> &obj)
 {
   switch (xdrs->x_op) {
   case XDR_ENCODE:
-    return rpc_traverse (xdrs, *static_cast<pyw_rpc_str<n> *> (&obj));
+    {
+      return rpc_encode (xdrs, obj);
+    }
   case XDR_DECODE:
     {
       u_int32_t size;
@@ -967,7 +997,7 @@ pyw_rpc_bytes<M>::init_trav () const
 {
   char *c;
   int i;
-  if (_obj && PyString_AsStringAndSize (_obj, &c, &i)) {
+  if (_obj && PyString_AsStringAndSize (_obj, &c, &i) == 0) {
     _str = c;
     _sz = i;
     return true;
@@ -987,15 +1017,15 @@ pyw_rpc_bytes<M>::get_char (int i, pyw_rpc_byte_t *c) const
   return true;
 }
 
-template<size_t M> const char *
-pyw_rpc_str<M>::get () const 
+template<class W, size_t m> const char *
+pyw_tmpl_str_t<W,m>::get () const 
 {
   size_t dummy;
   return get (&dummy);
 }
 
-template<size_t M> char *
-pyw_rpc_str<M>::get (size_t *sz) const
+template<class W, size_t M> char *
+pyw_tmpl_str_t<W,M>::get (size_t *sz) const
 {
   char *ret;
   int i;
@@ -1019,8 +1049,8 @@ pyw_rpc_str<M>::get (size_t *sz) const
   return ret;
 }
 
-template<size_t m> bool 
-pyw_rpc_str<m>::set (char *buf, size_t len)
+template<class W, size_t m> bool 
+pyw_tmpl_str_t<W,m>::set (char *buf, size_t len)
 {
   Py_XDECREF (_obj);
   if (len > maxsize) {

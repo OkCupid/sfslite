@@ -65,6 +65,14 @@ def call4(cli):
     z.warnx ()
     cli.call (ex1.FOO_FOOZ, z, cb)
 
+def call5(cli):
+    z = ex1.fooz_t ()
+    f = ex1.foo_t ()
+    f.x = "this is a test string"
+    f.xx = 4080
+    z.b = f.xdr2str ()
+    z.warnx ()
+    cli.call (ex1.FOO_FOOZ, z, cb);
 
     
 
@@ -80,7 +88,7 @@ fd = sock.fileno ()
 x = async.arpc.axprt_stream (fd, sock)
 cli = async.arpc.aclnt (x, ex1.foo_prog_1 ())
 
-call4 (cli);
+call5 (cli);
 
 async.util.fixsignals ()
 async.core.amain ()

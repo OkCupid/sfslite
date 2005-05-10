@@ -52,6 +52,11 @@ def dispatch (srv, sbp):
         sbp.reply (r)
 
     elif sbp.proc () == ex1.FOO_FOOZ:
+        arg = sbp.getarg ()
+        bytes = arg.b;
+        f = ex1.foo_t ()
+        f.str2xdr (bytes)
+        f.warn ()
         sbp.reply (sbp.getarg ())
         
     else:

@@ -21,7 +21,7 @@ struct giz_t {
 
 struct fooz_t {
 	baz_t *baz;
-	opaque b<20>;
+	opaque b<200>;
 };
 
 enum aa_t { A1 = 1, A2 = 2, A3 = 3 };
