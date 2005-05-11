@@ -19,7 +19,7 @@ def dispatch (srv, sbp):
         active_srvs.remove (srv)
         return
     print "procno=", sbp.proc ()
-    sbp.getarg ().warn ()
+    #sbp.getarg ().warn ()
     
     if sbp.proc () == ex1.FOO_NULL:
         sbp.reply (None)
@@ -49,6 +49,7 @@ def dispatch (srv, sbp):
             r = bb.f.xx
         else:
             r = bb.i
+        res = ex1.foo_opq_t ();
         sbp.reply (r)
 
     elif sbp.proc () == ex1.FOO_FOOZ:
@@ -56,8 +57,14 @@ def dispatch (srv, sbp):
         bytes = arg.b;
         f = ex1.foo_t ()
         f.str2xdr (bytes)
-        f.warn ()
-        sbp.reply (sbp.getarg ())
+        #f.warn ()
+        #sbp.reply (sbp.getarg ())
+        sbp.reply (10)
+
+    elif sbp.proc () == ex1.FOO_OPQ:
+        res = ex1.foo_opq_t ();
+        res.c = ''
+        sbp.reply (res);
         
     else:
         sbp.reject (async.arpc.PROC_UNAVAIL)

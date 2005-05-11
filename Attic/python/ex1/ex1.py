@@ -71,10 +71,12 @@ def call5(cli):
     f.x = "this is a test string"
     f.xx = 4080
     z.b = f.xdr2str ()
+    z.c = 'h\x00m\x00x\x00y'
     z.warnx ()
     cli.call (ex1.FOO_FOOZ, z, cb);
 
-    
+def call6(cli):
+    cli.call (ex1.FOO_OPQ, None, cb);
 
 port = 3000
 if len (sys.argv) > 1:
@@ -88,8 +90,9 @@ fd = sock.fileno ()
 x = async.arpc.axprt_stream (fd, sock)
 cli = async.arpc.aclnt (x, ex1.foo_prog_1 ())
 
-call5 (cli);
+call6 (cli);
 
 async.util.fixsignals ()
+async.core.setprogname (sys.argv[0])
 async.core.amain ()
 

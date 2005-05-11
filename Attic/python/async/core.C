@@ -123,6 +123,18 @@ Core_exit (PyObject *self, PyObject *args)
   return NULL;
 }
 
+static PyObject *
+Core_setprogname (PyObject *self, PyObject *args)
+{
+  char *s;
+  if (!PyArg_ParseTuple (args, "s", &s))
+    return NULL;
+  if (s)
+    setprogname (s);
+  Py_INCREF (Py_None);
+  return Py_None;
+}
+
 static struct PyMethodDef core_methods[] = {
   { "amain",  Core_amain , METH_NOARGS,
     PyDoc_STR ("amain () from libasync") },
@@ -136,6 +148,8 @@ static struct PyMethodDef core_methods[] = {
     PyDoc_STR ("make_async from libasync") },
   { "exit", Core_exit, METH_VARARGS,
     PyDoc_STR ("async exit function") },
+  { "setprogname" , Core_setprogname, METH_VARARGS,
+    PyDoc_STR ("setprogname from libasync") },
   { NULL, NULL, NULL, NULL }
 };
 

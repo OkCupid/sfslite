@@ -21,6 +21,7 @@ struct giz_t {
 
 struct fooz_t {
 	baz_t *baz;
+	opaque c[40]; 
 	opaque b<200>;
 };
 
@@ -33,6 +34,10 @@ union bb_t switch (aa_t aa) {
 		baz_t b;
 	default:
 		int i;
+};
+
+struct foo_opq_t {
+	opaque c[2];
 };
 
 program FOO_PROG {
@@ -53,7 +58,10 @@ program FOO_PROG {
 		int
 		FOO_BB (bb_t) = 4;
 
-		fooz_t
+		int
 		FOO_FOOZ (fooz_t) = 5;
+
+		foo_opq_t 
+		FOO_OPQ (void) = 6;
 	} = 1;
 } = 100;

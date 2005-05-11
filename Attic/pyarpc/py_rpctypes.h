@@ -179,7 +179,7 @@ public:
   bool init_trav () const;
   bool init ();
   size_t size () const { return _sz; }
-private:
+protected:
   mutable const char *_str;
   mutable size_t _sz;
 };
@@ -205,12 +205,12 @@ public:
   pyw_rpc_bytes (const pyw_rpc_bytes<M> &o) 
     : pyw_tmpl_opq_t<pyw_rpc_bytes<M>, M > (o) {}
 
-  bool get_char (int i, pyw_rpc_byte_t *c) const;
+  bool get_char (u_int i, pyw_rpc_byte_t *c) const;
   pyw_rpc_byte_t operator[] (u_int i) const;
 };
 
 template<size_t M> 
-class pyw_rpc_opaque : pyw_tmpl_opq_t<pyw_rpc_opaque<M>, M>
+class pyw_rpc_opaque : public pyw_tmpl_opq_t<pyw_rpc_opaque<M>, M>
 {
 public:
   pyw_rpc_opaque () : pyw_tmpl_opq_t<pyw_rpc_opaque<M>, M > () {}
@@ -218,6 +218,8 @@ public:
   pyw_rpc_opaque (pyw_err_t e) : pyw_tmpl_opq_t<pyw_rpc_opaque<M>, M > (e) {}
   pyw_rpc_opaque (const pyw_rpc_opaque<M> &o) 
     : pyw_tmpl_opq_t<pyw_rpc_opaque<M>, M > (o) {}
+  bool get_char (u_int i, pyw_rpc_byte_t *c) const;
+  pyw_rpc_byte_t operator[] (u_int i) const;
 };
 
 template<class T, size_t max>
@@ -522,15 +524,22 @@ pyw_rpc_vec<T,m>::operator[] (u_int i) const
   return ret;
 }
 
-template<size_t m> pyw_rpc_byte_t 
-pyw_rpc_bytes<m>::operator[] (u_int i) const
+
+template<class W> pyw_rpc_byte_t 
+char_at (const W &obj, u_int i) 
 {
-  if (i >= size ())
+  if (i >= obj.size ())
     return pyw_rpc_byte_t (PYW_ERR_BOUNDS);
   pyw_rpc_byte_t ret (PYW_ERR_NONE);
-  get_char (i, &ret);
+  obj.get_char (i, &ret);
   return ret;
 }
+
+ 
+template<size_t m> pyw_rpc_byte_t
+pyw_rpc_bytes<m>::operator[] (u_int i) const { return char_at (*this, i); }
+template<size_t m> pyw_rpc_byte_t
+pyw_rpc_opaque<m>::operator[] (u_int i)const  { return char_at (*this, i); }
 
 const strbuf &
 rpc_print (const strbuf &sb, const pyw_rpc_byte_t &obj,
@@ -554,18 +563,19 @@ rpc_print (const strbuf &sb, const TEMP<T, n> &obj,		\
 
 RPC_ARRAYVEC_DECL(pyw_rpc_vec);
 
-template<size_t n> const strbuf &			        
-rpc_print (const strbuf &sb, const pyw_rpc_bytes<n> &obj,
-	   int recdepth = RPC_INFINITY,
-	   const char *name = NULL, const char *prefix = NULL)
-{
-  if (obj.print_err (sb, recdepth, name, prefix))
-    return sb;
-  if (!obj.init_trav ()) {
-    return sb;
-  }
-  return rpc_print_array_vec (sb, obj, recdepth, name, prefix);
+#define RPC_ARRAYVEC_OPQ_DECL(T)                                \
+template<size_t n> const strbuf &                               \
+rpc_print (const strbuf &sb, const T<n> &obj,                   \
+	   int recdepth = RPC_INFINITY,                         \
+	   const char *name = NULL, const char *prefix = NULL)  \
+{                                                               \
+  if (obj.print_err (sb, recdepth, name, prefix)) return sb;    \
+  if (!obj.init_trav ()) return sb;                             \
+  return rpc_print_array_vec (sb, obj, recdepth, name, prefix); \
 }
+
+RPC_ARRAYVEC_OPQ_DECL(pyw_rpc_bytes);
+RPC_ARRAYVEC_OPQ_DECL(pyw_rpc_opaque);
 
 template<class T, size_t n> struct rpc_namedecl<pyw_rpc_vec<T, n> > {
   static str decl (const char *name) {
@@ -926,6 +936,55 @@ rpc_traverse (XDR *xdrs, pyw_rpc_str<n> &obj)
   }
 }
 
+template<class T, size_t n> inline bool
+rpc_traverse (T &t, pyw_rpc_opaque<n> &obj)
+{
+  char buf[n];
+  memset (buf, 0, n);
+  for (u_int i = 0; i < n; i++) {
+    buf[i] = obj[i].get_byte ();
+    rpc_traverse (t, buf[i]);
+  }
+  PyObject *pystr = PyString_FromStringAndSize (buf, n);
+  if (!pystr) {
+    PyErr_NoMemory ();
+    return false;
+  }
+  return obj.set_obj (pystr);
+}
+
+template<size_t n> inline bool
+rpc_traverse (XDR *xdrs, pyw_rpc_opaque<n> &obj)
+{
+  char buf[n];
+  switch (xdrs->x_op) {
+  case XDR_ENCODE: 
+    {
+      size_t sz;
+      char *dat = obj.get (&sz);
+      if (!dat) return false;
+      if (sz < n) {
+	memset (buf, 0, n);
+	memcpy (buf, dat, sz);
+	dat = buf;
+      }
+      bool rc = xdr_putpadbytes (xdrs, dat, n);
+      return rc;
+    }
+  case XDR_DECODE:
+    {
+      bool rc;
+      if (!xdr_getpadbytes (xdrs, buf, n)) 
+	rc = false;
+      else
+	rc = obj.set (buf, n);
+      return rc;
+    }
+  default:
+    return true;
+  }
+}
+
 template<size_t n> inline bool
 rpc_traverse (XDR *xdrs, pyw_rpc_bytes<n> &obj)
 {
@@ -1053,7 +1112,7 @@ pyw_tmpl_opq_t<W, M>::init_trav () const
 {
   char *c;
   int i;
-  if (_obj && PyString_AsStringAndSize (_obj, &c, &i) < 0) {
+  if (_obj && PyString_AsStringAndSize (_obj, &c, &i) >= 0) {
     _str = c;
     _sz = i;
     return true;
@@ -1061,11 +1120,25 @@ pyw_tmpl_opq_t<W, M>::init_trav () const
     return false;
 }
 
-template<size_t M> bool
-pyw_rpc_bytes<M>::get_char (int i, pyw_rpc_byte_t *c) const
+template<size_t m> bool
+pyw_rpc_opaque<m>::get_char (u_int i, pyw_rpc_byte_t *c) const
 {
   assert (_str);
-  if (i >= _sz) {
+  if (i >= maxsize) {
+    c->set_err (PYW_ERR_BOUNDS);
+  } else if (int (i) < 0 || int (i) >= _sz) {
+    c->set_byte ('\0');
+  } else {
+    c->set_byte (_str[i]);
+  }
+  return true;
+}
+
+template<size_t M> bool
+pyw_rpc_bytes<M>::get_char (u_int i, pyw_rpc_byte_t *c) const
+{
+  assert (_str);
+  if (int (i) < 0 || int (i) >= _sz) {
     c->set_err (PYW_ERR_BOUNDS);
     return false;
   }
