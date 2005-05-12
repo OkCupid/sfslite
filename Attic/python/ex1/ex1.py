@@ -72,6 +72,7 @@ def call5(cli):
     f.xx = 4080
     z.b = f.xdr2str ()
     z.c = 'h\x00m\x00x\x00y'
+    z.d[3].y = [ 400, 31 ]
     z.warnx ()
     cli.call (ex1.FOO_FOOZ, z, cb);
 

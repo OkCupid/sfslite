@@ -10,7 +10,6 @@ active_srvs = [];
 
 def dispatch (srv, sbp):
     print "in dispatch"
-    print jxjx
     if sbp.eof ():
         print "EOF !!"
         

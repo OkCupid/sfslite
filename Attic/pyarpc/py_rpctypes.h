@@ -112,7 +112,7 @@ public:
 
   PyObject *get_obj ();
   PyObject *safe_get_obj (bool fail = false);
-  const PyObject *get_const_obj () const { return _obj; }
+  const PyObject *const_obj () const { return _obj; }
   PyObject *unwrap () ;
 
 protected:
@@ -378,7 +378,7 @@ pyw_tmpl_opq_t<W,m>::init ()
 template<class T, size_t sz> bool
 pyw_rpc_array<T,sz>::init ()
 {
-  if (!pyw_tmpl_t<pyw_rpc_vec<T,M >, PyListObject >::init ())
+  if (!pyw_tmpl_t<pyw_rpc_array<T,sz >, PyListObject >::init ())
     return false;
   _typ = &PyList_Type;
   PyObject *l = PyList_New (n_elem);
@@ -386,9 +386,9 @@ pyw_rpc_array<T,sz>::init ()
     PyErr_NoMemory ();
     return false;
   }
-  for (u_int i = 0; i < n_elem ; i++) {
+  for (u_int i = 0; i < size () ; i++) {
     T *t = New T ;
-    PyList_SET_ITEM (l, i, t->unrwap ());
+    PyList_SET_ITEM (l, i, t->unwrap ());
   }
   bool rc = set_obj (l); 
   Py_DECREF (l);
@@ -492,11 +492,10 @@ template<> struct rpc_type2str<pyw_##T> {	\
   static const char *type () { return #T; }	\
 };
 
-inline bool
-rpc_isstruct (pyw_rpc_byte_t)
-{
-  return false;
-}
+#define NOT_A_STRUCT(T)                         \
+inline bool rpc_isstruct (T) { return false; }
+
+NOT_A_STRUCT(pyw_rpc_byte_t);
 
 template<size_t m> struct rpc_type2str<pyw_rpc_bytes<m> > {
   static const char *type () { return "opaque"; }
@@ -819,6 +818,36 @@ template<class T, size_t m> struct converter_t<pyw_rpc_vec<T,m> >
   }
 };
 
+template<class T, size_t m> struct converter_t<pyw_rpc_array<T,m> >
+{
+  static PyObject * convert (PyObject *in)
+  {
+    if (!PyList_Check (in)) {
+      PyErr_SetString (PyExc_TypeError, "expected a list type");
+      return NULL;
+    }
+
+    if (PyList_Size (in) > m) {
+      PyErr_SetString (PyExc_OverflowError, 
+		       "list execeeds predeclared list length");
+      return NULL;
+    }
+
+    while (PyList_Size (in) < m) {
+      T *n = New T;
+      // Note: unwrap will dealloc the wrapper object
+      if (PyList_Append (in, n->unwrap ()) < 0) 
+	return NULL;
+    }
+
+    // might be good to do a recursive type check...
+    Py_INCREF (in);
+    return in;
+  }
+};
+    
+
+
 template<class T, PyTypeObject *t> struct converter_t<pyw_rpc_ptr<T, t> >
 {
   static PyObject * convert (PyObject *in)
@@ -943,7 +972,8 @@ PY_RPC_TYPE2STR_DECL(ctype)                                      \
 RPC_PRINT_TYPE_DECL(pyw_##ctype)                                 \
 RPC_PRINT_DECL(pyw_##ctype)                                      \
 INT_CONVERTER(pyw_##ctype);                                      \
-ALLOC_DECL(pyw_##ctype);
+ALLOC_DECL(pyw_##ctype);                                         \
+NOT_A_STRUCT(pyw_##ctype);
 
 INT_DO_ALL_H(u_int32_t, UnsignedLong);
 INT_DO_ALL_H(int32_t, Long);
@@ -1070,32 +1100,28 @@ rpc_traverse (XDR *xdrs, pyw_rpc_bytes<n> &obj)
   }
 }
 
-template<class T, class A> inline bool
-rpc_traverse_slot (T &t, A &a, int i)
-{
-  PyErr_SetString (PyExc_RuntimeError,
-		   "no rpc_traverse_slot function found");
-  return false;
-}
 
-template<class A, size_t max> inline bool
-rpc_traverse_slot (XDR *xdrs, pyw_rpc_vec<A,max> &v, int i)
+template<class L, class E> inline bool
+rpc_traverse_slot (XDR *xdrs, L &v, int i)
 {
   switch (xdrs->x_op) {
   case XDR_ENCODE:
     {
-      A el (PYW_ERR_NONE);
+      E el (PYW_ERR_NONE);
       if (!v.get_slot (i, &el))
 	return false;
       return rpc_traverse (xdrs, el);
     }
   case XDR_DECODE:
     {
-      A el;
+      E el;
       if (!rpc_traverse (xdrs, el)) {
 	return false;
       }
-      return v.set_slot (el.get_obj (), i);
+      PyObject *obj = el.get_obj ();
+      bool rc = v.set_slot (obj, i);
+      Py_DECREF (obj);
+      return rc;
     }
   default:
     return false;
@@ -1122,9 +1148,20 @@ rpc_traverse (T &t, pyw_rpc_vec<A,max> &obj)
     }
 
   for (u_int i = 0; i < size; i++) 
-    if (!rpc_traverse_slot (t, obj, i))
+    if (!rpc_traverse_slot<pyw_rpc_vec<A,max>, A> (t, obj, i))
       return false;
 
+  return true;
+}
+
+template<class T, class A, size_t max> inline bool
+rpc_traverse (T &t, pyw_rpc_array<A,max> &obj)
+{
+  u_int size = obj.size ();
+  assert (size == max);
+  for (u_int i = 0; i < size; i++)
+    if (!rpc_traverse_slot<pyw_rpc_array<A,max>, A> (t, obj, i))
+      return false;
   return true;
 }
 
@@ -1274,19 +1311,32 @@ pyw_rpc_vec<T,m>::size () const
   return u_int (l);
 }
 
-template<class T, size_t m> bool
-pyw_rpc_vec<T,m>::get_slot (int i, T *out)  const
+template<class L, class E> bool
+vec_get_slot (int i, const L &l, E *out) 
 {
-  assert (i < _sz && i >= 0);
-  if (!_obj) {
+  assert (i < l.size ()  && i >= 0);
+  if (!l.const_obj ()) {
     PyErr_SetString (PyExc_UnboundLocalError, "unbound vector");
     return NULL;
   }
-  PyObject *in = PyList_GetItem (_obj, i);
+  PyObject *in = PyList_GetItem (const_cast<PyObject *> (l.const_obj ()), i);
   if (!in)
     return false;
   return out->safe_set_obj (in);
 }
+
+template<class T, size_t m> bool
+pyw_rpc_vec<T,m>::get_slot (int i, T *out)  const
+{
+  return vec_get_slot (i, *this, out);
+}
+
+template<class T, size_t m> bool
+pyw_rpc_array<T,m>::get_slot (int i, T *out) const
+{
+  return vec_get_slot (i, *this, out);
+}
+
 
 template<class T, size_t m> bool
 pyw_rpc_vec<T,m>::set_slot (PyObject *el, int i)
@@ -1296,7 +1346,10 @@ pyw_rpc_vec<T,m>::set_slot (PyObject *el, int i)
     PyErr_SetString (PyExc_UnboundLocalError, "NULL array slot assignment");
     return false;
   } else if (i < _sz) {
-    rc = PyList_SetItem (_obj, i, el);
+    // SetItem "steals" a reference from us
+    Py_INCREF (el); 
+    if ((rc = PyList_SetItem (_obj, i, el)) < 0)
+      Py_DECREF (el);
   } else if (i == _sz) {
     rc = PyList_Append (_obj, el);
     _sz ++;
@@ -1304,6 +1357,24 @@ pyw_rpc_vec<T,m>::set_slot (PyObject *el, int i)
     PyErr_SetString (PyExc_IndexError, "out-of-order list insertion");
     return false;
   }
+  return (rc >= 0);
+}
+
+template<class T, size_t m> bool
+pyw_rpc_array<T,m>::set_slot (PyObject *el, int i)
+{
+  int rc;
+  assert (i >= 0 && i < size ());
+  if (!el) {
+    PyErr_SetString (PyExc_UnboundLocalError, "NULL array slot assignment");
+    return false;
+  }
+
+  // Recall that PyList_Set "steals" a reference from us
+  Py_INCREF (el);
+  if ((rc = PyList_SetItem (_obj, i, el)) < 0)
+    Py_DECREF (el);
+
   return (rc >= 0);
 }
 
@@ -1331,10 +1402,13 @@ pyw_tmpl_t<W,P>::safe_set_obj (PyObject *in)
   return ret;
 }
 
+//
+// XXX - copy_from will most likely be aborted
+//
 template<class W, class P> bool
 pyw_tmpl_t<W,P>::copy_from (const pyw_tmpl_t<W,P> &src)
 {
-  const P *in = reinterpret_cast<const P *> (src.get_const_obj ());
+  const P *in = reinterpret_cast<const P *> (src.const_obj ());
   PyObject *n = py_obj_copy (in);
   if (!n)
     return false;
