@@ -619,6 +619,7 @@ rpc_print (const strbuf &sb, const TEMP<T, n> &obj,		\
 }
 
 RPC_ARRAYVEC_DECL(pyw_rpc_vec);
+RPC_ARRAYVEC_DECL(pyw_rpc_array);
 
 #define RPC_ARRAYVEC_OPQ_DECL(T)                                \
 template<size_t n> const strbuf &                               \
@@ -636,8 +637,12 @@ RPC_ARRAYVEC_OPQ_DECL(pyw_rpc_opaque);
 
 template<class T, size_t n> struct rpc_namedecl<pyw_rpc_vec<T, n> > {
   static str decl (const char *name) {
-    return strbuf () << rpc_namedecl<T>::decl (rpc_parenptr (name))
-		     << rpc_dynsize (n);
+    return rpc_namedecl<rpc_vec<T, n> >::decl (name);
+  }
+};
+template<class T, size_t n> struct rpc_namedecl<pyw_rpc_array<T,n> > {
+  static str decl (const char *name) {
+    return rpc_namedecl<array<T, n> >::decl (name);
   }
 };
 template<class T, PyTypeObject *t> struct rpc_namedecl<pyw_rpc_ptr<T,t> > {
