@@ -4,6 +4,9 @@
 #ifndef __PY_UTIL_H_INCLUDED__
 #define __PY_UTIL_H_INCLUDED__
 
+#include <Python.h>
+#include "async.h"
+
 template<class T> str
 safe_to_str (const T *in)
 {
@@ -51,5 +54,7 @@ private:
 
 typedef pp_t<PyObject> pop_t;
 
+bool assure_callable (PyObject *obj);
+void py_throwup () ;
 
 #endif

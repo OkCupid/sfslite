@@ -1170,10 +1170,10 @@ pyw_tmpl_str_t<W,M>::get (size_t *sz) const
     return NULL;
   }
   *sz = i;
-  if (*sz >= maxsize) {
+  if (*sz > maxsize) {
     PyErr_SetString (PyExc_OverflowError, 
 		     "Length of string exceeded\n");
-    *sz = maxsize;
+    return NULL;
   }
   return ret;
 }
