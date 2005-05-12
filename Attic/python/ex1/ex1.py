@@ -90,7 +90,7 @@ fd = sock.fileno ()
 x = async.arpc.axprt_stream (fd, sock)
 cli = async.arpc.aclnt (x, ex1.foo_prog_1 ())
 
-call6 (cli);
+call5 (cli);
 
 async.util.fixsignals ()
 async.core.setprogname (sys.argv[0])

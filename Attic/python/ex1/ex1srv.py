@@ -57,14 +57,13 @@ def dispatch (srv, sbp):
         bytes = arg.b;
         f = ex1.foo_t ()
         f.str2xdr (bytes)
-        #f.warn ()
-        #sbp.reply (sbp.getarg ())
-        sbp.reply (10)
+        f.warn ()
+        sbp.reply (sbp.getarg ())
 
     elif sbp.proc () == ex1.FOO_OPQ:
-        res = ex1.foo_opq_t ();
-        res.c = ''
-        sbp.reply (res);
+        x = ex1.foo_opq_t ();
+        x.c = '4432we00rwersfdqwer';
+        sbp.reply (x)
         
     else:
         sbp.reject (async.arpc.PROC_UNAVAIL)
