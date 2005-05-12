@@ -37,7 +37,7 @@ union bb_t switch (aa_t aa) {
 };
 
 struct foo_opq_t {
-	opaque c[2];
+	opaque c[20];
 };
 
 program FOO_PROG {
@@ -58,7 +58,7 @@ program FOO_PROG {
 		int
 		FOO_BB (bb_t) = 4;
 
-		int
+		fooz_t	
 		FOO_FOOZ (fooz_t) = 5;
 
 		foo_opq_t 
