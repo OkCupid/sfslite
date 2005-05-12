@@ -6,6 +6,7 @@
 #include "arpc.h"
 #include "py_rpctypes.h"
 #include "py_gen.h"
+#include "py_util.h"
 
 static PyObject *AsyncXDR_Exception;
 static PyObject *AsyncRPC_Exception;
@@ -165,6 +166,7 @@ py_svccb_t_getres (py_svccb_t *o)
 static PyObject *
 py_svccb_t_reject (py_svccb_t *o, PyObject *args)
 {
+  warn << "in reject\n";
   if (!sbp_check (o)) return NULL;
   int stat = 0;
   char auth = 0;
@@ -286,9 +288,14 @@ py_asrv_t_dispatch (ptr<asrvbun_t> bun, svccb *sbp)
       py_sbp->wrap_res = bun->prog->pytab[sbp->proc ()].wrap_res;
     PyObject *arglist = Py_BuildValue ("(O)", py_sbp);
     PyObject *pres = PyObject_CallObject (bun->cb, arglist);
+
+    // will cause a stack trace and exit if there is an error
+    py_throwup (pres);
+
     Py_XDECREF (pres);
     Py_DECREF (arglist);
     Py_DECREF (py_sbp);
+
   }
 }
 
@@ -308,10 +315,7 @@ py_asrv_t_setcb (py_asrv_t *self, PyObject *args, PyObject *kwds)
   if (!cb) {
     self->srv->setcb (NULL);
   } else {
-    if (!PyCallable_Check (cb)) {
-      PyErr_SetString (PyExc_TypeError, "callable expected");
-      return NULL;
-    }
+    if (!assure_callable (cb)) return NULL;
     self->srv->setcb (wrap (py_asrv_t_dispatch,
 			    asrvbun_t::alloc (self->py_prog, cb)));
   }
@@ -488,9 +492,14 @@ py_aclnt_t_call_cb (ptr<aclntbun_t> bun, clnt_stat e)
     PyObject *res = bun->res->safe_get_obj ( e != 0 );
     PyObject *arglist = Py_BuildValue ("(iO)", (int )e, res);
     PyObject *pres = PyObject_CallObject (bun->cb, arglist);
+
+    // will cause a stack trace and exit if error
+    py_throwup (pres);
+
     Py_XDECREF (pres);
     Py_DECREF (arglist);
     Py_DECREF (res);  // Py_BuildValue raises the refcount on res
+
   } 
 }
 

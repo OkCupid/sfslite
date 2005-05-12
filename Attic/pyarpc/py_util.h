@@ -55,6 +55,6 @@ private:
 typedef pp_t<PyObject> pop_t;
 
 bool assure_callable (PyObject *obj);
-void py_throwup () ;
+void py_throwup (PyObject *obj) ;
 
 #endif

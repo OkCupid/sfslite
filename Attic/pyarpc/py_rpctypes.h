@@ -222,6 +222,29 @@ public:
   pyw_rpc_byte_t operator[] (u_int i) const;
 };
 
+template<class T, size_t sz>
+class pyw_rpc_array : public pyw_tmpl_t<pyw_rpc_array<T,sz>, PyListObject >
+{
+public:
+  pyw_rpc_array () :
+    pyw_tmpl_t<pyw_rpc_array<T,sz>, PyListObject > (&PyList_Type) {}
+  pyw_rpc_array (PyObject *o) :
+    pyw_tmpl_t<pyw_rpc_array<T,sz>, PyListObject > (o) {}
+  pyw_rpc_array (pyw_err_t e) :
+    pyw_tmpl_t<pyw_rpc_array<T,sz>, PyListObject > (e, &PyList_Type) {}
+  pyw_rpc_array (const pyw_rpc_array<T,sz> &p) :
+    pyw_tmpl_t<pyw_rpc_array<T,sz>, PyListObject > (p) {}
+
+  T operator[] (u_int i) const;
+  u_int size () const { return n_elem; }
+  bool get_slot (int i, T *out) const;
+  bool set_slot (PyObject *el, int i);
+  bool init ();
+
+  enum { n_elem = sz } ;
+
+};
+
 template<class T, size_t max>
 class pyw_rpc_vec : public pyw_tmpl_t<pyw_rpc_vec<T, max>, PyListObject > 
 {
@@ -352,6 +375,26 @@ pyw_tmpl_opq_t<W,m>::init ()
   return true;
 }
 
+template<class T, size_t sz> bool
+pyw_rpc_array<T,sz>::init ()
+{
+  if (!pyw_tmpl_t<pyw_rpc_vec<T,M >, PyListObject >::init ())
+    return false;
+  _typ = &PyList_Type;
+  PyObject *l = PyList_New (n_elem);
+  if (!l) {
+    PyErr_NoMemory ();
+    return false;
+  }
+  for (u_int i = 0; i < n_elem ; i++) {
+    T *t = New T ;
+    PyList_SET_ITEM (l, i, t->unrwap ());
+  }
+  bool rc = set_obj (l); 
+  Py_DECREF (l);
+  return rc;
+}
+
 template<class T, size_t M> bool
 pyw_rpc_vec<T,M>::init ()
 {
@@ -423,6 +466,12 @@ template<class T, size_t n> inline bool
 xdr_pyw_rpc_vec (XDR *xdrs, void *objp)
 {
   return rpc_traverse (xdrs, *static_cast<pyw_rpc_vec<T,n> *> (objp));
+}
+
+template<class T, size_t n> inline bool
+xdr_pyw_rpc_array (XDR *xdrs, void *objp)
+{
+  return rpc_traverse (xdrs, *static_cast<pyw_rpc_array<T,n> *> (obj));
 }
 
 template<class T, PyTypeObject *t> inline bool
@@ -513,17 +562,26 @@ rpc_print (const strbuf &sb, const pyw_rpc_ptr<T,t> &obj,
 }
 
 
-template<class T, size_t m> T
-pyw_rpc_vec<T,m>::operator[] (u_int i) const
+template<class L, class E> E
+obj_at (const L &lst, u_int i)
 {
-  if (i >= size ()) 
-    return T (PYW_ERR_BOUNDS);
-  T ret (PYW_ERR_NONE);
-  if (!get_slot (i, &ret))
-    return T (PYW_ERR_TYPE);
+  if (i >= lst.size ())
+    return E (PYW_ERR_BOUNDS);
+  E ret (PYW_ERR_NONE);
+  if (!lst.get_slot (i, &ret))
+    return E (PYW_ERR_TYPE);
   return ret;
 }
 
+#define OBJ_AT(typ)                                              \
+template<class T, size_t m> T                                    \
+pyw_rpc_##typ <T,m>::operator[] (u_int i) const                  \
+{                                                                \
+  return obj_at<pyw_rpc_##typ <T,m>, T> (*this, i);             \
+}
+
+OBJ_AT (vec);
+OBJ_AT (array);
 
 template<class W> pyw_rpc_byte_t 
 char_at (const W &obj, u_int i) 
@@ -534,12 +592,11 @@ char_at (const W &obj, u_int i)
   obj.get_char (i, &ret);
   return ret;
 }
-
  
 template<size_t m> pyw_rpc_byte_t
 pyw_rpc_bytes<m>::operator[] (u_int i) const { return char_at (*this, i); }
 template<size_t m> pyw_rpc_byte_t
-pyw_rpc_opaque<m>::operator[] (u_int i)const  { return char_at (*this, i); }
+pyw_rpc_opaque<m>::operator[] (u_int i) const { return char_at (*this, i); }
 
 const strbuf &
 rpc_print (const strbuf &sb, const pyw_rpc_byte_t &obj,

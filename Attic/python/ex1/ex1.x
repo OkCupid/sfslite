@@ -23,6 +23,7 @@ struct fooz_t {
 	baz_t *baz;
 	opaque c[40]; 
 	opaque b<200>;
+	bar_t d[5];
 };
 
 enum aa_t { A1 = 1, A2 = 2, A3 = 3 };

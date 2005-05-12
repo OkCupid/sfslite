@@ -13,9 +13,17 @@ assure_callable (PyObject *obj)
 }
 
 void
-py_throwup ()
+py_throwup (PyObject *obj)
 {
-  if (PyErr_Occurred ()) {
+  bool flag = PyErr_Occurred ();
+  if (!obj && !flag) {
+    warn << "python call returned NULL, but no error set!\n";
+    exit (2);
+  }
+  if (flag) {
+    if (obj) {
+      warn << "python error set, but valid object returned from call!\n";
+    }
     PyErr_Print ();
     exit (2);
   }
