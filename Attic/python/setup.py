@@ -31,7 +31,7 @@ from distutils.extension import Extension
 name = "SFS-%s" % os.path.basename(sys.executable)
 version = "0.1"
 extra_objects = []
-extra_compile_args = []
+extra_compile_args = [ '-g' ]
 
 libraries = [ 'async', 'arpc', 'sfscrypt', 'pyarpc', 'gmp' ]
 library_dirs = [ '/usr/local/lib/sfslite/shdbg' ]
@@ -79,6 +79,8 @@ metadata = {
                    libraries=libraries,
                    extra_compile_args=extra_compile_args,
                    extra_objects=extra_objects,
+                   runtime_library_dirs=library_dirs,
+                   language='c++',
                    ),
         Extension( name='async.rpctypes',
                    sources=['async/rpctypes.C'],
@@ -87,6 +89,8 @@ metadata = {
                    libraries=libraries,
                    extra_compile_args=extra_compile_args,
                    extra_objects=extra_objects,
+                   runtime_library_dirs=library_dirs,
+                   language='c++',
                    )
         ],
     }
