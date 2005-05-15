@@ -237,8 +237,8 @@ public:
 
   T operator[] (u_int i) const;
   u_int size () const { return n_elem; }
-  bool get_slot (int i, T *out) const;
-  bool set_slot (PyObject *el, int i);
+  bool get_slot (u_int i, T *out) const;
+  bool set_slot (PyObject *el, u_int i);
   bool init ();
 
   enum { n_elem = sz } ;
@@ -262,13 +262,13 @@ public:
     
   T operator[] (u_int i) const;
   u_int size () const;
-  bool get_slot (int i, T *out) const;
-  bool set_slot (PyObject *el, int i);
+  bool get_slot (u_int i, T *out) const;
+  bool set_slot (PyObject *el, u_int i);
   bool shrink (size_t sz);
   bool init ();
   enum { maxsize = max };
 private:
-  mutable int _sz;
+  mutable size_t _sz;
 };
 
 class pyw_void : public pyw_tmpl_t<pyw_void, PyObject>
@@ -785,7 +785,7 @@ struct converter_t<pyw_rpc_bytes<m> >
       PyErr_SetString (PyExc_TypeError, "expected string type");
       return NULL;
     }
-    if (PyString_Size (in) > m) {
+    if (PyString_Size (in) > int (m)) {
       PyErr_SetString (PyExc_OverflowError, 
 		       "bytes exceed predeclared limits");
       return NULL;
@@ -804,7 +804,7 @@ template<class T, size_t m> struct converter_t<pyw_rpc_vec<T,m> >
       PyErr_SetString (PyExc_TypeError, "expected a list type");
       return NULL;
     }
-    if (PyList_Size (in) > m) {
+    if (PyList_Size (in) > int (m)) {
       PyErr_SetString (PyExc_OverflowError, 
 		       "list execeeds predeclared list length");
       return NULL;
@@ -827,13 +827,13 @@ template<class T, size_t m> struct converter_t<pyw_rpc_array<T,m> >
       return NULL;
     }
 
-    if (PyList_Size (in) > m) {
+    if (PyList_Size (in) > int (m)) {
       PyErr_SetString (PyExc_OverflowError, 
 		       "list execeeds predeclared list length");
       return NULL;
     }
 
-    while (PyList_Size (in) < m) {
+    while (PyList_Size (in) < int (m)) {
       T *n = New T;
       // Note: unwrap will dealloc the wrapper object
       if (PyList_Append (in, n->unwrap ()) < 0) 
@@ -1102,7 +1102,7 @@ rpc_traverse (XDR *xdrs, pyw_rpc_bytes<n> &obj)
 
 
 template<class L, class E> inline bool
-rpc_traverse_slot (XDR *xdrs, L &v, int i)
+rpc_traverse_slot (XDR *xdrs, L &v, u_int i)
 {
   switch (xdrs->x_op) {
   case XDR_ENCODE:
@@ -1225,7 +1225,7 @@ pyw_rpc_opaque<m>::get_char (u_int i, pyw_rpc_byte_t *c) const
   assert (_str);
   if (i >= maxsize) {
     c->set_err (PYW_ERR_BOUNDS);
-  } else if (int (i) < 0 || int (i) >= _sz) {
+  } else if (i >= _sz) {
     c->set_byte ('\0');
   } else {
     c->set_byte (_str[i]);
@@ -1237,7 +1237,7 @@ template<size_t M> bool
 pyw_rpc_bytes<M>::get_char (u_int i, pyw_rpc_byte_t *c) const
 {
   assert (_str);
-  if (int (i) < 0 || int (i) >= _sz) {
+  if (i >= _sz) {
     c->set_err (PYW_ERR_BOUNDS);
     return false;
   }
@@ -1298,7 +1298,7 @@ pyw_tmpl_str_t<W,m>::set (char *buf, size_t len)
 // py_rpc_vec methods
 //
 
-template<class T, size_t m> u_int
+template<class T, size_t m> size_t
 pyw_rpc_vec<T,m>::size () const
 {
   int l = PyList_Size (_obj);
@@ -1312,9 +1312,9 @@ pyw_rpc_vec<T,m>::size () const
 }
 
 template<class L, class E> bool
-vec_get_slot (int i, const L &l, E *out) 
+vec_get_slot (u_int i, const L &l, E *out) 
 {
-  assert (i < l.size ()  && i >= 0);
+  assert (i < l.size ());
   if (!l.const_obj ()) {
     PyErr_SetString (PyExc_UnboundLocalError, "unbound vector");
     return NULL;
@@ -1326,20 +1326,20 @@ vec_get_slot (int i, const L &l, E *out)
 }
 
 template<class T, size_t m> bool
-pyw_rpc_vec<T,m>::get_slot (int i, T *out)  const
+pyw_rpc_vec<T,m>::get_slot (u_int i, T *out)  const
 {
   return vec_get_slot (i, *this, out);
 }
 
 template<class T, size_t m> bool
-pyw_rpc_array<T,m>::get_slot (int i, T *out) const
+pyw_rpc_array<T,m>::get_slot (u_int i, T *out) const
 {
   return vec_get_slot (i, *this, out);
 }
 
 
 template<class T, size_t m> bool
-pyw_rpc_vec<T,m>::set_slot (PyObject *el, int i)
+pyw_rpc_vec<T,m>::set_slot (PyObject *el, u_int i)
 {
   int rc;
   if (!el) {
@@ -1361,10 +1361,10 @@ pyw_rpc_vec<T,m>::set_slot (PyObject *el, int i)
 }
 
 template<class T, size_t m> bool
-pyw_rpc_array<T,m>::set_slot (PyObject *el, int i)
+pyw_rpc_array<T,m>::set_slot (PyObject *el, u_int i)
 {
   int rc;
-  assert (i >= 0 && i < size ());
+  assert (i < size ());
   if (!el) {
     PyErr_SetString (PyExc_UnboundLocalError, "NULL array slot assignment");
     return false;

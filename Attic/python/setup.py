@@ -26,6 +26,7 @@ import os
 import sys
 from distutils.core import setup
 from distutils.extension import Extension
+import distutils.sysconfig
 
 
 name = "SFS-%s" % os.path.basename(sys.executable)
@@ -54,6 +55,7 @@ Programming Language :: Python
 Topic :: Libraries
 """
 
+py_inc = [ distutils.sysconfig.get_python_inc(plat_specific=s) for s in [0,1]]
 
 metadata = {
     'name': name,
@@ -91,8 +93,33 @@ metadata = {
                    extra_objects=extra_objects,
                    runtime_library_dirs=library_dirs,
                    language='c++',
+                   ),
+        Extension( name='ex1.ex1',
+                   sources=['ex1/ex1.C'],
+                   include_dirs=include_dirs,
+                   library_dirs=library_dirs,
+                   libraries=libraries,
+                   extra_compile_args=extra_compile_args,
+                   extra_objects=extra_objects,
+                   runtime_library_dirs=library_dirs,
+                   language='c++',
                    )
         ],
+
+    'libraries' :
+         [ ( 'pyarpc',
+             { 'sources' : [ 'pyarpc/py_' + f + '.C'
+                             for f in [ 'gen', 'rpctypes', 'util' ] ],
+               'include_dirs': include_dirs + py_inc,
+               'library_dirs': library_dirs,
+               'libraries': libraries,
+               'extra_compile_args': extra_compile_args,
+               'extra_objects': extra_objects,
+               'runtime_library_dirs': library_dirs,
+               'language': 'c++',
+               }
+             )
+           ]
     }
 
 setup(**metadata)

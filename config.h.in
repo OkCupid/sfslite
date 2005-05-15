@@ -3,7 +3,7 @@
 /* Define if last argument of authunix_create is a gid_t *. */
 #undef AUTHUNIX_GID_T
 
-/* Define if you must run "df -k" to get BSD-formatted output */
+/* Define if you must run \"df -k\" to get BSD-formatted output */
 #undef DF_NEEDS_DASH_K
 
 /* Define if compiling with dmalloc. */
@@ -51,6 +51,9 @@
 
 /* Define if your kernel has the Arla file system's XFS device */
 #undef HAVE_DEV_XFS
+
+/* Define to 1 if you have the <dlfcn.h> header file. */
+#undef HAVE_DLFCN_H
 
 /* Define if the first element of a grouplist is the effective gid */
 #undef HAVE_EGID_IN_GROUPLIST
@@ -447,9 +450,11 @@
 /* Define to `int' if <sys/types.h> doesn't define. */
 #undef gid_t
 
-/* Define as `__inline' if that's what the C compiler calls it, or to nothing
-   if it is not supported. */
+/* Define to `__inline__' or `__inline' if that's what the C compiler
+   calls it, or to nothing if 'inline' is not supported under any name.  */
+#ifndef __cplusplus
 #undef inline
+#endif
 
 /* Define to `long' if <sys/types.h> does not define. */
 #undef off_t
