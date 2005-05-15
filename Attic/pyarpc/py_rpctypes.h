@@ -10,6 +10,28 @@
 
 //-----------------------------------------------------------------------
 //
+// DEBUG tools
+
+#ifdef PYDEBUG
+
+#define PYDEBUG_NEW(W) pyarpc_debug_cntr_inc<W> ();
+#define PYDEBUG_FREE(W) pyarpc_debug_cntr_dec<W> ();
+
+#else
+
+
+#define PYDEBUG_NEW (W) {}
+#define PYDEBUG_FREE (W) {}
+
+
+#endif
+
+//
+//
+//-----------------------------------------------------------------------
+
+//-----------------------------------------------------------------------
+//
 //  Native Object types for RPC ptrs
 //
 
@@ -123,10 +145,16 @@ protected:
 template<class W, class P>
 class pyw_tmpl_t : public pyw_base_t {
 public:
-  pyw_tmpl_t (PyTypeObject *t) : pyw_base_t (t) {}
-  pyw_tmpl_t (PyObject *o, PyTypeObject *t) : pyw_base_t (o, t) {}
-  pyw_tmpl_t (const pyw_tmpl_t<W,P> &t) : pyw_base_t (t) {}
-  pyw_tmpl_t (pyw_err_t e, PyTypeObject *t) : pyw_base_t (e, t) {}
+  pyw_tmpl_t (PyTypeObject *t) : pyw_base_t (t) 
+  { PYDEBUG_NEW (W); }
+  pyw_tmpl_t (PyObject *o, PyTypeObject *t) : pyw_base_t (o, t) 
+  { PYDEBUG_NEW (W); }
+  pyw_tmpl_t (const pyw_tmpl_t<W,P> &t) : pyw_base_t (t) 
+  { PYDEBUG_NEW (W); }
+  pyw_tmpl_t (pyw_err_t e, PyTypeObject *t) : pyw_base_t (e, t) 
+  { PYDEBUG_NEW (W); }
+
+  ~pyw_tmpl_t () { PYDEBUG_DEL (W); }
   
   P *casted_obj () { return reinterpret_cast<P *> (_obj); }
   const P *const_casted_obj () const 
