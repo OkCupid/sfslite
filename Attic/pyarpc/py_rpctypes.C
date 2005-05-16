@@ -326,7 +326,18 @@ static PyGetSetDef py_rpc_ptr_t_getsetters[] = {
 
 PY_CLASS_DEF3(py_rpc_ptr_t, "async.rpc_ptr", 1, dealloc, -1, 
 	      "RPC ptr object", methods, 0, getsetters, init, new, 0, 
-	      0,0,0)
+	      0,0,0);
 
 //
 //-----------------------------------------------------------------------
+
+//-----------------------------------------------------------------------
+//
+// Debug symbols
+//
+
+#ifdef PYDEBUG
+
+qhash<str,int> g_alloc_cnt;
+
+#endif /* PYDEBUG */ 

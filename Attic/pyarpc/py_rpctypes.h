@@ -7,28 +7,33 @@
 #include "structmember.h"
 #include "arpc.h"
 #include "rpctypes.h"
+#include "qhash.h"
+#include "async.h"
 
-//-----------------------------------------------------------------------
+//----------------------------------------------------------------------
+// DEBUG stuff
 //
-// DEBUG tools
+
+typedef qhash<str,int> debug_dict_t;
+
+template<class W> void pydebug_inc (debug_dict_t *d);
+template<class W> void pydebug_dec (debug_dict_t *d);
+
+// XXX temporary
+#define PYDEBUG 1
 
 #ifdef PYDEBUG
+extern debug_dict_t g_alloc_cnt;
+# define PYDEBUG_NEW(W) pydebug_inc<W> (&g_alloc_cnt);
+# define PYDEBUG_DEL(W) pydebug_dec<W> (&g_alloc_cnt);
+#else /* ! PYDEBUG */
+# define PYDEBUG_NEW(W) 
+# define PYDEBUG_DEL(W) 
+#endif /* PYDEBUG */
 
-#define PYDEBUG_NEW(W) pyarpc_debug_cntr_inc<W> ();
-#define PYDEBUG_FREE(W) pyarpc_debug_cntr_dec<W> ();
-
-#else
-
-
-#define PYDEBUG_NEW (W) {}
-#define PYDEBUG_FREE (W) {}
-
-
-#endif
-
-//
 //
 //-----------------------------------------------------------------------
+
 
 //-----------------------------------------------------------------------
 //
@@ -146,15 +151,15 @@ template<class W, class P>
 class pyw_tmpl_t : public pyw_base_t {
 public:
   pyw_tmpl_t (PyTypeObject *t) : pyw_base_t (t) 
-  { PYDEBUG_NEW (W); }
+  { PYDEBUG_NEW (W) }
   pyw_tmpl_t (PyObject *o, PyTypeObject *t) : pyw_base_t (o, t) 
-  { PYDEBUG_NEW (W); }
+  { PYDEBUG_NEW (W) }
   pyw_tmpl_t (const pyw_tmpl_t<W,P> &t) : pyw_base_t (t) 
-  { PYDEBUG_NEW (W); }
+  { PYDEBUG_NEW (W) }
   pyw_tmpl_t (pyw_err_t e, PyTypeObject *t) : pyw_base_t (e, t) 
-  { PYDEBUG_NEW (W); }
+  { PYDEBUG_NEW (W) }
 
-  ~pyw_tmpl_t () { PYDEBUG_DEL (W); }
+  ~pyw_tmpl_t () { PYDEBUG_DEL (W) }
   
   P *casted_obj () { return reinterpret_cast<P *> (_obj); }
   const P *const_casted_obj () const 
@@ -1445,6 +1450,49 @@ pyw_tmpl_t<W,P>::copy_from (const pyw_tmpl_t<W,P> &src)
   return rc;
 }
 
+//
+//-----------------------------------------------------------------------
+
+//-----------------------------------------------------------------------
+//
+// More Debug Stuff
+//
+
+template<class W> str
+getkey () 
+{
+  const char *typ = rpc_type2str<W>::type ();
+  if (!typ) {
+    warn << "no typ found for wrapper in debug_inc!\n";
+    return NULL;
+  }
+  return typ;
+}
+
+template<class W> void
+pydebug_inc (qhash<str,int> *hsh)
+{
+  str k = getkey<W> ();
+  if (!k) return;
+  int *i;
+  if ((i = (*hsh)[k]))  (*i) ++ ;
+  else hsh->insert (k, 1);
+}
+
+template<class W> void
+pydebug_dec (qhash<str,int> *hsh)
+{
+  str k = getkey<W> ();
+  if (!k) return;
+  int *i;
+  if (!(i = (*hsh)[k])) {
+    warn << "dec without inc: " << k << "\n";
+  } else {
+    (*i) -- ;
+  }
+}
+
+//
 //
 //-----------------------------------------------------------------------
 
