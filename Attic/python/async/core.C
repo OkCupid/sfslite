@@ -6,6 +6,10 @@
 #include "py_gen.h"
 #include "py_debug.h"
 
+//
+// $Id$
+//
+
 static PyObject *
 Core_amain (PyObject *self, PyObject *args)
 {
@@ -24,6 +28,24 @@ Core_cb (ptr<pop_t> handler)
 }
 
 static PyObject *
+Core_nowcb (PyObject *self, PyObject *args)
+{
+  PyObject *cb;
+  if (!PyArg_ParseTuple (args, "O", &cb))
+    return NULL;
+
+  if (!PyCallable_Check (cb)) {
+    PyErr_SetString (PyExc_TypeError, "expected a callable object");
+    return NULL;
+  }
+  delaycb (0, 0, wrap (Core_cb, pop_t::alloc (cb)));
+  
+  Py_INCREF (Py_None);
+  return Py_None;
+}
+
+
+static PyObject *
 Core_delaycb (PyObject *self, PyObject *args)
 {
   PyObject *handler;
@@ -33,7 +55,7 @@ Core_delaycb (PyObject *self, PyObject *args)
     return NULL;
 
   if (!PyCallable_Check (handler)) {
-    PyErr_SetString (PyExc_TypeError, "expected a calling object as 3rd arg");
+    PyErr_SetString (PyExc_TypeError, "expected a callable object as 3rd arg");
     return NULL;
   }
 
@@ -145,6 +167,8 @@ static struct PyMethodDef core_methods[] = {
     PyDoc_STR ("amain () from libasync") },
   { "delaycb", Core_delaycb, METH_VARARGS,
     PyDoc_STR ("delaycb from libasync") },
+  { "nowcb", Core_nowcb, METH_VARARGS,
+    PyDoc_STR ("delaycb (0,0,cb) from libasync") },
   { "fdcb", Core_fdcb, METH_VARARGS,
     PyDoc_STR ("fdcb from libasync") },
   { "sigcb", Core_sigcb, METH_VARARGS,
