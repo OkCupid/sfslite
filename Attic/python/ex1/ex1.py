@@ -16,13 +16,13 @@ i = 5
 
 def cb(err,res,cli):
     print "err=", err, "& res=", res
-    print "Calling exit"
     global i
     if i == 0:
-        async.core.delaycb (0, 0, async.core.exit );
+        print "Calling exit"
+        async.core.nowcb ( async.core.exit );
     else:
         i = i - 1;
-        async.core.delaycb (0, 0, lambda : call5 (cli))
+        async.core.nowcb ( lambda : call5 (cli))
 
 def cb2(err, foo):
     if err == 0:
