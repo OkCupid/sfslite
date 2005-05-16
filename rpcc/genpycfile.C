@@ -302,7 +302,10 @@ dump_w_class_clear_func (const rpc_struct *rs)
        << wt << "::clear ()\n"
        << "{\n"
        << get_inner_obj ("o", ct)
-       << "  bool ret = ";
+       << "  bool ret = true";
+  // XXX - We don't need this since the inner object will take care
+  // of clearing its data values when its ref count goes to 0
+#if 0 
   for (const rpc_decl *rd = rs->decls.base (); rd < rs->decls.lim (); rd++) {
     if (!first)
       aout << " &&\n"
@@ -311,6 +314,8 @@ dump_w_class_clear_func (const rpc_struct *rs)
       first = false;
     aout << "o->" << rd->id << ".clear ()";
   }
+#endif 
+
   aout << ";\n"
        << "  Py_DECREF (_obj);\n"
        << "  _obj = NULL;\n"
@@ -328,6 +333,7 @@ dump_class_uncasted_new_func (const rpc_struct *rs)
        <<                 "PyObject *args, PyObject *kwds)\n"
        << "{\n"
        << "  " << ct << " *self;\n"
+       << "  PYDEBUG_PYALLOC (" << ct << ");\n"
        << "  if (!(self = (" << ct << " *)type->tp_alloc (type, 0)))\n"
        << "    return NULL;\n";
   for (const rpc_decl *rd = rs->decls.base (); rd < rs->decls.lim (); rd++) {
@@ -358,6 +364,7 @@ dump_enum_new_func (const str &id)
        << ct << "_new (PyTypeObject *type, PyObject *args, PyObject *kwds)\n"
        << "{\n"
        << "  " << ct << " *self;\n"
+       << "  PYDEBUG_PYALLOC (" << ct << ");\n"
        << "  if (!(self = (" << ct << " *)type->tp_alloc (type, 0)))\n"
        << "    return NULL;\n"
        << "  return self;\n"
@@ -463,7 +470,8 @@ dump_class_dealloc_func (const rpc_struct *rs)
   for (const rpc_decl *rd = rs->decls.base (); rd < rs->decls.lim (); rd++) {
     aout << "  self->" << rd->id << ".clear ();\n";
   }
-  aout << "  self->ob_type->tp_free ((PyObject *) self);\n"
+  aout << "  PYDEBUG_PYFREE (" << ct << ");\n"
+       << "  self->ob_type->tp_free ((PyObject *) self);\n"
        << "}\n\n";
 }
 
@@ -1654,6 +1662,7 @@ dump_union_dealloc_func (const rpc_union *u)
        << ct << "_dealloc (" << ct << " *self)\n"
        << "{\n"
        << "  self->_base.destroy ();\n"
+       << "  PYDEBUG_PYFREE (" << ct << ");\n"
        << "  self->ob_type->tp_free ((PyObject *) self);\n"
        << "}\n\n";
 }
@@ -1668,6 +1677,7 @@ dump_union_uncasted_new_func (const rpc_union *u)
        <<                       "PyObject *args, PyObject *kwds)\n"
        << "{\n"
        << "  " << ct << " *self;\n"
+       << "  PYDEBUG_PYALLOC (" << ct << ");\n"
        << "  if (!(self = (" << ct << " *)type->tp_alloc (type, 0)))\n"
        << "    return NULL;\n"
        << "  int arg = 0;\n"
@@ -1782,7 +1792,6 @@ dump_py_enum (const rpc_enum *e)
        << "\n";
 }
 
-#if 0
 static void
 dump_enum_dealloc_func (const rpc_enum *e)
 {
@@ -1790,10 +1799,10 @@ dump_enum_dealloc_func (const rpc_enum *e)
   aout << "static void\n"
        << ct << "_dealloc (" << ct << " *self)\n"
        << "{\n"
-       << "  self->ob_type_tp_free ((PyObject *) self);\n"
+       << "  PYDEBUG_PYFREE (" << ct << ");\n"
+       << "  self->ob_type->tp_free ((PyObject *) self);\n"
        << "}\n\n";
 }
-#endif
 
 static void
 dump_int_to_enum_converter (const rpc_enum *e)
@@ -1832,7 +1841,7 @@ dump_enum_type_object (const str &id)
   const str ct = pyc_type (id);
   const str pt = id;
   aout << "PY_CLASS_DEF (" << ct << ", \"" << module << "." << pt 
-       <<                "\", 1, 0, -1, \"" << pt << " object\",\n"
+       <<                "\", 1, dealloc, -1, \"" << pt << " object\",\n"
        << "              methods, members, 0, init, new, 0);\n"
        << "\n";
 }
@@ -1865,6 +1874,7 @@ dumpenum_hdr (const rpc_sym *s)
   dump_type_object_decl (rs->id);
   dump_py_enum (rs);
   dump_class_method_decls (ct);
+  dump_enum_dealloc_func (rs);
 
   // dump the object wrapper
   dump_w_class (rs->id);

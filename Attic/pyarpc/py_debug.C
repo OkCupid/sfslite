@@ -27,4 +27,26 @@ pydebug_memreport (const strbuf &b)
   b << "============= End New/Delete Memory Statistics =================\n";
 }
 
-#endif /* PYDEBUG */ 
+
+void 
+pydebug_inc (const str &k, qhash<str,int> *hsh)
+{
+
+  int *i;
+  if ((i = (*hsh)[k]))  (*i) ++ ;
+  else hsh->insert (k, 1);
+}
+
+void 
+pydebug_dec (const str &k, qhash<str,int> *hsh)
+{
+  int *i;
+  if (!(i = (*hsh)[k])) {
+    warn << "dec without inc: " << k << "\n";
+  } else {
+    (*i) -- ;
+  }
+}
+
+
+#endif /* PYDEBUG */

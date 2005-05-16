@@ -122,6 +122,7 @@ public:
 protected:
   PyObject *_obj;
   PyTypeObject *_typ;
+
 };
 
 template<class W, class P>
@@ -146,6 +147,10 @@ public:
   bool copy_from (const pyw_tmpl_t<W,P> &t);
 
   bool safe_set_obj (PyObject *in);
+
+  PYDEBUG_CLASS_METHODS
+protected:
+  PYDEBUG_CLASS_MEMBERS
 };
 
 template<class W, size_t m = RPC_INFINITY>
@@ -1169,9 +1174,13 @@ rpc_traverse_tmpl (T &t, pyw_rpc_vec<A,max> &obj)
 template<class T> inline bool
 py_rpc_clear_or_traverse (XDR *xdrs, T &obj)
 {
-  if (xdrs->x_op == XDR_FREE) 
+  if (xdrs->x_op == XDR_FREE) {
+    // This is kind of cheating, but we assume that a call to 
+    // rpc_traverse with XDR_FREE will be followed by a delete on
+    // generic void *
+    PYDEBUG_DEL_FUNC(obj);
     return obj.clear ();
-  else 
+  } else 
     return rpc_traverse_tmpl (xdrs, obj);
 }
 
@@ -1478,8 +1487,8 @@ pyw_tmpl_t<W,P>::copy_from (const pyw_tmpl_t<W,P> &src)
 //-----------------------------------------------------------------------
 
 //-----------------------------------------------------------------------
-//
-// More Debug Stuff
+// 
+// debug functions
 //
 
 template<class W> str
@@ -1493,30 +1502,6 @@ getkey ()
   return typ;
 }
 
-template<class W> void
-pydebug_inc (qhash<str,int> *hsh)
-{
-  str k = getkey<W> ();
-  if (!k) return;
-  int *i;
-  if ((i = (*hsh)[k]))  (*i) ++ ;
-  else hsh->insert (k, 1);
-}
-
-template<class W> void
-pydebug_dec (qhash<str,int> *hsh)
-{
-  str k = getkey<W> ();
-  if (!k) return;
-  int *i;
-  if (!(i = (*hsh)[k])) {
-    warn << "dec without inc: " << k << "\n";
-  } else {
-    (*i) -- ;
-  }
-}
-
-//
 //
 //-----------------------------------------------------------------------
 
