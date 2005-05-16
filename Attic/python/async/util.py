@@ -1,8 +1,10 @@
-
+#
+# $Id$
+#
 import async.core
 import signal
 
-__all__ = [ "xdrcp" ]
+__all__ = [ "xdrcp", "fixsignals" ]
 
 def xdrcp(x):
     n = x.__new__ (type (x))
