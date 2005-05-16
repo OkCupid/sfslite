@@ -11,11 +11,18 @@ import socket
 import sys
 import posix
 
-def cb(err,res):
+global i
+i = 5
+
+def cb(err,res,cli):
     print "err=", err, "& res=", res
     print "Calling exit"
-    async.core.exit ()
-    print "after exit!!"
+    global i
+    if i == 0:
+        async.core.delaycb (0, 0, async.core.exit );
+    else:
+        i = i - 1;
+        async.core.delaycb (0, 0, lambda : call5 (cli))
 
 def cb2(err, foo):
     if err == 0:
@@ -74,7 +81,7 @@ def call5(cli):
     z.c = 'h\x00m\x00x\x00y'
     z.d[3].y = [ 400, 31 ]
     z.warnx ()
-    cli.call (ex1.FOO_FOOZ, z, cb);
+    cli.call (ex1.FOO_FOOZ, z, lambda x,y : cb (x,y,cli))
 
 def call6(cli):
     cli.call (ex1.FOO_OPQ, None, cb);

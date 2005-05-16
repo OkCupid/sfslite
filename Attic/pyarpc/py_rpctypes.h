@@ -9,30 +9,7 @@
 #include "rpctypes.h"
 #include "qhash.h"
 #include "async.h"
-
-//----------------------------------------------------------------------
-// DEBUG stuff
-//
-
-typedef qhash<str,int> debug_dict_t;
-
-template<class W> void pydebug_inc (debug_dict_t *d);
-template<class W> void pydebug_dec (debug_dict_t *d);
-
-// XXX temporary
-#define PYDEBUG 1
-
-#ifdef PYDEBUG
-extern debug_dict_t g_alloc_cnt;
-# define PYDEBUG_NEW(W) pydebug_inc<W> (&g_alloc_cnt);
-# define PYDEBUG_DEL(W) pydebug_dec<W> (&g_alloc_cnt);
-#else /* ! PYDEBUG */
-# define PYDEBUG_NEW(W) 
-# define PYDEBUG_DEL(W) 
-#endif /* PYDEBUG */
-
-//
-//-----------------------------------------------------------------------
+#include "py_debug.h"
 
 
 //-----------------------------------------------------------------------
@@ -120,7 +97,7 @@ public:
     pyw_base_err_t (p._err), _obj (p._obj), _typ (p._typ) 
   { Py_XINCREF (_obj); }
   
-  ~pyw_base_t () { Py_XDECREF (_obj); }
+  PYDEBUG_VIRTUAL_DESTRUCTOR ~pyw_base_t () { Py_XDECREF (_obj); }
 
   // sometimes we allocate room for objects via Python's memory
   // allocation routines.  Doing so does not do "smart" initialization,
@@ -624,20 +601,16 @@ char_at (const W &obj, u_int i)
   obj.get_char (i, &ret);
   return ret;
 }
+const strbuf &
+rpc_print (const strbuf &sb, const pyw_rpc_byte_t &obj,
+	   int recdepth = RPC_INFINITY,
+	   const char *name = NULL, const char *prefix = NULL);
  
 template<size_t m> pyw_rpc_byte_t
 pyw_rpc_bytes<m>::operator[] (u_int i) const { return char_at (*this, i); }
 template<size_t m> pyw_rpc_byte_t
 pyw_rpc_opaque<m>::operator[] (u_int i) const { return char_at (*this, i); }
 
-const strbuf &
-rpc_print (const strbuf &sb, const pyw_rpc_byte_t &obj,
-	   int recdepth = RPC_INFINITY,
-	   const char *name = NULL, const char *prefix = NULL)
-{
-  if (obj.print_err (sb, recdepth, name, prefix)) return sb;
-  return rpc_print (sb, obj.get_byte (), recdepth, name, prefix);
-}
 
 #define RPC_ARRAYVEC_DECL(TEMP)                                 \
 template<class T, size_t n> const strbuf &			\
@@ -1056,6 +1029,8 @@ rpc_traverse (XDR *xdrs, pyw_rpc_str<n> &obj)
 	return false;
       return obj.set (dp, size);
     }
+  case XDR_FREE:
+    return obj.clear ();
   default:
     return true;
   }
@@ -1105,6 +1080,8 @@ rpc_traverse (XDR *xdrs, pyw_rpc_opaque<n> &obj)
 	rc = obj.set (buf, n);
       return rc;
     }
+  case XDR_FREE:
+    return obj.clear ();
   default:
     return true;
   }
@@ -1128,6 +1105,8 @@ rpc_traverse (XDR *xdrs, pyw_rpc_bytes<n> &obj)
 	return false;
       return obj.set (dp, size);
     }
+  case XDR_FREE:
+    return obj.clear ();
   default:
     return true;
   }
@@ -1162,7 +1141,7 @@ rpc_traverse_slot (XDR *xdrs, L &v, u_int i)
 }
 
 template<class T, class A, size_t max> inline bool
-rpc_traverse (T &t, pyw_rpc_vec<A,max> &obj)
+rpc_traverse_tmpl (T &t, pyw_rpc_vec<A,max> &obj)
 {
   u_int size = obj.size ();
 
@@ -1187,8 +1166,29 @@ rpc_traverse (T &t, pyw_rpc_vec<A,max> &obj)
   return true;
 }
 
+template<class T> inline bool
+py_rpc_clear_or_traverse (XDR *xdrs, T &obj)
+{
+  if (xdrs->x_op == XDR_FREE) 
+    return obj.clear ();
+  else 
+    return rpc_traverse_tmpl (xdrs, obj);
+}
+
+template<class T, size_t max> inline bool
+rpc_traverse (XDR *xdrs, pyw_rpc_vec<T, max> &obj)
+{
+  return py_rpc_clear_or_traverse (xdrs, obj);
+}
+
 template<class T, class A, size_t max> inline bool
-rpc_traverse (T &t, pyw_rpc_array<A,max> &obj)
+rpc_traverse (T &t, pyw_rpc_vec<A,max> &obj)
+{
+  return rpc_traverse_tmpl (t, obj);
+}
+
+template<class T, class A, size_t max> inline bool
+rpc_traverse_tmpl (T &t, pyw_rpc_array<A,max> &obj)
 {
   u_int size = obj.size ();
   assert (size == max);
@@ -1198,8 +1198,20 @@ rpc_traverse (T &t, pyw_rpc_array<A,max> &obj)
   return true;
 }
 
+template<class A, size_t max> inline bool
+rpc_traverse (XDR *xdrs, pyw_rpc_array<A,max> &obj)
+{
+  return py_rpc_clear_or_traverse (xdrs, obj);
+}
+
+template<class T, class A, size_t max> inline bool
+rpc_traverse (T &t, pyw_rpc_array<A,max> &obj)
+{
+  return rpc_traverse_tmpl (t, obj);
+}
+
 template<class C, class T, PyTypeObject *t> inline bool
-rpc_traverse (C &c, pyw_rpc_ptr<T,t> &obj)
+rpc_traverse_tmpl (C &c, pyw_rpc_ptr<T,t> &obj)
 {
   bool nonnil = false;
   py_rpc_ptr_t *p = obj.casted_obj ();
@@ -1216,6 +1228,18 @@ rpc_traverse (C &c, pyw_rpc_ptr<T,t> &obj)
   if (p)
     p->clear ();
   return true;
+}
+
+template<class T, PyTypeObject *t> inline bool
+rpc_traverse (XDR *xdrs, pyw_rpc_ptr<T,t> &obj)
+{
+  return py_rpc_clear_or_traverse (xdrs, obj);
+}
+
+template<class C, class T, PyTypeObject *t> inline bool
+rpc_traverse (C &c, pyw_rpc_ptr<T,t> &obj)
+{
+  return rpc_traverse_tmpl (c, obj);
 }
 
 //

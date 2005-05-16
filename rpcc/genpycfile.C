@@ -610,7 +610,7 @@ dump_w_rpc_traverse (const str &id)
   str wt = pyw_type (id);
 
   aout << "template<class T> bool\n"
-       << "rpc_traverse (T &t, " << wt << " &wo)\n"
+       << "rpc_traverse_tmpl (T &t, " << wt << " &wo)\n"
        << "{\n"
        << "  " << ct << " *io = wo.casted_obj ();\n"
        << "  if (!io) {\n"
@@ -619,6 +619,16 @@ dump_w_rpc_traverse (const str &id)
        << "    return false;\n"
        << "  }\n"
        << "  return rpc_traverse (t, *io);\n"
+       << "}\n\n"
+       << "inline bool\n"
+       << "rpc_traverse (XDR *xdrs, " << wt << "&wo)\n"
+       << "{\n"
+       << "  return py_rpc_clear_or_traverse (xdrs, wo);\n"
+       << "}\n\n"
+       << "template<class T> bool\n"
+       << "rpc_traverse (T &t, " << wt << " &wo)\n"
+       << "{\n"
+       << "  return rpc_traverse_tmpl (t, wo);\n"
        << "}\n\n";
 }
 

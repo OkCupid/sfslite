@@ -331,13 +331,20 @@ PY_CLASS_DEF3(py_rpc_ptr_t, "async.rpc_ptr", 1, dealloc, -1,
 //
 //-----------------------------------------------------------------------
 
+
+
 //-----------------------------------------------------------------------
+// 
+// rpc_byte temp var
 //
-// Debug symbols
+
+const strbuf &
+rpc_print (const strbuf &sb, const pyw_rpc_byte_t &obj,
+	   int recdepth, const char *name, const char *prefix)
+{
+  if (obj.print_err (sb, recdepth, name, prefix)) return sb;
+  return rpc_print (sb, obj.get_byte (), recdepth, name, prefix);
+}
+
 //
-
-#ifdef PYDEBUG
-
-qhash<str,int> g_alloc_cnt;
-
-#endif /* PYDEBUG */ 
+//-----------------------------------------------------------------------

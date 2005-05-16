@@ -4,6 +4,7 @@
 #include "async.h"
 #include "py_util.h"
 #include "py_gen.h"
+#include "py_debug.h"
 
 static PyObject *
 Core_amain (PyObject *self, PyObject *args)
@@ -28,7 +29,7 @@ Core_delaycb (PyObject *self, PyObject *args)
   PyObject *handler;
   int s, us;
 
-  if (!PyArg_ParseTuple (args, "(iiO)", &s, &us, &handler))
+  if (!PyArg_ParseTuple (args, "iiO", &s, &us, &handler))
     return NULL;
 
   if (!PyCallable_Check (handler)) {
@@ -119,6 +120,10 @@ Core_exit (PyObject *self, PyObject *args)
   int i = 0;
   if (!PyArg_ParseTuple (args, "|i", &i))
     return NULL;
+
+  // report debug information to find memory leaks in pysfs
+  PYDEBUG_MEMREPORT(warnx);
+
   exit (i);
   return NULL;
 }

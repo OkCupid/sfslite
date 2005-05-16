@@ -105,6 +105,7 @@ py_svccb_t_dealloc (py_svccb_t *self)
     self->sbp->reject (PROC_UNAVAIL);
     self->sbp = NULL;
   }
+  warn << "~svccb\n";
   self->ob_type->tp_free ((PyObject *)self);
 }
 
@@ -170,8 +171,11 @@ py_svccb_t_reject (py_svccb_t *o, PyObject *args)
   if (!sbp_check (o)) return NULL;
   int stat = 0;
   char auth = 0;
+  PyObject *ret = NULL;
+
   if (!PyArg_ParseTuple (args, "i|b", &stat, &auth))
-    return NULL;
+    goto done;
+
   if (auth) {
     o->sbp->reject (auth_stat (stat));
   } else {
@@ -180,7 +184,10 @@ py_svccb_t_reject (py_svccb_t *o, PyObject *args)
   o->sbp = NULL;
 
   Py_INCREF (Py_None);
-  return Py_None;
+  ret = Py_None;
+
+ done:
+  return ret;
 }
 
 static PyObject *
@@ -209,6 +216,8 @@ py_svccb_t_reply (py_svccb_t *o, PyObject *args)
 
   o->sbp->reply (res);
   o->sbp = NULL;
+
+  delete res; // DM's classes don't do this for us!
 
   Py_INCREF (Py_None);
   return Py_None;
