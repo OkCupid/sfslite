@@ -1343,7 +1343,7 @@ dumpprint (const rpc_sym *s)
     print_w_struct (s->senum.addr ()->id);
     break;
   case rpc_sym::TYPEDEF:
-    print_print (pyc_type (s->stypedef->id));
+    print_print (pyw_type (s->stypedef->id));
   default:
     break;
   }
@@ -1926,8 +1926,8 @@ static void
 dumptypedef (const rpc_sym *s)
 {
   const rpc_decl *rs = s->stypedef.addr ();
-  dump_allocator (pyw_type (rs->id));
-  dump_xdr_func (pyw_type (rs->id));
+  dump_allocator (rs->id);
+  dump_xdr_func (rs->id);
 }
 
 static void

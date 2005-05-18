@@ -41,6 +41,12 @@ struct foo_opq_t {
 	opaque c[20];
 };
 
+typedef bar_t xx_t;
+
+struct yy_t {
+	xx_t xx;
+};
+
 program FOO_PROG {
 	version FOO_VERS {
 
