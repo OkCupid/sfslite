@@ -146,6 +146,13 @@ decltype (const rpc_decl *d)
 }
 
 static void
+pdecl_py (str prefix, const rpc_decl *d)
+{
+  str name = d->id;
+  aout << prefix << decltype (d) << " " << pyw_type (name) << ";\n";
+}
+
+static void
 pdecl (str prefix, const rpc_decl *d)
 {
   str name = d->id;
@@ -597,11 +604,10 @@ dump_xdr_func (const str &id)
 {
   str ct = pyc_type (id);
   str wt = pyw_type (id);
-  aout << "BOOL\n"
+  aout << XDR_RETURN << "\n"
        << "xdr_" << wt << " (XDR *xdrs, void *objp)\n"
        << "{\n"
-       << "  return rpc_traverse (xdrs, *static_cast <" << wt << " *> "
-       << "(objp));\n"
+       << "  return xdr_doit<" << wt << "> (xdrs, objp);\n"
        << "}\n\n";
 }
 
@@ -618,7 +624,7 @@ dump_w_rpc_traverse (const str &id)
   str wt = pyw_type (id);
 
   aout << "template<class T> bool\n"
-       << "rpc_traverse_tmpl (T &t, " << wt << " &wo)\n"
+       << "rpc_traverse (T &t, " << wt << " &wo)\n"
        << "{\n"
        << "  " << ct << " *io = wo.casted_obj ();\n"
        << "  if (!io) {\n"
@@ -627,17 +633,7 @@ dump_w_rpc_traverse (const str &id)
        << "    return false;\n"
        << "  }\n"
        << "  return rpc_traverse (t, *io);\n"
-       << "}\n\n"
-       << "inline bool\n"
-       << "rpc_traverse (XDR *xdrs, " << wt << "&wo)\n"
-       << "{\n"
-       << "  return py_rpc_clear_or_traverse (xdrs, wo);\n"
-       << "}\n\n"
-       << "template<class T> bool\n"
-       << "rpc_traverse (T &t, " << wt << " &wo)\n"
-       << "{\n"
-       << "  return rpc_traverse_tmpl (t, wo);\n"
-       << "}\n\n";
+       << "}\n\n" ;
 }
 
 static void
@@ -1921,7 +1917,7 @@ static void
 dumptypedef_hdr (const rpc_sym *s)
 {
   const rpc_decl *rd = s->stypedef.addr ();
-  pdecl ("typedef ", rd);
+  pdecl_py ("typedef ", rd);
   pmshl (rd->id);
   aout << "RPC_TYPEDEF_DECL (" << rd->id << ")\n";
 }
@@ -1929,7 +1925,9 @@ dumptypedef_hdr (const rpc_sym *s)
 static void
 dumptypedef (const rpc_sym *s)
 {
-
+  const rpc_decl *rs = s->stypedef.addr ();
+  dump_allocator (pyw_type (rs->id));
+  dump_xdr_func (pyw_type (rs->id));
 }
 
 static void

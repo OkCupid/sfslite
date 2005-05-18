@@ -30,8 +30,8 @@ T##_alloc ()                                                    \
 BOOL								\
 xdr_##T (XDR *xdrs, void *objp)				        \
 {								\
-  return rpc_traverse (xdrs, *static_cast<T *> (objp));	        \
-}								\
+  return xdr_doit<T> (xdrs, objp);                              \
+}								
 
 #define INT_DO_ALL_C(T, s, P)                                   \
 ALLOC_DEFN (pyw_##T);                                           \

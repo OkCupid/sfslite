@@ -148,9 +148,6 @@ public:
 
   bool safe_set_obj (PyObject *in);
 
-  PYDEBUG_CLASS_METHODS
-protected:
-  PYDEBUG_CLASS_MEMBERS
 };
 
 template<class W, size_t m = RPC_INFINITY>
@@ -465,34 +462,49 @@ ALLOC_DECL(pyw_void);
 #define XDR_DECL(T)                                            \
 extern BOOL xdr_##T (XDR *xdrs, void *objp);
 
+template <class T> bool
+xdr_doit (XDR *xdrs, void *objp)
+{
+  switch (xdrs->x_op) {
+  case XDR_DECODE:
+  case XDR_ENCODE:
+    return rpc_traverse (xdrs, *static_cast<T *> (objp));
+  case XDR_FREE:
+    rpc_destruct (static_cast<T *> (objp));
+    return true;
+  default:
+    panic ("unexpected XDR op: %d\n", xdrs->x_op);
+  }
+}
+
 template<size_t n> inline bool
 xdr_pyw_rpc_str (XDR *xdrs, void *objp)
 {
-  return rpc_traverse (xdrs, *static_cast<pyw_rpc_str<n> *> (objp));
+  return xdr_doit<pyw_rpc_str<n> > (xdrs, pbj);
 }
 
 template<class W, size_t n> inline bool
 xdr_pyw_rpc_bytes (XDR *xdrs, void *objp)
 {
-  return rpc_traverse (xdrs, *static_cast<pyw_tmpl_opq_t<W,n> *> (objp));
+  return xdr_doit<pyw_tmpl_opq_t<W,n> *> (xdrs, objp);
 }
 
 template<class T, size_t n> inline bool
 xdr_pyw_rpc_vec (XDR *xdrs, void *objp)
 {
-  return rpc_traverse (xdrs, *static_cast<pyw_rpc_vec<T,n> *> (objp));
+  return xdr_doit<pyw_rpc_vec<T,n> *> (xdrs, objp);
 }
 
 template<class T, size_t n> inline bool
 xdr_pyw_rpc_array (XDR *xdrs, void *objp)
 {
-  return rpc_traverse (xdrs, *static_cast<pyw_rpc_array<T,n> *> (obj));
+  return xdr_doit<pyw_rpc_array<T,n> *> (xdrs, obj);
 }
 
 template<class T, PyTypeObject *t> inline bool
 xdr_pyw_rpc_ptr (XDR *xdr, void *objp)
 {
-  return rpc_traverse (xdr, *static_cast<pyw_rpc_ptr<T,t> *> (objp));
+  return xdr_doit<pyw_rpc_ptr<T,t> *> (objp);
 }
 
 //
@@ -1146,7 +1158,7 @@ rpc_traverse_slot (XDR *xdrs, L &v, u_int i)
 }
 
 template<class T, class A, size_t max> inline bool
-rpc_traverse_tmpl (T &t, pyw_rpc_vec<A,max> &obj)
+rpc_traverse (T &t, pyw_rpc_vec<A,max> &obj)
 {
   u_int size = obj.size ();
 
@@ -1171,33 +1183,8 @@ rpc_traverse_tmpl (T &t, pyw_rpc_vec<A,max> &obj)
   return true;
 }
 
-template<class T> inline bool
-py_rpc_clear_or_traverse (XDR *xdrs, T &obj)
-{
-  if (xdrs->x_op == XDR_FREE) {
-    // This is kind of cheating, but we assume that a call to 
-    // rpc_traverse with XDR_FREE will be followed by a delete on
-    // generic void *
-    PYDEBUG_DEL_FUNC(obj);
-    return obj.clear ();
-  } else 
-    return rpc_traverse_tmpl (xdrs, obj);
-}
-
-template<class T, size_t max> inline bool
-rpc_traverse (XDR *xdrs, pyw_rpc_vec<T, max> &obj)
-{
-  return py_rpc_clear_or_traverse (xdrs, obj);
-}
-
 template<class T, class A, size_t max> inline bool
-rpc_traverse (T &t, pyw_rpc_vec<A,max> &obj)
-{
-  return rpc_traverse_tmpl (t, obj);
-}
-
-template<class T, class A, size_t max> inline bool
-rpc_traverse_tmpl (T &t, pyw_rpc_array<A,max> &obj)
+rpc_traverse (T &t, pyw_rpc_array<A,max> &obj)
 {
   u_int size = obj.size ();
   assert (size == max);
@@ -1207,20 +1194,8 @@ rpc_traverse_tmpl (T &t, pyw_rpc_array<A,max> &obj)
   return true;
 }
 
-template<class A, size_t max> inline bool
-rpc_traverse (XDR *xdrs, pyw_rpc_array<A,max> &obj)
-{
-  return py_rpc_clear_or_traverse (xdrs, obj);
-}
-
-template<class T, class A, size_t max> inline bool
-rpc_traverse (T &t, pyw_rpc_array<A,max> &obj)
-{
-  return rpc_traverse_tmpl (t, obj);
-}
-
 template<class C, class T, PyTypeObject *t> inline bool
-rpc_traverse_tmpl (C &c, pyw_rpc_ptr<T,t> &obj)
+rpc_traverse (C &c, pyw_rpc_ptr<T,t> &obj)
 {
   bool nonnil = false;
   py_rpc_ptr_t *p = obj.casted_obj ();
@@ -1237,18 +1212,6 @@ rpc_traverse_tmpl (C &c, pyw_rpc_ptr<T,t> &obj)
   if (p)
     p->clear ();
   return true;
-}
-
-template<class T, PyTypeObject *t> inline bool
-rpc_traverse (XDR *xdrs, pyw_rpc_ptr<T,t> &obj)
-{
-  return py_rpc_clear_or_traverse (xdrs, obj);
-}
-
-template<class C, class T, PyTypeObject *t> inline bool
-rpc_traverse (C &c, pyw_rpc_ptr<T,t> &obj)
-{
-  return rpc_traverse_tmpl (c, obj);
 }
 
 //
