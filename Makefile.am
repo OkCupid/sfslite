@@ -7,11 +7,11 @@ else
 ADB = adb
 endif
 
-if USE_PY
-PYARPC = pyarpc
-else
+#if USE_PY
+#PYARPC = pyarpc
+#else
 PYARPC = 
-endif
+#endif
 
 #
 # sfslite change
