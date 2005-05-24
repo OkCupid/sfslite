@@ -51,30 +51,6 @@ pyw_type (const str &s)
   return b;
 }
 
-static bool
-is_int_type (const str &s)
-{
-  return (s == "u_int32_t" || s == "int32_t" );
-}
-
-static bool
-is_long_type (const str &s)
-{
-  return (s == "int64_t" || s == "u_int64_t" );
-}
-
-static bool
-is_double_type (const str &s)
-{
-  return (s == "double"  || s == "quadruple");
-}
-
-static bool
-is_number (const str &s)
-{
-  return is_double_type (s) || is_int_type (s) || is_long_type (s);
-}
-
 static str
 py_type_obj (const str &in)
 {
@@ -159,71 +135,11 @@ pdecl (str prefix, const rpc_decl *d)
   aout << prefix << decltype (d) << " " << name << ";\n";
 }
 
-
-static str
-py_type_obj (const rpc_decl *d)
-{
-  if (d->type == "string" || d->type == "opaque") {
-    return "PyString_Type";
-  } else {
-    switch (d->qual) {
-    case rpc_decl::SCALAR:
-    case rpc_decl::PTR:
-      if (is_int_type (d->type)) 
-	return "PyInt_Type";
-      else if (is_long_type (d->type))
-	return "PyLong_Type";
-      else if (is_double_type (d->type))
-	return "PyDouble_Type";
-      else
-	return py_type_obj (d->type);
-    case rpc_decl::VEC:
-    case rpc_decl::ARRAY:
-      return "PyList_Type";
-    default:
-      break;
-    }
-  }
-  return NULL;
-}
-
-static bool
-is_scalar (const rpc_decl *d)
-{
-  return (d->qual == rpc_decl::SCALAR);
-}
-
-static bool
-is_fixed (const rpc_decl *d)
-{
-  return (d->qual == rpc_decl::ARRAY);
-}
-
 static str
 obj_in_class (const rpc_decl *d)
 {
   strbuf b;
   b << d->id << ".obj ()";
-  return b;
-}
-
-static str
-bound (const rpc_decl *d)
-{
-  return (is_scalar (d) ? "0" : d->bound);
-}
-
-static str
-py_typecheck_unqual (const str &typ, const str &v)
-{
-  strbuf b;
-  if (typ == "string" || typ == "opqaue") {
-    b << "PyString_Check (" << v << ")";
-  } else if (is_number (typ)) {
-    b << "PyNumber_Check (" << v << ")";
-  } else {
-    b << "PyObject_IsInstance (" << v << ", " << py_type_obj (typ) << ")";
-  }
   return b;
 }
 
@@ -302,7 +218,6 @@ dump_w_enum_clear_func (const str &id)
 static void
 dump_w_class_clear_func (const rpc_struct *rs)
 {
-  bool first = true;
   str ct = pyc_type (rs->id);
   str wt = pyw_type (rs->id);
   aout << "bool\n"
@@ -611,12 +526,6 @@ dump_xdr_func (const str &id)
        << "}\n\n";
 }
 
-static str
-rpc_trav_func (const str &a1, const str &obj, const rpc_decl *d)
-{
-  return str ();
-}
-
 static void
 dump_w_rpc_traverse (const str &id)
 {
@@ -884,20 +793,6 @@ dump_getter (const str &cl, const rpc_decl *d)
        << "}\n\n";
 }
 
-static str 
-py_converter (const str &s)
-{
-  strbuf b;
-  // note the extra space for nested templates
-  b << "converter_t<" << s << " >::convert";
-  return b;
-}
-
-static str
-py_converter (const rpc_decl *d)
-{
-  return py_converter (decltype (d));
-}
 
 static void
 dump_setter (const str &cl, const rpc_decl *d)
@@ -1484,66 +1379,6 @@ dumpstruct (const rpc_sym *s)
 
   dump_xdr_func (rs->id);
 }
-
-void
-static py_pswitch (str prefix, const rpc_union *rs, str swarg,
-	 void (*pt) (str, const rpc_union *rs, const rpc_utag *),
-	 str suffix, void (*defac) (str, const rpc_union *rs))
-{
-  bool hasdefault = false;
-  str subprefix = strbuf () << prefix << "  ";
-
-  aout << prefix << "switch (" << swarg << ") {" << suffix;
-  for (const rpc_utag *rt = rs->cases.base (); rt < rs->cases.lim (); rt++) {
-    if (rt->swval) {
-      if (rt->swval == "TRUE")
-	aout << prefix << "case true:" << suffix;
-      else if (rt->swval == "FALSE")
-	aout << prefix << "case false:" << suffix;
-      else
-	aout << prefix << "case " << rt->swval << ":" << suffix;
-    }
-    else {
-      hasdefault = true;
-      aout << prefix << "default:" << suffix;
-    }
-    if (rt->tagvalid)
-      pt (subprefix, rs, rt);
-  }
-  if (!hasdefault && defac) {
-    aout << prefix << "default:" << suffix;
-    defac (subprefix, rs);
-  }
-  aout << prefix << "}\n";
-}
-
-#if 0
-static void
-puniontraverse (str prefix, const rpc_union *rs, const rpc_utag *rt)
-{
-#if 0
-  aout << prefix << "if (obj." << rs->tagid << " != tag)\n";
-  if (rt->tag.type == "void")
-    aout << prefix << "  obj._base.destroy ();\n";
-  else
-    aout << prefix << "  obj." << rt->tag.id << ".select ();\n";
-#endif
-  if (rt->tag.type == "void")
-    aout << prefix << "return true;\n";
-  else
-    aout << prefix << "return rpc_traverse (t, *obj." << rt->tag.id << ");\n";
-}
-
-static void
-pselect (str prefix, const rpc_union *rs, const rpc_utag *rt)
-{
-  if (rt->tag.type == "void")
-    aout << prefix << "_base.destroy ();\n";
-  else
-    aout << prefix << rt->tag.id << ".select ();\n";
-  aout << prefix << "break;\n";
-}
-#endif
 
 static void
 punionmacro (str prefix, const rpc_union *rs, const rpc_utag *rt)
@@ -2381,3 +2216,116 @@ genpyh (str fname)
 
   aout << "#endif /* !" << guard << " */\n";
 }
+
+
+//-----------------------------------------------------------------------
+// XXX the shitcan
+//
+
+#if 0
+static str
+py_type_obj (const rpc_decl *d)
+{
+  if (d->type == "string" || d->type == "opaque") {
+    return "PyString_Type";
+  } else {
+    switch (d->qual) {
+    case rpc_decl::SCALAR:
+    case rpc_decl::PTR:
+      if (is_int_type (d->type)) 
+	return "PyInt_Type";
+      else if (is_long_type (d->type))
+	return "PyLong_Type";
+      else if (is_double_type (d->type))
+	return "PyDouble_Type";
+      else
+	return py_type_obj (d->type);
+    case rpc_decl::VEC:
+    case rpc_decl::ARRAY:
+      return "PyList_Type";
+    default:
+      break;
+    }
+  }
+  return NULL;
+}
+
+static bool
+is_fixed (const rpc_decl *d)
+{
+  return (d->qual == rpc_decl::ARRAY);
+}
+
+static str
+bound (const rpc_decl *d)
+{
+  return (is_scalar (d) ? "0" : d->bound);
+}
+
+static str
+py_converter (const rpc_decl *d)
+{
+  return py_converter (decltype (d));
+}
+
+static str 
+py_converter (const str &s)
+{
+  strbuf b;
+  // note the extra space for nested templates
+  b << "converter_t<" << s << " >::convert";
+  return b;
+}
+
+static bool
+is_scalar (const rpc_decl *d)
+{
+  return (d->qual == rpc_decl::SCALAR);
+}
+
+static str
+py_typecheck_unqual (const str &typ, const str &v)
+{
+  strbuf b;
+  if (typ == "string" || typ == "opqaue") {
+    b << "PyString_Check (" << v << ")";
+  } else if (is_number (typ)) {
+    b << "PyNumber_Check (" << v << ")";
+  } else {
+    b << "PyObject_IsInstance (" << v << ", " << py_type_obj (typ) << ")";
+  }
+  return b;
+}
+
+static str
+rpc_trav_func (const str &a1, const str &obj, const rpc_decl *d)
+{
+  return str ();
+}
+
+static bool
+is_int_type (const str &s)
+{
+  return (s == "u_int32_t" || s == "int32_t" );
+}
+
+static bool
+is_long_type (const str &s)
+{
+  return (s == "int64_t" || s == "u_int64_t" );
+}
+
+static bool
+is_double_type (const str &s)
+{
+  return (s == "double"  || s == "quadruple");
+}
+
+static bool
+is_number (const str &s)
+{
+  return is_double_type (s) || is_int_type (s) || is_long_type (s);
+}
+
+
+#endif
