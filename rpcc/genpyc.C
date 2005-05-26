@@ -225,21 +225,8 @@ dump_w_class_clear_func (const rpc_struct *rs)
        << wt << "::clear ()\n"
        << "{\n"
        << get_inner_obj ("o", ct)
-       << "  bool ret = true";
-  // XXX - We don't need this since the inner object will take care
-  // of clearing its data values when its ref count goes to 0
-#if 0 
-  for (const rpc_decl *rd = rs->decls.base (); rd < rs->decls.lim (); rd++) {
-    if (!first)
-      aout << " &&\n"
-	   << "             ";
-    else
-      first = false;
-    aout << "o->" << rd->id << ".clear ()";
-  }
-#endif 
-
-  aout << ";\n"
+       << "  bool ret = true"
+       << ";\n"
        << "  Py_DECREF (_obj);\n"
        << "  _obj = NULL;\n"
        << "  return ret;\n"
@@ -569,17 +556,6 @@ dump_rpc_traverse (const rpc_struct *rs)
     aout << "  return true;\n";
   aout << "}\n\n";
 }
-
-#if 0
-static void
-dump_class_member_frag (str prefix, str typ, const rpc_decl *d)
-{
-  aout << prefix << "{ \"" << d->id << "\", T_OBJECT_EX, "
-       << "offsetof (" << typ << ", " << d->id << "), 0, "
-       << "\"" << d->id << " field of object of type " << typ << "\"},\n"
-    ;
-}
-#endif
 
 static void
 dump_class_members (const str &t)
