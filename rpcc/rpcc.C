@@ -28,6 +28,7 @@ bhash<str> ids;
 
 const str shell ("/bin/sh");
 static str outfile;
+str python_module_name;
 
 str
 rpcprog (const rpc_program *rp, const rpc_vers *rv)
@@ -123,8 +124,8 @@ cleanup ()
 static void
 usage ()
 {
-  warn << "usage: rpcc {-c | -h | -python | -q } [-Ppref] [-Ddef] [-Idir] "
-    "[-o outfile] file.x\n";
+  warn << "usage: rpcc {-c | -h | -python | -q | -pyc | -pyh] } [-Ppref] "
+       << "[-Ddef] [-Idir]\n\t[-o outfile] file.x\n";
   exit (1);
 }
 
@@ -182,8 +183,16 @@ main (int argc, char **argv)
       idprefix = argv[an];
     else if (!strncmp (arg, "-P", 2) && !idprefix && arg[2])
       idprefix = arg + 2;
+    else if (!strcmp (arg, "-n") &&  !python_module_name && ++an < argc)
+      python_module_name = argv[an];
+    else if (!strncmp (arg, "-n", 2) && !python_module_name && arg[2])
+      python_module_name = arg + 2;
     else 
       usage ();
+  }
+  if (python_module_name && mode != PYC) {
+    warn << "-n parameter only valid with -pyc\n";
+    usage ();
   }
   if (!fname)
     usage ();

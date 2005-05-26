@@ -24,6 +24,7 @@
 #include "rpcc.h"
 
 str module;
+str dotted_m;
 
 typedef enum 
 { 
@@ -686,7 +687,7 @@ dump_type_object (const str &id)
   str ct = pyc_type (id);
   str pt = id;
 
-  aout << "PY_CLASS_DEF2(" << ct << ", \"" << module << "." << pt 
+  aout << "PY_CLASS_DEF2(" << ct << ", \"" << dotted_m << "." << pt 
        <<                "\", 1, dealloc, "
        <<                "-1, \"" << pt << " object\",\n"
        << "              methods, members, getsetters, init, new, 0,\n"
@@ -757,7 +758,7 @@ dump_prog_py_obj (const rpc_program *prog)
 
 
 	 
-    aout << "PY_CLASS_DEF(" << type << ", \"" << module << "." 
+    aout << "PY_CLASS_DEF(" << type << ", \"" << dotted_m << "." 
 	 << objType << "\", "
 	 <<               "1, 0, -1,\n"
 	 << "             \"" << objType << " RPC program wrapper\", "
@@ -1671,7 +1672,7 @@ dump_enum_type_object (const str &id)
 {
   const str ct = pyc_type (id);
   const str pt = id;
-  aout << "PY_CLASS_DEF (" << ct << ", \"" << module << "." << pt 
+  aout << "PY_CLASS_DEF (" << ct << ", \"" << dotted_m << "." << pt 
        <<                "\", 1, dealloc, -1, \"" << pt << " object\",\n"
        << "              methods, members, 0, init, new, 0);\n"
        << "\n";
@@ -2015,21 +2016,21 @@ dumpmodule (const symlist_t &lst)
 #if 0
        << "  // import async.rpctypes to get types for rpc ptrs, etc\n"
        << "  PyObject *tmpmod = NULL;\n"
-       << "  if (!(tmpmod = PyImport_ImportModule (\"async.rpctypes\")));\n"
+       << "  if (!(tmpmod = PyImport_ImportModule (\"sfs.rpctypes\")));\n"
        << "    return;\n"
        << "  Py_XDECREF (tmpmod);\n"
        << "\n"
 #endif
        << "  // import async.arpc and get the type information for\n"
        << "  // async.arpc.rpc_program\n"
-       << "  module = PyImport_ImportModule (\"async.arpc\");\n"
+       << "  module = PyImport_ImportModule (\"sfs.arpc\");\n"
        << "  if (!module)\n"
        << "    return;\n"
        << "  PyObject *tmp = PyObject_GetAttrString (module,\n"
        << "         \"rpc_program\");\n"
        << "  if (!tmp) {\n"
        << "    PyErr_SetString (PyExc_TypeError,\n"
-       << "             \"Cannot load rpc_program type from async.arpc\");\n"
+       << "             \"Cannot load rpc_program type from sfs.arpc\");\n"
        << "    Py_DECREF (module);\n"
        << "    return;\n"
        << "  }\n"
@@ -2037,7 +2038,7 @@ dumpmodule (const symlist_t &lst)
        << "     Py_DECREF (tmp);\n"
        << "     Py_DECREF (module);\n"
        << "     PyErr_SetString(PyExc_TypeError,\n"
-       << "             \"Expected async.arpc.rpc_program to be a type\");\n"
+       << "             \"Expected sfs.arpc.rpc_program to be a type\");\n"
        << "     return;\n"
        << "  }\n"
        << "  py_rpc_program = (PyTypeObject *)tmp;\n"
@@ -2122,6 +2123,7 @@ void
 genpyc (str fname)
 {
   module = makemodulename (fname);
+  dotted_m = python_module_name ? python_module_name : module;
   
 
   aout << "// -*-c++-*-\n"

@@ -192,3 +192,6 @@ void pswitch (str prefix, const rpc_union *rs, str swarg,
 	      void (*pt) (str, const rpc_union *rs, const rpc_utag *),
 	      str suffix = "\n",
 	      void (*defac) (str, const rpc_union *rs) = NULL);
+
+// added for pyc/pyh generation
+extern str python_module_name;
