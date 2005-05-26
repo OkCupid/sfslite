@@ -59,6 +59,13 @@ public:
     E2 (m, m);
     return m;
   }
+  bigint encrypt (const bigint &msg) const {
+    bigint m = msg;
+    if (!E1 (m, m))
+      return 0;
+    E2 (m, m);
+    return m;
+  }
   bool verify (const str &msg, const bigint &s) const {
     bigint m;
     E2 (m, s);
@@ -98,6 +105,12 @@ public:
     D2 (m, msg);
     D1 (m, m);
     return post_decrypt (m, msglen, nbits);
+  }
+  bigint decrypt (const bigint &msg) const {
+    bigint m;
+    D2 (m, msg);
+    D1 (m, m);
+    return m;
   }
   bigint sign (const str &msg) const {
     sha1ctx sc;

@@ -39,9 +39,6 @@ int dn_expand (const u_char *, const u_char *, const u_char *, char *, int);
 #endif /* NEED_DN_EXPAND_DECL */
 }
 
-#define my_offsetof(p_type,field) ((size_t)&(((p_type *)0)->field))
-
-
 #if 0
 int
 dn_skipname (const u_char *icp, const u_char *eom)
@@ -103,6 +100,7 @@ dnstcppkt::input (int fd)
     inbuf = static_cast<u_char *> (xrealloc (inbuf, inbufsize));
   }
   if (inbufpos < sz) {
+    errno = 0;
     int n = read (fd, inbuf + inbufpos, inbufsize - inbufpos);
     if (n > 0)
       inbufpos += n;
@@ -527,7 +525,7 @@ dnsparse::tomxlist ()
     return NULL;
 
   ref <mxlist> mxl = refcounted<mxlist, vsize>::alloc
-    (my_offsetof (mxlist, m_mxes[mxes.size ()])
+    (xoffsetof (mxlist, m_mxes[mxes.size ()])
      + hintsize (hints.size ()) + nset.size ());
   char *hintp = reinterpret_cast<char *> (&mxl->m_mxes[mxes.size ()]);
   char *namebase = hintp + hintsize (hints.size ());
@@ -664,7 +662,7 @@ dnsparse::tosrvlist ()
   srvrec_randomize (recs.base (), recs.lim ());
 
   ref<srvlist> s = refcounted<srvlist, vsize>::alloc
-    (my_offsetof (srvlist, s_srvs[recs.size ()])
+    (xoffsetof (srvlist, s_srvs[recs.size ()])
      + hintsize (hints.size ()) + nset.size ());
 
   char *hintp = reinterpret_cast<char *> (&s->s_srvs[recs.size ()]);
@@ -716,7 +714,7 @@ dnsparse::totxtlist ()
   }
 
   ref<txtlist> t = refcounted<txtlist, vsize>::alloc
-    (my_offsetof (txtlist, t_txts[txtv.size ()]) + nchars);
+    (xoffsetof (txtlist, t_txts[txtv.size ()]) + nchars);
 
   char *dp = (char *) &t->t_txts[txtv.size ()];
   t->t_name = dp;

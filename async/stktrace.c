@@ -40,6 +40,8 @@
 # define NO_STACK_TOP 1
 #endif /* OpenBSD */
 
+int stktrace_record;
+
 #if __GNUC__ >= 2 && defined (__i386__)
 
 static const char hexdigits[] = "0123456789abcdef";
@@ -63,7 +65,7 @@ segv_handler (int sig)
 #endif /* NO_STACK_TOP */
 
 const char *
-__backtrace (const char *file)
+__backtrace (const char *file, int lim)
 {
   const void *const *framep;
   size_t filelen;
@@ -92,7 +94,8 @@ __backtrace (const char *file)
 #endif /* NO_STACK_TOP */
 
   __asm volatile ("movl %%ebp, %0" : "=g" (framep) :);
-  while (framep[0] && bp >= buf + 11) {
+  while (!((int) framep & 3) && (const char *) framep > buf
+	 && framep[0] && bp >= buf + 11 && lim--) {
     int i;
     u_long pc = (u_long) framep[1] - 1;
     bucket = ((bucket << 5) + bucket) ^ pc;
@@ -141,7 +144,7 @@ __backtrace (const char *file)
 #else /* !gcc 2 || !i386 */
 
 const char *
-__backtrace (const char *file)
+__backtrace (const char *file, int lim)
 {
   return file;
 }
@@ -156,8 +159,6 @@ char *dmalloc_logpath;
 #endif /* DMALLOC_VERSION_MAJOR < 5 */
 
 
-static int stktrace_record;
-
 const char *
 stktrace (const char *file)
 {
@@ -171,7 +172,7 @@ stktrace (const char *file)
     }
     stktrace_record = 1;
   }
-  return __backtrace (file);
+  return __backtrace (file, -1);
 }
 
 #endif /* DMALLOC */

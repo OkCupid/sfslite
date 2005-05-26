@@ -148,8 +148,13 @@ inetsocket (int type, u_int16_t port, u_int32_t addr)
       && setsockopt (s, SOL_SOCKET, SO_REUSEADDR, (char *) &n, sizeof (n)) < 0)
     fatal ("inetsocket: SO_REUSEADDR: %s\n", strerror (errno));
  again:
-  if (bind (s, (struct sockaddr *) &sin, sizeof (sin)) >= 0)
+  if (bind (s, (struct sockaddr *) &sin, sizeof (sin)) >= 0) {
+#if 0
+    if (type == SOCK_STREAM)
+      warn ("TCP (fd %d) bound: %s\n", s, __backtrace (__FL__));
+#endif
     return s;
+  }
   if (errno == EADDRNOTAVAIL && sin.sin_addr.s_addr != htonl (addr)) {
     sin.sin_addr.s_addr = htonl (addr);
     goto again;

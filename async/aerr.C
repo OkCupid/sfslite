@@ -113,7 +113,7 @@ _err_output_async (suio *uio, int flags)
     erruio->copyu (uio);
     make_sync (errfd);
     erruio->output (errfd);
-    abort ();
+    myabort ();
   }
 
   /* Start new iovecs after newlines so as to output entire lines when

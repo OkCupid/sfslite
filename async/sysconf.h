@@ -471,8 +471,8 @@ getpeereid (int fd, uid_t *u, gid_t *g)
 #define __stringify(s) #s
 #define stringify(s) __stringify(s)
 #define __FL__ __FILE__ ":" stringify (__LINE__)
-const char *__backtrace (const char *file);
-#define __BACKTRACE__ (__backtrace (__FL__))
+const char *__backtrace (const char *file, int lim);
+#define __BACKTRACE__ (__backtrace (__FL__, -1))
 
 #ifdef DMALLOC
 
@@ -516,6 +516,7 @@ xfree (void *ptr)
 #define xfree(ptr) _xfree_wrap(__FILE__, __LINE__, ptr)
 
 const char *stktrace (const char *file);
+extern int stktrace_record;
 #define txmalloc(size) _xmalloc_leap (stktrace (__FILE__), __LINE__, size)
 
 #else /* !DMALLOC */
@@ -543,6 +544,9 @@ int strncasecmp (const char *, const char *, int);
 /*
  * Other random stuff
  */
+
+/* Some versions of linux have a weird offsetof definition */
+#define xoffsetof(type, member)  ((size_t)(&((type *)0)->member))
 
 #ifdef __cplusplus
 /* Egcs g++ without '-ansi' has some strange ideas about what NULL

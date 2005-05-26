@@ -139,8 +139,8 @@ chldcb_check ()
       chldcbs.remove (c);
 #ifdef WRAP_DEBUG
       if (callback_trace & CBTR_CHLD)
-	warn ("CALLBACK_TRACE: %schild pid %d %s <- %s\n",
-	      timestring (), pid, c->cb->dest, c->cb->line);
+	warn ("CALLBACK_TRACE: %schild pid %d (status %d) %s <- %s\n",
+	      timestring (), pid, status, c->cb->dest, c->cb->line);
 #endif /* WRAP_DEBUG */
       (*c->cb) (status);
       delete c;

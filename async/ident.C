@@ -40,10 +40,19 @@ struct identstat {
   callback<void, str, ptr<hostent>, int>::ptr cb;
 
   void cbdone ();
-  void identcb (str u, int e)
-    { if (u && identrx.search (u)) user = identrx[2]; cbdone (); }
-  void dnscb (ptr<hostent> hh, int e)
-    { h = hh; err = e; if (h && *h->h_name) host = h->h_name; cbdone (); }
+  void identcb (str u, int e) {
+    if (u && identrx.search (u))
+      user = identrx[2];
+    a = NULL;
+    cbdone ();
+  }
+  void dnscb (ptr<hostent> hh, int e) {
+    h = hh;
+    err = e;
+    if (h && *h->h_name)
+      host = h->h_name;
+    cbdone ();
+  }
 };
 
 void

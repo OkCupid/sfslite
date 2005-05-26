@@ -5,7 +5,6 @@ dnl
 
 AC_INIT(acinclude.m4)
 AM_INIT_AUTOMAKE(sfslite,0.8pre)
-dnl AC_INIT(sfs,0.7.2)
 dnl AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER(config.h)
 
@@ -32,10 +31,9 @@ AM_PROG_LEX
 AC_PROG_YACC
 SFS_WFLAGS
 SFS_PATH_CPP
-AC_PROG_INSTALL_C
+AC_PROG_INSTALL
 AC_PROG_LN_S
 dnl AC_PROG_MAKE_SET
-SFS_PYINC
 AC_PATH_PROGS(M4, gm4 gnum4 m4, '$(top_srcdir)/missing')
 test "$RPCC" || RPCC='$(top_builddir)/rpcc/rpcc'
 
@@ -46,75 +44,7 @@ if test "$no_x" != yes; then
   test -z "$x_includes" || CPPFLAGS="$CPPFLAGS -I$x_includes"
 fi
 
-dnl
-dnl Test user ID and group ID required for SFS
-dnl
-AC_SUBST(sfsuser)
-AC_SUBST(sfsgroup)
-sfsuser="$with_sfsuser"
-test -z "$sfsuser" && sfsuser=sfs
-sfsgroup="$with_sfsgroup"
-test -z "$sfsgroup" && sfsgroup="$sfsuser"
-
-if test -z "${with_sfsuser+set}" -o -z "${with_sfsgroup+set}"; then
-AC_CACHE_CHECK(for sfs user and group, sfs_cv_ugidok,
-    [changequote expr='[0-9][0-9]*$' changequote([,])]
-    uid_isnum=`expr $sfsuser : $expr`
-    if test "$uid_isnum" != 0; then
-	sfs_getpwd="getpwuid ($sfsuser)"
-    else
-	sfs_getpwd="getpwnam (\"$sfsuser\")"
-    fi
-    gid_isnum=`expr $sfsgroup : $expr`
-    if test "$gid_isnum" != 0; then
-	sfs_getgrp="getgrgid ($sfsgroup)"
-    else
-	sfs_getgrp="getgrnam (\"$sfsgroup\")"
-    fi
-    AC_TRY_RUN([changequote changequote([[,]])
-#include <stdio.h>
-#include <sys/types.h>
-#include <pwd.h>
-#include <grp.h>
-
-static int error;
-
-static void
-bad (char *p)
-{
-  if (error)
-    printf (" %s", p);
-  else {
-    error = 1;
-    printf ("[%s", p);
-  }
-}
-
-int
-main ()
-{
-  struct passwd *pw = $sfs_getpwd;
-  struct group *gr = $sfs_getgrp;
-
-  if (!$uid_isnum && !pw)
-    bad ("No user $sfsuser."); 
-  if (!$gid_isnum && !gr)
-    bad ("No group $sfsgroup."); 
-  else if (gr && gr->gr_mem[0])
-    bad ("Group $sfsgroup cannot have users."); 
-  if (pw && gr && pw->pw_gid != gr->gr_gid)
-    bad ("Login group of $sfsuser must be $sfsgroup."); 
-  if (error)
-    printf ("] ");
-  return error;
-}
-changequote([,])],
-    sfs_cv_ugidok=yes, sfs_cv_ugidok=no, sfs_cv_ugidok=skipped))
-
-    test "$sfs_cv_ugidok" = no \
-	&& AC_MSG_ERROR(Create sfs user/group or use --with-sfsuser/--with-sfsgroup)
-fi
-
+SFS_USER
 
 AC_ARG_ENABLE(shlib,
 --enable-shlib            Build shared libraries rather than static ones,,)
@@ -135,24 +65,7 @@ AM_CONDITIONAL(STATIC, test "$enable_shared" != yes)
 
 AC_SUBST(MALLOCK)
 MALLOCK='$(top_builddir)/sfsmisc/mallock.o'
-AC_SUBST(NOPAGING)
-if test "$enable_static" = yes -a -z "${NOPAGING+set}"; then
-    case "$host_os" in
-	openbsd3.[[3456789]]*|openbsd[[456789]]*)
-	    #MALLOCK=		# mallock.o may panic the OpenBSD kernel
-# ... unfortunately OMAGIC files don't work on OpenBSD
-	    NOPAGING="-all-static"
-	;;
-	openbsd*)
-	    test "$ac_cv_prog_gcc" = yes && NOPAGING="-Wl,-Bstatic,-N"
-	    MALLOCK=		# mallock.o panics the OpenBSD kernel
-	;;
-	freebsd*)
-	    test yes = "$ac_cv_prog_gcc" -a yes != "$ac_cv_func_mlockall" \
-		 && NOPAGING="-Wl,-Bstatic"
-	;;
-    esac
-fi
+SFS_NOPAGING
 
 dnl Path for daemonize
 SFS_PATH_PROG(logger)
@@ -270,21 +183,23 @@ dnl AC_CHECK_FUNCS(popen times clock getrusage)
 
 dnl POSIX.1b defines a struct timespec to record time information in two
 dnl fields: seconds and nanoseconds.  Some stat structures have these.
-dnl Others (including linux) don not have the sub-second information.
+dnl Others (including linux) do not have the sub-second information.
 dnl Check for this by looking for the st_atimespec field in struct stat.
 
 SFS_CHECK_STAT_FIELD(st_atimespec)
 SFS_CHECK_STAT_FIELD(st_mtimespec)
+SFS_CHECK_STAT_FIELD(st_mtim)
 
 dnl SFS specific checks
 SFS_DMALLOC
 SFS_CHECK_XDR
 SFS_CHECK_WIDE_SELECT
 SFS_PUTENV_COPY
-dnl SFS_CHECK_NFSMNT
+SFS_CHECK_NFSMNT
 SFS_CHECK_SA_LEN
 SFS_CHECK_FDPASS
 SFS_CHECK_SOCK_BUF
+SFS_CHECK_BSD_REUSEADDR
 SFS_CHECK_EGID_IN_GROUPLIST
 SFS_FIND_RESOLV
 SFS_FIND_CRYPT
@@ -303,7 +218,7 @@ if test "$sfs_cv_have_dev_xfs" = yes; then
 	Define if your kernel has the Arla file system's XFS device)
 fi
 
-SFS_SLEEPYCAT(4.2 4.1 4.0 3.3 3.2 3.1, no)
+SFS_SLEEPYCAT(4.3 4.2 4.1 4.0 3.3 3.2 3.1, no)
 AC_SUBST(DBLIB)
 AC_SUBST(DBDEPS)
 DBLIB='$(top_builddir)/sfsrodb/libsfsrodb.a'
@@ -375,7 +290,6 @@ for flag in $LDFLAGS; do
 done
 LDFLAGS="$new_LDFLAGS"
 
-
 dnl
 dnl BEGIN sfslite changes
 dnl
@@ -406,8 +320,6 @@ CPPFLAGS="$CPPFLAGS -DEXECDIR="'\"$(sfsexecdir)\"'
 dnl
 dnl END sfslite changes
 dnl
-
-
 
 SFS_CFLAGS
 
@@ -488,20 +400,14 @@ AC_ARG_WITH(sfsdir,
 AC_SUBST(sfsdir)
 CPPFLAGS="$CPPFLAGS -DSFSDIR="'\"$(sfsdir)\"'
 
+AC_SUBST(SFSRO_PROXY_LIB)
+
 AC_ARG_WITH(sfsuser,
 --with-sfsuser=name       Name of sfs user)
 AC_ARG_WITH(sfsgroup,
 --with-sfsgroup=name      Name of sfs group)
 
 
-dnl
-dnl BEGIN sfslite change
-dnl
+
 AC_OUTPUT(Makefile async/Makefile rpcc/Makefile arpc/Makefile
-	  crypt/Makefile sfsmisc/Makefile libsfs/Makefile
-	  pyarpc/Makefile)
-
-dnl
-dnl END sfslite change
-dnl
-
+	crypt/Makefile sfsmisc/Makefile)

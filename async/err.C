@@ -93,7 +93,7 @@ _err_output_sync (suio *uio, int flags)
   int saved_errno = errno;
   uio->output (errfd);
   if (flags & warnobj::panicflag)
-    abort ();
+    myabort ();
   if (flags & warnobj::fatalflag) {
     if (fatalhook)
       (*fatalhook) ();
@@ -153,7 +153,7 @@ fatalobj::~fatalobj ()
    * through a few hoops rather than simply implement ~fatalobj as
    * {}. */
   static_cast<warnobj *> (this)->~warnobj ();
-  abort ();
+  myabort ();
 }
 #endif /* !fatalobj */
 
@@ -267,7 +267,7 @@ panic (const char *fmt, ...)
   va_end (ap);
 
   _err_output (b.tosuio (), warnobj::panicflag);
-  abort ();
+  myabort ();
 }
 
 GLOBALDESTRUCT;

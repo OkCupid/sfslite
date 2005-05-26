@@ -25,7 +25,7 @@ default_xmalloc_handler (int size)
 {
   const char msg[] = "malloc failed\n";
   write (errfd, msg, sizeof (msg) - 1);
-  abort ();
+  myabort ();
 }
 void (*xmalloc_handler) (int) = default_xmalloc_handler;
 
@@ -151,13 +151,13 @@ operator new (size_t size, nothrow_t) throw ()
 # define delete_throw throw()
 #endif /* !delete_throw */
 
+#ifndef DMALLOC
+
 void
 operator delete (void *ptr) delete_throw
 {
   xfree (ptr);
 }
-
-#ifndef DMALLOC
 
 void *
 operator new[] (size_t size) throw (bad_alloc)
@@ -182,6 +182,15 @@ operator delete[] (void *ptr) delete_throw
 }
 
 #else /* DMALLOC */
+
+void
+operator delete (void *ptr) delete_throw
+{
+  if (stktrace_record > 0)
+    dmalloc_free (__backtrace (__FILE__, 2), __LINE__, ptr, DMALLOC_FUNC_FREE);
+  else
+    xfree (ptr);
+}
 
 void *
 operator new[] (size_t size) throw (bad_alloc)

@@ -121,4 +121,20 @@ operator<< (const traceobj &sb, const str &s)
       panic ("assertion \"%s\" failed at %s\n", #e, __FL__);	\
   } while (0)
 
+#ifdef DMALLOC
+inline void myabort () __attribute__ ((noreturn));
+inline void
+myabort ()
+{
+  static bool shutdown_called;
+  if (!shutdown_called) {
+    shutdown_called = true;
+    dmalloc_shutdown ();
+  }
+  abort ();
+}
+#else /* !DMALLOC */
+# define myabort abort
+#endif /* !DMALLOC */
+
 #endif /* !_ASYNC_ERR_H_ */

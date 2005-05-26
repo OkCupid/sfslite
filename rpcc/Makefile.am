@@ -8,7 +8,7 @@ bin_PROGRAMS = rpcc
 noinst_HEADERS = rpcc.h parse.h
 
 rpcc_SOURCES = genheader.C gencfile.C genpython.C parse.yy scan.ll rpcc.C \
-	genpycfile.C
+	genpyc.C
 if STATIC
 rpcc_LDADD = $(LDADD)
 rpcc_DEPENDENCIES = $(LIBASYNC)
@@ -47,7 +47,7 @@ parse.cc: parse.yy
 		fi;						\
 	fi
 
-parse.o: parse.cc 
+parse.o: parse.cc parse.h
 # Note: certain versions of bison put __attribute__((unused)) after
 # unused goto labels, which doesn't agree well with gcc 3.2.1.
 # If you have problems, try the next line instead of the following one.

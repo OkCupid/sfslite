@@ -143,9 +143,10 @@ public:
 
 class dnssock_tcp : public dnssock {
   int fd;
+  bool write_ok;
   dnstcppkt tcpstate;
   void rcb ();
-  void wcb ();
+  void wcb (bool selected = false);
 public:
   dnssock_tcp (int f, cb_t cb);
   ~dnssock_tcp ();

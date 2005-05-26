@@ -34,6 +34,7 @@
 extern prng rnd;
 
 #include "rabin.h"
+#include "rsa.h"
 #include "blowfish.h"
 #include "arc4.h"
 #include "axprt_crypt.h"

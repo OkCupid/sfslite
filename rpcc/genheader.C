@@ -180,8 +180,6 @@ punionmacrodefault (str prefix, const rpc_union *rs)
   aout << prefix << "break; \\\n";
 }
 
-
-
 static void
 dumpunion (const rpc_sym *s)
 {

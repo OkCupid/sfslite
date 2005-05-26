@@ -76,9 +76,10 @@ dnssock_udp::rcb ()
 
 
 dnssock_tcp::dnssock_tcp (int f, cb_t cb)
-  : dnssock (true, cb), fd (f)
+  : dnssock (true, cb), fd (f), write_ok (false)
 {
   fdcb (fd, selread, wrap (this, &dnssock_tcp::rcb));
+  fdcb (fd, selwrite, wrap (this, &dnssock_tcp::wcb, true));
 }
 
 dnssock_tcp::~dnssock_tcp ()
@@ -104,8 +105,12 @@ dnssock_tcp::rcb ()
 }
 
 void
-dnssock_tcp::wcb ()
+dnssock_tcp::wcb (bool selected)
 {
+  if (selected)
+    write_ok = true;
+  if (!write_ok)
+    return;
   int n = tcpstate.output (fd);
   if (n < 0) {
     fdcb (fd, selwrite, NULL);
@@ -114,7 +119,7 @@ dnssock_tcp::wcb ()
   else if (n > 0)
     fdcb (fd, selwrite, NULL);
   else
-    fdcb (fd, selwrite, wrap (this, &dnssock_tcp::wcb));
+    fdcb (fd, selwrite, wrap (this, &dnssock_tcp::wcb, true));
 }
 
 void
@@ -198,6 +203,8 @@ resolver::resend (bool udp, bool tcp)
     if (r->usetcp) {
       if (tcp && tcpsock)
 	sendreq (r);
+      else if (tcp)
+	failreq (ARERR_CANTSEND, r);
     }
     else if (udp && udpsock) {
       reqtoq.remove (r);
@@ -393,6 +400,7 @@ resolv_conf::reload_cb (ref<bool> d, bool failure, str newres)
   if (!newres) {
     warn ("resolv_conf::reload_cb: fork: %m\n");
     setsock (true);
+    return;
   }
   if (newres.len () != sizeof (_res)) {
     warn ("resolv_conf::reload_cb: short read\n");
@@ -546,12 +554,15 @@ dnsreq::timeout ()
 void
 dnsreq::fail (int err)
 {
+  assert (err);
   if (!error)
     error = err;
   if (constructed)
     readreply (NULL);
-  else
+  else {
+    remove ();
     delaycb (0, wrap (this, &dnsreq::readreply, (dnsparse *) NULL));
+  }
 }
 
 void
@@ -566,6 +577,7 @@ dnsreq_a::readreply (dnsparse *reply)
 {
   ptr<hostent> h;
   if (!error) {
+    assert (reply);
     if (!(h = reply->tohostent ()))
       error = reply->error;
     else if (checkaddr) {

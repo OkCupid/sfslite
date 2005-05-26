@@ -162,7 +162,7 @@ daemonize ()
     break;
   }
     
-  if (setsid () < 0)
+  if (setsid () == -1)
     fatal ("setsid: %m\n");
   if (!builddir) {
     start_logger ();

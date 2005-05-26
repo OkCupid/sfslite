@@ -403,7 +403,8 @@ __suio_vuprintf (const char *line, struct suio *uio,
       cp = va_arg (ap, char *);
     gotcp:
       if (cp == NULL)
-	  cp = "(null)";
+	panic ("suio_vuprintf:  NULL pointer\n");
+	//cp = "(null)";
       if (prec >= 0) {
 	/*
 	 * can't use strlen; can only look for the

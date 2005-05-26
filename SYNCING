@@ -3,6 +3,7 @@ When Syncing from SFS to SFSlite: A Checklist
 ---------------------------------------------
  - acinclude.m4
     - copy over SFS_TAG macro
+    - ditto for SFS_MMAP and INSTALL_C
  - configure.in
     - copy block of code from begin sfslite to end sfslite
     - meaning, we need new rules for sfsincludedir, sfslibdir, etc, that

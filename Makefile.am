@@ -1,22 +1,11 @@
 ## Process this file with automake to produce Makefile.in
 ## $Id$
 
-if USE_DB
-ADB =
-else
-ADB = adb
-endif
-
-#if USE_PY
-#PYARPC = pyarpc
-#else
-PYARPC = 
-#endif
 
 #
 # sfslite change
 #
-SUBDIRS = async rpcc arpc crypt sfsmisc $(PYARPC)
+SUBDIRS = async rpcc arpc crypt sfsmisc 
 
 
 noinst_HEADERS = nfsconf.h
@@ -71,6 +60,7 @@ install-exec-local:
 	fi
 
 install-data-hook:
+	$(INSTALL_DATA) async/env.mk $(DESTDIR)$(sfslibdir)
 	@echo "********************** Upgrading SFS **************************"
 	@echo If you previously installed older versions of SFS, you may want
 	@echo to remove their directories and files:
@@ -78,8 +68,7 @@ install-data-hook:
 	@echo "   " $(prefix)/include/sfs-VERSION
 	@echo "   " $(prefix)/lib/sfs-VERSION
 	@echo
-	@echo where VERSION is less than $(VERSION). Be certain to kill old 
-	@echo versions of SFS before deleting their corresponding binaries.
+	@echo where VERSION is less than $(VERSION). 
 	@echo "***************************************************************"
 
 uninstall-local:
@@ -102,6 +91,6 @@ aux-all aux-mostlyclean aux-clean aux-distclean aux-maintainer-clean:
 
 .PHONY: rpcclean
 rpcclean:
-	for dir in arpc svc libsfs; do \
+	for dir in arpc libsfs; do \
 		(cd $$dir && $(MAKE) rpcclean); \
 	done
