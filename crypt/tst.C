@@ -41,11 +41,9 @@ do {								\
        << hexdump (digest, sizeof (digest)) << "\n";		\
 } while (0)
 
-#if 0
   HMAC ("Jefe", "what do ya want for nothing?");
   HMAC ("\014\014\014\014\014\014\014\014\014\014\014\014\014\014\014\014\014\014\014\014", "Test With Truncation");
   //HMAC2 ("Je", "fe", "what do ya want for nothing?");
-#endif
 
   rsa_priv x (rsa_keygen (1024));
   bigint pt (random_bigint (1019));
