@@ -38,7 +38,7 @@ bbuddy.h bitvec.h callback.h cbuf.h dns.h dnsimpl.h dnsparse.h err.h	\
 fdlim.h ihash.h init.h itree.h keyfunc.h list.h msb.h opnew.h		\
 parseopt.h pcre.h qhash.h refcnt.h rxx.h serial.h stllike.h str.h	\
 suio++.h sysconf.h union.h vatmpl.h vec.h rwfd.h  \
-litetime.h
+litetime.h env.mk
 
 #
 # begin sfslite changes
@@ -84,9 +84,9 @@ env.mk: Makefile
 	echo "CXX = $(CXX)" >> env.mk~
 	echo "CFLAGS = $(CFLAGS)" >> env.mk~
 	echo "CXXFLAGS = $(CXXFLAGS)" >> env.mk~
+	echo "LIBS = $(LIBS)" >> env.mk~
+	echo "sfstag = $(sfstag)" >> env.mk~
 	mv -f env.mk~ env.mk
-
-BUILT_SOURCES = env.mk
 
 EXTRA_DIST = .cvsignore env.mk
 CLEANFILES = core *.core *~ *.rpo dftables chartables.c stamp-async-repo
