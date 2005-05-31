@@ -154,7 +154,7 @@ main (int argc, char *argv[])
 	if (rrc > 0) data_read = 1;
       }
 
-      if (rrc == 0 && !data_read) {
+      if (rrc == 0) {
 	mmcd_shutdown (mmap_rgn, mmap_rgn_sz, fd, argv[1]);
 	break;
       }
