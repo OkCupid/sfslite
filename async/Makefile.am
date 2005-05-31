@@ -50,7 +50,7 @@ mmcd_DEPENDENCIES =
 # end sfslite changes
 #
 
-noinst_HEADERS = internal.h
+noinst_HEADERS = internal.h env.mk
 
 dftables_SOURCES = dftables.c
 dftables_LDADD =
