@@ -22,6 +22,7 @@
  */
 
 #include "rpcc.h"
+#include "rxx.h"
 
 str module;
 str dotted_m;
@@ -32,6 +33,8 @@ typedef enum
 } pass_num_t;
 
 qhash<str,str> enum_tab;
+qhash<str,u_int32_t> proc_tab;
+qhash<str,str> literal_tab;
 
 static str
 pyc_type (const str &s)
@@ -172,7 +175,7 @@ get_inner_obj (const str &vn, const str &ct)
 static void
 dump_w_class_init_func (const str &wt, const str &pt)
 {
-  aout << "bool\n"
+  aout << "inline bool\n"
        << wt << "::init ()\n"
        << "{\n"
        << "  _typ = &" << pt << ";\n"
@@ -190,7 +193,7 @@ dump_union_init_and_clear (const rpc_union *u)
 
   dump_w_class_init_func (wt, pt);
   
-  aout << "bool\n"
+  aout << "inline bool\n"
        << wt << "::clear ()\n"
        << "{\n"
        << get_inner_obj ("o", ct)
@@ -206,7 +209,7 @@ dump_w_enum_clear_func (const str &id)
 {
   const str wt = pyw_type (id);
 
-  aout << "bool\n"
+  aout << "inline bool\n"
        << wt << "::clear ()\n"
        << "{\n"
        << "  Py_XDECREF (_obj);\n"
@@ -221,7 +224,7 @@ dump_w_class_clear_func (const rpc_struct *rs)
 {
   str ct = pyc_type (rs->id);
   str wt = pyw_type (rs->id);
-  aout << "bool\n"
+  aout << "inline bool\n"
        << wt << "::clear ()\n"
        << "{\n"
        << get_inner_obj ("o", ct)
@@ -798,15 +801,19 @@ dump_setter_decl (const str &cl, const str &id)
 static void
 dump_getsetter_decl (const str &cl, const str &id)
 {
-  dump_getter_decl (cl, id);
-  dump_setter_decl (cl, id);
+  if (id) {
+    dump_getter_decl (cl, id);
+    dump_setter_decl (cl, id);
+  }
 }
 
 static void
 dump_getsetter (const str &cl, const rpc_decl *d)
 {
-  dump_getter (cl, d);
-  dump_setter (cl, d);
+  if (d->id) {
+    dump_getter (cl, d);
+    dump_setter (cl, d);
+  }
 }
 
 static void
@@ -957,8 +964,10 @@ dump_union_tag_getsetter (const rpc_union *u)
 static void
 dump_union_getsetter (const rpc_union *u, const rpc_utag *t)
 {
-  dump_union_getter (u, t);
-  dump_union_setter (u, t);
+  if (t->tag.id) {
+    dump_union_getter (u, t);
+    dump_union_setter (u, t);
+  }
 }
 
 static void
@@ -1008,7 +1017,8 @@ dump_union_getsetter_table (const rpc_union *u)
   aout << "static PyGetSetDef " << ct << "_getsetters[] = {\n";
   dump_getsetter_table_row ("  ", ct, u->tagid, "union switch element");
   for (const rpc_utag *rd = u->cases.base (); rd < u->cases.lim (); rd ++)
-    dump_getsetter_table_row ("  ", ct, rd->tag.id, "union case");
+    if (rd->tag.id)
+      dump_getsetter_table_row ("  ", ct, rd->tag.id, "union case");
   aout << "  {NULL}\n"
        << "};\n\n";
 }
@@ -1329,6 +1339,10 @@ dumpstruct_hdr (const rpc_sym *s)
 
   dump_rpc_traverse (rs);
   dump_w_rpc_traverse (rs->id);
+
+  // moved to header for time being
+  dump_w_class_init_func (pyw_type (rs->id), py_type_obj (rs->id));
+  dump_w_class_clear_func (rs);
 }
 
 static void
@@ -1349,10 +1363,6 @@ dumpstruct (const rpc_sym *s)
   dump_str_func (rs->id);
   dump_print_func (rs->id);
   dump_type_object (rs->id);
-
-
-  dump_w_class_init_func (pyw_type (rs->id), py_type_obj (rs->id));
-  dump_w_class_clear_func (rs);
 
   dump_xdr_func (rs->id);
 }
@@ -1510,6 +1520,9 @@ dumpunion_hdr (const rpc_sym *s)
   dump_print_decls (u->id);
   dump_convert (u->id);
   dump_w_rpc_traverse (u->id);
+
+  // moved to hdr for time being
+  dump_union_init_and_clear (u);
 }
 
 
@@ -1531,18 +1544,20 @@ dumpunion (const rpc_sym *s)
   dump_print_func (u->id);
   dump_type_object (u->id);
 
-  dump_union_init_and_clear (u);
   dump_xdr_func (u->id);
 }
 
+
 static void
-dump_c_enum (const rpc_enum *rs)
+dump_c_enum (const rpc_enum *rs, bool d)
 {
   int ctr = 0;
   str lastval;
   str ct = rs->id;
 
-  aout << "enum " << ct << " {\n";
+  if (d)
+    aout << "enum " << ct << " {\n";
+
   for (const rpc_const *rc = rs->tags.base (); rc < rs->tags.lim (); rc++) {
     if (enum_tab[rc->id]) {
       warn << "duplicate enum key: " << rc->id << "\n";
@@ -1554,7 +1569,8 @@ dump_c_enum (const rpc_enum *rs)
       ctr = 1;
       b << rc->val;
       ev = b;
-      aout << "  " << rc->id << " = " << rc->val << ",\n";
+      if (d)
+	aout << "  " << rc->id << " = " << rc->val << ",\n";
     }
     else if (lastval && (isdigit (lastval[0]) || lastval[0] == '-'
 			 || lastval[0] == '+')) {
@@ -1562,30 +1578,35 @@ dump_c_enum (const rpc_enum *rs)
       long l = strtol (lastval, NULL, 0) + ctr ++;
       b << l;
       ev = b;
-      aout << "  " << rc->id << " = " << ev << ",\n";
+      if (d)
+	aout << "  " << rc->id << " = " << ev << ",\n";
     } else if (lastval) {
       b << lastval << " + " << ctr ++;
       ev = b;
-      aout << "  " << rc->id << " = " << ev << ",\n";
+      if (d)
+	aout << "  " << rc->id << " = " << ev << ",\n";
     } else {
       b << ctr ++ ;
       ev = b;
-      aout << "  " << rc->id << " = " << ev << ",\n";
+      if (d)
+	aout << "  " << rc->id << " = " << ev << ",\n";
     }
     enum_tab.insert (rc->id, ev);
   }
-  aout << "};\n";
-
-  aout << "\ntemplate<class T> inline bool\n"
-       << "rpc_traverse (T &t, " << ct << " &obj)\n"
-       << "{\n"
-       << "  u_int32_t val = obj;\n"
-       << "  if (!rpc_traverse (t, val))\n"
-       << "    return false;\n"
-       << "  obj = " << ct << " (val);\n"
-       << "  return true;\n"
-       << "}\n\n";
-
+  if (d) { 
+    aout << "};\n";
+    
+    aout << "\ntemplate<class T> inline bool\n"
+	 << "rpc_traverse (T &t, " << ct << " &obj)\n"
+	 << "{\n"
+	 << "  u_int32_t val = obj;\n"
+	 << "  if (!rpc_traverse (t, val))\n"
+	 << "    return false;\n"
+	 << "  obj = " << ct << " (val);\n"
+	 << "  return true;\n"
+	 << "}\n\n";
+  }
+    
 }
 
 static void
@@ -1678,7 +1699,7 @@ dumpenum_hdr (const rpc_sym *s)
   const str wt = pyw_type (rs->id);
   const str ct = pyc_type (rs->id);
 
-  dump_c_enum (rs);
+  dump_c_enum (rs, true);
   dump_type_object_decl (rs->id);
   dump_py_enum (rs);
   dump_class_method_decls (ct);
@@ -1694,6 +1715,9 @@ dumpenum_hdr (const rpc_sym *s)
   dump_w_rpc_traverse (rs->id);
   dump_enum_rpc_traverse (rs->id);
 
+  // moved to header for time being
+  dump_w_class_init_func (wt, py_type_obj (rs->id));
+  dump_w_enum_clear_func (rs->id);
 }
 
 
@@ -1704,6 +1728,7 @@ dumpenum (const rpc_sym *s)
   const str wt = pyw_type (rs->id);
   const str ct = pyc_type (rs->id);
 
+  dump_c_enum (rs, false);
 
   // convert used throughout
   dump_enum_in_range (rs);
@@ -1718,8 +1743,6 @@ dumpenum (const rpc_sym *s)
   dump_print_func (rs->id);
   dump_enum_type_object (rs->id);
 
-  dump_w_class_init_func (wt, py_type_obj (rs->id));
-  dump_w_enum_clear_func (rs->id);
 
   dump_xdr_func (rs->id);
   dumpenum_mthds (rs);
@@ -1762,7 +1785,7 @@ mktbl (const rpc_program *rs)
 
 
 static void 
-dump_procno_ins1 (const str &k, const str &v)
+dump_constants_ins1 (const str &k, const str &v)
 {
   aout << "  if ((rc = PyModule_AddIntConstant (mod, \""
        << k << "\", (long ) (" << v << "))) < 0)\n"
@@ -1770,35 +1793,47 @@ dump_procno_ins1 (const str &k, const str &v)
 }
 
 static void 
-dump_procno_ins1 (const str &k, u_int32_t v)
+dump_constants_ins1 (const str &k, u_int32_t v)
 {
   strbuf b;
   b << v;
-  dump_procno_ins1 (k, b);
+  dump_constants_ins1 (k, b);
 }
 
 static void
-dump_procno_trav (const str &s, str *v)
+dump_constants_trav (const str &s, str *v)
 {
-  dump_procno_ins1 (s, *v);
+  dump_constants_ins1 (s, *v);
 }
 
 static void
-dump_procno_ins (const rpc_program *rs)
+dump_constants_trav_i (const str &s, u_int32_t *v)
+{
+  dump_constants_ins1 (s, *v);
+}
+
+static void
+dump_constants ()
 {
   aout << "static int\n"
        << "py_module_all_ins (PyObject *mod)\n"
        << "{\n"
        << "  int rc = 0;\n";
-  for (const rpc_vers *rv = rs->vers.base (); rv < rs->vers.lim (); rv++) {
-    for (const rpc_proc *rp = rv->procs.base (); rp < rv->procs.lim (); rp++) {
-      dump_procno_ins1 (rp->id, rp->val);
-    }
-  }
-  enum_tab.traverse (wrap (dump_procno_trav));
+  proc_tab.traverse (wrap (dump_constants_trav_i));
+  enum_tab.traverse (wrap (dump_constants_trav));
+  literal_tab.traverse (wrap (dump_constants_trav));
   aout << "  return rc;\n"
        << "}\n\n";
+}
 
+static void
+collect_procnos (const rpc_program *rs)
+{
+  for (const rpc_vers *rv = rs->vers.base (); rv < rs->vers.lim (); rv++) {
+    for (const rpc_proc *rp = rv->procs.base (); rp < rv->procs.lim (); rp++) {
+      proc_tab.insert (rp->id, rp->val);
+    }
+  }
 }
 
 static void
@@ -1851,7 +1886,7 @@ dumpprog (const rpc_sym *s)
   }
 
   mktbl (rs);
-  dump_procno_ins (rs);
+  collect_procnos (rs);
   dump_prog_py_obj (rs);
 }
 
@@ -1888,6 +1923,7 @@ dumphdr (const rpc_sym *s)
 static void
 dumpsym (const rpc_sym *s, pass_num_t pass)
 {
+  static rxx define_rxx ("#\\s*define\\s*([a-zA-Z0-9_]+)\\s*([a-zA-Z0-9_]+)");
   switch (s->type) {
   case rpc_sym::STRUCT:
     if (pass == PASS_ONE)
@@ -1914,6 +1950,9 @@ dumpsym (const rpc_sym *s, pass_num_t pass)
       dumpprog (s);
     break;
   case rpc_sym::LITERAL:
+    if (define_rxx.match (*s->sliteral)) {
+      literal_tab.insert (define_rxx[1], define_rxx[2]);
+    }
     break;
   default:
     break;
@@ -1932,7 +1971,7 @@ makemodulename (str fname)
   else p = fname;
 
   while (char c = *p++) {
-    if (isalnum (c))
+    if (isalnum (c) || c == '_')
       guard << c;
     else
       break;
@@ -2041,10 +2080,9 @@ dumpmodule (const symlist_t &lst)
        << "\n"
        << "  if (m == NULL)\n"
        << "    return;\n"
-       << "  if (py_module_all_ins (m) < 0)\n"
+       << "  if (py_module_all_ins (m) < 0)\n" 
        << "    return;\n"
        << "\n";
-  
   
   for (const rpc_sym *s = lst.base (); s < lst.lim () ; s++) {
     vec<str> clss = get_c_classes (s);
@@ -2081,7 +2119,6 @@ genpyc (str fname)
 {
   module = makemodulename (fname);
   dotted_m = python_module_name ? python_module_name : module;
-  
 
   aout << "// -*-c++-*-\n"
        << "/* This file was automatically generated by rpcc. */\n\n"
@@ -2119,6 +2156,7 @@ genpyc (str fname)
       }
     }
   }
+  dump_constants ();
   dumpmodule (symlist);
 }
 
