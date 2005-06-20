@@ -649,13 +649,16 @@ need_nfs_nfs_h=no
 AC_EGREP_HEADER(nfs_args, sys/mount.h,,
 	AC_EGREP_HEADER(nfs_args, nfs/mount.h,
 		AC_DEFINE(NEED_NFS_MOUNT_H, 1,
-			[The nfs_args structure is in <nfs/nfsmount.h>]))
+			[The nfs_args structure is in <nfs/mount.h>]))
 	AC_EGREP_HEADER(nfs_args, nfs/nfsmount.h,
 		AC_DEFINE(NEED_NFS_NFSMOUNT_H, 1,
 			[The nfs_args structure is in <nfs/nfsmount.h]))
 	AC_EGREP_HEADER(nfs_args, nfsclient/nfs.h,
 		AC_DEFINE(NEED_NFSCLIENT_NFS_H, 1,
 			[The nfs_args structure is in <nfsclient/nfs.h>]))
+       AC_EGREP_HEADER(nfs_args, nfsclient/nfsargs.h,
+               AC_DEFINE(NEED_NFSCLIENT_NFSARGS_H, 1,
+                       [The nfs_args structure is in <nfsclient/nfsargs.h>]))
 	AC_EGREP_HEADER(nfs_args, nfs/nfs.h,
 		AC_DEFINE(NEED_NFS_NFS_H, 1,
 			[The nfs_args structure is in <nfs/nfs.h>])

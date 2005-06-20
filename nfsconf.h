@@ -35,6 +35,9 @@
 #if NEED_NFSCLIENT_NFS_H
 # include <nfsclient/nfs.h>
 #endif /* NEED_NFSCLIENT_NFS_H */
+#if NEED_NFSCLIENT_NFSARGS_H
+# include <nfsclient/nfsargs.h>
+#endif /* NEED_NFSCLIENT_NFSARGS_H */
 #if NEED_NFS_MOUNT_H
 # include <nfs/mount.h>
 #endif /* NEED_NFS_MOUNT_H */
