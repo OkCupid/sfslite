@@ -2,7 +2,7 @@ dnl $Id$
 dnl
 dnl Find full path to program
 dnl
-AC_DEFUN(SFS_PATH_PROG,
+AC_DEFUN([SFS_PATH_PROG],
 [AC_PATH_PROG(PATH_[]translit($1, [-a-z.], [_A-Z_]), $1,,
 $2[]ifelse($2,,,:)/usr/bin:/bin:/sbin:/usr/sbin:/usr/etc:/usr/libexec:/usr/ucb:/usr/bsd:/usr/5bin:$PATH:/usr/local/bin:/usr/local/sbin:/usr/X11R6/bin)
 if test "$PATH_[]translit($1, [-a-z.], [_A-Z_])"; then
@@ -13,7 +13,7 @@ fi])
 dnl
 dnl File path to cpp
 dnl
-AC_DEFUN(SFS_PATH_CPP,
+AC_DEFUN([SFS_PATH_CPP],
 [AC_PATH_PROG(_PATH_CPP, cpp,,
 /usr/ccs/bin:/usr/bin:/bin:/sbin:/usr/sbin:/usr/etc:/usr/libexec:/lib:/usr/lib:/usr/ucb:/usr/bsd:/usr/5bin:$PATH:/usr/local/bin:/usr/local/sbin:/usr/X11R6/bin)
 if test -z "$_PATH_CPP"; then
@@ -33,7 +33,7 @@ AC_DEFINE_UNQUOTED(PATH_CPP, "$_PATH_CPP",
 dnl
 dnl How to get BSD-like df output
 dnl
-AC_DEFUN(SFS_PATH_DF,
+AC_DEFUN([SFS_PATH_DF],
 [SFS_PATH_PROG(df, /usr/ucb:/usr/bsd:/usr/local/bin)
 AC_CACHE_CHECK(if [$PATH_DF] needs -k for BSD-formatted output,
 	sfs_cv_df_dash_k,
@@ -49,7 +49,7 @@ dnl
 dnl Check for declarations
 dnl SFS_CHECK_DECL(symbol, headers-to-try, headers-to-include)
 dnl
-AC_DEFUN(SFS_CHECK_DECL,
+AC_DEFUN([SFS_CHECK_DECL],
 [AC_CACHE_CHECK(for a declaration of $1, sfs_cv_$1_decl,
 dnl    for hdr in [patsubst(builtin(shift, $@), [,], [ ])]; do
     for hdr in $2; do
@@ -68,7 +68,7 @@ fi])
 dnl
 dnl Check if lsof keeps a device cache
 dnl
-AC_DEFUN(SFS_LSOF_DEVCACHE,
+AC_DEFUN([SFS_LSOF_DEVCACHE],
 [if test "$PATH_LSOF"; then
     AC_CACHE_CHECK(if lsof supports a device cache, sfs_cv_lsof_devcache,
     if $PATH_LSOF -h 2>&1 | fgrep -e -D > /dev/null; then
@@ -84,7 +84,7 @@ fi])
 dnl
 dnl Posix time subroutine
 dnl
-AC_DEFUN(SFS_TIME_CHECK,
+AC_DEFUN([SFS_TIME_CHECK],
 [AC_CACHE_CHECK($3, sfs_cv_time_check_$1,
 AC_TRY_COMPILE([
 #ifdef TIME_WITH_SYS_TIME
@@ -102,7 +102,7 @@ fi])
 dnl
 dnl Posix time stuff
 dnl
-AC_DEFUN(SFS_TIMESPEC,
+AC_DEFUN([SFS_TIMESPEC],
 [AC_CHECK_HEADERS(sys/time.h)
 AC_HEADER_TIME
 AC_CHECK_FUNCS(clock_gettime)
@@ -124,7 +124,7 @@ dnl 		  Define if sys/time.h defines a struct timespec.))
 dnl
 dnl Find the crypt function
 dnl
-AC_DEFUN(SFS_FIND_CRYPT,
+AC_DEFUN([SFS_FIND_CRYPT],
 [AC_SUBST(LIBCRYPT)
 AC_CHECK_FUNC(crypt)
 if test $ac_cv_func_crypt = no; then
@@ -134,7 +134,7 @@ fi
 dnl
 dnl Find the setusercontext function
 dnl
-AC_DEFUN(SFS_CHECK_SETUSERCONTEXT,
+AC_DEFUN([SFS_CHECK_SETUSERCONTEXT],
 [AC_SUBST(SETUSERCONTEXTLIB)
 AC_CHECK_FUNC(setusercontext)
 if test "$ac_cv_func_setusercontext" = no; then
@@ -149,7 +149,7 @@ fi
 dnl
 dnl Find pty functions
 dnl
-AC_DEFUN(SFS_PTYLIB,
+AC_DEFUN([SFS_PTYLIB],
 [AC_SUBST(PTYLIB)
 AC_CHECK_FUNCS(_getpty)
 AC_CHECK_FUNCS(openpty)
@@ -191,7 +191,7 @@ dnl
 dnl SFS_TRY_RESOLV_LIB(library)
 dnl   see if -llibrary is needed to get res_mkquery
 dnl
-AC_DEFUN(SFS_TRY_RESOLV_LIB,
+AC_DEFUN([SFS_TRY_RESOLV_LIB],
 [reslib="$1"
 if test -z "$reslib"; then
     resdesc="standard C library"
@@ -232,7 +232,7 @@ fi
 dnl
 dnl Use -lresolv only if we need it
 dnl
-AC_DEFUN(SFS_FIND_RESOLV,
+AC_DEFUN([SFS_FIND_RESOLV],
 [AC_CHECK_HEADERS(arpa/nameser_compat.h)
 if test "$ac_cv_header_arpa_nameser_compat_h" = yes; then
 	nameser_header=arpa/nameser_compat.h
@@ -266,7 +266,7 @@ SFS_CHECK_DECL(dn_expand, resolv.h,
 dnl
 dnl Check if first element in grouplist is egid
 dnl
-AC_DEFUN(SFS_CHECK_EGID_IN_GROUPLIST,
+AC_DEFUN([SFS_CHECK_EGID_IN_GROUPLIST],
 [AC_TYPE_GETGROUPS
 AC_CACHE_CHECK(if egid is first element of grouplist, sfs_cv_egid_in_grouplist,
 AC_TRY_RUN([changequote changequote([[,]])
@@ -327,7 +327,7 @@ fi])
 dnl
 dnl Check for struct passwd fields
 dnl
-AC_DEFUN(SFS_PASSWD_FIELD,
+AC_DEFUN([SFS_PASSWD_FIELD],
 [AC_CACHE_CHECK(for $1 in struct passwd, sfs_cv_passwd_$1,
 AC_TRY_COMPILE([
 #include <sys/types.h>
@@ -343,7 +343,7 @@ fi])
 dnl
 dnl Check if putenv copies arguments
 dnl
-AC_DEFUN(SFS_PUTENV_COPY,
+AC_DEFUN([SFS_PUTENV_COPY],
 [AC_CACHE_CHECK(if putenv() copies its argument, sfs_cv_putenv_copy,
 AC_TRY_RUN([
 changequote`'changequote([[,]])
@@ -372,7 +372,7 @@ fi])
 dnl
 dnl Check for wide select
 dnl
-AC_DEFUN(SFS_CHECK_WIDE_SELECT,
+AC_DEFUN([SFS_CHECK_WIDE_SELECT],
 [AC_CACHE_CHECK(for wide select, sfs_cv_wideselect,
 fdlim_h=${srcdir}/fdlim.h
 test -f ${srcdir}/async/fdlim.h && fdlim_h=${srcdir}/async/fdlim.h
@@ -442,7 +442,7 @@ fi])
 dnl
 dnl Check for 64-bit off_t
 dnl
-AC_DEFUN(SFS_CHECK_OFF_T_64,
+AC_DEFUN([SFS_CHECK_OFF_T_64],
 [AC_CACHE_CHECK(for 64-bit off_t, sfs_cv_off_t_64,
 AC_TRY_COMPILE([
 #include <unistd.h>
@@ -456,12 +456,7 @@ fi])
 dnl
 dnl Check for type
 dnl
-
-dnl [AC_CACHE_CHECK(for $1, sfs_cv_type_$1,
-dnl ], sfs_cv_type_$1=yes, sfs_cv_type_$1=no))
-dnl ], sfs_cv_type_[]translit($1, [ ], [_])=yes, sfs_cv_type_[]translit($1, [ ], [_])=no))
-
-AC_DEFUN(SFS_CHECK_TYPE,
+AC_DEFUN([SFS_CHECK_TYPE],
 [AC_CACHE_CHECK(for $1, sfs_cv_type_[]translit($1, [ ], [_]),
 AC_TRY_COMPILE([
 #include <stddef.h>
@@ -480,9 +475,43 @@ if test $sfs_cv_type_[]translit($1, [ ], [_]) = yes; then
 		  Define if system headers declare a $1 type.)
 fi])
 dnl
+dnl Check if system defines u_int64_t as an unsigned long long
+dnl
+AC_DEFUN([SFS_CHECK_U_INT64],
+[AC_CHECK_SIZEOF(long, 4)
+AC_CHECK_SIZEOF(long long, 0)
+SFS_CHECK_TYPE(u_int64_t)
+AC_CACHE_CHECK(whether u_int64_t is an unsigned long long,
+	sfs_cv_u_int64_t_is_long_long,
+if test 8 -gt "$ac_cv_sizeof_long"; then
+    sfs_cv_u_int64_t_is_long_long=yes
+elif test yes != "$sfs_cv_type_u_int64_t"; then
+    sfs_cv_u_int64_t_is_long_long=yes
+else
+    AC_COMPILE_IFELSE([
+#include <stddef.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#ifdef HAVE_RPC_RPC_H
+#include <rpc/rpc.h>
+#endif
+
+void f (u_int64_t val);
+void
+f (unsigned long long val)
+{
+}
+], sfs_cv_u_int64_t_is_long_long=yes, sfs_cv_u_int64_t_is_long_long=no)
+fi)
+if test yes = "$sfs_cv_u_int64_t_is_long_long"; then
+AC_DEFINE(U_INT64_T_IS_LONG_LONG, 1,
+    Define if system header files typedef u_int64_t as unsigned long long)
+fi])
+dnl
 dnl Check for struct cmsghdr (for passing file descriptors)
 dnl
-AC_DEFUN(SFS_CHECK_FDPASS,
+AC_DEFUN([SFS_CHECK_FDPASS],
 [
 AC_CACHE_CHECK(for fd passing with msg_accrights in msghdr,
 		sfs_cv_accrights,
@@ -519,7 +548,7 @@ fi])
 dnl
 dnl Check for sa_len in struct sockaddrs
 dnl
-AC_DEFUN(SFS_CHECK_SA_LEN,
+AC_DEFUN([SFS_CHECK_SA_LEN],
 [AC_CACHE_CHECK(for sa_len in struct sockaddr, sfs_cv_sa_len,
 AC_TRY_COMPILE([
 #include <sys/types.h>
@@ -535,7 +564,7 @@ fi])
 dnl
 dnl Check for sockaddr_storage
 dnl
-AC_DEFUN(SFS_CHECK_SOCKADDR_STORAGE,
+AC_DEFUN([SFS_CHECK_SOCKADDR_STORAGE],
 [SFS_CHECK_TYPE(struct sockaddr_storage)
 AC_CACHE_CHECK(for __ss_len in sockaddr_storage, sfs_cv_ss_len_underscores,
 AC_TRY_COMPILE([
@@ -552,7 +581,7 @@ fi])
 dnl
 dnl Check something about the nfs_args field
 dnl
-AC_DEFUN(SFS_TRY_NFSARG_FIELD,
+AC_DEFUN([SFS_TRY_NFSARG_FIELD],
 [AC_TRY_COMPILE([
 #include "${srcdir}/nfsconf.h"
 ],[
@@ -562,7 +591,7 @@ $1;
 dnl
 dnl Check a particular field in nfs_args
 dnl
-AC_DEFUN(SFS_CHECK_NFSMNT_FIELD,
+AC_DEFUN([SFS_CHECK_NFSMNT_FIELD],
 [AC_CACHE_CHECK(for $1 in nfs_args structure, sfs_cv_nfsmnt_$1,
 SFS_TRY_NFSARG_FIELD(na.$1, sfs_cv_nfsmnt_$1=yes, sfs_cv_nfsmnt_$1=no))
 if test $sfs_cv_nfsmnt_$1 = yes; then
@@ -572,7 +601,7 @@ fi])
 dnl
 dnl Check if nfs_args hostname field is an array
 dnl
-AC_DEFUN(SFS_CHECK_NFSARG_HOSTNAME_ARRAY,
+AC_DEFUN([SFS_CHECK_NFSARG_HOSTNAME_ARRAY],
 [AC_CACHE_CHECK(if nfs_args hostname field is an array, sfs_cv_nfs_hostarray,
 	SFS_TRY_NFSARG_FIELD(na.hostname = 0,
 		sfs_cv_nfs_hostarray=no, sfs_cv_nfs_hostarray=yes))
@@ -583,7 +612,7 @@ fi])
 dnl
 dnl Check if addr field is a pointer or not
 dnl
-AC_DEFUN(SFS_CHECK_NFSARG_ADDR_PTR,
+AC_DEFUN([SFS_CHECK_NFSARG_ADDR_PTR],
 [AC_CHECK_HEADERS(tiuser.h)
 AC_CACHE_CHECK(if nfs_args addr field is a pointer, sfs_cv_nfsmnt_addr_ptr,
 	SFS_TRY_NFSARG_FIELD(na.addr = (void *) 0, sfs_cv_nfsmnt_addr_ptr=yes,
@@ -602,7 +631,7 @@ fi])
 dnl
 dnl Check for SVR4-like nfs_fh3 structure
 dnl
-AC_DEFUN(SFS_CHECK_FH3_SVR4,
+AC_DEFUN([SFS_CHECK_FH3_SVR4],
 [if test "$sfs_cv_nfsmnt_fhsize" != yes; then
   AC_CACHE_CHECK(for SVR4-like struct nfs_fh3, sfs_cv_fh3_svr4,
   AC_TRY_COMPILE([#include "${srcdir}/nfsconf.h"],
@@ -617,7 +646,7 @@ fi])
 dnl
 dnl Check for 2 argument unmount
 dnl
-AC_DEFUN(SFS_CHECK_UNMOUNT_FLAGS,
+AC_DEFUN([SFS_CHECK_UNMOUNT_FLAGS],
 [AC_CACHE_CHECK(for a 2 argument unmount, sfs_cv_umount_flags,
 AC_TRY_COMPILE([
 #include <sys/param.h>
@@ -639,7 +668,7 @@ fi])
 dnl
 dnl Check if we can find the nfs_args structure
 dnl
-AC_DEFUN(SFS_CHECK_NFSMNT,
+AC_DEFUN([SFS_CHECK_NFSMNT],
 [AC_CHECK_FUNCS(vfsmount unmount)
 AC_CHECK_HEADERS(nfs/nfsproto.h, [], [],
 [#include <sys/types.h>
@@ -653,12 +682,12 @@ AC_EGREP_HEADER(nfs_args, sys/mount.h,,
 	AC_EGREP_HEADER(nfs_args, nfs/nfsmount.h,
 		AC_DEFINE(NEED_NFS_NFSMOUNT_H, 1,
 			[The nfs_args structure is in <nfs/nfsmount.h]))
-       AC_EGREP_HEADER(nfs_args, nfsclient/nfsargs.h,
-               AC_DEFINE(NEED_NFSCLIENT_NFSARGS_H, 1,
-                       [The nfs_args structure is in <nfsclient/nfsargs.h>]))
 	AC_EGREP_HEADER(nfs_args, nfsclient/nfs.h,
 		AC_DEFINE(NEED_NFSCLIENT_NFS_H, 1,
 			[The nfs_args structure is in <nfsclient/nfs.h>]))
+       AC_EGREP_HEADER(nfs_args, nfsclient/nfsargs.h,
+               AC_DEFINE(NEED_NFSCLIENT_NFSARGS_H, 1,
+                       [The nfs_args structure is in <nfsclient/nfsargs.h>]))
 	AC_EGREP_HEADER(nfs_args, nfs/nfs.h,
 		AC_DEFINE(NEED_NFS_NFS_H, 1,
 			[The nfs_args structure is in <nfs/nfs.h>])
@@ -709,7 +738,7 @@ SFS_CHECK_UNMOUNT_FLAGS])
 dnl
 dnl Use -ldb only if we need it.
 dnl
-AC_DEFUN(SFS_FIND_DB,
+AC_DEFUN([SFS_FIND_DB],
 [AC_CHECK_FUNC(dbopen)
 if test $ac_cv_func_dbopen = no; then
 	AC_CHECK_LIB(db, dbopen)
@@ -721,7 +750,7 @@ fi
 dnl
 dnl Check something about the stat structure
 dnl
-AC_DEFUN(SFS_TRY_STAT_FIELD,
+AC_DEFUN([SFS_TRY_STAT_FIELD],
 [AC_TRY_COMPILE([
 #include <sys/stat.h>
 ],[
@@ -731,7 +760,7 @@ $1;
 dnl
 dnl Check for a particular field in stat
 dnl
-AC_DEFUN(SFS_CHECK_STAT_FIELD,
+AC_DEFUN([SFS_CHECK_STAT_FIELD],
 [AC_CACHE_CHECK(for $1 in stat structure, sfs_cv_stat_$1,
 SFS_TRY_STAT_FIELD(s.$1, sfs_cv_stat_$1=yes, sfs_cv_stat_$1=no))
 if test $sfs_cv_stat_$1 = yes; then
@@ -742,7 +771,7 @@ fi])
 dnl
 dnl  Check whether we can get away with large socket buffers.
 dnl
-AC_DEFUN(SFS_CHECK_SOCK_BUF,
+AC_DEFUN([SFS_CHECK_SOCK_BUF],
 [AC_CACHE_CHECK(whether socket buffers > 64k are allowed, 
  		sfs_cv_large_sock_buf, AC_TRY_RUN([
 #include <sys/types.h>
@@ -769,7 +798,7 @@ dnl  Test to see if we can bind a port with SO_REUSEADDR when
 dnl  there is a connected TCP socket using the same port number,
 dnl  but the connected socket does not have SO_REUSEADDR set.
 dnl
-AC_DEFUN(SFS_CHECK_BSD_REUSEADDR,
+AC_DEFUN([SFS_CHECK_BSD_REUSEADDR],
 [AC_CACHE_CHECK(for BSD SO_REUSEADDR semantics, sfs_cv_bsd_reuseaddr,
 [AC_RUN_IFELSE([changequote changequote([[,]])[[
 #include <stdio.h>
@@ -885,7 +914,7 @@ fi])
 dnl
 dnl Find pthreads
 dnl
-AC_DEFUN(SFS_FIND_PTHREADS,
+AC_DEFUN([SFS_FIND_PTHREADS],
 [AC_ARG_WITH(pthreads,
 --with-pthreads=DIR       Specify location of pthreads)
 ac_save_CFLAGS=$CFLAGS
@@ -923,7 +952,7 @@ LIBS="$ac_save_LIBS $sfs_cv_libpthread"])
 dnl
 dnl Find GMP
 dnl
-AC_DEFUN(SFS_GMP,
+AC_DEFUN([SFS_GMP],
 [AC_ARG_WITH(gmp,
 --with-gmp[[[=/usr/local]]]   specify path for gmp)
 AC_SUBST(GMP_DIR)
@@ -1146,7 +1175,7 @@ dnl 		    [[$1] arglist(shift($@))])])dnl
 dnl
 dnl SFS_TRY_SLEEPYCAT_VERSION(vers, dir)
 dnl
-AC_DEFUN(SFS_TRY_SLEEPYCAT_VERSION,
+AC_DEFUN([SFS_TRY_SLEEPYCAT_VERSION],
 [vers=$1
 dir=$2
 majvers=`echo $vers | sed -e 's/\..*//'`
@@ -1222,7 +1251,7 @@ dnl
 dnl   Find BekeleyDB version v1, v2, or v3...
 dnl      required can be "no" if DB is not required
 dnl
-AC_DEFUN(SFS_SLEEPYCAT,
+AC_DEFUN([SFS_SLEEPYCAT],
 [AC_ARG_WITH(db,
 --with-db[[[=/usr/local]]]    specify path for BerkeleyDB (from sleepycat.com))
 AC_SUBST(DB_DIR)
@@ -1288,7 +1317,7 @@ AM_CONDITIONAL(USE_DB, test "$USE_DB" = yes)
 dnl
 dnl Find OpenSSL
 dnl
-AC_DEFUN(SFS_OPENSSL,
+AC_DEFUN([SFS_OPENSSL],
 [AC_SUBST(OPENSSL_DIR)
 AC_ARG_WITH(openssl,
 --with-openssl[[=/usr/local/openssl]]   Find OpenSSL libraries
@@ -1319,7 +1348,7 @@ fi])
 dnl
 dnl Use dmalloc if requested
 dnl
-AC_DEFUN(SFS_DMALLOC,
+AC_DEFUN([SFS_DMALLOC],
 [
 dnl AC_ARG_WITH(small-limits,
 dnl --with-small-limits       Try to trigger memory allocation bugs,
@@ -1347,7 +1376,7 @@ AM_CONDITIONAL(DMALLOC, test "$using_dmalloc" = yes)
 dnl
 dnl Find perl
 dnl
-AC_DEFUN(SFS_PERLINFO,
+AC_DEFUN([SFS_PERLINFO],
 [AC_ARG_WITH(perl,
 --with-perl=PATH          Specify perl executable to use,
 [case "$withval" in
@@ -1388,7 +1417,7 @@ AC_SUBST(XSUBPP)
 dnl
 dnl Check for perl and for Pod::Man for generating man pages
 dnl
-AC_DEFUN(SFS_PERL_POD,
+AC_DEFUN([SFS_PERL_POD],
 [
 if test -z "$PERL" || text ! -x "$PERL"; then
 	AC_PATH_PROGS(PERL, perl5 perl)
@@ -1411,7 +1440,7 @@ dnl'
 dnl Various warning flags for gcc.  This must go at the very top,
 dnl right after AC_PROG_CC and AC_PROG_CXX.
 dnl
-AC_DEFUN(SFS_WFLAGS,
+AC_DEFUN([SFS_WFLAGS],
 [AC_SUBST(NW)
 AC_SUBST(WFLAGS)
 AC_SUBST(CXXWFLAGS)
@@ -1461,7 +1490,7 @@ dnl
 dnl SFS_CFLAGS puts the effects of SFS_WFLAGS into place.
 dnl This must be called after all tests have been run.
 dnl
-AC_DEFUN(SFS_CFLAGS,
+AC_DEFUN([SFS_CFLAGS],
 [unset CFLAGS
 unset CXXFLAGS
 CFLAGS='$(DEBUG) $(WFLAGS) $(ECFLAGS)'
@@ -1469,7 +1498,7 @@ CXXFLAGS='$(CXXDEBUG) $(CXXWFLAGS) $(ECXXFLAGS)'])
 dnl
 dnl Check for xdr_u_intNN_t, etc
 dnl
-AC_DEFUN(SFS_CHECK_XDR,
+AC_DEFUN([SFS_CHECK_XDR],
 [
 dnl AC_CACHE_CHECK([for a broken <rpc/xdr.h>], sfs_cv_xdr_broken,
 dnl AC_EGREP_HEADER(xdr_u_int32_t, [rpc/xdr.h], 
@@ -1498,7 +1527,7 @@ AC_DEFINE_UNQUOTED(xdrlong_t, $sfs_cv_xdrlong_t,
 dnl
 dnl Check for random device
 dnl
-AC_DEFUN(SFS_DEV_RANDOM,
+AC_DEFUN([SFS_DEV_RANDOM],
 [AC_CACHE_CHECK([for kernel random number generator], sfs_cv_dev_random,
 for dev in /dev/urandom /dev/srandom /dev/random /dev/srnd /dev/rnd; do
     if test -c "$dev"; then
@@ -1517,7 +1546,7 @@ fi
 dnl
 dnl Check for getgrouplist function
 dnl
-AC_DEFUN(SFS_GETGROUPLIST_TRYGID, [
+AC_DEFUN([SFS_GETGROUPLIST_TRYGID], [
 if test "$sfs_cv_grouplist_t" != gid_t; then
     AC_TRY_COMPILE([
 #include <sys/types.h>
@@ -1527,7 +1556,7 @@ int getgrouplist ([$*]);
 		    ], 0, sfs_cv_grouplist_t=gid_t)
 fi
 ])
-AC_DEFUN(SFS_GETGROUPLIST,
+AC_DEFUN([SFS_GETGROUPLIST],
 [AC_CHECK_FUNCS(getgrouplist)
 AC_CACHE_CHECK([whether getgrouplist uses int or gid_t], sfs_cv_grouplist_t,
     if test "$ac_cv_func_getgrouplist" = yes; then
@@ -1551,7 +1580,7 @@ AC_DEFINE_UNQUOTED([GROUPLIST_T], $sfs_cv_grouplist_t,
 dnl
 dnl Check if <grp.h> is needed for setgroups declaration (linux)
 dnl
-AC_DEFUN(SFS_SETGROUPS,
+AC_DEFUN([SFS_SETGROUPS],
 [AC_CACHE_CHECK([for setgroups declaration in grp.h],
 	sfs_cv_setgroups_grp_h,
 	AC_EGREP_HEADER(setgroups, grp.h,
@@ -1563,7 +1592,7 @@ fi])
 dnl
 dnl Check if authunix_create is broken and takes a gid_t *
 dnl
-AC_DEFUN(SFS_AUTHUNIX_GROUP_T,
+AC_DEFUN([SFS_AUTHUNIX_GROUP_T],
 [AC_CACHE_CHECK([what last authunix_create arg points to],
 	sfs_cv_authunix_group_t,
 AC_EGREP_HEADER([(authunix|authsys)_create.*(uid_t|gid_t)], rpc/rpc.h,
@@ -1575,7 +1604,7 @@ fi])
 dnl
 dnl Check the type of the x_ops field in XDR
 dnl
-AC_DEFUN(SFS_XDR_OPS_T,
+AC_DEFUN([SFS_XDR_OPS_T],
 [AC_CACHE_CHECK([type of XDR::x_ops], sfs_cv_xdr_ops_t,
 AC_EGREP_HEADER([xdr_ops *\* *x_ops;], rpc/xdr.h,
 	sfs_cv_xdr_ops_t=xdr_ops, sfs_cv_xdr_ops_t=XDR::xdr_ops))
@@ -1584,14 +1613,14 @@ AC_DEFINE_UNQUOTED(xdr_ops_t, $sfs_cv_xdr_ops_t,
 dnl
 dnl Set nopaging
 dnl
-AC_DEFUN(SFS_NOPAGING,
+AC_DEFUN([SFS_NOPAGING],
 [AC_SUBST(NOPAGING)
 if test "$enable_static" = yes -a -z "${NOPAGING+set}"; then
     case "$host_os" in
 	openbsd3.[[3456789]]*|openbsd[[456789]]*)
 	    #MALLOCK=		# mallock.o may panic the OpenBSD kernel
 # ... unfortunately OMAGIC files don't work on OpenBSD
-	    NOPAGING="-all-static"
+	    #NOPAGING="-all-static"
 	;;
 	openbsd*)
 	    test "$ac_cv_prog_gcc" = yes && NOPAGING="-Wl,-Bstatic,-N"
@@ -1599,7 +1628,7 @@ if test "$enable_static" = yes -a -z "${NOPAGING+set}"; then
 	;;
 	freebsd*)
 	    test yes = "$ac_cv_prog_gcc" -a yes != "$ac_cv_func_mlockall" \
-		 && NOPAGING="-all-static -Wl,-N"
+		 && NOPAGING="-all-static"
 	;;
     esac
 fi])
@@ -1607,7 +1636,7 @@ dnl
 dnl Find installed SFS libraries
 dnl This is not for SFS, but for other packages that use SFS.
 dnl
-AC_DEFUN(SFS_SFS,
+AC_DEFUN([SFS_SFS],
 [AC_ARG_WITH(sfs,
 --with-sfs[[=PATH]]         specify location of SFS libraries)
 if test "$with_sfs" = yes -o "$with_sfs" = ""; then
@@ -1690,14 +1719,14 @@ SFS_GMP
 SFS_DMALLOC
 
 LDEPS='$(LIBSFSMISC) $(LIBSVC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC)'
-LDADD="$LDEPS "'$(LIBGMP)'
+LDADD="$LDEPS "'$(LIBGMP)'' $(LIBPY)'
 AC_SUBST(LDEPS)
 AC_SUBST(LDADD)
 ])
 dnl
 dnl Test user ID and group ID required for SFS
 dnl
-AC_DEFUN(SFS_USER,
+AC_DEFUN([SFS_USER],
 [AC_SUBST(sfsuser)
 AC_SUBST(sfsgroup)
 sfsuser="$with_sfsuser"
@@ -1765,11 +1794,80 @@ changequote([,])],
 fi
 ])
 
+dnl
+dnl Check to find Python Headers
+dnl
+dnl SFS_PYTHON(vers)
+dnl
+AC_DEFUN([SFS_PYTHON],
+[
+AC_ARG_WITH(python,
+--with-python[=prog]        specify a Python interpreter )
+if test "${with_python+set}"
+then
+	ac_save_CFLAGS=$CFLAGS
+	ac_save_LIBS=$LIBS
+	ac_save_CC=$CC
+	ac_save_CXX=$CXX
+
+	AC_CACHE_CHECK(for python memory allocation, sfs_cv_pymalloc,
+	[
+	if test "$with_python" = yes; then
+		py=python
+	else
+		py=$with_python
+	fi
+
+	pyfull=`which $py`
+	if test $? -ne 0; then
+		AC_MSG_ERROR(Cannot find path for Python interpreter)
+	fi
+	cfg="${srcdir}/py/configure.py"
+
+	inc=-I`$pyfull $cfg -I`
+	lib=`$pyfull $cfg -l`
+	CC=`$pyfull $cfg -c`
+	CXX=`$pyfull $cfg -x`
+
+
+	CFLAGS="${ac_save_CFLAGS} $inc"
+	LIBS="$lib ${ac_save_LIBS}"
+
+	sfs_cv_pymalloc="no"
+
+	AC_TRY_LINK([#include <Python.h>
+                    ],
+                    [(void )PyMem_Malloc (0); 
+		    PyMem_Free ((void *)0); 
+		    PyMem_Realloc ((void *)0, 0);
+                    ], sfs_cv_pymalloc="yes" )
+	])
+	if test "$sfs_cv_pymalloc" = "yes"
+	then
+		CPPFLAGS="$CPPFLAGS $inc"
+		LIBPY="$lib"
+		AC_DEFINE(PYMALLOC, 1, Use Python memory alloc funcs)
+
+		dnl clear out configure's cache
+		unset ac_cv_prog_CC
+		unset ac_cv_prog_ac_ct_CC
+		AC_PROG_CC
+		AC_PROG_CPP
+		AC_PROG_CXX
+	else
+		CC=$ac_save_CC
+		CXX=$ac_save_CXX
+	fi
+	AC_SUBST(LIBPY)
+	LIBS=$ac_save_LIBS
+	CFLAGS=$ac_save_CFLAGS
+fi
+])
 dnl 
 dnl SFS_TAG -- allows different builds of SFS to be installed on
 dnl the same machine (i.e., for optimzation, debug, etc)
 dnl
-AC_DEFUN(SFS_TAG,
+AC_DEFUN([SFS_TAG],
 [AC_ARG_WITH(tag,
 --with-tag=TAG	    	Specify a custom SFS build tag)
 AC_ARG_WITH(mode,
@@ -1820,6 +1918,24 @@ case $with_mode in
 		CXXDEBUG='-g -pg -O2'
 		;;
 
+	"pydbg" )
+		sfstag=$with_mode
+		DEBUG=-g
+		CXXDEBUG=-g
+		with_python=yes
+		enable_shared=yes
+		with_dmalloc=no
+		SFS_PYTHON
+		;;
+
+	"python")
+		sfstag=$with_mode
+		with_python=yes
+		enable_shared=yes
+		with_dmalloc=no
+		SFS_PYTHON
+		;;
+
 	"optmz" | "lite" )
 		dnl
 		dnl no-op, should go in the regular sfslite directory
@@ -1846,7 +1962,7 @@ dnl SFS_MMAP
 dnl
 dnl  check MMAP options 
 dnl
-AC_DEFUN(SFS_MMAP,
+AC_DEFUN([SFS_MMAP],
 [AC_CACHE_CHECK(for MAP_NOSYNC option, sfs_map_nosync_opt,
 [AC_TRY_COMPILE([
 #include <sys/types.h>
@@ -1866,7 +1982,7 @@ dnl AC_PROG_INSTALL_C
 dnl
 dnl  checks for install -C; uses it instead of install -c
 dnl
-AC_DEFUN(AC_PROG_INSTALL_C,
+AC_DEFUN([AC_PROG_INSTALL_C],
 [
 AC_PROG_INSTALL
 AC_CACHE_CHECK(for install -C, ac_cv_path_install_c,

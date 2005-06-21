@@ -127,17 +127,22 @@ public:
     bigint &operator= (const mpdelayed<A, B, C> &d)
     { d.getres (this); return *this; }
 
-#if SIZEOF_LONG < 8
+#ifdef U_INT64_T_IS_LONG_LONG
+# if SIZEOF_LONG < 8
   bigint (int64_t si) { mpz_init (this); mpz_set_s64 (this, si); }
   bigint (u_int64_t ui) { mpz_init (this); mpz_set_u64 (this, ui); }
+# else /* SIZEOF_LONG >= 8 */
+  bigint (int64_t si) { mpz_init_set_si (this, (long) si); }
+  bigint (u_int64_t ui) { mpz_init_set_ui (this, (u_long) ui); }
+# endif /* SIZEOF_LONG >= 8 */
   bigint &operator= (int64_t si) { mpz_set_s64 (this, si); return *this; }
   bigint &operator= (u_int64_t ui) { mpz_set_u64 (this, ui); return *this; }
   int64_t gets64 () const { return mpz_get_s64 (this); }
   u_int64_t getu64 () const { return mpz_get_u64 (this); }
-#else /* SIZEOF_LONG >= 8 */
+#else /* !U_INT64_T_IS_LONG_LONG */
   int64_t gets64 () const { return mpz_get_si (this); }
   u_int64_t getu64 () const { return mpz_get_ui (this); }
-#endif /* SIZEOF_LONG >= 8 */
+#endif /* !U_INT64_T_IS_LONG_LONG */
 
   void swap (MP_INT *a) {
     MP_INT t = *a;

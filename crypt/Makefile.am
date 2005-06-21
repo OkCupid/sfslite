@@ -1,7 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 # $Id$
 
-LDADD = $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC) $(LIBGMP)
+LDADD = $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC) $(LIBGMP) $(LIBPY)
 
 sfslib_LTLIBRARIES = libsfscrypt.la
 LIBSFSCRYPT = libsfscrypt.la

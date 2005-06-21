@@ -37,17 +37,25 @@ protected:
   const int nbits;
 
 public:
-  rsa_pub (const bigint &ee, const bigint &nn)
-    : n (nn), e (ee), nbits (max ((int) n.nbits () - 5, 0)) 
+  rsa_pub (const bigint &nn)
+    : n (nn), e (3), nbits (max ((int) n.nbits () - 1, 0)) 
   {
-    warn << "e " << e.getstr () << "\n";
-    warn << "n " << n.getstr () << "\n";
+    // warn << "e " << e.getstr () << "\n";
+    // warn << "n " << n.getstr () << "\n";
   }
   const bigint &modulus () const { return n; }
   const bigint &exponent () const { return e; }
 
-  bigint encrypt (const bigint &m) const {
+  bigint encrypt (const str &msg) const {
+    bigint m = pre_encrypt (msg, nbits);
     if (!m)
+      return 0;
+    m = encrypt (m);
+    return m;
+  }
+
+  bigint encrypt (const bigint &m) const {
+    if (!m || static_cast<int>(m.nbits ()) > nbits)
       return 0;
     bigint c = powm (m, e, n);
     return c;
@@ -70,15 +78,18 @@ public:
   rsa_priv (const bigint &, const bigint &);
   static ptr<rsa_priv> make (const bigint &n1, const bigint &n2);
 
-  bigint decrypt (const bigint &c, bool crt = true) const {
+  str decrypt (const bigint &msg, size_t msglen) const {
+    bigint m = decrypt (msg);
+    return post_decrypt (m, msglen, nbits);
+  }
+
+  bigint decrypt (const bigint &c) const {
     bigint m;
-    if (crt) {
-      bigint mp = powm (c, dp, p);
-      bigint mq = powm (c, dq, q);
-      bigint v = mod ((mq - mp) * pinvq, q);
-      m = mp + p*v;
-    } else
-      m = powm (c, d, n); 
+    bigint mp = powm (c, dp, p);
+    bigint mq = powm (c, dq, q);
+    bigint v = mod ((mq - mp) * pinvq, q);
+    m = mp + p*v;
+    // m = powm (c, d, n); 
     return m;
   }
 };

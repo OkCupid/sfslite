@@ -67,7 +67,7 @@ setprogname (char *argv0)
     const char *p;
     if (!(p = strrchr (dmalloc_logpath, '/')) || !(p = strrchr (p, '.')))
       p = dmalloc_logpath + strlen (dmalloc_logpath);
-    logname = strbuf ("%.*s.%s", p - dmalloc_logpath, dmalloc_logpath,
+    logname = strbuf ("%.*s.%s", int (p - dmalloc_logpath), dmalloc_logpath,
 		      progname.cstr ());
     static char *lp;
     if (lp)

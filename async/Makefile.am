@@ -20,15 +20,14 @@ aerr.C aio.C aios.C arena.C armor.C bbuddy.C cbuf.C convertint.C	\
 core.C daemonize.C dns.C dnsparse.C err.C fdwait.C ident.C ifchg.C	\
 ihash.C itree.C lockfile.C malloc.C msb.C myaddrs.C myname.C		\
 parseopt.C pipe2str.C refcnt.C rxx.C sigio.C socket.C spawn.C str.C	\
-str2file.C straux.C suio++.C suio_vuprintf.C tcpconnect.C \
-litetime.C
+str2file.C straux.C suio++.C suio_vuprintf.C tcpconnect.C litetime.C
 
 aiod_SOURCES = aiod.C
 if STATIC
-aiod_LDADD = $(LIBASYNC)
+aiod_LDADD = $(LIBASYNC) $(LIBPY)
 aiod_DEPENDENCIES = $(LIBASYNC)
 else
-aiod_LDADD = $(LIBASYNC)
+aiod_LDADD = $(LIBASYNC) $(LIBPY)
 aiod_DEPENDENCIES = 
 endif
 
@@ -37,8 +36,7 @@ aiod.h aiod_prot.h aios.h amisc.h arena.h array.h async.h backoff.h	\
 bbuddy.h bitvec.h callback.h cbuf.h dns.h dnsimpl.h dnsparse.h err.h	\
 fdlim.h ihash.h init.h itree.h keyfunc.h list.h msb.h opnew.h		\
 parseopt.h pcre.h qhash.h refcnt.h rxx.h serial.h stllike.h str.h	\
-suio++.h sysconf.h union.h vatmpl.h vec.h rwfd.h  \
-litetime.h env.mk
+suio++.h sysconf.h union.h vatmpl.h vec.h rwfd.h litetime.h
 
 #
 # begin sfslite changes
@@ -85,8 +83,8 @@ env.mk: Makefile
 	echo "CFLAGS = $(CFLAGS)" >> env.mk~
 	echo "CXXFLAGS = $(CXXFLAGS)" >> env.mk~
 	echo "LIBS = $(LIBS)" >> env.mk~
-	echo "sfstag = $(sfstag)" >> env.mk~
 	mv -f env.mk~ env.mk
+
 
 EXTRA_DIST = .cvsignore env.mk
 CLEANFILES = core *.core *~ *.rpo dftables chartables.c stamp-async-repo

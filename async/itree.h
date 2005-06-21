@@ -87,7 +87,7 @@ protected:
   itree_core (const itree_core &);
   itree_core &operator = (const itree_core &);
 
-#define eos ((int) &(((T *) 0)->*field).p)
+#define eos ((ptrdiff_t) &(((T *) 0)->*field).p)
 #define cmpfn scmp, (void *) this
 
 public:

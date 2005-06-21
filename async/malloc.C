@@ -2,6 +2,13 @@
 
 #include "amisc.h"
 
+#ifdef PYMALLOC
+# ifdef _POSIX_C_SOURCE
+#  undef _POSIX_C_SOURCE
+# endif
+# include <Python.h>
+#endif /* PYMALLOC */
+
 #ifdef DMALLOC
 bool dmalloc_init::initialized;
 void
@@ -103,7 +110,11 @@ void *
 xmalloc (size_t size)
 {
   void *p;
+#ifdef PYMALLOC
+  if (!(p = PyMem_Malloc (size)))
+#else /* ! PYMALLOC */
   if (!(p = malloc (size)))
+#endif /* PYMALLOC */
     default_xmalloc_handler (size);
   return p;
 }
@@ -112,7 +123,11 @@ void *
 xrealloc (void *o, size_t size)
 {
   void *p;
+#ifdef PYMALLOC
+  if (!(p = PyMem_Realloc (o, size)))
+#else /* ! PYMALLOC */
   if (!(p = realloc (o, size)))
+#endif /* PYMALLOC */
     default_xmalloc_handler (size);
   return p;
 }
@@ -144,7 +159,11 @@ operator new (size_t size, nothrow_t) throw ()
 {
   if (!size)
     size = 1;
+#if PYMALLOC
+  return PyMem_Malloc (size);
+#else /* !PYMALLOC */
   return malloc (size);
+#endif
 }
 
 #ifndef delete_throw
@@ -172,7 +191,11 @@ operator new[] (size_t size, nothrow_t) throw ()
 {
   if (!size)
     size = 1;
+#if PYMALLOC
+  return PyMem_Malloc (size);
+#else /* !PYMALLOC */
   return malloc (size);
+#endif
 }
 
 void

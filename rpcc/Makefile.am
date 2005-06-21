@@ -1,9 +1,9 @@
 ## Process this file with automake to produce Makefile.in
 # $Id$
 
-LDADD = $(LIBASYNC)
+LDADD = $(LIBASYNC) $(LIBPY)
 
-sfsbin_PROGRAMS = rpcc
+bin_PROGRAMS = rpcc
 
 noinst_HEADERS = rpcc.h parse.h
 
@@ -17,7 +17,7 @@ rpcc_LDADD = $(LDADD)
 rpcc_DEPENDENCIES =
 endif
 
-YFLAGS = -d
+YYFLAGS = -d
 
 parse.h:
 	@:
@@ -28,7 +28,7 @@ scan.cc: scan.ll
 
 parse.cc: parse.yy
 	rm -f y.tab.c
-	$(YACC) $(AM_YFLAGS) $(YFLAGS) $(srcdir)/parse.yy
+	$(YACC) $(AM_YFLAGS) $(YYFLAGS) $(srcdir)/parse.yy
 	case "$(YACC)" in					\
 	*bison*)						\
 		sed -e 's/union yyalloc/struct yyalloc/g'	\
@@ -54,7 +54,7 @@ parse.o: parse.cc
 #	$(CXXCOMPILE) $(CXXNOERR) -D'__attribute__(x)=' -c $(srcdir)/parse.cc
 	$(CXXCOMPILE) $(CXXNOERR) -c $(srcdir)/parse.cc
 
-scan.o: parse.o scan.cc 
+scan.o: parse.o scan.cc parse.h
 	$(CXXCOMPILE) $(CXXNOERR) -c $(srcdir)/scan.cc
 
 .PHONY: parseclean

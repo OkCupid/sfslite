@@ -4,7 +4,9 @@ dnl Process this file with autoconf to produce a configure script.
 dnl
 
 AC_INIT(acinclude.m4)
+SFS_PYTHON
 AM_INIT_AUTOMAKE(sfslite,0.8pre)
+dnl AC_INIT(sfs,0.7.2)
 dnl AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER(config.h)
 
@@ -17,11 +19,14 @@ dnl End SFS lite change
 dnl
 
 AC_SUBST(LDEPS)
+
+AC_SUBST(LDEPS)
 AC_SUBST(LDADD)
 
 AC_SUBST(RPCC)
 
 AC_CANONICAL_HOST
+
 
 dnl Checks for programs.
 AC_PROG_CC
@@ -120,6 +125,7 @@ AC_TYPE_SIZE_T
 AC_C_BIGENDIAN
 SFS_TIMESPEC
 SFS_PASSWD_FIELD(pw_expire)
+SFS_CHECK_U_INT64
 SFS_CHECK_TYPE(ssize_t)
 SFS_CHECK_TYPE(int32_t)
 SFS_CHECK_TYPE(u_int32_t)
@@ -140,8 +146,6 @@ SFS_CHECK_TYPE(rlim_t,
 #ifdef HAVE_SYS_RUSAGE_H
 #include <sys/rusage.h>
 #endif /* !HAVE_SYS_RUSAGE_H */])
-AC_CHECK_SIZEOF(long, 4)
-AC_CHECK_SIZEOF(long long, 0)
 SFS_CHECK_OFF_T_64
 SFS_SETGROUPS
 SFS_AUTHUNIX_GROUP_T
@@ -253,6 +257,8 @@ LIBSFSRODB='$(top_builddir)/sfsrodb/libsfsrodb.la'
 AC_SUBST(LIBSFSMISC)
 LIBSFSMISC='$(top_builddir)/sfsmisc/libsfsmisc.la'
 LDADD='$(LIBSFSMISC) $(LIBSVC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC) $(LIBGMP)'
+LDADD="$LDADD "'$(LIBPY)'
+
 if test "$enable_shared" = yes; then
     LDEPS=
 else

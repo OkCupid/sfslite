@@ -25,6 +25,7 @@
 #ifndef _ASYNC_SYSCONF_H_
 #define _ASYNC_SYSCONF_H_ 1
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -130,13 +131,17 @@ int fchdir (int);
 #undef ip_opts
 #include <arpa/inet.h>
 
+#if defined(PYMALLOC) && defined(DMALLOC)
+# undef DMALLOC
+#endif /* PYMALLOC && DMALLOC */
+
 #if STDC_HEADERS
 # include <string.h>
 # ifndef bzero
 #  define bzero(a,b)   memset((a), 0, (b))
 # endif /* !bzero */
 #else /* !STDC_HEADERS */
-# ifndef DMALLOC
+# ifdef DMALLOC
 #  ifndef HAVE_STRCHR
 #   define strchr index
 #   define strrchr rindex
@@ -154,8 +159,9 @@ char *strrchr ();
 #   define memcpy(d, s, n) bcopy ((s), (d), (n))
 #   define memmove(d, s, n) bcopy ((s), (d), (n))
 #  endif /* !HAVE_MEMCPY */
-# endif /* !DMALLOC */
+# endif /* !DMALLOC || PYMALLOC */
 #endif
+
 
 #if defined (__linux__) && !defined (__GNUC__)
 /* GNU libc has some really really broken header files. */
@@ -260,17 +266,21 @@ typedef unsigned long long u_int64_t;
 
 #if SIZEOF_LONG == 8
 # define INT64(n) n##L
-# define U64F "l"
 #elif SIZEOF_LONG_LONG == 8
 # define INT64(n) n##LL
+#else /* Can't find 64-bit type */
+# error "Cannot find any 64-bit data types"
+#endif /* !SIZEOF_LONG_LONG */
+
+#ifdef U_INT64_T_IS_LONG_LONG
 # if defined (__sun__) && defined (__svr4__)
 #  define U64F "ll"
 # else /* everyone else */
 #  define U64F "q"
 # endif /* everyone else */
-#else /* Can't find 64-bit type */
-# error "Cannot find any 64-bit data types"
-#endif /* !SIZEOF_LONG_LONG */
+#else /* !U_INT64_T_IS_LONG_LONG */
+# define U64F "l"
+#endif /* !U_INT64_T_IS_LONG_LONG */
 
 #ifdef WORDS_BIGENDIAN
 #define htonq(n) n
