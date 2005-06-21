@@ -9,6 +9,7 @@ When Syncing from SFS to SFSlite: A Checklist
     - meaning, we need new rules for sfsincludedir, sfslibdir, etc, that
       contain mention of the SFS tag.
     - also make sure the m4 macro SFS_TAG is being called from here.
+    - dnl the SFS_CHECK_NFSMNT macro
  - Makefile.am
     - David usually doesn't update this; Needs a bunch of syncs.
  - async/Makefile.am
