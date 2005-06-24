@@ -159,7 +159,7 @@ char *strrchr ();
 #   define memcpy(d, s, n) bcopy ((s), (d), (n))
 #   define memmove(d, s, n) bcopy ((s), (d), (n))
 #  endif /* !HAVE_MEMCPY */
-# endif /* !DMALLOC || PYMALLOC */
+# endif /* !DMALLOC */
 #endif
 
 
@@ -533,7 +533,12 @@ extern int stktrace_record;
 
 void *xmalloc (size_t);
 void *xrealloc (void *, size_t);
-#define xfree free
+#ifdef PYMALLOC
+#include <Python.h>
+# define xfree PyMem_Free
+#else
+# define xfree free
+#endif
 char *xstrdup (const char *s);
 #define txmalloc(size) xmalloc (size)
 

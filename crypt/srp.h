@@ -41,8 +41,6 @@ protected:
   bigint B;
   srp_hash M;
   srp_hash H;
-  static bigint k1;
-  static bigint k3;
   bigint *k;
 
   void setparam (const bigint &NN, const bigint &gg) { N = NN; g = gg; }
@@ -50,13 +48,6 @@ protected:
     { if (checkparam (N, g, iter)) return true; N = g = 0; return false; }
   bool setS (const bigint &S);
 
-  struct paramcache {
-    bigint N;
-    u_int iter;
-    paramcache () : iter (0) {}
-  };
-  enum { cachesize = 2 };
-  static paramcache cache[cachesize];
   static int lastpos;
 
 public:
@@ -70,6 +61,16 @@ public:
   static bool checkparam (const bigint &N, const bigint &g, u_int iter = 32);
   static bool seedparam (const bigint &N, const bigint &g, u_int iter = 1);
   static void genparam (size_t nbits, bigint *Np, bigint *gp);
+
+  static bigint *k1;
+  static bigint *k3;
+  struct paramcache {
+    bigint N;
+    u_int iter;
+    paramcache () : iter (0) {}
+  };
+  enum { cachesize = 2 };
+  static paramcache *cache;
 };
 
 class srp_client : public srp_base {

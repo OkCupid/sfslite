@@ -37,13 +37,16 @@ size (size_t n)
 static void *
 scrub_alloc (size_t n)
 {
-  return xmalloc (size (n));
+  void *ret = xmalloc (size (n));
+  warn ("alloc %d bytes: %p\n", n, ret);
+  return ret;
 }
 
 static void
 scrub_free (void *p, size_t n)
 {
   bzero (p, n);
+  warn ("free %d bytes: %p\n", n, p);
   xfree (p);
 }
 
@@ -56,6 +59,7 @@ scrub_realloc (void *p, size_t o, size_t n)
   if (n <= o2) {
     if (n < o)
       bzero ((char *) p + n, o - n);
+    warn ("realloc (%p,%d,%d) -> %p\n", p, o, n, p);
     return p;
   }
 
@@ -63,6 +67,7 @@ scrub_realloc (void *p, size_t o, size_t n)
   memcpy (p2, p, o);
   bzero (p, o);
   xfree (p);
+  warn ("realloc (%p,%d,%d) -> %p\n", p, o, n, p2);
   return p2;
 }
 
