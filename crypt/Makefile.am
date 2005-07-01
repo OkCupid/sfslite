@@ -38,13 +38,8 @@ crypt_prot.o crypt_prot.lo: crypt_prot.h
 noinst_PROGRAMS = tst timing
 tst_SOURCES = tst.C
 timing_SOURCES =  timing.C
-if STATIC
 tst_LDADD = $(LDADD)
 tst_DEPENDENCIES = $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC)
-else
-tst_LDADD = $(LDADD)
-tst_DEPENDENCIES = 
-endif
 
 if REPO
 sfscrypt_repo_OBJECTS = $(libsfscrypt_la_OBJECTS) \

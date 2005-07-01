@@ -23,13 +23,8 @@ parseopt.C pipe2str.C refcnt.C rxx.C sigio.C socket.C spawn.C str.C	\
 str2file.C straux.C suio++.C suio_vuprintf.C tcpconnect.C litetime.C
 
 aiod_SOURCES = aiod.C
-if STATIC
 aiod_LDADD = $(LIBASYNC) $(LIBPY)
 aiod_DEPENDENCIES = $(LIBASYNC)
-else
-aiod_LDADD = $(LIBASYNC) $(LIBPY)
-aiod_DEPENDENCIES = 
-endif
 
 sfsinclude_HEADERS = \
 aiod.h aiod_prot.h aios.h amisc.h arena.h array.h async.h backoff.h	\
