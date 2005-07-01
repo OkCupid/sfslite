@@ -29,6 +29,9 @@
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/mount.h>
+#if HAVE_NFS_NFSPROTO_H
+# include <nfs/nfsproto.h>
+#endif /* HAVE_NFS_NFSPROTO_H */
 #if NEED_NFS_NFS_H
 # include <nfs/nfs.h>
 #endif /* NEED_NFS_NFS_H */
