@@ -106,6 +106,7 @@ public:
   void deleteall_correct ()
   {
     _deleteall_correct (root ());
+    clear ();
   }
 
   void deleteall () {
