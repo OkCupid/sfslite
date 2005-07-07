@@ -90,9 +90,24 @@ protected:
 #define eos ((ptrdiff_t) &(((T *) 0)->*field).p)
 #define cmpfn scmp, (void *) this
 
+  void _deleteall_correct (T *n)
+  {
+    if (n) {
+      _deleteall_correct (left (n));
+      _deleteall_correct (right (n));
+      delete n;
+    }
+  }
+
 public:
   itree_core () { clear (); }
   itree_core (const C &c) : cmp (c) { clear (); }
+
+  void deleteall_correct ()
+  {
+    _deleteall_correct (root ());
+  }
+
   void deleteall () {
     T *n, *nn;
     for (n = first (); n; n = nn) {
