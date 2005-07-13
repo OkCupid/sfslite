@@ -39,6 +39,7 @@ void err_reset ();
 void _err_output_sync (suio *, int);
 
 void setprogname (char *argv0);
+void setprogpid (int p);
 
 /* Old-style C functions for compatibility */
 extern "C" {

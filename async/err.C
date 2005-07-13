@@ -31,6 +31,7 @@
 #undef panic
 
 bssstr progname;
+bssstr progpid;
 str progdir;
 void (*fatalhook) ();
 
@@ -79,6 +80,13 @@ setprogname (char *argv0)
 }
 
 void
+setprogpid (int p)
+{
+  strbuf b ("%d", p);
+  progpid = b;
+}
+
+void
 err_reset ()
 {
   if (_err_reset_hook)
@@ -124,7 +132,10 @@ warnobj::warnobj (int f)
   if (flags & timeflag)
     cat (timestring ()).cat (" ");
   if (!(flags & xflag) && progname)
-    cat (progname).cat (": ");
+    if (progpid)
+      cat (progname).cat ("[").cat (progpid).cat ("]: ");
+    else
+      cat (progname).cat (": ");
   if (flags & panicflag)
     cat ("PANIC: ");
   else if (flags & fatalflag)
