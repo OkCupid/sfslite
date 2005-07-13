@@ -1827,6 +1827,11 @@ then
 	inc=-I`$pyfull $cfg -I`
 	lib=`$pyfull $cfg -l`
 	CC=`$pyfull $cfg -c`
+
+	dnl
+	dnl Python doesn't use C++ so it's not useful to take its
+	dnl C++ configuration; unless we set it explicitly, that is!
+	dnl
 	CXX=`$pyfull $cfg -x`
 
 

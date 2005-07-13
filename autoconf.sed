@@ -59,6 +59,7 @@ $a\
 / STDC_HEADERS/b pdefine
 / TIME_WITH_SYS_TIME/b pdefine
 / WORDS_BIGENDIAN/b pdefine
+/ PYMALLOC/b pdefine
 
 :skip
 d
