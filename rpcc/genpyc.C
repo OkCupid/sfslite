@@ -1219,6 +1219,7 @@ dumpprint (const rpc_sym *s)
     break;
   case rpc_sym::UNION:
     print_union (s->sunion.addr ());
+    print_w_struct (s->sunion.addr ()->id);
     break;
   case rpc_sym::ENUM:
     print_enum (s->senum.addr ());
@@ -1328,7 +1329,7 @@ static void
 dumpstruct_hdr (const rpc_sym *s)
 {
   const rpc_struct *rs = s->sstruct.addr ();
-  str ct = pyc_type (rs->id);
+  str wt = pyw_type (rs->id);
 
   dump_py_struct (rs);
   dump_type_object_decl (rs->id);
@@ -1339,6 +1340,8 @@ dumpstruct_hdr (const rpc_sym *s)
 
   dump_rpc_traverse (rs);
   dump_w_rpc_traverse (rs->id);
+
+  dump_rpc_print_decl (wt);
 
   // moved to header for time being
   dump_w_class_init_func (pyw_type (rs->id), py_type_obj (rs->id));
@@ -1513,7 +1516,8 @@ static void
 dumpunion_hdr (const rpc_sym *s)
 {
   const rpc_union *u = s->sunion.addr ();
-  str ct = pyc_type (u->id);
+  str wt = pyw_type (u->id);
+
   dump_c_union (s);
   dump_type_object_decl (u->id);
   dump_w_class (u->id);
@@ -1523,6 +1527,8 @@ dumpunion_hdr (const rpc_sym *s)
 
   // moved to hdr for time being
   dump_union_init_and_clear (u);
+
+  dump_rpc_print_decl (wt);
 }
 
 
@@ -1669,9 +1675,10 @@ dump_enum_type_object (const str &id)
 {
   const str ct = pyc_type (id);
   const str pt = id;
-  aout << "PY_CLASS_DEF (" << ct << ", \"" << dotted_m << "." << pt 
-       <<                "\", 1, dealloc, -1, \"" << pt << " object\",\n"
-       << "              methods, members, 0, init, new, 0);\n"
+  aout << "PY_CLASS_DEF2 (" << ct << ", \"" << dotted_m << "." << pt << "\",\n"
+       << "               1, dealloc, -1, \"" << pt << " object\",\n"
+       << "               methods, members, 0, init, new, 0,\n"
+       << "               str, 0, print);\n"
        << "\n";
 }
 
@@ -1709,7 +1716,11 @@ dumpenum_hdr (const rpc_sym *s)
   dump_w_class (rs->id);
   dump_print_decls (rs->id);
   dump_type2str_decl (rs->id);
+
+  // allow for pretty-printing when cross-linking XDR modules
   dump_rpc_print_decl (rs->id);
+  dump_rpc_print_decl (wt);
+
   dump_enum_in_range_decl (rs);
   dump_w_enum_convert (rs->id);
   dump_w_rpc_traverse (rs->id);
