@@ -187,6 +187,7 @@ void gencfile (str);
 void genpython (str);
 void genpyc (str);
 void genpyh (str);
+void genpyso (str);
 
 void pswitch (str prefix, const rpc_union *rs, str swarg,
 	      void (*pt) (str, const rpc_union *rs, const rpc_utag *),
