@@ -1848,6 +1848,18 @@ collect_procnos (const rpc_program *rs)
 }
 
 static void
+dumpprog_hdr (const rpc_sym *s)
+{
+  aout << "\n";
+  const rpc_program *rs = s->sprogram.addr ();
+  for (const rpc_vers *rv = rs->vers.base (); rv < rs->vers.lim (); rv++) {
+    str type = py_rpcprog_type (rs, rv);
+    aout << "PY_CLASS_DECL (" << type << ");\n";
+  }
+  aout << "\n";
+}
+
+static void
 dumpprog (const rpc_sym *s)
 {
   const rpc_program *rs = s->sprogram.addr ();
@@ -1922,6 +1934,7 @@ dumphdr (const rpc_sym *s)
     dumptypedef_hdr (s);
     break;
   case rpc_sym::PROGRAM:
+    dumpprog_hdr (s);
     break;
   case rpc_sym::LITERAL:
     aout << *s->sliteral << "\n";
@@ -1934,7 +1947,6 @@ dumphdr (const rpc_sym *s)
 static void
 dumpsym (const rpc_sym *s, pass_num_t pass)
 {
-  static rxx define_rxx ("#\\s*define\\s*([a-zA-Z0-9_]+)\\s*([a-zA-Z0-9_]+)");
   switch (s->type) {
   case rpc_sym::STRUCT:
     if (pass == PASS_ONE)
@@ -1971,19 +1983,14 @@ makemodulename (str fname)
 {
   strbuf guard;
   const char *p;
+  static rxx x ("(.*?)_(so|lib).C");
 
   if ((p = strrchr (fname, '/')))
     p++;
   else p = fname;
 
-  while (char c = *p++) {
-    if (isalnum (c) || c == '_')
-      guard << c;
-    else
-      break;
-  }
-
-  return guard;
+  assert (x.match (p));
+  return x[1];
 }
 
 static vec<str>
@@ -2015,24 +2022,8 @@ get_c_classes (const rpc_sym *s)
 }
 
 static void
-dump_init_func (const symlist_t &lst)
+add_baseclass_to_rpc_programs (const symlist_t &lst)
 {
-  aout << "INITFN(static_init_module_" << module << ");\n"
-       << "static void\n"
-       << "static_init_module_" << module << " ()\n"
-       << "{\n"
-       << "  PyObject *module;\n"
-       << "\n"
-       << "  if (!import_sfs_exceptions (&AsyncXDR_Exception, NULL,\n"
-       << "                              &AsyncUnion_Exception))\n"
-       << "    return;\n"
-       << "\n"
-       << "  py_rpc_program = import_type (\"sfs.arpc\", \"rpc_program\");\n"
-       << "  if (!py_rpc_program)\n"
-       << "    return;\n"
-       << "\n";
-    
-  // now add the subclasses to therpc_program types
   aout << "  // after import, we can fix up the rpc_program types..\n";
   for (const rpc_sym *s = lst.base (); s < lst.lim () ; s++) {
     if (s->type != rpc_sym::PROGRAM) 
@@ -2044,7 +2035,11 @@ dump_init_func (const symlist_t &lst)
       aout <<  "  " << py_type_obj (cls) << ".tp_base = py_rpc_program;\n";
     }
   }
+}
 
+static void
+init_python_type_structures (const symlist_t &lst)
+{
   aout << "\n"
        << "  if (";
   bool first = true;
@@ -2066,6 +2061,35 @@ dump_init_func (const symlist_t &lst)
        << "    return;\n"
        << "\n"
     ;
+}
+
+static void
+dump_init_func (const symlist_t &lst)
+{
+  strbuf b ("static_init_module_");
+  b << module << "()";
+  str func = b;
+
+  aout << "INITFN(static_init_module_" << module << ");\n"
+       << "static void\n"
+       << func << "\n"
+       << "{\n"
+    // XXX debug
+       << "  warn << \"+ enter global init function: " << func << "\\n\";\n"
+       << "  PyObject *module;\n"
+       << "\n"
+       << "  if (!import_sfs_exceptions (&AsyncXDR_Exception, NULL,\n"
+       << "                              &AsyncUnion_Exception))\n"
+       << "    return;\n"
+       << "\n"
+       << "  py_rpc_program = import_type (\"sfs.arpc\", \"rpc_program\");\n"
+       << "  if (!py_rpc_program)\n"
+       << "    return;\n"
+       << "\n";
+
+  add_baseclass_to_rpc_programs (lst);
+  aout << "\n";
+  init_python_type_structures (lst);
 
   for (const rpc_sym *s = lst.base (); s < lst.lim () ; s++) {
     vec<str> clss = get_c_classes (s);
@@ -2076,8 +2100,8 @@ dump_init_func (const symlist_t &lst)
     }
   }
 
-  aout << "  warn << \"finished static allocator for \" << modulename"
-       << " << \"\\n\";\n"
+  // XXX debug!
+  aout << "  warn << \"- exit global allocator: " << func << "\\n\";\n"
        << "}\n"
        << "\n";
 }
@@ -2096,15 +2120,11 @@ dumpmodule (const symlist_t &lst)
        << "init" << module << " (void)\n"
        << "{\n"
        << "  PyObject* m;\n"
-#if 0
-       << "  // import async.rpctypes to get types for rpc ptrs, etc\n"
-       << "  PyObject *tmpmod = NULL;\n"
-       << "  if (!(tmpmod = PyImport_ImportModule (\"sfs.rpctypes\")));\n"
-       << "    return;\n"
-       << "  Py_XDECREF (tmpmod);\n"
-       << "\n"
-#endif
-       << "\n"
+       << "\n";
+
+
+
+  aout << "\n"
        << "  m = Py_InitModule3 (\"" << module << "\", module_methods,\n"
        << "                      \"Python/rpc/XDR module for " 
        << module << ".\");\n"
@@ -2131,18 +2151,24 @@ dumpmodule (const symlist_t &lst)
 static str
 makehdrname (str fname)
 {
+  static rxx x ("(.*?)([^/]+)_(lib|so).C");
   strbuf hdr;
   const char *p;
 
-  if ((p = strrchr (fname, '/')))
-    p++;
-  else p = fname;
-
-  hdr.buf (p, strlen (p) - 1);
-  hdr.cat ("h");
-
+  if (!x.match (fname)) {
+    // old-style translation
+    if ((p = strrchr (fname, '/')))
+      p++;
+    else p = fname;
+    
+    hdr.buf (p, strlen (p) - 1);
+    hdr.cat ("h");
+  } else {
+    hdr << x[2] << ".h";
+  }
   return hdr;
-}
+
+} 
 
 static void
 init_globals (const str &fname)
@@ -2153,7 +2179,7 @@ init_globals (const str &fname)
 
 
 void
-genpyso (str fname)
+genpyc_lib (str fname)
 {
   init_globals (fname);
 
@@ -2197,7 +2223,7 @@ genpyso (str fname)
 }
 
 void
-genpyc (str fname)
+genpyc_so (str fname)
 {
   init_globals (fname);
   static rxx define_rxx ("#\\s*define\\s*([a-zA-Z0-9_]+)\\s*([a-zA-Z0-9_]+)");

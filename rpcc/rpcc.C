@@ -124,7 +124,7 @@ cleanup ()
 static void
 usage ()
 {
-  warn << "usage: rpcc {-c | -h | -python | -q | -pyc | -pyh | -pys }\n"
+  warn << "usage: rpcc {-c | -h | -python | -q | -pyl | -pyh | -pys }\n"
     "            [-Ppref] [-Ddef] [-Idir]\n\t[-o outfile] file.x\n";
   exit (1);
 }
@@ -148,7 +148,7 @@ main (int argc, char **argv)
   vec<char *> av;
   char *fname = NULL;
   char *basename;
-  enum { BAD, HEADER, CFILE, PYTHON, PYC, PYH, PYS } mode = BAD;
+  enum { BAD, HEADER, CFILE, PYTHON, PYL, PYH, PYS } mode = BAD;
   void (*fn) (str) = NULL;
   int len;
 
@@ -171,8 +171,8 @@ main (int argc, char **argv)
       mode = CFILE;
     else if (!strcmp (arg, "-python") && mode == BAD)
       mode = PYTHON;
-    else if (!strcmp (arg, "-pyc") && mode == BAD)
-      mode = PYC;
+    else if (!strcmp (arg, "-pyl") && mode == BAD)
+      mode = PYL;
     else if (!strcmp (arg, "-pyh") && mode == BAD)
       mode = PYH;
     else if (!strcmp (arg, "-pys") && mode == BAD)
@@ -192,8 +192,8 @@ main (int argc, char **argv)
     else 
       usage ();
   }
-  if (python_module_name && mode != PYC) {
-    warn << "-n parameter only valid with -pyc\n";
+  if (python_module_name && !(mode == PYL || mode == PYS)) {
+    warn << "-n parameter only valid with -pyl or -pys\n";
     usage ();
   }
   if (!fname)
@@ -230,11 +230,12 @@ main (int argc, char **argv)
     if (!outfile)
       outfile = strbuf ("%.*spy", len - 1, basename);
      break;
-  case PYC:
-    av[2] = "-DRPCC_PYC";
-    fn = genpyc;
+  case PYL:
+    av[2] = "-DRPCC_PYL";
+    fn = genpyc_lib;
+    // foo.x -> foo_lib.C
     if (!outfile)
-      outfile = strbuf ("%.*sC", len -1, basename);
+      outfile = strbuf ("%.*s_lib.C", len - 2, basename);
     break;
   case PYH:
     av[2] = "-DRPCC_PYH";
@@ -243,10 +244,11 @@ main (int argc, char **argv)
       outfile = strbuf ("%.*sh", len -1, basename);
     break;
   case PYS:
-    av[2] = "-DRPCC_PYH";
-    fn = genpyso;
+    av[2] = "-DRPCC_PYS";
+    fn = genpyc_so;
+    // foo.x -> foo_so.C
     if (!outfile)
-      outfile = strbuf ("%.*sh", len -1, basename);
+      outfile = strbuf ("%.*s_so.C", len -2, basename);
     break;
   default:
     usage ();
