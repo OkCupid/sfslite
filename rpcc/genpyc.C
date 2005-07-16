@@ -2078,8 +2078,6 @@ dump_init_func (const symlist_t &lst)
        << "static void\n"
        << func << "\n"
        << "{\n"
-    // XXX debug
-       << "  warn << \"+ enter global init function: " << func << "\\n\";\n"
        << "  PyObject *module;\n"
        << "\n"
        << "  if (!import_sfs_exceptions (&AsyncXDR_Exception, NULL,\n"
@@ -2104,9 +2102,7 @@ dump_init_func (const symlist_t &lst)
     }
   }
 
-  // XXX debug!
-  aout << "  warn << \"- exit global allocator: " << func << "\\n\";\n"
-       << "}\n"
+  aout << "}\n"
        << "\n";
 }
 
