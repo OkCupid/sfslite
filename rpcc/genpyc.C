@@ -325,8 +325,11 @@ dump_class_init_func (const rpc_struct *rs)
        << "    return -1;\n\n";
 
   for (const rpc_decl *rd = rs->decls.base (); rd < rs->decls.lim (); rd++) {
-    aout << "  if (" << rd->id << ") \n"
-	 << "     self->" << rd->id << ".safe_set_obj (" << rd->id << ");\n";
+    aout << "  if (" << rd->id << " && "
+	 << " !self->" << rd->id << ".safe_set_obj (" << rd->id << ")) {\n"
+	 << "    py_prepend_err_msg (\"in field '" << rd->id << "': \");\n"
+	 << "    return -1;\n"
+	 << "  }\n";
   }
   
   
