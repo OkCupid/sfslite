@@ -301,10 +301,10 @@ dump_class_init_func (const rpc_struct *rs)
     if (first)
       first = false;
     else
-      aout << ", ";
+      aout << ",\n                            ";
     aout << "\"" << rd->id << "\"";
   }
-  aout << ", NULL};\n";
+  aout << ", NULL};\n\n";
 
   aout << "  if (!PyArg_ParseTupleAndKeywords (args, kwds, \"|";
   for (const rpc_decl *rd = rs->decls.base (); rd < rs->decls.lim (); rd++) 
@@ -316,8 +316,9 @@ dump_class_init_func (const rpc_struct *rs)
   for (const rpc_decl *rd = rs->decls.base (); rd < rs->decls.lim (); rd++) {
     if (first)
       first = false;
-    else
-      aout << ", ";
+    else {
+      aout << ",\n                                    ";
+    }
     aout << "&" << rd->id;
   }
   aout << "))\n"
@@ -325,7 +326,7 @@ dump_class_init_func (const rpc_struct *rs)
 
   for (const rpc_decl *rd = rs->decls.base (); rd < rs->decls.lim (); rd++) {
     aout << "  if (" << rd->id << ") \n"
-	 << "     self->" << rd->id << ".set_obj (" << rd->id << ");\n";
+	 << "     self->" << rd->id << ".safe_set_obj (" << rd->id << ");\n";
   }
   
   
