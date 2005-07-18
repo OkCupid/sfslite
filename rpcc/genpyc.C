@@ -227,12 +227,10 @@ dump_w_class_clear_func (const rpc_struct *rs)
   aout << "inline bool\n"
        << wt << "::clear ()\n"
        << "{\n"
-       << get_inner_obj ("o", ct)
-       << "  bool ret = true"
-       << ";\n"
-       << "  Py_DECREF (_obj);\n"
+       << "  PyObject *tmp = _obj;\n"
        << "  _obj = NULL;\n"
-       << "  return ret;\n"
+       << "  Py_XDECREF (tmp);\n"
+       << "  return true;\n"
        << "}\n\n";
 }
 
@@ -1714,7 +1712,6 @@ dumpenum_hdr (const rpc_sym *s)
   dump_type_object_decl (rs->id);
   dump_py_enum (rs);
   dump_class_method_decls (ct);
-  dump_enum_dealloc_func (rs);
 
   // dump the object wrapper
   dump_w_class (rs->id);
@@ -1748,6 +1745,7 @@ dumpenum (const rpc_sym *s)
   // convert used throughout
   dump_enum_in_range (rs);
   dump_int_to_enum_converter (rs);
+  dump_enum_dealloc_func (rs);
 
   dump_enum_new_func (rs->id);
   // dump_enum_dealloc_func (rs);
@@ -2078,8 +2076,6 @@ dump_init_func (const symlist_t &lst)
        << "static void\n"
        << func << "\n"
        << "{\n"
-       << "  PyObject *module;\n"
-       << "\n"
        << "  if (!import_sfs_exceptions (&AsyncXDR_Exception, NULL,\n"
        << "                              &AsyncUnion_Exception))\n"
        << "    return;\n"
