@@ -141,7 +141,7 @@ int fchdir (int);
 #  define bzero(a,b)   memset((a), 0, (b))
 # endif /* !bzero */
 #else /* !STDC_HEADERS */
-# ifdef DMALLOC
+# ifndef DMALLOC
 #  ifndef HAVE_STRCHR
 #   define strchr index
 #   define strrchr rindex
@@ -159,7 +159,7 @@ char *strrchr ();
 #   define memcpy(d, s, n) bcopy ((s), (d), (n))
 #   define memmove(d, s, n) bcopy ((s), (d), (n))
 #  endif /* !HAVE_MEMCPY */
-# endif /* !DMALLOC */
+# endif /* !DMALLOC || PYMALLOC */
 #endif
 
 
@@ -533,12 +533,7 @@ extern int stktrace_record;
 
 void *xmalloc (size_t);
 void *xrealloc (void *, size_t);
-#ifdef PYMALLOC
-#include <Python.h>
-# define xfree PyMem_Free
-#else
-# define xfree free
-#endif
+#define xfree free
 char *xstrdup (const char *s);
 #define txmalloc(size) xmalloc (size)
 

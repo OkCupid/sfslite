@@ -103,6 +103,8 @@ public:
   itree_core () { clear (); }
   itree_core (const C &c) : cmp (c) { clear (); }
 
+  // MK 7/6/05: deleteall() is fast but broken; accesses freed memory;
+  // deleteall_correct () is slow but should be safer.
   void deleteall_correct ()
   {
     _deleteall_correct (root ());

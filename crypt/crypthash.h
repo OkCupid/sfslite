@@ -30,6 +30,7 @@
 
 struct datasink {
   virtual void update (const void *, size_t) = 0;
+  virtual ~datasink () {}
 };
 
 class mdblock : public datasink {

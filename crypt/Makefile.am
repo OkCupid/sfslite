@@ -16,8 +16,8 @@ tiger.C tiger_sboxes.C wmstr.C xdr_mpz_t.C schnorr.C ocb.C
 sfsinclude_HEADERS = crypt_prot.x \
 aes.h arc4.h axprt_crypt.h bench.h bigint.h blowfish.h crypt.h		\
 crypthash.h crypt_prot.h esign.h hashcash.h modalg.h password.h		\
-prime.h prng.h rabin.h rsa.h seqno.h sha1.h srp.h tiger.h wmstr.h schnorr.h	\
-ocb.h umac.h
+prime.h prng.h rabin.h rsa.h seqno.h sha1.h tiger.h wmstr.h schnorr.h	\
+ocb.h 
 
 noinst_HEADERS = blowfish_data.h
 

@@ -107,11 +107,7 @@ RPC_PRINT_GEN (char, sb.fmt ("%02x", (int) obj & 0xff))
 RPC_PRINT_GEN (int32_t, sb << obj)
 RPC_PRINT_GEN (u_int32_t, sb.fmt ("0x%x", obj))
 RPC_PRINT_GEN (int64_t, sb << obj)
-#if SIZEOF_LONG != 8
-RPC_PRINT_GEN (u_int64_t, sb.fmt ("0x%qx", obj))
-#else /* SIZEOF_LONG == 8 */
-RPC_PRINT_GEN (u_int64_t, sb.fmt ("0x%lx", obj))
-#endif /* SIZEOF_LONG == 8 */
+RPC_PRINT_GEN (u_int64_t, sb.fmt ("0x%" U64F "x", obj))
 RPC_PRINT_GEN (bool, sb << (obj ? "true" : "false"))
 
 RPC_PRINT_DEFINE(bool)

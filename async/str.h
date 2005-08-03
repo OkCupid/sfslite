@@ -354,13 +354,10 @@ STRBUFOP (int n, b.fmt ("%d", n))
 STRBUFOP (u_int n, b.fmt ("%u", n))
 STRBUFOP (long n, b.fmt ("%ld", n))
 STRBUFOP (u_long n, b.fmt ("%lu", n))
-#if SIZEOF_LONG != 8
-STRBUFOP (int64_t n, b.fmt ("%qd", n))
-STRBUFOP (u_int64_t n, b.fmt ("%qu", n))
-#elif SIZEOF_LONG_LONG > 0
+#if SIZEOF_LONG_LONG > 0
 STRBUFOP (long long n, b.fmt ("%qd", n))
 STRBUFOP (unsigned long long n, b.fmt ("%qu", n))
-#endif /* SIZEOF_LONG_LONG > 0 && SIZEOF_LONG == 8 */
+#endif /* SIZEOF_LONG_LONG > 0 */
 
 #undef STRBUFOP
 

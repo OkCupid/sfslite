@@ -78,6 +78,17 @@ setprogname (const char *in)
 }
 
 #define BUFSZ 1024
+
+static int
+mmcd_gettime (struct timespec *tp)
+{
+  struct timeval tv;
+  if (gettimeofday (&tv, NULL) < 0)
+      return -1;
+  tp->tv_sec = tv.tv_sec;
+  tp->tv_nsec = tv.tv_usec * 1000;
+  return 0;
+}
  
 int
 main (int argc, char *argv[])
@@ -108,7 +119,7 @@ main (int argc, char *argv[])
   // make the file the right size by writing our time
   // there
   //
-  clock_gettime (CLOCK_REALTIME, ts);
+  mmcd_gettime (ts);
   ts[1]  = ts[0];
 
   if (argc != 2) 
@@ -137,7 +148,7 @@ main (int argc, char *argv[])
   wt.tv_sec = 0;
   wt.tv_usec = CLCKD_INTERVAL;
   while (1) {
-    clock_gettime (CLOCK_REALTIME, ts); 
+    mmcd_gettime (ts); 
     targ[0] = ts[0];
     targ[1] = ts[0];
       
@@ -164,7 +175,7 @@ main (int argc, char *argv[])
       continue;
     }
 
-    clock_gettime (CLOCK_REALTIME, ts+1); 
+    mmcd_gettime (ts+1); 
     d = timespec_diff (ts[1], ts[0]);
     
     /*

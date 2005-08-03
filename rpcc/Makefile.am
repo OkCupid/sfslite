@@ -54,7 +54,7 @@ parse.o: parse.cc
 #	$(CXXCOMPILE) $(CXXNOERR) -D'__attribute__(x)=' -c $(srcdir)/parse.cc
 	$(CXXCOMPILE) $(CXXNOERR) -c $(srcdir)/parse.cc
 
-scan.o: parse.o scan.cc parse.h
+scan.o: parse.o scan.cc 
 	$(CXXCOMPILE) $(CXXNOERR) -c $(srcdir)/scan.cc
 
 .PHONY: parseclean

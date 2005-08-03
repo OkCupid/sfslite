@@ -526,7 +526,8 @@ aclnt::seteofcb (cbv::ptr e)
   eofcb = e;
   if (xi->ateof ()) {
     eofcb = NULL;
-    (*e) ();
+    if (e)
+      (*e) ();
   }
 }
 

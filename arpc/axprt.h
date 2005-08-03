@@ -73,6 +73,7 @@ protected:
   virtual ~axprt_dgram ();
 
 public:
+  int getfd () { return fd; }
   void sendv (const iovec *, int, const sockaddr *);
   void setrcb (recvcb_t);
   void poll ();

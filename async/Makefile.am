@@ -36,7 +36,7 @@ suio++.h sysconf.h union.h vatmpl.h vec.h rwfd.h litetime.h
 #
 # begin sfslite changes
 #
-mmcd_SOURCES = clock_gettime.c mmcd.c
+mmcd_SOURCES = mmcd.c
 mmcd_LDADD = 
 mmcd_DEPENDENCIES = 
 #

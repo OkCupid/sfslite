@@ -26,6 +26,7 @@
 #include "ihash.h"
 #include "itree.h"
 #include "list.h"
+#include "litetime.h"
 
 #include <typeinfo>
 
@@ -35,7 +36,9 @@ int maxfd;
 bool amain_panic;
 static int nselfd;
 
-timespec tsnow;
+// initialize this in case we access tsnow before calling amain()
+timespec tsnow = { 0, 0 };
+
 const time_t &timenow = tsnow.tv_sec;
 
 static timeval selwait;

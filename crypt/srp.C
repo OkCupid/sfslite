@@ -29,26 +29,11 @@
 #include "crypt_prot.h"
 #include "srp.h"
 
-bigint *srp_base::k1 = NULL;
-bigint *srp_base::k3 = NULL;
-srp_base::paramcache *srp_base::cache;
-
+bigint srp_base::k1 (1);
+bigint srp_base::k3 (3);
 u_int srp_base::minprimsize;
+srp_base::paramcache srp_base::cache[srp_base::cachesize];
 int srp_base::lastpos;
-bool srp_init_flag = false;
-
-static void
-srp_init ()
-{
-  if (!srp_init_flag) {
-    mp_setscrub ();
-    srp_base::k1 = New bigint (1);
-    srp_base::k3 = New bigint (3);
-    srp_base::cache = New srp_base::paramcache[srp_base::cachesize];
-    srp_init_flag = true;
-  }
-}
-
 
 bool
 srp_base::setS (const bigint &SS)
@@ -81,8 +66,6 @@ srp_base::setS (const bigint &SS)
 bool
 srp_base::checkparam (const bigint &N, const bigint &g, u_int iter)
 {
-  srp_init ();
-
   bigint N1 (N - 1);
   if (N.nbits () < minprimsize || g != g % N || g == N1
       || powm (g, N >> 1, N) != N1)
@@ -141,7 +124,7 @@ srpres
 srp_client::init (srpmsg *msgout, const srp_hash &sid,
                   str uu, str pp, int version)
 {
-  k = (version < 6) ? k1 : k3;  // the former is for SRP-3, the latter SRP-6
+  k = (version < 6) ? &k1 : &k3;  // the former is for SRP-3, the latter SRP-6
   user = uu;
   pwd = pp;
   host = NULL;
@@ -284,7 +267,7 @@ srpres
 srp_server::init (srpmsg *msgout, const srpmsg *msgin,
 		  const srp_hash &sid, str uu, str info, int version)
 {
-  k = (version < 6) ? k1 : k3;  // the former is for SRP-3, the latter SRP-6
+  k = (version < 6) ? &k1 : &k3;  // the former is for SRP-3, the latter SRP-6
   if (msgin->size () || !info || !info.len ())
     return SRP_FAIL;
   rxx r (srpinforx);
