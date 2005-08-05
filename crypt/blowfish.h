@@ -30,6 +30,7 @@
 
 class block64cipher {
 public:
+  virtual ~block64cipher () {}
   virtual void setkey (const void *, size_t) = 0;
   void setkey_sha1 (const void *, size_t);
   virtual void encipher (u_int32_t *, u_int32_t *) const = 0;
