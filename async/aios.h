@@ -40,43 +40,31 @@ class aios : virtual public refcount {
   typedef callback<void, str, int>::ptr rcb_t;
   typedef callback<void, int>::ptr wcb_t;
 
-  int fd;
-  int err;
-  bool eof;
-  bool weof;
-
   bool rlock;
-  cbuf inb;
   bool (aios::*infn) ();
   rcb_t rcb;
 
-  strbuf outb;
   bool wblock;
 
   time_t timeoutval;
   time_t timeoutnext;
   timecb_t *timeoutcb;
 
-  str debugname;
   ssize_t debugiov;
 
   vec<int> fdsendq;
 
-  void fail (int e);
   void mkrcb (const str &s)
     { infn = &aios::rnone; rcb_t::ref cb = rcb; rcb = NULL; (*cb) (s, err); }
   void timeoutcatch ();
   void timeoutbump ();
 
-  void input ();
   bool rnone () { return false; }
   bool rline ();
   bool rany ();
   void setreadcb (bool (aios::*fn) (), rcb_t cb);
 
-  void mkwcb (wcb_t cb) { if (fd >= 0) (*cb) (err); }
-  void (output) ();
-  void setoutcb ();
+  virtual void mkwcb (wcb_t cb) { if (fd >= 0) (*cb) (err); }
   void schedwrite ();
 
   void dumpdebug ();
@@ -95,9 +83,33 @@ class aios : virtual public refcount {
   }
 
 protected:
+  int fd;
+  cbuf inb;
+  strbuf outb;
+
+  int err;
+  bool eof;
+  bool weof;
+
+  str debugname;
+  const char *wrpref;
+  const char *rdpref;
+  const char *errpref;
+
   aios (int, size_t);
   ~aios ();
   void finalize ();
+
+  bool reading () { return rcb; }
+  virtual bool writing () { return outb.tosuio ()->resid (); }
+  void fail (int e);
+  void input ();
+  void (output) ();
+
+  virtual int doinput ();
+  virtual int dooutput ();
+  virtual void setincb ();
+  virtual void setoutcb ();
 
 public:
   enum { defrbufsize = 0x2000 };
@@ -106,6 +118,7 @@ public:
   int fdno () { return fd; }
   void setdebug (str name) { debugname = name; }
   void settimeout (time_t secs) { timeoutval = secs; timeoutbump (); }
+  time_t gettimeout () { return timeoutval; }
   void abort ();
 
   void setrbufsize (size_t n) { inb.resize (n); }
@@ -119,7 +132,7 @@ public:
   void write (void *buf, size_t len)
     { iovec iov = { iovbase_t (buf), len }; writev (&iov, 1); }
   void sendeof ();
-  void setwcb (wcb_t cb)
+  virtual void setwcb (wcb_t cb)
     { suio_callback (outb.tosuio (), wrap (this, &aios::mkwcb, cb)); }
   int flush ();
   void sendfd (int sfd) { fdsendq.push_back (sfd); }

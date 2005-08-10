@@ -59,9 +59,9 @@ aios::timeoutcatch ()
     return;
   }
   timeoutcb = NULL;
-  if (timeoutval && (rcb || outb.tosuio ()->resid ())) {
+  if (timeoutval && (reading () || writing ())) {
     if (debugname)
-      warnx << debugname << " === Timeout\n";
+      warnx << debugname << errpref << "Timeout\n";
     fail (ETIMEDOUT);
   }
 }
@@ -82,7 +82,7 @@ aios::abort ()
   if (fd < 0)
     return;
   if (debugname)
-    warnx << debugname << " === EOF\n";
+    warnx << debugname << errpref << "EOF\n";
   rcb = NULL;
   fdcb (fd, selread, NULL);
   fdcb (fd, selwrite, NULL);
@@ -94,6 +94,27 @@ aios::abort ()
   outb.tosuio ()->clear ();
 }
 
+int
+aios::doinput ()
+{
+  int n = ::readv (fd, const_cast<iovec *> (inb.iniov ()), inb.iniovcnt ());
+  if (n > 0)
+    inb.addbytes (n);
+  return n;
+}
+
+void
+aios::setincb ()
+{
+  if (fd >= 0) {
+    if (rcb)
+      fdcb (fd, selread, wrap (this, &aios::input));
+    else
+      fdcb (fd, selread, NULL);
+    //timeoutbump ();
+  }
+}
+
 void
 aios::input ()
 {
@@ -103,10 +124,8 @@ aios::input ()
 
   ref<aios> hold = mkref (this); // Don't let this be freed under us
 
-  int n = ::readv (fd, const_cast<iovec *> (inb.iniov ()), inb.iniovcnt ());
-  if (n > 0)
-    inb.addbytes (n);
-  else if (n < 0 && errno != EAGAIN) {
+  int n = doinput ();
+  if (n < 0 && errno != EAGAIN) {
     fail (errno);
     rlock = false;
     return;
@@ -118,14 +137,8 @@ aios::input ()
   }
   while ((this->*infn) ())
     ;
-  if (fd >= 0) {
-    if (rcb)
-      fdcb (fd, selread, wrap (this, &aios::input));
-    else
-      fdcb (fd, selread, NULL);
-    //timeoutbump ();
-  }
   rlock = false;
+  setincb ();
 }
 
 bool
@@ -135,7 +148,7 @@ aios::rline ()
   if (lfp < 0) {
     if (!inb.space ()) {
       if (debugname)
-	warnx << debugname << " === Line too long\n";
+	warnx << debugname << errpref << "Line too long\n";
       fail (EFBIG);
     }
     return false;
@@ -150,7 +163,7 @@ aios::rline ()
 
   str s (m);
   if (debugname)
-    warnx << debugname << " ==> " << s << "\n";
+    warnx << debugname << rdpref << s << "\n";
   mkrcb (s);
   return true;
 }
@@ -182,10 +195,9 @@ aios::setreadcb (bool (aios::*fn) (), rcb_t cb)
   }
 }
 
-void
-aios::output ()
+int
+aios::dooutput ()
 {
-  ref<aios> hold = mkref (this); // Don't let this be freed under us
   suio *out = outb.tosuio ();
 
   int res;
@@ -203,15 +215,23 @@ aios::output ()
     else if (res < 0 && errno == EAGAIN)
       res = 0;
   }
+  if (weof && !outb.tosuio ()->resid ())
+    shutdown (fd, SHUT_WR);
+  return res;
+}
+
+void
+aios::output ()
+{
+  ref<aios> hold = mkref (this); // Don't let this be freed under us
       
+  int res = dooutput ();
   if (res < 0) {
     fail (errno);
     return;
   }
   if (res > 0)
     timeoutbump ();
-  if (weof && !out->resid ())
-    shutdown (fd, SHUT_WR);
   wblock = !res;
   setoutcb ();
 }
@@ -219,7 +239,9 @@ aios::output ()
 void
 aios::setoutcb ()
 {
-  if (err && err != ETIMEDOUT) {
+  if (fd < 0)
+    return;
+  else if (err && err != ETIMEDOUT) {
     fdcb (fd, selwrite, NULL);
     outb.tosuio ()->clear ();
   }
@@ -262,7 +284,7 @@ aios::dumpdebug ()
 	text << "\r";
       crpending = false;
       if (!prefprinted)
-	text << debugname << " <== ";
+	text << debugname << wrpref;
       else
 	prefprinted = false;
 
@@ -278,7 +300,7 @@ aios::dumpdebug ()
 	crpending = true;
       }
       if (!prefprinted)
-	text << debugname << " <== ";
+	text << debugname << wrpref;
       prefprinted = true;
       text.buf (s, e - s);
     }
@@ -290,9 +312,11 @@ aios::dumpdebug ()
 }
 
 aios::aios (int fd, size_t rbsz)
-  : fd (fd), err (0), eof (false), weof (false), rlock (false), inb (rbsz),
-    infn (&aios::rnone), wblock (false), timeoutval (0), timeoutcb (NULL),
-    debugiov (-1)
+  : rlock (false), infn (&aios::rnone), wblock (false),
+    timeoutval (0), timeoutcb (NULL),
+    debugiov (-1), fd (fd), inb (rbsz),
+    err (0), eof (false), weof (false),
+    wrpref (" <== "), rdpref (" ==> "), errpref (" === ")
 {
   _make_async (fd);
 }
@@ -301,13 +325,15 @@ aios::~aios ()
 {
   if (fd >= 0) {
     if (debugname)
-      warnx << debugname << " === EOF\n";
+      warnx << debugname << errpref << "EOF\n";
     fdcb (fd, selread, NULL);
     fdcb (fd, selwrite, NULL);
     ::close (fd);
   }
   if (timeoutcb)
     timecb_remove (timeoutcb);
+  while (!fdsendq.empty ())
+    ::close (fdsendq.pop_front ());
 }
 
 void
@@ -337,7 +363,7 @@ aios::sendeof ()
   assert (!weof);
   weof = true;
   if (!outb.tosuio ()->resid ())
-    shutdown (fd, SHUT_WR);
+    output ();
 }
 
 int
@@ -363,10 +389,10 @@ aios::finalize ()
   else if (err) {
     // Make one last effort to flush buffer
     if (err == ETIMEDOUT)
-      outb.tosuio ()->output (fd);
+      dooutput ();
     delete this;
   }
-  else if (outb.tosuio ()->output (fd) < 0)
+  else if (dooutput () < 0)
     delete this;
 }
 
