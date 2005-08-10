@@ -72,6 +72,7 @@ xdr_int (XDR *xdrs, void *objp)
     val = *static_cast<int *> (objp);
     return rpc_traverse (xdrs, val);
   case XDR_DECODE:
+    val = 0; // silence buggy warning message in gcc 4.1
     if (!rpc_traverse (xdrs, val))
       return false;
     *static_cast<int *> (objp) = val;

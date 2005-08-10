@@ -39,6 +39,8 @@ authunixint_create (const char *host, u_int32_t uid, u_int32_t gid,
   size_t i;
   AUTH *ret;
 
+  if (ngroups > 16)
+    ngroups = 16;
   if (sizeof (gid_t) == 4) {
     authunix_gid_t *gids = (authunix_gid_t *) groups;
     return authunix_create (h, uid, gid, ngroups, gids);
