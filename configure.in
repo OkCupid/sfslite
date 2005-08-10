@@ -10,11 +10,11 @@ dnl AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER(config.h)
 
 dnl
-dnl begin SFS lite change
+dnl begin SFSLITE change
 dnl
 SFS_TAG
 dnl
-dnl End SFS lite change
+dnl End SFSLITE change
 dnl
 
 AC_SUBST(LDEPS)
