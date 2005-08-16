@@ -1987,17 +1987,25 @@ makemodulename (str fname)
   const char *p;
   static rxx x1 ("(.*?)_(so|lib).C");
   static rxx x2 ("(.*?).[a-zA-Z]+");
+  static rxx x3 ("([a-zA-Z0-9_]+)");
 
   if ((p = strrchr (fname, '/')))
     p++;
   else p = fname;
 
+  str r;
+
   if (x1.match (p))
-    return x1[1];
+    r = x1[1];
   else if (x2.match (p))
-    return x2[1];
-  else
-    return p;
+    r = x2[1];
+  else if (x3.match (p))
+    r = x3[1];
+  else {
+    warn << "Invalid output file name given; cannot convert it: " << p << "\n";
+    exit (-1);
+  }
+  return r;
 }
 
 static vec<str>
