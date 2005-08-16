@@ -563,7 +563,12 @@ extern int stktrace_record;
 
 void *xmalloc (size_t);
 void *xrealloc (void *, size_t);
-#define xfree free
+#ifdef PYMALLOC
+# include <Python.h>
+# define xfree PyMem_Free
+#else /* !PYMALLOC (i.e., default case) */
+# define xfree free
+#endif /* PYMALLOC */
 char *xstrdup (const char *s);
 #define txmalloc(size) xmalloc (size)
 
