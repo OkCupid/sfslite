@@ -1985,14 +1985,19 @@ makemodulename (str fname)
 {
   strbuf guard;
   const char *p;
-  static rxx x ("(.*?)_(so|lib).C");
+  static rxx x1 ("(.*?)_(so|lib).C");
+  static rxx x2 ("(.*?).[a-zA-Z]+");
 
   if ((p = strrchr (fname, '/')))
     p++;
   else p = fname;
 
-  assert (x.match (p));
-  return x[1];
+  if (x1.match (p))
+    return x1[1];
+  else if (x2.match (p))
+    return x2[1];
+  else
+    return p;
 }
 
 static vec<str>
