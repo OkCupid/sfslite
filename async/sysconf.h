@@ -564,6 +564,10 @@ extern int stktrace_record;
 void *xmalloc (size_t);
 void *xrealloc (void *, size_t);
 #ifdef PYMALLOC
+// on linux, _POSIX_C_SOURCE is doubly defined...
+# if defined(__linux__) && defined(_POSIX_C_SOURCE)
+#  undef _POSIX_C_SOURCE 
+# endif
 # include <Python.h>
 # define xfree PyMem_Free
 #else /* !PYMALLOC (i.e., default case) */
