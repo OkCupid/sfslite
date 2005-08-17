@@ -79,6 +79,7 @@ env.mk: Makefile
 	echo "CXXFLAGS = $(CXXFLAGS)" >> env.mk~
 	echo "LIBS = $(LIBS)" >> env.mk~
 	echo "LIBGMP = $(LIBGMP)" >> env.mk~
+	echo "LDFLAGS = $(LDFLAGS)" >> env.mk~
 	mv -f env.mk~ env.mk
 
 
