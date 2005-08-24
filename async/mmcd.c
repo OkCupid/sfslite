@@ -32,6 +32,8 @@
 #include "sysconf.h"
 
 #define CLCKD_INTERVAL 10000
+#define THOUSAND 1000
+#define MILLION THOUSAND*THOUSAND
 
 const char *progname;
 
@@ -45,16 +47,14 @@ usage (int argc, char *argv[])
 static int 
 timespec_diff (struct timespec a, struct timespec b)
 {
-  return  (a.tv_nsec - b.tv_nsec) / 1000 -
-    (b.tv_sec - a.tv_sec) * 1000000;
+  return  (a.tv_nsec - b.tv_nsec) / THOUSAND -
+    (b.tv_sec - a.tv_sec) * MILLION;
 }
 
 static void 
-mmcd_shutdown (void *rgn, size_t sz, int fd, char *fn)
+mmcd_shutdown (void *rgn, size_t sz, int fd, char *fn, int sig)
 {
-  fprintf (stderr, 
-	   "%s: caught EOF on standard input; shutting down.\n",
-	   progname);
+  fprintf (stderr, "%s: exiting on signal %d\n", progname, sig);
   munmap (rgn, sz);
   close (fd);
 
@@ -89,31 +89,53 @@ mmcd_gettime (struct timespec *tp)
   tp->tv_nsec = tv.tv_usec * 1000;
   return 0;
 }
+
+/*
+ * global variables that can be accessed from within signal handlers!
+ */
+char *mmap_rgn;
+size_t mmap_rgn_sz;
+int mmap_fd;
+char *mmap_file;
+
+static void
+handle_sigint (int i)
+{
+  if (i == SIGTERM || i == SIGINT || i == SIGKILL) {
+    mmcd_shutdown (mmap_rgn, mmap_rgn_sz, mmap_fd, mmap_file, i);
+    exit (0);
+  } else {
+    fprintf (stderr, "unexpected signal caught: %d; ignoring it\n", i);
+  }
+}
+
+static void
+set_signal_handlers ()
+{
+  struct sigaction sa;
+  memset (&sa, 0, sizeof (sa));
+  sa.sa_handler = handle_sigint;
+  sa.sa_flags = 0;
+  if (sigaction (SIGTERM, &sa, NULL) < 0) {
+    fprintf (stderr, "bad sigaction; errno=%d\n", errno);
+    exit (-1);
+  }
+  if (sigaction (SIGINT, &sa, NULL) < 0) {
+    fprintf (stderr, "bad sigaction; errno=%d\n", errno);
+    exit (-1);
+  }
+}
  
 int
 main (int argc, char *argv[])
 {
-  char *mmap_rgn;
-  int fd;
   struct timespec ts[2];
   struct timespec *targ;
   struct timeval wt;
   int d;
-  int rc, ctlfd, nselfd, rrc;
-  fd_set read_fds;
-  size_t mmap_rgn_sz;
-  char buf[BUFSZ];
-  int data_read;
+  int rc;
 
   setprogname (argv[0]);
-
-  //
-  // listen for an EOF on Standard Input; this means it's time to
-  // shutdown
-  //
-  ctlfd = 0;
-  FD_SET (ctlfd, &read_fds);
-  nselfd = ctlfd + 1;
 
   //
   // make the file the right size by writing our time
@@ -124,26 +146,31 @@ main (int argc, char *argv[])
 
   if (argc != 2) 
     usage (argc, argv);
-  fd = open (argv[1], O_RDWR|O_CREAT, 0644);
-  if (fd < 0) {
+
+  mmap_file = argv[1];
+  mmap_fd = open (mmap_file, O_RDWR|O_CREAT, 0644);
+
+  if (mmap_fd < 0) {
     fprintf (stderr, "mmcd: %s: cannot open file for reading\n", argv[1]);
     exit (1);
   }
-  if (write (fd, (char *)ts, sizeof (ts)) != sizeof (ts)) {
+  if (write (mmap_fd, (char *)ts, sizeof (ts)) != sizeof (ts)) {
     fprintf (stderr, "mmcd: %s: short write\n", argv[1]);
     exit (1);
   }
 
   mmap_rgn_sz = sizeof (struct timespec )  * 2;
-  mmap_rgn = mmap (NULL, mmap_rgn_sz, PROT_WRITE, MAP_SHARED, fd, 0); 
+  mmap_rgn = mmap (NULL, mmap_rgn_sz, PROT_WRITE, MAP_SHARED, mmap_fd, 0); 
   if (mmap_rgn == MAP_FAILED) {
     fprintf (stderr, "mmcd: mmap failed: %d\n", errno);
     exit (1);
   }
 
   fprintf (stderr, "%s: starting up; file=%s; pid=%d\n", 
-	   progname, argv[1], getpid ());
+	   progname, mmap_file, getpid ());
 
+  set_signal_handlers ();
+  
   targ = (struct timespec *) mmap_rgn;
   wt.tv_sec = 0;
   wt.tv_usec = CLCKD_INTERVAL;
@@ -152,32 +179,14 @@ main (int argc, char *argv[])
     targ[0] = ts[0];
     targ[1] = ts[0];
       
-    rc = select (nselfd, &read_fds, NULL, NULL, &wt);
+    rc = select (0, NULL, NULL, NULL, &wt);
     if (rc < 0) {
       fprintf (stderr, "%s: select failed: %d\n", progname, errno);
       continue;
     } 
 
-    if (rc > 0 && FD_ISSET (ctlfd, &read_fds)) {
-
-      data_read = 0;
-      while ((rrc = read (ctlfd, buf, BUFSZ)) > 0) {
-	if (rrc > 0) data_read = 1;
-      }
-
-      if (rrc == 0) {
-	mmcd_shutdown (mmap_rgn, mmap_rgn_sz, fd, argv[1]);
-	break;
-      }
-      else if (rrc < 0) 
-	fprintf (stderr, "%s: read returned error: %d\n", progname, errno);
-
-      continue;
-    }
-
     mmcd_gettime (ts+1); 
     d = timespec_diff (ts[1], ts[0]);
-    
     /*
      * long sleeps will hurt the accuracy of the clock; may as well
      * report them, although eventually it would be nice to do something
