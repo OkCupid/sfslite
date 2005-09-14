@@ -16,10 +16,23 @@ COMMENT= 	Standard version of the sfslite library
 GNU_CONFIGURE=	yes
 
 #
-# This flag might be set by slave configuration directories that
-# call us up.
+# if being called from one of the slave distributions (like
+# sfslite-dbg), then the build-mode will be set, and we should
+# rename the port accordingly so that more than one of them can
+# be built.
 #
-BUILD_MODE?= shopt
+.if defined(BUILD_MODE)
+PKGNAMESUFFIX+= "-${BUILD_MODE}"
+.else
+BUILD_MODE?=    shopt
+.endif # define(BUILD_MODE)
+
+#
+# rpcc does not work with byacc, so just require BISON
+#
+USE_BISON=	yes
+
+LIB_DEPENDS=   gmp:${PORTSDIR}/math/libgmp4
 
 INSTALLS_SHLIB= yes
 LDCONFIG_DIRS=  %%PREFIX%%/lib/${PORTNAME}/${BUILD_MODE}
