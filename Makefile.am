@@ -10,8 +10,7 @@ SUBDIRS = async rpcc arpc crypt sfsmisc
 
 noinst_HEADERS = nfsconf.h
 
-EXTRA_DIST = setup autoconf.sed .cvsignore STANDARDS \
-	INSTALL.darwin INSTALL.macos README.0.7-upgrade sfsauthd/upgradedb.pl
+EXTRA_DIST = setup autoconf.sed .cvsignore STANDARDS 
 
 CLEANFILES = core *.core *~
 
