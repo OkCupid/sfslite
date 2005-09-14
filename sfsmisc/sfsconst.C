@@ -26,14 +26,12 @@
 #include "parseopt.h"
 #include <pwd.h>
 #include <grp.h>
-#include "async.h"
-#include "crypt.h"
 
 #ifndef SFSUSER
 # define SFSUSER "sfs"
 #endif /* !SFSUSER */
 
-u_int32_t sfs_release = 99999;
+u_int32_t sfs_release = SFS_RELEASE;
 u_int16_t sfs_defport;
 uid_t sfs_uid;
 gid_t sfs_gid;
@@ -406,6 +404,20 @@ sfsconst_init ()
 str
 sfsconst_etcfile (const char *name)
 {
+  const char *path[] = { etc1dir, etc2dir, etc3dir, NULL };
+  return sfsconst_etcfile (name, path);
+}
+
+str
+sfsconst_etcfile_required (const char *name)
+{
+  const char *path[] = { etc1dir, etc2dir, etc3dir, NULL };
+  return sfsconst_etcfile_required (name, path);
+}
+
+str
+sfsconst_etcfile (const char *name, const char *const *path)
+{
   str file;
   if (name[0] == '/') {
     file = name;
@@ -413,18 +425,8 @@ sfsconst_etcfile (const char *name)
       return file;
     return NULL;
   }
-  file = strbuf ("%s/%s", etc1dir, name);
-  if (!access (file, F_OK))
-    return file;
-  if (errno != ENOENT)
-    fatal << file << ": " << strerror (errno) << "\n";
-  file = strbuf ("%s/%s", etc2dir, name);
-  if (!access (file, F_OK))
-    return file;
-  if (errno != ENOENT)
-    fatal << file << ": " << strerror (errno) << "\n";
-  if (etc3dir) {
-    file = strbuf ("%s/%s", etc3dir, name);
+  for (const char *const *d = path; *d; d++) {
+    file = strbuf ("%s/%s", *d, name);
     if (!access (file, F_OK))
       return file;
     if (errno != ENOENT)
@@ -434,13 +436,16 @@ sfsconst_etcfile (const char *name)
 }
 
 str
-sfsconst_etcfile_required (const char *name)
+sfsconst_etcfile_required (const char *name, const char *const *path)
 {
-  str file = sfsconst_etcfile (name);
-  str e3 = etc3dir ? str (strbuf ("  %s/%s\n", etc3dir, name)) : str ("");
-  if (!file)
-    fatal ("Could not find '%s'.  Searched:\n  %s/%s\n  %s/%s\n",
-	   name, etc1dir, name, etc2dir, name) << e3;
+  str file = sfsconst_etcfile (name, path);
+  if (!file) {
+    strbuf msg ("Could not find '%s'. Searched:\n", name);
+    for (const char *const *d = path; *d; d++) {
+      msg << "  " << *d << "/" << name << "\n";
+    }
+    fatal ( str (msg));
+  }
   return file;
 }
 
@@ -456,26 +461,4 @@ sfshostname ()
   for (u_int i = 0; i < name.len (); i++)
     m[i] = tolower (name[i]);
   return m;
-}
-
-static void
-setbool (bool *bp)
-{
-  *bp = true;
-}
-
-void
-rndkbd (const str &msg)
-{
-  if (msg)
-    warnx << msg << "\n";
-
-  warnx << "\nI need secret bits with which to"
-    " seed the random number generator.\n"
-    "Please type some random or unguessable text until you hear a beep:\n";
-  bool finished = false;
-  if (!getkbdnoise (64, &rnd_input, wrap (&setbool, &finished)))
-    fatal << "no tty\n";
-  while (!finished)
-    acheck ();
 }
