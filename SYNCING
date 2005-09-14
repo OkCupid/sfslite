@@ -33,4 +33,4 @@ When Syncing from SFS to SFSlite: A Checklist
  - crypt/Makefile.am
     - remove if STATIC lines for different compiling tst for
       shared libraries.  was breaking builds under gcc 3.4
-    - do not build umac.c or srp.c
+    - do not build umac.c or srp.c or serial.c

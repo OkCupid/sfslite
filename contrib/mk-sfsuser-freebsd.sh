@@ -3,12 +3,12 @@
 # alread on FreeBSD.
 #
 
-GROUP=sfs10
-USER=sfs10
+GROUP=sfs
+USER=sfs
 PW=pw
 NAME='SFS User'
 
-$PW groupshow $GROUP 2>&1 >/dev/null
+$PW groupshow $GROUP >/dev/null 2>&1
 if [ $? -ne 0 ]
 then
     $PW groupadd $GROUP

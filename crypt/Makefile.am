@@ -10,7 +10,7 @@ libsfscrypt_la_SOURCES = \
 aes.C arc4.C axprt_crypt.C blowfish.C crypt_prot.C esign.C		\
 getkbdnoise.C getsysnoise.C hashcash.C mdblock.C modalg.C mpscrub.C	\
 mpz_misc.C mpz_raw.C mpz_square.C mpz_xor.C pad.C password.C prng.C	\
-rabin.C random_prime.C rndseed.C rsa.C seqno.C serial.C sha1.C sha1oracle.C	\
+rabin.C random_prime.C rndseed.C rsa.C seqno.C sha1.C sha1oracle.C	\
 tiger.C tiger_sboxes.C wmstr.C xdr_mpz_t.C schnorr.C ocb.C 
 
 sfsinclude_HEADERS = crypt_prot.x \
