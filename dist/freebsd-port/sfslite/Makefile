@@ -17,7 +17,7 @@ GNU_CONFIGURE=	yes
 
 CONFIGURE_ARGS= --with-mode=shopt
 
-post-install:
+post-extract:
 	/bin/sh ${WRKSRC}/contrib/mk-sfsuser-freebsd.sh
 
 .include <bsd.port.mk>
