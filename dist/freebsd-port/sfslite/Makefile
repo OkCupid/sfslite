@@ -16,6 +16,11 @@ COMMENT= 	Standard version of the sfslite library
 GNU_CONFIGURE=	yes
 
 #
+# Map X.Y.Z.Q => X.Y
+#
+SHORTVERSION!=	echo ${PORTVERSION} | sed -Ee 's/([^.]+\.[^.]+).*/\1/' 
+
+#
 # if being called from one of the slave distributions (like
 # sfslite-dbg), then the build-mode will be set, and we should
 # rename the port accordingly so that more than one of them can
@@ -23,7 +28,7 @@ GNU_CONFIGURE=	yes
 #
 .if defined(BUILD_MODE)
 PKGNAMESUFFIX+= "-${BUILD_MODE}"
-RPCC_BIN?=      lib/${PORTNAME}-${PORTVERSION}/${BUILD_MODE}
+RPCC_BIN?=      lib/${PORTNAME}-${SHORTVERSION}/${BUILD_MODE}
 .else
 BUILD_MODE?=    shopt
 RPCC_BIN?=      bin
@@ -47,6 +52,10 @@ INSTALLS_SHLIB= yes
 
 CONFIGURE_TARGET=--build=${MACHINE_ARCH}-portbld-freebsd${OSREL}
 CONFIGURE_ARGS=  --with-mode=${BUILD_MODE}
+
+PLIST_SUB+=      VERSION=${SHORTVERSION} 
+PLIST_SUB+=      TAG=${BUILD_MODE}
+PLIST_SUB+=      RPCC_BIN=${RPCC_BIN}
 
 #
 # need to run this pre-configure
