@@ -37,7 +37,13 @@ USE_BISON=	yes
 LIB_DEPENDS+=   gmp:${PORTSDIR}/math/libgmp4
 
 INSTALLS_SHLIB= yes
-LDCONFIG_DIRS=  %%PREFIX%%/lib/${PORTNAME}/${BUILD_MODE}
+
+#
+# Do not add LDCONFIG dirs, since we want SFS to link to its own
+# libraries, and not our (light) ones...
+#
+#LDCONFIG_DIRS=  %%PREFIX%%/lib/${PORTNAME}/${BUILD_MODE}
+#
 
 CONFIGURE_TARGET=--build=${MACHINE_ARCH}-portbld-freebsd${OSREL}
 CONFIGURE_ARGS=  --with-mode=${BUILD_MODE}
