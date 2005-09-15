@@ -23,8 +23,10 @@ GNU_CONFIGURE=	yes
 #
 .if defined(BUILD_MODE)
 PKGNAMESUFFIX+= "-${BUILD_MODE}"
+RPCC_BIN?=      lib/${PORTNAME}-${PORTVERSION}/${BUILD_MODE}
 .else
 BUILD_MODE?=    shopt
+RPCC_BIN?=      bin
 .endif # define(BUILD_MODE)
 
 #
