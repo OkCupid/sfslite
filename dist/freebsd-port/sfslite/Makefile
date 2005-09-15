@@ -32,7 +32,7 @@ BUILD_MODE?=    shopt
 #
 USE_BISON=	yes
 
-LIB_DEPENDS=   gmp:${PORTSDIR}/math/libgmp4
+LIB_DEPENDS+=   gmp:${PORTSDIR}/math/libgmp4
 
 INSTALLS_SHLIB= yes
 LDCONFIG_DIRS=  %%PREFIX%%/lib/${PORTNAME}/${BUILD_MODE}
