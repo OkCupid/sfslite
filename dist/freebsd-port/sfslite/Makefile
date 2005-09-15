@@ -41,12 +41,12 @@ USE_BISON=	yes
 
 LIB_DEPENDS+=   gmp:${PORTSDIR}/math/libgmp4
 
-INSTALLS_SHLIB= yes
 
 #
 # Do not add LDCONFIG dirs, since we want SFS to link to its own
 # libraries, and not our (lite) ones...
 #
+#INSTALLS_SHLIB= yes
 #LDCONFIG_DIRS=  %%PREFIX%%/lib/${PORTNAME}/${BUILD_MODE}
 #
 
