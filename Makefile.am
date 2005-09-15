@@ -67,7 +67,7 @@ install-data-hook:
 	@echo "   " $(prefix)/include/sfs-VERSION
 	@echo "   " $(prefix)/lib/sfs-VERSION
 	@echo
-	@echo where VERSION is less than $(VERSION). 
+	@echo where VERSION is less than $(SHORTVERSION). 
 	@echo "***************************************************************"
 
 uninstall-local:

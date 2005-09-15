@@ -3,7 +3,7 @@
 
 LDADD = $(LIBASYNC) $(LIBPY)
 
-bin_PROGRAMS = rpcc
+sfsbin_PROGRAMS = rpcc
 
 noinst_HEADERS = rpcc.h parse.h
 

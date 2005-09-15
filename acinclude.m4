@@ -1878,15 +1878,14 @@ AC_ARG_WITH(mode,
 --with-mode=MODE        Specify a build mode for SFS (debug|shared|shdbg|lite))
 if test "${with_tag+set}" = "set" -a "$with_tag" != "no"; then
 	sfstag=$with_tag
-	sfs_no_bin_install=yes
 fi
+install_to_system_bin=0
 case $with_mode in
 	"debug" )
 		DEBUG=-g
 		CXXDEBUG=-g
 		sfstag=$with_mode
 		with_dmalloc=yes
-		sfs_no_bin_install=yes
 		;;
 
 	"std" )
@@ -1905,6 +1904,7 @@ case $with_mode in
 	"shopt" )
 		sfstag=$with_mode
 		enable_shared=yes
+		install_to_system_bin=1
 		;;
 
 	"shdbg"  )
@@ -1913,7 +1913,6 @@ case $with_mode in
 		DEBUG=-g
 		CXXDEBUG=-g
 		with_dmalloc=yes
-		sfs_no_bin_install=yes
 		;;
 
 	"profile" )
@@ -1941,6 +1940,7 @@ case $with_mode in
 		;;
 
 	"optmz" | "lite" )
+		install_to_system_bin=1
 		dnl
 		dnl no-op, should go in the regular sfslite directory
 		dnl
@@ -1958,7 +1958,6 @@ if test "${sfstag+set}" = "set" ; then
 fi	
 AC_SUBST(sfstagdir)
 AC_SUBST(sfstag)
-AM_CONDITIONAL(DO_BIN_INSTALL, test "$sfs_no_bin_install" != "yes")
 ])
 
 dnl
