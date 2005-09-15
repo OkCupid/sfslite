@@ -18,7 +18,7 @@ GNU_CONFIGURE=	yes
 #
 # Map X.Y.Z.Q => X.Y
 #
-SHORTVERSION!=	echo ${PORTVERSION} | sed -Ee 's/([^.]+\.[^.]+).*/\1/' 
+SHORTVERSION!=	${ECHO} ${PORTVERSION} | sed -Ee 's/([^.]+\.[^.]+).*/\1/'
 
 #
 # if being called from one of the slave distributions (like
@@ -45,7 +45,7 @@ INSTALLS_SHLIB= yes
 
 #
 # Do not add LDCONFIG dirs, since we want SFS to link to its own
-# libraries, and not our (light) ones...
+# libraries, and not our (lite) ones...
 #
 #LDCONFIG_DIRS=  %%PREFIX%%/lib/${PORTNAME}/${BUILD_MODE}
 #
@@ -53,7 +53,7 @@ INSTALLS_SHLIB= yes
 CONFIGURE_TARGET=--build=${MACHINE_ARCH}-portbld-freebsd${OSREL}
 CONFIGURE_ARGS=  --with-mode=${BUILD_MODE}
 
-PLIST_SUB+=      VERSION=${SHORTVERSION} 
+PLIST_SUB+=      VERSION=${SHORTVERSION}
 PLIST_SUB+=      TAG=${BUILD_MODE}
 PLIST_SUB+=      RPCC_BIN=${RPCC_BIN}
 
@@ -61,6 +61,6 @@ PLIST_SUB+=      RPCC_BIN=${RPCC_BIN}
 # need to run this pre-configure
 #
 post-extract:
-	sh ${WRKSRC}/contrib/mk-sfsuser-freebsd.sh
+	${SH} ${WRKSRC}/contrib/mk-sfsuser-freebsd.sh
 
 .include <bsd.port.mk>
