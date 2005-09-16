@@ -1,11 +1,16 @@
 # New ports collection makefile for:  sfslite
-# Date created:        5 December 1994
+# Date created:        10 September 2005
 # Whom:                max
 #
 # $FreeBSD$
 #
 
 PORTNAME=	sfslite
+
+#
+# SFS version 0.8 => sfslite versions 0.8.1, 0.8.2, 0.8.3, ....
+# since it will be updated more frequently.
+#
 PORTVERSION=	0.8.1
 CATEGORIES=	devel
 MASTER_SITES=	http://dist.okws.org/dist/
@@ -14,6 +19,26 @@ MAINTAINER=	ports@okws.org
 COMMENT= 	Standard version of the sfslite library
 
 GNU_CONFIGURE=	yes
+USE_GMAKE=	yes
+USE_REINPLACE=	yes
+CONFIGURE_ARGS+=--with-sfsuser=sfs \
+		--with-sfsgroup=sfs 
+#
+# rpcc does not work with byacc, so just require BISON
+#
+USE_BISON=	yes
+
+.include <bsd.port.pre.mk>
+.if ${ARCH} != "i386"
+BROKEN=		"Does not compile on !i386"
+.endif
+
+.if ${OSVERSION} > 500000
+LIB_DEPENDS+=	gmp.6:${PORTSDIR}/math/libgmp4
+CONFIGURE_ARGS+=--with-gmp=${LOCALBASE}
+.else
+CONFIGURE_ARGS+=--with-gmp=/usr
+.endif
 
 #
 # Map X.Y.Z.Q => X.Y
@@ -27,7 +52,7 @@ SHORTVERSION!=	${ECHO} ${PORTVERSION} | sed -Ee 's/([^.]+\.[^.]+).*/\1/'
 # be built.
 #
 .if defined(BUILD_MODE)
-PKGNAMESUFFIX+= "-${BUILD_MODE}"
+PKGNAMESUFFIX+= -${BUILD_MODE}
 RPCC_BIN?=      lib/${PORTNAME}-${SHORTVERSION}/${BUILD_MODE}
 .else
 BUILD_MODE?=    shopt
@@ -35,32 +60,27 @@ RPCC_BIN?=      bin
 .endif # define(BUILD_MODE)
 
 #
-# rpcc does not work with byacc, so just require BISON
-#
-USE_BISON=	yes
-
-LIB_DEPENDS+=   gmp:${PORTSDIR}/math/libgmp4
-
-
-#
 # Do not add LDCONFIG dirs, since we want SFS to link to its own
 # libraries, and not our (lite) ones...
 #
-#INSTALLS_SHLIB= yes
-#LDCONFIG_DIRS=  %%PREFIX%%/lib/${PORTNAME}/${BUILD_MODE}
-#
+INSTALLS_SHLIB= yes
+LDCONFIG_DIRS=  %%PREFIX%%/lib/${PORTNAME}/${BUILD_MODE}
+
 
 CONFIGURE_TARGET=--build=${MACHINE_ARCH}-portbld-freebsd${OSREL}
-CONFIGURE_ARGS=  --with-mode=${BUILD_MODE}
+CONFIGURE_ARGS+=  --with-mode=${BUILD_MODE}
 
 PLIST_SUB+=      VERSION=${SHORTVERSION}
 PLIST_SUB+=      TAG=${BUILD_MODE}
 PLIST_SUB+=      RPCC_BIN=${RPCC_BIN}
 
 #
-# need to run this pre-configure
+# Slave distributions might override this since they won't have a 
+# pkg-install script in their directory.
 #
-post-extract:
-	${SH} ${WRKSRC}/contrib/mk-sfsuser-freebsd.sh
+PKG_INSTALL?=    pkg-install
 
-.include <bsd.port.mk>
+pre-install:
+	PKG_PREFIX=${PREFIX} ${SH} ${PKG_INSTALL} ${PKGNAME} PRE-INSTALL
+
+.include <bsd.port.post.mk>
