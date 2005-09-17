@@ -29,9 +29,6 @@ CONFIGURE_ARGS+=--with-sfsuser=sfs \
 USE_BISON=	yes
 
 .include <bsd.port.pre.mk>
-.if ${ARCH} != "i386"
-BROKEN=		"Does not compile on !i386"
-.endif
 
 .if ${OSVERSION} > 500000
 LIB_DEPENDS+=	gmp.6:${PORTSDIR}/math/libgmp4
