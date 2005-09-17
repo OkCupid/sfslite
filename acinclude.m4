@@ -1905,6 +1905,8 @@ case $with_mode in
 		sfstag=$with_mode
 		enable_shared=yes
 		install_to_system_bin=1
+		DEBUG='-g -O2'
+		CXXDEBUG='-g -O2'
 		;;
 
 	"shdbg"  )
