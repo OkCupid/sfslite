@@ -56,13 +56,8 @@ BUILD_MODE?=    shopt
 RPCC_BIN?=      bin
 .endif # define(BUILD_MODE)
 
-#
-# Do not add LDCONFIG dirs, since we want SFS to link to its own
-# libraries, and not our (lite) ones...
-#
 INSTALLS_SHLIB= yes
 LDCONFIG_DIRS=  %%PREFIX%%/lib/${PORTNAME}/${BUILD_MODE}
-
 
 CONFIGURE_TARGET=--build=${MACHINE_ARCH}-portbld-freebsd${OSREL}
 CONFIGURE_ARGS+=  --with-mode=${BUILD_MODE}
