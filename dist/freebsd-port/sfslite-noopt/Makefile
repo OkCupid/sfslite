@@ -1,6 +1,8 @@
-
+# New ports collection makefile for:  sfslite-noopt
+# Date created:        22 September 2005
+# Whom:                max
 #
-# No optimization to help with debugging
+# $FreeBSD$
 #
 BUILD_MODE =     shared
 MASTERDIR=       ${.CURDIR}/../sfslite

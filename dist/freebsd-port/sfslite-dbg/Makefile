@@ -1,6 +1,8 @@
-
+# New ports collection makefile for:  sfslite-dbg
+# Date created:        22 September 2005
+# Whom:                max
 #
-# Compile without optimization and with dmalloc memory debugging
+# $FreeBSD$
 #
 BUILD_MODE=      shdbg
 MASTERDIR=       ${.CURDIR}/../sfslite
