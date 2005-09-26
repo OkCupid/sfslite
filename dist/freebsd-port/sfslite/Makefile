@@ -11,7 +11,7 @@ PORTNAME=	sfslite
 # SFS version 0.8 => sfslite versions 0.8.1, 0.8.2, 0.8.3, ....
 # since it will be updated more frequently.
 #
-PORTVERSION=	0.8.1
+PORTVERSION=	0.8.2
 CATEGORIES=	devel
 MASTER_SITES=	http://dist.okws.org/dist/
 
