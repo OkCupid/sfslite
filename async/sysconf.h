@@ -498,36 +498,7 @@ const char *__backtrace (const char *file, int lim);
 #define memcpy(to, from, len) \
   _dmalloc_memcpy((char *) (to), (const char *) (from), len)
 #define memmove(to, from, len) \
-	_sfs_dmalloc_bcopy((const char *) (from), (char *) (to), len)
-
-//
-// begin SFSLITE changes...
-//
-
-/*
- * When compiling C++, put this into std:: so that we don't break
- * when compiling with STL headers.
- */
-#if defined(__cplusplus)
-namespace std {
-static inline void
-_sfs_dmalloc_bcopy(const void *from, void *to, const size_t len)
-{
-	_dmalloc_bcopy(from, to, len);
-
-}
-}
-#endif /* __cplusplus */
-static inline void
-_sfs_dmalloc_bcopy(const void *from, void *to, const size_t len)
-{
-	_dmalloc_bcopy(from, to, len);
-
-}
-
-//
-// end SFSLITE changes
-//
+  _dmalloc_bcopy((const char *) (from), (char *) (to), len)
 
 /* Work around Dmalloc's misunderstanding of free's definition */
 
