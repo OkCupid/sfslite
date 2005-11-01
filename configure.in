@@ -51,7 +51,16 @@ if test "$no_x" != yes; then
   test -z "$x_includes" || CPPFLAGS="$CPPFLAGS -I$x_includes"
 fi
 
-SFS_USER
+dnl Begin sfslite change
+dnl
+dnl MK: 11/1/05
+dnl
+dnl Do not need SFS user for sfslite, so no longer do the check or
+dnl require it.
+dnl
+dnl SFS_USER
+dnl
+dnl End sfslite change
 
 AC_ARG_ENABLE(shlib,
 --enable-shlib            Build shared libraries rather than static ones,,)
