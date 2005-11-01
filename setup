@@ -52,6 +52,15 @@ if test -z "${AUTOCONF_VERSION+set}"; then
 	fi
 	done
     done
+else
+    acv="$AUTOCONF_VERSION"
+    for dir in /usr/local/bin /usr/bin; do
+	if test -x ${dir}/autoconf-${acv}; then
+	    AUTOCONF=${dir}/autoconf-${acv}
+	    export AUTOCONF
+	    break
+	fi
+    done
 fi
 
 if test -z "${SETUP_TOP_PID}"; then
@@ -77,10 +86,6 @@ if test "${LIBTOOLIZE+set}" != "set"; then
 		-a -x /usr/bin/glibtoolize; then
 	LIBTOOLIZE=glibtoolize
     fi
-fi
-
-if test "${ACLOCAL+set}" != "set"; then
-    ACLOCAL=aclocal
 fi
 
 for file in acinclude.m4; do
@@ -117,9 +122,9 @@ fi
 set -x
 chmod +x setup
 $LIBTOOLIZE $LTI_ARGS
-$ACLOCAL
-autoheader253
-automake15 $AM_ARGS
+aclocal
+autoheader
+automake $AM_ARGS
 $AUTOCONF
 set +x
 
