@@ -183,6 +183,7 @@ operator!= (const sockaddr_in &a, const sockaddr_in &b)
   return a.sin_port != b.sin_port || a.sin_addr.s_addr != b.sin_addr.s_addr;
 }
 template<> struct hashfn<sockaddr_in> {
+  hashfn () {}
   hash_t operator() (const sockaddr_in &a) const
     { return ntohs (a.sin_port) << 16 ^ htonl (a.sin_addr.s_addr); }
 };

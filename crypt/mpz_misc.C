@@ -149,9 +149,13 @@ mpz_get_u64 (const MP_INT *mp)
   int i = ABS (mp->_mp_size);
   if (!i)
     return 0;
+#if GMP_LIMB_SIZE >= 8
+  u_int64_t ret = mp->_mp_d[0];
+#else /* GMP_LIMB_SIZE < 8 */
   u_int64_t ret = mp->_mp_d[--i];
-  while (i >= 0)
+  while (i > 0)
     ret = (ret << 8 * sizeof (mp_limb_t)) | mp->_mp_d[--i];
+#endif /* GMP_LIMB_SIZE < 8 */
   if (mp->_mp_size > 0)
     return ret;
   return ~(ret - 1);
@@ -163,11 +167,15 @@ mpz_get_s64 (const MP_INT *mp)
   int i = ABS (mp->_mp_size);
   if (!i)
     return 0;
+#if GMP_LIMB_SIZE >= 8
+  int64_t ret = mp->_mp_d[0];
+#else /* GMP_LIMB_SIZE < 8 */
   int64_t ret = mp->_mp_d[--i];
-  while (i >= 0)
+  while (i > 0)
     ret = (ret << 8 * sizeof (mp_limb_t)) | mp->_mp_d[--i];
   if (mp->_mp_size > 0)
     return ret;
+#endif /* GMP_LIMB_SIZE < 8 */
   return ~(ret - 1);
 }
 #endif /* SIZEOF_LONG < 8 */

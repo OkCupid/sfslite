@@ -26,9 +26,10 @@
 #include "ihash.h"
 #include "itree.h"
 #include "list.h"
-#include "litetime.h"
 
 #include <typeinfo>
+
+#include "litetime.h"
 
 #define FD_SETSIZE_ROUND (sizeof (long))/* # Bytes to which to round fd_sets */
 int fd_set_bytes;		// Size in bytes of a [wide] fd_set
@@ -480,9 +481,9 @@ async_init::start ()
   }
   if (!getenv ("FDLIM_HARD") || !execsafe ()) {
     str var = strbuf ("FDLIM_HARD=%d", fdlim_get (1));
-    xputenv (var);
+    xputenv (const_cast<char*>(var.cstr()));
     var = strbuf ("FDLIM_SOFT=%d", fdlim_get (0));
-    xputenv (var);
+    xputenv (const_cast<char*>(var.cstr()));
   }
 #ifndef HAVE_WIDE_SELECT
   fdlim_set (FD_SETSIZE, execsafe ());

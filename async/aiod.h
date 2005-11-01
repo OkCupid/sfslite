@@ -32,6 +32,10 @@
 
 struct aiod_req;
 
+// gcc 4.1 fixes
+class aiod;
+class aiofh;
+
 class aiobuf {
   friend class aiod;
   friend class aiofh;

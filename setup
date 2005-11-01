@@ -118,8 +118,8 @@ set -x
 chmod +x setup
 $LIBTOOLIZE $LTI_ARGS
 $ACLOCAL
-autoheader
-automake $AM_ARGS
+autoheader253
+automake15 $AM_ARGS
 $AUTOCONF
 set +x
 

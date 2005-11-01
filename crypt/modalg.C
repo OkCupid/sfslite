@@ -61,7 +61,7 @@ barrett::mpz_reduce (MP_INT *r, const MP_INT *a) const
     mpz_sub (r, r, mp);
 }
 
-const bigint montgom::b (bigint (1) << mpz_bitsperlimb);
+const bigint montgom::b (bigint (1) << ((int)(mpz_bitsperlimb)));
 
 void
 montgom::set (const bigint &m)

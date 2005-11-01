@@ -499,7 +499,6 @@ const char *__backtrace (const char *file, int lim);
   _dmalloc_memcpy((char *) (to), (const char *) (from), len)
 #define memmove(to, from, len) \
   _dmalloc_bcopy((const char *) (from), (char *) (to), len)
-
 /* Work around Dmalloc's misunderstanding of free's definition */
 
 #if DMALLOC_VERSION_MAJOR >= 5
@@ -535,13 +534,9 @@ extern int stktrace_record;
 void *xmalloc (size_t);
 void *xrealloc (void *, size_t);
 #ifdef PYMALLOC
-// on linux, _POSIX_C_SOURCE is doubly defined...
-# if defined(__linux__) && defined(_POSIX_C_SOURCE)
-#  undef _POSIX_C_SOURCE 
-# endif
 # include <Python.h>
 # define xfree PyMem_Free
-#else /* !PYMALLOC (i.e., default case) */
+#else /* !PYMALLOC (i.e., the default condition) */
 # define xfree free
 #endif /* PYMALLOC */
 char *xstrdup (const char *s);

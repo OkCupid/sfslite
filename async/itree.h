@@ -105,16 +105,30 @@ public:
 
   // MK 7/6/05: deleteall() is fast but broken; accesses freed memory;
   // deleteall_correct () is slow but should be safer.
+  // DM: deleteall () possibly fixed
   void deleteall_correct ()
   {
     _deleteall_correct (root ());
     clear ();
   }
 
+  static T *min_postorder (T *n) {
+    T *nn;
+    if (n)
+      while ((nn = left (n)) || (nn = right (n)))
+        n = nn;
+    return n;
+  }
+  static T *next_postorder (const T *n) {
+    T *nn = up (n), *nnr;
+    if (nn && (nnr = right (nn)) && n != nnr)
+      return min_postorder (nnr);
+    return nn;
+  }
   void deleteall () {
     T *n, *nn;
-    for (n = first (); n; n = nn) {
-      nn = next (n);
+    for (n = min_postorder (root ()); n; n = nn) {
+      nn = next_postorder (n);
       delete n;
     }
     clear ();
