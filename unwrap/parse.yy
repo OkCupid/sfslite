@@ -28,19 +28,31 @@
 %}
 
 %token <str> T_ID
-%token <str> T_TEMPLATE
+%token <str> T_NUM
 %token <str> T_PASSTHROUGH
 
 /* Tokens for C++ Variable Modifiers */
 %token T_CONST
 %token T_STRUCT
-%token T_EXTERN
-%token T_REGISTER
 %token T_TYPENAME
+%token T_VOID
+%token T_CHAR
+%token T_SHORT
+%token T_INT
+%token T_LONG
+%token T_FLOAT
+%token T_DOUBLE
+%token T_SIGNED
+%token T_UNSIGNED
+%token T_STATIC
+
+%token T_2COLON
 
 /* Keywords for our new filter */
 %token T_VARS
 %token T_SHOTGUN
+%token T_MEMBER
+%token T_FUNCTION
 
 %token T_2COLON
 
@@ -50,54 +62,145 @@ file: /* empty * /
 	;
 
 section:  passthrough
-	| unwrap
+	| fn
 	;
 
 passhthrough: /* empty */
 	| passthrough T_PASSTHROUGH
 	;
 
-unwrap:   unwrap_vars
-	| unwrap_shotgun
+fn:	T_FUNCTION '(' fn_declaration ')' fn_body 
 	;
 
-unwrap_vars: T_VARS '{' var_decl_list '}'
+fn_body: '{' fn_statements '}'
 	;
 
-unwrap_shotgun: T_SHOTGUN '{' shotgun_round '}'
+fn_declaration: declaration_specifiers_opt fancy_declarator const_opt
 	;
 
-shotgun_round: /* empty */
-	| shotgun_round shotgun_pellet
+const_opt: /* empty *
+	| T_CONST
 	;
 
-shotgun_pellet: fn_call ';'
-	| fn_ret_expr '=' fn_call ';'
+fn_statements: fn_statements fn_statement 
 	;
 
-fn_ret_expr: '(' fn_ret_list ')'
+fn_statement: passthrough
+	| vars
+	| shotgun
 	;
 
-fn_ret_list: /* empty */
-	| fn_ret_list ',' T_ID
+vars:	T_VARS '{' declaration_list_opt '}'
 	;
 
-fn
-
-
-var_decl_list:	/* empty * /
-	| var_decl_list var_decl_line
+shotgun: T_SHOTGUN '{' shotgun_calls '}'
 	;
 
-var_decl_line: c_type var_name_list ';'
+shotgun_calls: /* empty */
+	| shotgun_calls shotgun_call
 	;
 
-var_name_list: var_name
-	| var_name_list ',' var_name
+shotgun_call: passthrough callback passthrough ';'
 	;
 
-pointers:	/* empty */
-	| pointers '*'
+callback: '@' '(' callback_param_list ')'
+	;
+
+callback_param_list: /* empty */
+	| callback_param_list ',' callback_param
+	;
+
+callback_param: identifier
+	| callback_stack_var
+	| callback_class_var
+	;
+
+callback_stack_var: '$' '(' parameter_declaration ')'
+	;
+
+callback_class_var: '%' '(' parameter_delcaration ')'
+	;
+
+declaration_list_opt: /* empty */
+	| declaration_list
+	;
+
+declaration_list: declaration
+	| declaration_list declaration
+	;
+
+/* missing: '...'
+ */
+parameter_type_list: parameter_list
+	;
+
+parameter_list: /* empty *
+	| parameter_list ',' parameter_declaration
+	;
+
+/* missing: abstract declarators
+ */
+parameter_declaration: declaration_specifiers declarator
+	;
+
+declaration: declaration_specifiers init_declarator_list_opt ';'
+	;
+
+init_declarator_list_opt: /* empty */
+	| init_declarator_list
+	;
+
+init_declarator_list:  init_declarator
+	| init_declarator_list ',' init_declarator
+	;
+
+/* missing: C++-style initialization, C-style initiatlization
+ */
+init_declarator: declarator
+	;
+
+declarator: pointer_opt direct_declarator
+	;
+
+fancy_declarator: pointer_opt fancy_direct_declarator
+	;
+
+/* accommodate my_class_t::foo
+ */
+fancy_direct_declarator: typedef_name
+	;
+
+/* missing: arrays, and C++-style initialization
+ */
+direct_declarator: identifier
+	;
+
+declaration_specifiers_opt: /* empty */
+	| declaration_specifiers
+	;
+
+/* missing: first rule:
+ *	storage_class_specifier declaration_specifiers_opt
+ */
+declaration_specifiers: 
+	| type_specifier declaration_specifiers_opt
+	| type_qualifier declaration_specifiers_opt
+	;
+
+/* missing: struct and enum rules:
+ *	| struct_or_union_specifier
+ *	| enum_specifier
+ */
+type_specifier: T_VOID
+	| T_CHAR
+	| T_SHORT
+	| T_INT
+	| T_LONG
+	| T_FLOAT
+	| T_DOUBLE
+	| T_SIGNED
+	| T_UNSIGNED
+	| typedef_name
 	;
 
 type_qualifier:	T_CONST
@@ -108,48 +211,41 @@ type_qualifier_list: type_qualifier
 	| type_qualifier_list type_qualifier
 	;
 
-pointer: '*' type_qualifier_list
-	| '*' type_qualifier_list pointer
+type_qualifier_list_opt: /* empty */
+	| type_qualifier_list
 	;
 
-var_name: pointer T_ID 
-	| T_ID
+/*
+ * foo<int, char *>::bar_t::my_class<int> -> 
+ *   foo<> bar_t my_class<>
+ */
+typedef_name:  typedef_name_single
+	| typedef_name T_2COLON typedef_name_single
 	;
 
-c_type_with_pointer: c_type
-	| c_type pointer
+typedef_name_single: identifier template_instantiation_opt
 	;
 
-c_type: c_type_base
-	| c_type_base templated_type
+template_instantiation_opt: /* empty */
+	| template_instantiation
 	;
 
-templated_type: '<' templated_type_list '>'
+template_instantiation: '<' template_instantiation_list '>'
 	;
 
-templated_type_list: /* empty */
-	| templated_type_list ',' templated_type_arg
+template_instantiation_list: /* empty */
+	| template_instantiation_list ',' template_instantiation_arg
 	;
 
-templated_type_arg: c_type_with_pointer
-	| T_NUM
+template_instantiation_arg: declaration_specifiers pointer_opt
 	;
 
-c_type_base: type_specifier_list c_type_base_unspecified
+pointer_opt: /* empty */
+	| pointer
 	;
 
-c_type_base_unspecified: T_ID
-	| c_type_base_unspecified T_2COLON T_ID
-	;
-
-type_specifier: T_CONST
-	| T_STRUCT
-	| T_UNSIGNED
-	| T_STATIC
-	;
-
-type_specifier_list: /* empty */
-	| type_specifier_list type_specifier
+pointer: '*'
+	| '*' type_qualifier_list_opt pointer
 	;
 
 %%

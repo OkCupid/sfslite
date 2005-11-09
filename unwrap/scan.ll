@@ -73,6 +73,7 @@ static		return T_STATIC;
 [})]		{ yy_pop_state (); return yytext[0]; }
 
 [<>;,:*]	{ return yytext[0]; }
+"::"		{ return T_2COLON; }
 
 ID 		{ yylval.str = yytext; return T_ID; }
 
