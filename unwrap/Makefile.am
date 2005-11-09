@@ -1,21 +1,15 @@
 ## Process this file with automake to produce Makefile.in
 # $Id$
 
-LDADD = $(LIBASYNC) $(LIBPY)
+LDADD = $(LIBASYNC) 
 
-sfsbin_PROGRAMS = rpcc
+sfsbin_PROGRAMS = unwrap
 
-noinst_HEADERS = rpcc.h parse.h
+noinst_HEADERS = unwrap.h
 
-rpcc_SOURCES = genheader.C gencfile.C genpython.C parse.yy scan.ll rpcc.C \
-	genpyc.C
-if STATIC
-rpcc_LDADD = $(LDADD)
-rpcc_DEPENDENCIES = $(LIBASYNC)
-else
-rpcc_LDADD = $(LDADD)
-rpcc_DEPENDENCIES =
-endif
+unwrap_SOURCES = unwrap.C parse.yy scan.ll
+unwrap_LDADD = $(LDADD)
+unwrap_DEPENDENCIES = $(LIBASYNC)
 
 YYFLAGS = -d
 

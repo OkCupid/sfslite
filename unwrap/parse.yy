@@ -57,15 +57,12 @@
 %token T_2COLON
 
 %%
-file: /* empty * /
-	| file section
+
+file:  passthrough
+	| file fn passthrough
 	;
 
-section:  passthrough
-	| fn
-	;
-
-passhthrough: /* empty */
+passthrough: /* empty */
 	| passthrough T_PASSTHROUGH
 	;
 
@@ -75,14 +72,16 @@ fn:	T_FUNCTION '(' fn_declaration ')' fn_body
 fn_body: '{' fn_statements '}'
 	;
 
-fn_declaration: declaration_specifiers_opt fancy_declarator const_opt
+/* declaration_specifiers is no longer optional ?! */
+fn_declaration: declaration_specifiers fancy_declarator const_opt
 	;
 
-const_opt: /* empty *
+const_opt: /* empty */
 	| T_CONST
 	;
 
-fn_statements: fn_statements fn_statement 
+fn_statements:  /* empty */
+	| fn_statements fn_statement 
 	;
 
 fn_statement: passthrough
@@ -110,6 +109,9 @@ callback_param_list: /* empty */
 	| callback_param_list ',' callback_param
 	;
 
+identifier: T_ID
+	;
+
 callback_param: identifier
 	| callback_stack_var
 	| callback_class_var
@@ -118,7 +120,7 @@ callback_param: identifier
 callback_stack_var: '$' '(' parameter_declaration ')'
 	;
 
-callback_class_var: '%' '(' parameter_delcaration ')'
+callback_class_var: '%' '(' parameter_declaration ')'
 	;
 
 declaration_list_opt: /* empty */
@@ -134,7 +136,7 @@ declaration_list: declaration
 parameter_type_list: parameter_list
 	;
 
-parameter_list: /* empty *
+parameter_list: /* empty */
 	| parameter_list ',' parameter_declaration
 	;
 
@@ -162,17 +164,20 @@ init_declarator: declarator
 declarator: pointer_opt direct_declarator
 	;
 
-fancy_declarator: pointer_opt fancy_direct_declarator
+fancy_declarator: pointer fancy_direct_declarator
+	| fancy_direct_declarator
 	;
 
 /* accommodate my_class_t::foo
  */
 fancy_direct_declarator: typedef_name
+	| fancy_direct_declarator '(' parameter_type_list ')'
 	;
 
 /* missing: arrays, and C++-style initialization
  */
 direct_declarator: identifier
+	| direct_declarator '(' parameter_type_list ')'
 	;
 
 declaration_specifiers_opt: /* empty */
@@ -204,7 +209,6 @@ type_specifier: T_VOID
 	;
 
 type_qualifier:	T_CONST
-	| T_VOLATILE
 	;
 
 type_qualifier_list: type_qualifier
