@@ -55,13 +55,14 @@ SYM	[{}<>;,():*\[\]]
 
 const		return T_CONST;
 struct		return T_STRUCT;
-extern		return T_EXTERN;
-register	return T_REGISTER;
 typename	return T_TYPENAME;
 unsigned	return T_UNSIGNED;
+static		return T_STATIC;
 
 [{]		{ yy_push_state (UNWRAP); return yytext[0]; }
 [}]		{ yy_pop_state (); return yytext[0]; }
+
+::		{ retun T_2COLON; }
 
 [{}<>;(),:*]	{ return yytext[0]; }
 
