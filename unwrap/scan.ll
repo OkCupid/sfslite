@@ -46,7 +46,7 @@ DNUM 	[+-]?[0-9]+
 XNUM 	[+-]?0x[0-9a-fA-F]
 
 %x FULL_PARSE FN_ENTER VARS_ENTER SHOTGUN_ENTER SHOTGUN_CB_ENTER SHOTGUN
-%x UNWRAP 
+%x UNWRAP SHOTGUN_CB
 
 %%
 
@@ -75,16 +75,20 @@ static		return T_STATIC;
 [<>;,:*]	{ return yytext[0]; }
 "::"		{ return T_2COLON; }
 
-ID 		{ yylval.str = yytext; return T_ID; }
+{ID} 		{ yylval.str = yytext; return T_ID; }
 
-DNUM|XNUM	{ yylval.str = yytext; return T_NUM; }
+{DNUM}|{XNUM}	{ yylval.str = yytext; return T_NUM; }
+
+.		{ return yyerror ("illegal token found in parsed "
+				  "environment"); }
 
 }
 
 <FN_ENTER>{
 \n		++lineno;
 {WSPACE}+	/*discard*/;
-[(]		{ switch_to_state (FULL_PARSE); return yytext[0]; }
+[(]		{ yy_push_state (FULL_PARSE); return yytext[0]; }
+[{]		{ yy_pop_state (); return yytext[0]; }
 }
 
 <VARS_ENTER>{
@@ -126,8 +130,7 @@ DNUM|XNUM	{ yylval.str = yytext; return T_NUM; }
 
 <UNWRAP>{
 \n		{ yylval.str = yytext; ++lineno; return T_PASSTHROUGH; }
-[^VS{\n]+	{ yylval.str = yytext; return T_PASSTHROUGH; }
-[VS]		{ yylval.str = yytext; return T_PASSTHROUGH; }
+[^VS{}\n]+|[VS]	{ yylval.str = yytext; return T_PASSTHROUGH; }
 [{]		{ yylval.str = yytext; yy_push_state (UNWRAP); 
 		  return T_PASSTHROUGH; }
 [}]		{ yylval.str = yytext; yy_pop_state ();
@@ -138,7 +141,9 @@ SHOTGUN		{ yy_push_state (SHOTGUN_ENTER); return T_SHOTGUN; }
 }
 
 
-<INITIAL>{
+[^MF\n]+|[MF]	{ yylval.str = yytext; return T_PASSTHROUGH ; }
+\n		{ ++lineno; yylval.str = yytext; return T_PASSTHROUGH; }
+
 MEMBER   	{ yy_push_state (UNWRAP); 
 	          yy_push_state (FN_ENTER); 
                   return T_MEMBER; 
@@ -147,8 +152,6 @@ MEMBER   	{ yy_push_state (UNWRAP);
 FUNCTION	{ yy_push_state (UNWRAP);
 		  yy_push_state (FN_ENTER);
 		  return T_FUNCTION; }
-}
-
 
 %%
 

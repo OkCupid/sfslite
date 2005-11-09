@@ -19,5 +19,9 @@ extern int yyparse ();
 #undef yyerror
 extern int yyerror (str);
 
+extern int yyparse ();
+extern int yydebug;
+extern FILE *yyin;
+
 
 #endif /* _UNWRAP_H */

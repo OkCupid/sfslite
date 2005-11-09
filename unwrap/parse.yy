@@ -80,12 +80,11 @@ const_opt: /* empty */
 	| T_CONST
 	;
 
-fn_statements:  /* empty */
-	| fn_statements fn_statement 
+fn_statements:  passthrough
+	| fn_statements fn_unwrap passthrough
 	;
 
-fn_statement: passthrough
-	| vars
+fn_unwrap: vars
 	| shotgun
 	;
 
@@ -131,12 +130,16 @@ declaration_list: declaration
 	| declaration_list declaration
 	;
 
+parameter_type_list_opt: /* empty */
+	| parameter_type_list
+	;
+
 /* missing: '...'
  */
 parameter_type_list: parameter_list
 	;
 
-parameter_list: /* empty */
+parameter_list: parameter_declaration
 	| parameter_list ',' parameter_declaration
 	;
 
@@ -171,26 +174,35 @@ fancy_declarator: pointer fancy_direct_declarator
 /* accommodate my_class_t::foo
  */
 fancy_direct_declarator: typedef_name
-	| fancy_direct_declarator '(' parameter_type_list ')'
+	| fancy_direct_declarator '(' parameter_type_list_opt ')'
 	;
 
 /* missing: arrays, and C++-style initialization
  */
 direct_declarator: identifier
-	| direct_declarator '(' parameter_type_list ')'
-	;
-
-declaration_specifiers_opt: /* empty */
-	| declaration_specifiers
+	| direct_declarator '(' parameter_type_list_opt ')'
 	;
 
 /* missing: first rule:
  *	storage_class_specifier declaration_specifiers_opt
+ *
+ * changed rule, to eliminate s/r conflicts
  */
-declaration_specifiers: 
-	| type_specifier declaration_specifiers_opt
-	| type_qualifier declaration_specifiers_opt
+declaration_specifiers: type_modifier_list type_specifier
 	;
+
+/*
+ * new rule to eliminate s/r conflicts
+ */
+type_modifier:  type_qualifier
+	| T_SIGNED
+	| T_UNSIGNED
+	;
+
+type_modifier_list: /* empty */
+	| type_modifier_list type_modifier
+	;
+	
 
 /* missing: struct and enum rules:
  *	| struct_or_union_specifier
@@ -203,8 +215,6 @@ type_specifier: T_VOID
 	| T_LONG
 	| T_FLOAT
 	| T_DOUBLE
-	| T_SIGNED
-	| T_UNSIGNED
 	| typedef_name
 	;
 
@@ -234,10 +244,14 @@ template_instantiation_opt: /* empty */
 	| template_instantiation
 	;
 
-template_instantiation: '<' template_instantiation_list '>'
+template_instantiation: '<' template_instantiation_list_opt '>'
 	;
 
-template_instantiation_list: /* empty */
+template_instantiation_list_opt: /* empty */
+	| template_instantiation_list
+	;
+
+template_instantiation_list: template_instantiation_arg
 	| template_instantiation_list ',' template_instantiation_arg
 	;
 
