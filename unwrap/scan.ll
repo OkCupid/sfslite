@@ -33,68 +33,130 @@
 
 str filename = "(stdin)";
 int lineno;
+static void switch_to_state (int i);
 %}
 
 %option stack
 %option noyywrap
 
-NUM	[-]?[0-9]+
 ID	[a-zA-Z_][a-zA-Z_0-9]*
 WSPACE	[ \t]
 SYM	[{}<>;,():*\[\]]
+DNUM 	[+-]?[0-9]+
+XNUM 	[+-]?0x[0-9a-fA-F]
 
-
-%x UNWRAP UNWRAP_ENTER BLOCK
+%x FULL_PARSE FN_ENTER VARS_ENTER SHOTGUN_ENTER SHOTGUN_CB_ENTER SHOTGUN
+%x UNWRAP 
 
 %%
 
 
-<UNWRAP>{
+<FULL_PARSE>{
 \n		++lineno;
 {WSPACE}+	/* discard */;
 
 const		return T_CONST;
 struct		return T_STRUCT;
 typename	return T_TYPENAME;
+void		return T_VOID;
+char		return T_CHAR;
+short		return T_SHORT;
+int		return T_INT;
+long		return T_LONG;
+float		return T_FLOAT;
+double		return T_DOUBLE;
+signed		return T_SIGNED;
 unsigned	return T_UNSIGNED;
 static		return T_STATIC;
 
-[{]		{ yy_push_state (UNWRAP); return yytext[0]; }
-[}]		{ yy_pop_state (); return yytext[0]; }
+[{(]		{ yy_push_state (FULL_PARSE); return yytext[0]; }
+[})]		{ yy_pop_state (); return yytext[0]; }
 
-::		{ retun T_2COLON; }
-
-[{}<>;(),:*]	{ return yytext[0]; }
+[<>;,:*]	{ return yytext[0]; }
 
 ID 		{ yylval.str = yytext; return T_ID; }
 
-[+-]?[0-9]+	|
-[+-]?0x[0-9a-fA-F]+	{ yylval.str = yytext; return T_NUM; }
+DNUM|XNUM	{ yylval.str = yytext; return T_NUM; }
 
 }
 
-
-<UNWRAP_ENTER>{
+<FN_ENTER>{
 \n		++lineno;
-{WSPACE}++	/* discard */ ;
-[{]		{ yy_push_state (UNWRAP); return yytext[0]; }
+{WSPACE}+	/*discard*/;
+[(]		{ switch_to_state (FULL_PARSE); return yytext[0]; }
 }
 
-<INITIAL,BLOCK>{
+<VARS_ENTER>{
+\n		++lineno;
+{WSPACE}+	/* discard */ ;
+[{]		{ switch_to_state (FULL_PARSE); return yytext[0]; }
+}
+
+<SHOTGUN_ENTER>{
+\n		++lineno;
+{WSPACE}+	/* discard */ ;
+[{]		{ switch_to_state (SHOTGUN); return yytext[0]; }
+}
+
+<SHOTGUN_CB_ENTER>{
+\n		++lineno;
+{WSPACE}+	/* discard */ ;
+[(]		{ switch_to_state (SHOTGUN_CB); return yytext[0]; }
+}
+
+<SHOTGUN_CB>{
+[(]		{ yy_push_state (SHOTGUN_CB); return yytext[0]; }
+{ID}		{ yylval.str = yytext; return T_ID; }
+[)]		{ yy_pop_state (); return yytext[0]; }
+[%$]		{ yy_push_state (FN_ENTER); return yytext[0]; }
+,		{ return yytext[0]; }
+}
+
+<SHOTGUN>{
+\n		++lineno;
+[^@{};\n]+	{ yylval.str = yytext; return T_PASSTHROUGH; }
+@		{ yy_push_state (SHOTGUN_CB); return yytext[0]; }
+[;]		{ return yytext[0]; }
+[}]		{ yy_pop_state (); return yytext[0]; }
+.		{ return yyerror ("illegal token found in SHOTGUN "
+				  "environment"); }
+}
+
+
+<UNWRAP>{
 \n		{ yylval.str = yytext; ++lineno; return T_PASSTHROUGH; }
-[^U{\n]+	{ yylval.str = yytext; return T_PASSTHROUGH; }
-U		{ yylval.str = yytext; return T_PASSTHROUGH; }
-[{]		{ yylval.str = yytext; yy_push_state (BLOCK); 
+[^VS{\n]+	{ yylval.str = yytext; return T_PASSTHROUGH; }
+[VS]		{ yylval.str = yytext; return T_PASSTHROUGH; }
+[{]		{ yylval.str = yytext; yy_push_state (UNWRAP); 
 		  return T_PASSTHROUGH; }
 [}]		{ yylval.str = yytext; yy_pop_state ();
 	    	  return T_PASSTHROUGH; }
 
-UNWRAP_VARS	{ yy_push_state (UNWRAP_ENTER); return T_VARS; }
-UNWRAP_SHOTGUN	{ yy_push_state (UNWRAP_ENTER); return T_SHOTGUN; }
-
+VARS		{ yy_push_state (VARS_ENTER); return T_VARS; }
+SHOTGUN		{ yy_push_state (SHOTGUN_ENTER); return T_SHOTGUN; }
 }
 
+
+<INITIAL>{
+MEMBER   	{ yy_push_state (UNWRAP); 
+	          yy_push_state (FN_ENTER); 
+                  return T_MEMBER; 
+		}
+
+FUNCTION	{ yy_push_state (UNWRAP);
+		  yy_push_state (FN_ENTER);
+		  return T_FUNCTION; }
+}
+
+
 %%
+
+void
+switch_to_state (int s)
+{
+	yy_pop_state ();
+	yy_push_state (s);
+}
 
 int
 yyerror (str msg)
