@@ -31,11 +31,80 @@
 %token <str> T_TEMPLATE
 %token <str> T_PASSTHROUGH
 
-%token T_VOID
-%token T_STACKVARS
+/* Tokens for C++ Variable Modifiers */
+%token T_CONST
+%token T_STRUCT
+%token T_EXTERN
+%token T_REGISTER
+%token T_TYPENAME
+
+/* Keywords for our new filter */
+%token T_VARS
 %token T_SHOTGUN
 
 %%
+file: /* empty * /
+	| file section
+	;
+
+section:  passthrough
+	| unwrap
+	;
+
+passhthrough: /* empty */
+	| passthrough T_PASSTHROUGH
+	;
+
+unwrap:   unwrap_vars
+	| unwrap_shotgun
+	;
+
+unwrap_vars: T_VARS '{' var_decl_list '}'
+	;
+
+var_decl_list:	/* empty * /
+	| var_decl_list var_decl_line
+	;
+
+var_decl_line: c_type var_name_list ';'
+	;
+
+var_name_list: var_name
+	| var_name_list ',' var_name
+	;
+
+pointers:	/* empty */
+	| pointers '*'
+	;
+
+type_qualifier:	T_CONST
+	| T_VOLATILE
+	;
+
+type_qualifier_list: type_qualifier
+	| type_qualifier_list type_qualifier
+	;
+
+pointer: '*' type_qualifier_list
+	| '*' type_qualifier_list pointer
+	;
+
+var_name: pointer T_ID 
+	| T_ID
+	;
+
+c_type_with_pointer: c_type
+	| c_type pointer
+	;
+
+c_type: c_type_simple
+	| c_type_simple templated_type
+	;
+
+c_type_simple:  
+
+
+
 file: /* empty */ { checkliterals (); }
 	| file { checkliterals (); } definition { checkliterals (); }
 	;

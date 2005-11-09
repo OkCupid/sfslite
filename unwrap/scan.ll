@@ -44,69 +44,56 @@ WSPACE	[ \t]
 SYM	[{}<>;,():*\[\]]
 
 
-%x UNWRAP TEMPLATE
+%x UNWRAP UNWRAP_ENTER BLOCK
 
 %%
 
-UNWRAP_VARS 	{ yy_push_state (UNWRAP); return T_STACKVARS; }
-UNWRAP_SHOTGUN 	{ yy_push_state (UNWRAP); return T_SHOTGUN; }
-UNWRAP_MEMBER_FN { yy_push_state (UNWRAP_FN); return T_MEMBER_FN; }
 
-<DOPARSE>{
+<UNWRAP>{
+\n		++lineno;
+{WSPACE}+	/* discard */;
+
 const		return T_CONST;
 struct		return T_STRUCT;
 extern		return T_EXTERN;
 register	return T_REGISTER;
 typename	return T_TYPENAME;
-[{}<>;(),:*]	{ return yytext[0]; }
-}
+unsigned	return T_UNSIGNED;
 
-<UNWRAP_FN>{
-[():]
-
-}
-
-<UNWRAP>{
-\n		++lineno;
-{WSPACE}+	/* discard */;
-[{;(),_]	{ return yytext[0]; }
+[{]		{ yy_push_state (UNWRAP); return yytext[0]; }
 [}]		{ yy_pop_state (); return yytext[0]; }
-}
 
-<UNWRAP,UNWRAP_FN>{
-ID		{ yylval.str = ytext; return T_ID; }
-"<"		{ yy_push_state (TEMPLATE); return yytext[0]; }
-}
+[{}<>;(),:*]	{ return yytext[0]; }
 
-<TEMPLATE>{
-"<"		{ yy_push_state (TEMPLATE); return yytext[0]; }
-\n		++lineno;
-{WSPACE}+	/* discard */;
 ID 		{ yylval.str = yytext; return T_ID; }
-NUM 		{ yylval.str = yytext; return T_NUM; }
-[,:]		{ return yytext[0]; }
-">"		{ yy_pop_state (); return yytext[0]; }
+
+[+-]?[0-9]+	|
+[+-]?0x[0-9a-fA-F]+	{ yylval.str = yytext; return T_NUM; }
+
 }
 
+
+<UNWRAP_ENTER>{
 \n		++lineno;
-[^U\n]+		{ yylval.str = yytext; return T_PASSTHROUGH; }
+{WSPACE}++	/* discard */ ;
+[{]		{ yy_push_state (UNWRAP); return yytext[0]; }
+}
+
+<INITIAL,BLOCK>{
+\n		{ yylval.str = yytext; ++lineno; return T_PASSTHROUGH; }
+[^U{\n]+	{ yylval.str = yytext; return T_PASSTHROUGH; }
 U		{ yylval.str = yytext; return T_PASSTHROUGH; }
+[{]		{ yylval.str = yytext; yy_push_state (BLOCK); 
+		  return T_PASSTHROUGH; }
+[}]		{ yylval.str = yytext; yy_pop_state ();
+	    	  return T_PASSTHROUGH; }
+
+UNWRAP_VARS	{ yy_push_state (UNWRAP_ENTER); return T_VARS; }
+UNWRAP_SHOTGUN	{ yy_push_state (UNWRAP_ENTER); return T_SHOTGUN; }
+
+}
 
 %%
-
-void
-nlcount (int m)
-{
-  int n = 0;
-  for (char *y = yytext; *y; y++)
-    if (*y == '\n') {
-      n++;
-      if (m && m == n) 
-        break;
-    }
-   lineno++;
-}
-
 
 int
 yyerror (str msg)
