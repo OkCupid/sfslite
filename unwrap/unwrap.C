@@ -3,7 +3,7 @@
 
 #include "unwrap.h"
 
-parse_state_t *state;
+parse_state_t state;
 
 static void
 usage ()
@@ -52,15 +52,11 @@ main (int argc, char *argv[])
     yyin = ifh;
   }
 
-  if (debug) {
-#ifdef YYDEBUG
-    yydebug = 1;
-#endif
-  }
+  yydebug = 1;
   
   // set up the dirty global variable to keep track of state while
   // running yacc
-  state = New parse_state_t ();
+  // state = New parse_state_t ();
 
   yyparse ();
 

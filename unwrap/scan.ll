@@ -32,7 +32,7 @@
 #define yywrap() 1
 
 str filename = "(stdin)";
-int lineno;
+int lineno = 1;
 static void switch_to_state (int i);
 %}
 

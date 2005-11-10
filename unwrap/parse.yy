@@ -85,7 +85,7 @@ passthrough: /* empty */
 
 fn:	T_FUNCTION '(' fn_declaration ')' 
 	{
-	   state->new_fn ($3);
+	   state.new_fn ($3);
 	}
 	fn_body 
 	;
@@ -96,6 +96,7 @@ fn_body: '{' fn_statements '}'
 /* declaration_specifiers is no longer optional ?! */
 fn_declaration: declaration_specifiers declarator const_opt
 	{
+	   $2->dump ();
 	   $$ = New unwrap_fn_t ($1, $2, $3);
 	}
 	;
@@ -173,8 +174,13 @@ parameter_list: parameter_declaration
 	}
 	| parameter_list ',' parameter_declaration
 	{
-	  ($1)->add ($3);
- 	  $$ = $1;
+	  if (! ($1)->add ($3) ) {
+	    strbuf b;
+	    b << "duplicated parameter in param list: " << $3.name ();
+	    yyerror (b);
+          } else {
+ 	    $$ = $1;
+          }
 	}
 	;
 

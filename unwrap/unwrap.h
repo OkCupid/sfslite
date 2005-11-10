@@ -74,7 +74,7 @@ public:
   ~vartab_t () {}
   vartab_t () {}
   vartab_t (var_t v) { add (v); }
-  bool size () { return _vars.size (); }
+  u_int size () { return _vars.size (); }
   bool add (var_t v) ;
 
   vec<var_t> _vars;
@@ -95,6 +95,7 @@ public:
   str name () const { return _name; }
   ptr<vartab_t> params () { return _params; }
   void set_params (ptr<vartab_t> v) { _params = v; }
+  void dump () const ;
 private:
   const str _name;
   str _pointer;
@@ -133,7 +134,7 @@ private:
   tailq<unwrap_el_t, &unwrap_el_t::_lnk> _elements;
 };
 
-extern parse_state_t *state;
+extern parse_state_t state;
 
 struct YYSTYPE {
   ::str             str;
@@ -145,6 +146,7 @@ struct YYSTYPE {
   unwrap_fn_t *     fn;
 };
 extern YYSTYPE yylval;
+extern str filename;
 
 #define CONCAT(in,out)  do { strbuf b; b << in; out = b; } while (0)
 
