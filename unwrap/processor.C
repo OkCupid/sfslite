@@ -41,3 +41,18 @@ declarator_t::dump () const
   if (_params)
     warn << "  param list size: " << _params->size () << "\n";
 }
+
+void
+parse_state_t::passthrough (const str &s)
+{
+  if (!*_elements.plast || !(*_elements.plast)->append (s)) 
+    _elements.insert_tail (New unwrap_passthrough_t (s));
+
+}
+
+void
+parse_state_t::new_shotgun (unwrap_shotgun *g)
+{
+  _shotgun = g;
+  _elements.insert_tail (g);
+}

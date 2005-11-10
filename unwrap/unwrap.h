@@ -28,6 +28,11 @@ public:
   tailq_entry<unwrap_el_t> _lnk;
 };
 
+class unwrap_vars_t : public unwrap_el_t {
+public:
+  unwrap_vars_t () {}
+};
+
 class unwrap_passthrough_t : public unwrap_el_t {
 public:
   unwrap_passthrough_t (const str &s) { append (s); }
@@ -116,6 +121,7 @@ public:
   unwrap_fn_t (const str &r, ptr<declarator_t> d, bool c)
     : _ret_type (r, d->pointer ()), _name (d->name ()),
       _name_mangled (mangle (_name)), _isconst (c) {}
+  vartab_t *stack_vars () { return &_stack_vars; }
 private:
   const type_t _ret_type;
   const str _name;
@@ -125,13 +131,38 @@ private:
   vartab_t _stack_vars;
 };
 
+class unwrap_shotgun_t;
 class parse_state_t {
 public:
   void new_fn (unwrap_fn_t *f) { new_el (f); _fn = f; }
   void new_el (unwrap_el_t *e) { _fn = NULL; _elements.insert_tail (e); }
+  void passthrough (const str &s) ;
+  void push (unwrap_el_t *e) { _elements.insert_tail (e); }
+
+  vartab_t *stack_vars () { return _fn ? _fn->stack_vars () : NULL; }
+  void set_decl_specifier (const str &s) { _decl_specifier = s; }
+  str decl_specifier () const { return _decl_specifier; }
+
+  void new_shotgun (unwrap_shotgun_t *g);
+  unwrap_shotgun_t *shotgun () { return _shotgun; }
+
 private:
+  str _decl_specifier;
   unwrap_fn_t *_fn;
+  unwrap_shotgun_t *_shotgun;
   tailq<unwrap_el_t, &unwrap_el_t::_lnk> _elements;
+};
+
+class unwrap_shotgun_t : public parse_state_t, public unwrap_el_t 
+{
+public:
+  unwrap_shotgun_t () {}
+};
+
+class unwrap_callback_t : public unwrap_el_t {
+public:
+  
+
 };
 
 extern parse_state_t state;
@@ -139,11 +170,14 @@ extern parse_state_t state;
 struct YYSTYPE {
   ::str             str;
   ptr<declarator_t> decl;
-  ptr<vartab_t>     params;
+  ptr<vartab_t>     vars;
   var_t             var;
   bool              opt;
   char              ch;
   unwrap_fn_t *     fn;
+  unwrap_el_t *     el;
+
+  vec<ptr<declarator_t> > decls;
 };
 extern YYSTYPE yylval;
 extern str filename;

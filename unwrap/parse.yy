@@ -63,14 +63,16 @@
 %type <str> template_instantiation_list_opt identifier
 %type <str> typedef_name type_qualifier_list_opt type_qualifier_list
 %type <str> type_qualifier type_specifier type_modifier_list
-%type <str> type_modifier declaration_specifiers
+%type <str> type_modifier declaration_specifiers passthrough
 
 %type <decl> init_declarator declarator direct_declarator
 
-%type <params>  parameter_type_list_opt parameter_type_list parameter_list
-%type <opt>     const_opt
-%type <fn>      fn_declaration
-%type <var>	parameter_declaration
+%type <vars> parameter_type_list_opt parameter_type_list parameter_list
+%type <opt>  const_opt
+%type <fn>   fn_declaration
+%type <var>  parameter_declaration callback_class_var callback_stack_var
+
+%type <el>   fn_unwrap vars shotgun callback
 
 %%
 
@@ -79,8 +81,13 @@ file:  passthrough
 	| file fn passthrough
 	;
 
-passthrough: /* empty */
-	| passthrough T_PASSTHROUGH
+passthrough: /* empty */	    { $$ = ""; }
+	| passthrough T_PASSTHROUGH 
+	{
+	   strbuf b ($1);
+	   b << $2;
+	   $$ = str (b);
+	}
 	;
 
 fn:	T_FUNCTION '(' fn_declaration ')' 
@@ -105,8 +112,15 @@ const_opt: /* empty */		{ $$ = false; }
 	| T_CONST		{ $$ = true; }
 	;
 
-fn_statements:  passthrough
+fn_statements: passthrough			
+	{
+	  state.passthrough ($1);
+	}
 	| fn_statements fn_unwrap passthrough
+	{
+	  state.push ($2);
+	  state.passthrough ($3);
+	}
 	;
 
 fn_unwrap: vars
@@ -114,16 +128,33 @@ fn_unwrap: vars
 	;
 
 vars:	T_VARS '{' declaration_list_opt '}'
+	{
+	  $$ = New unwrap_vars_t ();
+	}
 	;
 
-shotgun: T_SHOTGUN '{' shotgun_calls passthrough '}'
+shotgun: T_SHOTGUN '{' 
+	{
+	  state.new_shotgun (New unwrap_shotgun_t ());
+	}
+	shotgun_calls passthrough '}'
+	{
+	  $$ = state.shotgun ();
+	}
 	;
 
-shotgun_calls: /* empty */
-	| shotgun_calls shotgun_call
+shotgun_calls: /* empty */		
+	| shotgun_calls shotgun_call	
 	;
 
 shotgun_call: passthrough callback passthrough ';' 
+	{
+	  parse_state_t *sg = state.shotgun ();
+	  sg->passthrough ($1);
+	  sg->push ($2);
+	  sg->passthrough ($3);
+	  sg->passthrough (";");
+	}
 	;
 
 callback: '@' '(' callback_param_list_opt ')'
@@ -146,9 +177,17 @@ callback_param: identifier
 	;
 
 callback_stack_var: '$' '(' parameter_declaration ')'
+	{
+	  if (!state.stack_vars ()->add ($3)) {
+	    strbuf b;
+	    b << "redefinition of stack variable: " << $3.name () << "\n";
+	    yyerror (b);
+	  }
+	  $$ = $3;
+	}
 	;
 
-callback_class_var: '%' '(' parameter_declaration ')'
+callback_class_var: '%' '(' parameter_declaration ')'    { $$ = $3; }
 	;
 
 declaration_list_opt: /* empty */
@@ -195,7 +234,11 @@ parameter_declaration: declaration_specifiers declarator
 	}
 	;
 
-declaration: declaration_specifiers init_declarator_list_opt ';'
+declaration: declaration_specifiers 
+	{
+	  state.set_decl_specifier ($1);
+	}
+	init_declarator_list_opt ';'
 	;
 
 init_declarator_list_opt: /* empty */
@@ -209,6 +252,15 @@ init_declarator_list:  init_declarator
 /* missing: C++-style initialization, C-style initiatlization
  */
 init_declarator: declarator
+	{
+	  vartab_t *t = state.stack_vars ();
+	  var_t v (state.decl_specifier (), $1);
+	  if (!t->add (v)) {
+	    strbuf b;
+	    b << "redefinition of stack variable: " << $1->name () << "\n";
+ 	    yyerror (b);
+          }
+	}
 	;
 
 declarator: pointer_opt direct_declarator
