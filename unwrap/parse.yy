@@ -98,13 +98,17 @@ shotgun_calls: /* empty */
 	| shotgun_calls shotgun_call
 	;
 
-shotgun_call: passthrough callback passthrough ';'
+shotgun_call: passthrough callback passthrough ';' passthrough
 	;
 
-callback: '@' '(' callback_param_list ')'
+callback: '@' '(' callback_param_list_opt ')'
 	;
 
-callback_param_list: /* empty */
+callback_param_list_opt: /* empty */
+	| callback_param_list
+	;
+
+callback_param_list: callback_param
 	| callback_param_list ',' callback_param
 	;
 
