@@ -3,6 +3,8 @@
 
 #include "unwrap.h"
 
+parse_state_t *state;
+
 static void
 usage ()
 {
@@ -19,6 +21,7 @@ main (int argc, char *argv[])
   int ch;
   str outfile;
   bool debug = false;
+
   
   make_sync (0);
   make_sync (1);
@@ -55,7 +58,12 @@ main (int argc, char *argv[])
 #endif
   }
   
+  // set up the dirty global variable to keep track of state while
+  // running yacc
+  state = New parse_state_t ();
+
   yyparse ();
+
   if (ifh) {
     fclose (ifh);
   }

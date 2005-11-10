@@ -58,17 +58,21 @@
 %token T_2COLON
 
 %type <str> pointer pointer_opt template_instantiation_arg
-%type <str> template_instantiation_list tempalte_instantiation
+%type <str> template_instantiation_list template_instantiation
 %type <str> template_instantiation_opt typedef_name_single
+%type <str> template_instantiation_list_opt identifier
 %type <str> typedef_name type_qualifier_list_opt type_qualifier_list
 %type <str> type_qualifier type_specifier type_modifier_list
 %type <str> type_modifier declaration_specifiers
 
 %type <decl> init_declarator declarator direct_declarator
 
-%type <params>  parameter_type_list_opt parametere_type_list parameter_list
+%type <params>  parameter_type_list_opt parameter_type_list parameter_list
 %type <opt>     const_opt
+%type <fn>      fn_declaration
+%type <var>	parameter_declaration
 
+%%
 
 
 file:  passthrough
@@ -111,14 +115,14 @@ fn_unwrap: vars
 vars:	T_VARS '{' declaration_list_opt '}'
 	;
 
-shotgun: T_SHOTGUN '{' shotgun_calls '}'
+shotgun: T_SHOTGUN '{' shotgun_calls passthrough '}'
 	;
 
 shotgun_calls: /* empty */
 	| shotgun_calls shotgun_call
 	;
 
-shotgun_call: passthrough callback passthrough ';' passthrough
+shotgun_call: passthrough callback passthrough ';' 
 	;
 
 callback: '@' '(' callback_param_list_opt ')'
@@ -169,7 +173,7 @@ parameter_list: parameter_declaration
 	}
 	| parameter_list ',' parameter_declaration
 	{
-	  $1->add ($2);
+	  ($1)->add ($3);
  	  $$ = $1;
 	}
 	;
@@ -221,7 +225,7 @@ direct_declarator: typedef_name
 	}
 	| typedef_name '(' parameter_type_list_opt ')'
 	{
-	   $$ = New refcounted<declarator_t> ($1, $2);
+	   $$ = New refcounted<declarator_t> ($1, $3);
 	}
 	;
 
@@ -317,7 +321,7 @@ template_instantiation_list_opt: /* empty */   { $$ = "" ; }
 template_instantiation_list: template_instantiation_arg
 	| template_instantiation_list ',' template_instantiation_arg
 	{
-	  CONCAT($1 << " , " << $2, $$);
+	  CONCAT($1 << " , " << $3, $$);
 	}
 	;
 
