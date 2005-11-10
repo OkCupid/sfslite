@@ -25,6 +25,7 @@
 %{
 #include "unwrap.h"
 #define YYSTYPE YYSTYPE
+
 %}
 
 %token <str> T_ID
@@ -56,7 +57,19 @@
 
 %token T_2COLON
 
-%%
+%type <str> pointer pointer_opt template_instantiation_arg
+%type <str> template_instantiation_list tempalte_instantiation
+%type <str> template_instantiation_opt typedef_name_single
+%type <str> typedef_name type_qualifier_list_opt type_qualifier_list
+%type <str> type_qualifier type_specifier type_modifier_list
+%type <str> type_modifier declaration_specifiers
+
+%type <decl> init_declarator declarator direct_declarator
+
+%type <params>  parameter_type_list_opt parametere_type_list parameter_list
+%type <opt>     const_opt
+
+
 
 file:  passthrough
 	| file fn passthrough
@@ -66,18 +79,25 @@ passthrough: /* empty */
 	| passthrough T_PASSTHROUGH
 	;
 
-fn:	T_FUNCTION '(' fn_declaration ')' fn_body 
+fn:	T_FUNCTION '(' fn_declaration ')' 
+	{
+	   state->new_fn ($3);
+	}
+	fn_body 
 	;
 
 fn_body: '{' fn_statements '}'
 	;
 
 /* declaration_specifiers is no longer optional ?! */
-fn_declaration: declaration_specifiers fancy_declarator const_opt
+fn_declaration: declaration_specifiers declarator const_opt
+	{
+	   $$ = New unwrap_fn_t ($1, $2, $3);
+	}
 	;
 
-const_opt: /* empty */
-	| T_CONST
+const_opt: /* empty */		{ $$ = false; }
+	| T_CONST		{ $$ = true; }
 	;
 
 fn_statements:  passthrough
@@ -134,7 +154,7 @@ declaration_list: declaration
 	| declaration_list declaration
 	;
 
-parameter_type_list_opt: /* empty */
+parameter_type_list_opt: /* empty */ { $$ = NULL; }
 	| parameter_type_list
 	;
 
@@ -143,13 +163,26 @@ parameter_type_list_opt: /* empty */
 parameter_type_list: parameter_list
 	;
 
-parameter_list: parameter_declaration
+parameter_list: parameter_declaration 
+	{
+	  $$ = New refcounted<vartab_t> ($1);
+	}
 	| parameter_list ',' parameter_declaration
+	{
+	  $1->add ($2);
+ 	  $$ = $1;
+	}
 	;
 
 /* missing: abstract declarators
  */
 parameter_declaration: declaration_specifiers declarator
+	{
+	  if ($2->params ()) {
+	    warn << "parameters found when not expected\n";
+	  }
+	  $$ = var_t ($1, $2);
+	}
 	;
 
 declaration: declaration_specifiers init_declarator_list_opt ';'
@@ -169,42 +202,56 @@ init_declarator: declarator
 	;
 
 declarator: pointer_opt direct_declarator
+	{
+	  if ($1.len () > 0) 
+	    $2->set_pointer ($1);
+  	  $$ = $2;
+	}
 	;
 
-fancy_declarator: pointer fancy_direct_declarator
-	| fancy_direct_declarator
-	;
 
-/* accommodate my_class_t::foo
+/* 
+ * use "typedef_name" instead of identifier for C++-style names
+ *
+ * simplified to not be recursive...
  */
-fancy_direct_declarator: typedef_name
-	| fancy_direct_declarator '(' parameter_type_list_opt ')'
+direct_declarator: typedef_name
+	{
+	   $$ = New refcounted<declarator_t> ($1);
+	}
+	| typedef_name '(' parameter_type_list_opt ')'
+	{
+	   $$ = New refcounted<declarator_t> ($1, $2);
+	}
 	;
 
-/* missing: arrays, and C++-style initialization
- */
-direct_declarator: identifier
-	| direct_declarator '(' parameter_type_list_opt ')'
-	;
 
 /* missing: first rule:
  *	storage_class_specifier declaration_specifiers_opt
  *
  * changed rule, to eliminate s/r conflicts
+ *
+ * Returns: <str> element, with the type of the variable (unparsed)
  */
 declaration_specifiers: type_modifier_list type_specifier
+	{
+	   CONCAT($1 << " " << $2, $$);
+	}
 	;
 
 /*
  * new rule to eliminate s/r conflicts
  */
 type_modifier:  type_qualifier
-	| T_SIGNED
-	| T_UNSIGNED
+	| T_SIGNED		{ $$ = "signed"; }
+	| T_UNSIGNED		{ $$ = "unsigned"; }
 	;
 
-type_modifier_list: /* empty */
+type_modifier_list: /* empty */ { $$ = ""; }
 	| type_modifier_list type_modifier
+	{
+	  CONCAT ($1 << " " << $2, $$);
+	}
 	;
 	
 
@@ -212,24 +259,27 @@ type_modifier_list: /* empty */
  *	| struct_or_union_specifier
  *	| enum_specifier
  */
-type_specifier: T_VOID
-	| T_CHAR
-	| T_SHORT
-	| T_INT
-	| T_LONG
-	| T_FLOAT
-	| T_DOUBLE
+type_specifier: T_VOID		{ $$ = "void" ; }
+	| T_CHAR 		{ $$ = "char";  }
+	| T_SHORT		{ $$ = "short"; }
+	| T_INT			{ $$ = "int" ; }
+	| T_LONG		{ $$ = "long" ; }
+	| T_FLOAT		{ $$ = "float"; }
+	| T_DOUBLE		{ $$ = "double" ; }
 	| typedef_name
 	;
 
-type_qualifier:	T_CONST
+type_qualifier:	T_CONST		{ $$ = "const"; }
 	;
 
 type_qualifier_list: type_qualifier
 	| type_qualifier_list type_qualifier
+	{
+	  CONCAT($1 << " " << $2, $$);
+	}
 	;
 
-type_qualifier_list_opt: /* empty */
+type_qualifier_list_opt: /* empty */ { $$ = ""; }
 	| type_qualifier_list
 	;
 
@@ -239,35 +289,53 @@ type_qualifier_list_opt: /* empty */
  */
 typedef_name:  typedef_name_single
 	| typedef_name T_2COLON typedef_name_single
+	{
+	   CONCAT($1 << "::" << $3, $$);
+	}
 	;
 
 typedef_name_single: identifier template_instantiation_opt
+	{
+          CONCAT($1 << $2, $$);
+	}
 	;
 
-template_instantiation_opt: /* empty */
-	| template_instantiation
+template_instantiation_opt: /* empty */ 	{ $$ = ""; }
+	| template_instantiation	
 	;
 
 template_instantiation: '<' template_instantiation_list_opt '>'
+	{
+	  CONCAT("<" << $2 << ">", $$);
+	}
 	;
 
-template_instantiation_list_opt: /* empty */
+template_instantiation_list_opt: /* empty */   { $$ = "" ; }
 	| template_instantiation_list
 	;
 
 template_instantiation_list: template_instantiation_arg
 	| template_instantiation_list ',' template_instantiation_arg
+	{
+	  CONCAT($1 << " , " << $2, $$);
+	}
 	;
 
 template_instantiation_arg: declaration_specifiers pointer_opt
+	{
+	  CONCAT($1 << " " << $2, $$);
+	}
 	;
 
-pointer_opt: /* empty */
+pointer_opt: /* empty */	{ $$ = ""; }
 	| pointer
 	;
 
-pointer: '*'
+pointer: '*'			{ $$ = "*"; }
 	| '*' type_qualifier_list_opt pointer
+	{
+	  CONCAT(" * " << $2 << $3, $$);
+	}
 	;
 
 %%

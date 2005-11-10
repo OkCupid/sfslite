@@ -7,7 +7,7 @@ sfsbin_PROGRAMS = unwrap
 
 noinst_HEADERS = unwrap.h
 
-unwrap_SOURCES = unwrap.C parse.yy scan.ll
+unwrap_SOURCES = unwrap.C parse.yy scan.ll processor.C
 unwrap_LDADD = $(LDADD)
 unwrap_DEPENDENCIES = $(LIBASYNC)
 
