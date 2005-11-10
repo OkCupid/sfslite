@@ -157,6 +157,10 @@ SHOTGUN		{ yy_push_state (SHOTGUN_ENTER); return T_SHOTGUN; }
 	    	  return T_PASSTHROUGH; }
 }
 
+/* In the base UNWRAP frame, we need to return '}' and not PASSTHROUGH
+ * to the parser, since the parser needs to know when to close the
+ * FUNCTION () { ... } section
+ */
 <UNWRAP_BASE>{
 [}]		{ return yytext[0]; }
 }
