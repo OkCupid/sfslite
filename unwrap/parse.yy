@@ -102,6 +102,10 @@ fn:	T_FUNCTION '(' fn_declaration ')'
 	;
 
 fn_body: '{' fn_statements '}'
+	{
+	  /* hack in function body close */
+	  state.passthrough ("}\n");
+	}
 	;
 
 /* declaration_specifiers is no longer optional ?! */
@@ -188,25 +192,46 @@ callback_param_list: callback_param
 identifier: T_ID
 	;
 
-callback_param: identifier             { $$ = var_t ($1); }
+callback_param: identifier             
+	{   
+           var_t v;
+	   if (state.args ()->exists ($1)) {
+	     v = var_t ($1, ARG);
+	   } else if (state.stack_vars ()->exists ($1)) {
+	     v = var_t ($1, STACK);
+	   } else {
+	      strbuf b;
+	      b << "unbound variable in wrap: " << $1;
+	      yyerror (b);
+	   }
+	   $$ = v;
+	}
 	| callback_stack_var
 	| callback_class_var
 	;
 
 callback_stack_var: '$' '(' parameter_declaration ')'
 	{
+	  if (state.args ()->exists ($3.name ())) {
+	    strbuf b;
+	    b << "stack variable '" << $3.name () << "' shadows a parameter\n";
+	    yyerror (b);
+	  }
 	  if (!state.stack_vars ()->add ($3)) {
 	    strbuf b;
 	    b << "redefinition of stack variable: " << $3.name () << "\n";
 	    yyerror (b);
 	  }
+	  $3.set_asc (STACK);
 	  $$ = $3;
 	}
 	;
 
 callback_class_var: '%' '(' parameter_declaration ')'    
 	{ 
-	   $3.set_as_class_var ();
+ 	   /* doesn't matter if it fails... */
+	   state.class_vars_tmp ()->add ($3);
+	   $3.set_asc (CLASS);
 	   $$ = $3; 
 	}
 	;
@@ -276,9 +301,14 @@ init_declarator: declarator
 	{
 	  vartab_t *t = state.stack_vars ();
 	  var_t v (state.decl_specifier (), $1);
+	  if (state.args ()->exists (v.name ())) {
+	    strbuf b;
+	    b << "stack variable '" << v.name () << "' shadows a parameter\n";
+	    yyerror (b);
+	  }
 	  if (!t->add (v)) {
 	    strbuf b;
-	    b << "redefinition of stack variable: " << $1->name () << "\n";
+	    b << "redefinition of stack variable: " << v.name () << "\n";
  	    yyerror (b);
           }
 	}

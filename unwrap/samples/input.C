@@ -13,8 +13,8 @@ FUNCTION(int my_class_t::fn1 (int a, ptr<T> x, cbi::ptr cb_done))
   
   if (a == 10) {
     SHOTGUN {
-      call_fn (a, x, CB(b,x));
-      call_fn2 (a,x, CB(v,name));
+      call_fn (a, x, @(b,x,%(double q)));
+      call_fn2 (a,x, @(v,name));
     }
     if (v && b && *b) {
       warn << foo << "\n";

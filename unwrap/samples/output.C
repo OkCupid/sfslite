@@ -29,10 +29,11 @@ my_class_t__fn1__freezer_t::reenter ()
 }
 
 static void
-my_class_t__fn1__freezer_t::cb1 (ptr<bool> b, int x)
+my_class_t__fn1__freezer_t::cb1 (ptr<bool> b, int x, double q, trigger_t trig)
 {
   _stack.b = b;
   _stack.x = x;
+  _class_tmp.q = q;
 }
 
 int
@@ -79,6 +80,9 @@ my_class_t::fn1 (int a, ptr<bar_t> x, cbi::ptr cb_done, ptr<freezer_t> __frz)
       return;
     }
   my_class_t__fn1__label1:
+    q = __frz_c->_class_tmp.q;
+
+
     if (v && b && *b) {
       warn << foo << "\n";
     }

@@ -20,6 +20,8 @@ extern int yyparse ();
 extern int yydebug;
 extern FILE *yyin;
 
+typedef enum { NONE = 0, ARG = 1, STACK = 2, CLASS = 3 } vartyp_t ;
+
 class unwrap_el_t {
 public:
   unwrap_el_t () {}
@@ -55,6 +57,7 @@ public:
   str to_str () const;
   void set_base_type (const str &t) { _base_type = t; }
   void set_pointer (const str &p) { _pointer = p; }
+  bool is_complete () const { return _base_type; }
 private:
   str _base_type, _pointer;
 };
@@ -62,11 +65,11 @@ private:
 class declarator_t;
 class var_t {
 public:
-  var_t (const str &n) : _name (n), _stack_var (true) {}
+  var_t () : _asc (NONE) {}
+  var_t (const str &n, vartyp_t a = NONE) : _name (n), _asc (a) {}
   var_t (const str &t, ptr<declarator_t> d);
   var_t (const str &t, const str &p, const str &n)
-    : _type (t, p), _name (n), _stack_var (true) {}
-  var_t () {}
+    : _type (t, p), _name (n), _asc (STACK) {}
 protected:
   type_t _type;
 
@@ -75,14 +78,17 @@ public:
   const str &name () const { return _name; }
   type_t *get_type () { return &_type; }
   const type_t * get_type_const () const { return &_type; }
-  void set_as_class_var () { _stack_var = false; }
+  bool is_complete () const { return _type.is_complete (); }
+
+  // ASC = Args, Stack or Class
+  void set_asc (vartyp_t a) { _asc = a; }
+  vartyp_t get_asc () const { return _asc; }
 
   str decl () const;
-
   str _name;
 
 private:
-  bool _stack_var;
+  vartyp_t _asc;
 };
 
 class vartab_t {
@@ -90,8 +96,12 @@ public:
   ~vartab_t () {}
   vartab_t () {}
   vartab_t (var_t v) { add (v); }
-  u_int size () { return _vars.size (); }
+  u_int size () const { return _vars.size (); }
   bool add (var_t v) ;
+  void declarations (strbuf &b, const str &padding) const;
+  void paramlist (strbuf &b) const;
+  bool exists (const str &n) const { return _tab[n]; }
+  const var_t *lookup (const str &n) const;
 
   vec<var_t> _vars;
   qhash<str, u_int> _tab;
@@ -102,13 +112,14 @@ class unwrap_fn_t;
 class unwrap_callback_t : public unwrap_el_t {
 public:
   unwrap_callback_t (ptr<vartab_t> t, unwrap_fn_t *f) : 
-    _vars (t), _outputted (false), _parent_fn (f) {}
-  void output (int fd);
+    _vars (t), _parent_fn (f) {}
+  void output (int fd) {}
+  void output_in_class (strbuf &b, int n);
   tailq_entry<unwrap_callback_t> _lnk;
 private:
   ptr<vartab_t> _vars;
-  bool _outputted;
   unwrap_fn_t *_parent_fn;
+  int _cb_id;
 };
 
 /*
@@ -144,6 +155,7 @@ str mangle (const str &in);
 //   foo_t::max<int,int>::bar  => bar
 //
 str strip_to_method (const str &in);
+str strip_off_method (const str &in);
 
 //
 // Unwrap Function Type
@@ -153,36 +165,45 @@ public:
   unwrap_fn_t (const str &r, ptr<declarator_t> d, bool c)
     : _ret_type (r, d->pointer ()), _name (d->name ()),
       _name_mangled (mangle (_name)), _method_name (strip_to_method (_name)),
-      _isconst (c), _freezer (freezer ()),
+      _class (strip_off_method (_name)), _isconst (c),_freezer (mk_freezer ()),
       _args (d->params ()) {}
+
   vartab_t *stack_vars () { return &_stack_vars; }
+  vartab_t *args () { return _args; }
+  vartab_t *class_vars_tmp () { return &_class_vars_tmp; }
+
   void output (int fd);
   void add_callback (unwrap_callback_t *c) { _cbs.insert_tail (c); }
   str fn_prefix () const { return _name_mangled; }
 
   static var_t freezer_generic () ;
-  var_t freezer () const ;
   str decl_casted_freezer () const;
+  var_t feezer () const { return _freezer; }
 
   str frznm () const { return _freezer.name (); }
   str reenter_fn  () const ;
   str frozen_arg (const str &i) const ;
+
 
 private:
   const type_t _ret_type;
   const str _name;
   const str _name_mangled;
   const str _method_name;
+  const str _class;
   const bool _isconst;
   const var_t _freezer;
 
+  var_t mk_freezer () const ;
+
   ptr<vartab_t> _args;
   vartab_t _stack_vars;
+  vartab_t _class_vars_tmp;
   tailq<unwrap_callback_t, &unwrap_callback_t::_lnk> _cbs; 
 
-  void output_reenter (int fd);
-  void output_callbacks (int fd);
+  void output_reenter (strbuf &b);
   void output_freezer (int fd);
+  void output_fn_header (int fd);
   
 };
 
@@ -194,7 +215,11 @@ public:
   void passthrough (const str &s) ;
   void push (unwrap_el_t *e) { _elements.insert_tail (e); }
 
+  // access variable tables in the currently active function
   vartab_t *stack_vars () { return _fn ? _fn->stack_vars () : NULL; }
+  vartab_t *class_vars_tmp () { return _fn ? _fn->class_vars_tmp () : NULL ; }
+  vartab_t *args () { return _fn ? _fn->args () : NULL; }
+
   void set_decl_specifier (const str &s) { _decl_specifier = s; }
   str decl_specifier () const { return _decl_specifier; }
   unwrap_fn_t *function () { return _fn; }

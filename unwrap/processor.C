@@ -3,7 +3,15 @@
 #include "rxx.h"
 
 var_t::var_t (const str &t, ptr<declarator_t> d)
-  : _type (t, d->pointer ()), _name (d->name ()), _stack_var (true) {}
+  : _type (t, d->pointer ()), _name (d->name ()), _asc (NONE) {}
+
+const var_t *
+vartab_t::lookup (const str &n) const
+{
+  const u_int *ind = _tab[n];
+  if (!ind) return NULL;
+  return &_vars[*ind];
+}
 
 str
 type_t::to_str () const
@@ -45,6 +53,18 @@ strip_to_method (const str &in)
   }
   return in;
 }
+
+str 
+strip_off_method (const str &in)
+{
+  static rxx mthd_rxx ("([^:]+::)+");
+
+  if (mthd_rxx.search (in)) 
+    return str (in.cstr (), mthd_rxx[1].len () - 2);
+
+  return NULL;
+}
+
 
 bool
 vartab_t::add (var_t v)
@@ -98,7 +118,7 @@ unwrap_fn_t::freezer_generic ()
 }
 
 var_t
-unwrap_fn_t::freezer () const
+unwrap_fn_t::mk_freezer () const
 {
   strbuf b;
   b << _name_mangled << "__freezer_t";
@@ -132,6 +152,23 @@ unwrap_fn_t::frozen_arg (const str &i) const
   return b;
 }
 
+void
+vartab_t::declarations (strbuf &b, const str &padding) const
+{
+  for (u_int i = 0; i < size (); i++) {
+    b << padding << _vars[i].decl () << ";\n";
+  }
+}
+
+void
+vartab_t::paramlist (strbuf &b) const
+{
+  for (u_int i = 0; i < size () ; i++) {
+    if (i != 0) b << ", ";
+    b << _vars[i].decl ();
+  }
+}
+
 //
 //
 //-----------------------------------------------------------------------
@@ -147,56 +184,149 @@ unwrap_passthrough_t::output (int fd)
 }
   
 void 
-unwrap_callback_t::output (int fd)
+unwrap_callback_t::output_in_class (strbuf &b, int n)
 {
-  if (_outputted)
-    return;
-  _outputted = true;
+  _cb_id = n;
 
+  b << "  void cb" << n  << " (";
+  if (_vars) {
+    for (u_int i = 0; i < _vars->size (); i++) {
+      const var_t &v = _vars->_vars[i];
+      switch (v.get_asc ()) {
+      case ARG:
+	b << _parent_fn->args ()->lookup (v.name ())->decl ();
+	break;
+      case STACK:
+	b << _parent_fn->stack_vars ()->lookup (v.name ())->decl ();
+	break;
+      case CLASS:
+	b << v.decl ();
+	break;
+      default:
+	yyerror ("unknown variable type / unexepected runtime error");
+	break;
+      }
+      b << ", ";
+    }
+  }
+
+  b << " trig_t trig)\n"
+    << "  {\n";
+  if (_vars) {
+    for (u_int i = 0; i < _vars->_vars.size (); i++) {
+      const var_t &v = _vars->_vars[i];
+      b << "    ";
+      switch (v.get_asc ()) {
+      case ARG:
+	b << "_args";
+	break;
+      case STACK:
+	b << "_stack";
+	break;
+      case CLASS:
+	b << "_class_tmp";
+	break;
+      default:
+	assert (false);
+      }
+      b << "." << _vars->_vars[i].name () << " = "  
+	<< _vars->_vars[i].name () << ";\n";
+    }
+  }
+  b  << "  }\n\n";
 }
 
 void
-unwrap_fn_t::output_reenter (int fd)
+unwrap_fn_t::output_reenter (strbuf &b)
 {
-  strbuf b;
-  b << "static void\n"
-    << reenter_fn () << " (" << freezer_generic ().decl () << ")\n"
-    << "{\n"
-    << decl_casted_freezer () << "\n"
-    << "  " << frznm () <<  "->_self->" << _method_name << " (";
+  b << "  void reetner ()\n"
+    << "  {\n"
+    << "    ";
+
+  if (_class)
+    b << "_self->";
+
+  b << _method_name << " (";
 
   for (u_int i = 0; _args && i < _args->_vars.size (); i++) {
-    if (i != 0) b << ", ";
-    b << frozen_arg (_args->_vars[i].name ());
+    b << "_args." << _args->_vars[i].name ();
+    b << ", ";
   }
-  b << ");\n"
-    << "}\n\n";
-
-  b.tosuio ()->output (fd);
+  b << "mkref (this));\n"
+    << "  }\n\n";
 }
 
 void
 unwrap_fn_t::output_freezer (int fd)
 {
+  strbuf b;
+  b << "class " << _freezer.type ().base_type ()  << " : public freezer_t\n"
+    << "{\n"
+    << "public:\n"
+    << "  " << _freezer.type ().base_type () << " () : freezer_t () {}\n"
+    << "\n"
+    ;
 
+  int i = 1;
+  for (unwrap_callback_t *cb = _cbs.first ; cb; cb = _cbs.next (cb)) {
+    cb->output_in_class (b, i++);
+  }
+
+  b << "  struct stack_t {\n"
+    ;
+  _stack_vars.declarations (b, "    ");
+  b << "  };\n";
+
+  b << "\n"
+    << "  struct args_t {\n"
+    ;
+  _args->declarations (b, "    ");
+  b << "  };\n";
+
+  b << "\n"
+    << "  struct class_tmp_t {\n"
+    ;
+  _class_vars_tmp.declarations (b, "    ");
+ 
+  b << "  };\n\n";
+
+  output_reenter (b);
+
+  b << "  stack_t _stack;\n"
+    << "  class_t _class_tmp;\n"
+    << "  args_t _args;\n" ;
+
+  if (_class) {
+    b << "  " << _class << " *_self;\n";
+  }
+
+  b << "};\n\n";
+
+  b.tosuio ()->output (fd);
 }
 
 void
-unwrap_fn_t::output_callbacks (int fd)
+unwrap_fn_t::output_fn_header (int fd)
 {
-
-
-
+  strbuf b;
+  b << _ret_type.to_str () << "\n"
+    << _name << "(";
+  if (_args) {
+    _args->paramlist (b);
+    b << ", ";
+  }
+  b << freezer_generic ().decl () << ")\n"
+    << "{\n"
+    << "}\n"
+    ;
 }
-
 
 
 void 
 unwrap_fn_t::output (int fd)
 {
   output_freezer (fd);
-  output_reenter (fd);
-  output_callbacks (fd);
+  output_fn_header (fd);
 }
 
 void 
