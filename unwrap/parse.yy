@@ -162,8 +162,11 @@ shotgun_call: passthrough callback passthrough ';'
 	;
 
 callback: '@' '(' callback_param_list_opt ')'
-	{
-	  $$ = New unwrap_callback_t ($3);
+	{ 
+ 	  unwrap_fn_t *fn = state.function ();
+	  unwrap_callback_t *c = New unwrap_callback_t ($3, fn);
+	  fn->add_callback (c);
+	  $$ = c;
 	}
 	;
 

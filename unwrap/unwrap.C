@@ -52,6 +52,15 @@ main (int argc, char *argv[])
     yyin = ifh;
   }
 
+  int outfd;
+  if (outfile) {
+    if ((outfd = open (outfile.cstr (), O_CREAT|O_WRONLY)) < 0) {
+      warn << "cannot open file for writing: " << outfile << "\n";
+    }
+  } else {
+    outfd = 1;
+  }
+
   yydebug = 1;
   
   // set up the dirty global variable to keep track of state while
@@ -63,4 +72,8 @@ main (int argc, char *argv[])
   if (ifh) {
     fclose (ifh);
   }
+
+  state.output (outfd);
+  close (outfd);
+
 }

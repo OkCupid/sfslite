@@ -23,21 +23,16 @@ public:
 };
 
 static void
-my_class_t__fn1__reenter (ptr<freezer_t> __frz)
+my_class_t__fn1__freezer_t::reenter ()
 {
-  my_class_t__fn1__cnysa_state_t *__frz_c =
-    reinterpret_cast<my_class_t__fn1__cnysa_state_t *> (frz);
-  __frz_c->self->fn1 (__frz_c->a.a, __frz_c->a.x, __frz_c->a.cb_done,
-		      __frz);
+  self->fn1 (_args.a, _args.x, _args.cb_done, mkref (this));
 }
 
 static void
-my_class_t__fn1__cb1 (ptr<freezer_t> __frz, ptr<bool> b, int x)
+my_class_t__fn1__freezer_t::cb1 (ptr<bool> b, int x)
 {
-  my_class_t__fn1__cnysa_state_t *__frz_c =
-    reinterpret_cast<my_class_t__fn1__cnysa_state_t *> (frz);
-  __frz_c->s.b = b;
-  __frz_c->s.x = x;
+  _stack.b = b;
+  _stack.x = x;
 }
 
 int
@@ -76,10 +71,10 @@ my_class_t::fn1 (int a, ptr<bar_t> x, cbi::ptr cb_done, ptr<freezer_t> __frz)
       __frz->_jump_to = 1;
 
       trigger_t trig = 
-	trigger_t::alloc (wrap (my_class_t__fn1__reenter, __frz));
+	trigger_t::alloc (wrap (__frz, my_class_t__fn1__freezer_t::reenter));
 
-      call_fn (a, x, wrap (my_class_t__fn1__cb1, __frz, trig));
-      call_fn2 (a, x, wrap (my_class_t__fn1__cb2, __frz, trig));
+      call_fn (a, x, wrap (__frz, my_class_t__fn1__freezer_t::cb1, trig));
+      call_fn2 (a, x, wrap (__frz, my_class_t__fn1__freezer_t::cb2, trig));
 
       return;
     }

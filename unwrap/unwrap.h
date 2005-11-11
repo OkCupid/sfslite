@@ -25,21 +25,24 @@ public:
   unwrap_el_t () {}
   virtual ~unwrap_el_t () {}
   virtual bool append (const str &s) { return false; }
+  virtual void output (int fd) = 0;
   tailq_entry<unwrap_el_t> _lnk;
 };
 
 class unwrap_vars_t : public unwrap_el_t {
 public:
   unwrap_vars_t () {}
+  void output (int fd) {}
 };
 
 class unwrap_passthrough_t : public unwrap_el_t {
 public:
   unwrap_passthrough_t (const str &s) { append (s); }
-  bool append (const str &s) { strs.push_back (s); buf << s; return true; }
+  bool append (const str &s) { _strs.push_back (s); _buf << s; return true; }
+  void output (int fd);
 private:
-  strbuf buf;
-  vec<str> strs;
+  strbuf _buf;
+  vec<str> _strs;
 };
 
 class type_t {
@@ -49,7 +52,7 @@ public:
     : _base_type (t), _pointer (p) {}
   str base_type () const { return _base_type; }
   str pointer () const { return _pointer; }
-  str to_str () const { return strbuf () << _base_type << " " << _pointer; }
+  str to_str () const;
   void set_base_type (const str &t) { _base_type = t; }
   void set_pointer (const str &p) { _pointer = p; }
 private:
@@ -68,10 +71,13 @@ protected:
   type_t _type;
 
 public:
+  const type_t &type () const { return _type; }
   const str &name () const { return _name; }
   type_t *get_type () { return &_type; }
   const type_t * get_type_const () const { return &_type; }
   void set_as_class_var () { _stack_var = false; }
+
+  str decl () const;
 
   str _name;
 
@@ -89,6 +95,20 @@ public:
 
   vec<var_t> _vars;
   qhash<str, u_int> _tab;
+};
+
+class unwrap_fn_t; 
+
+class unwrap_callback_t : public unwrap_el_t {
+public:
+  unwrap_callback_t (ptr<vartab_t> t, unwrap_fn_t *f) : 
+    _vars (t), _outputted (false), _parent_fn (f) {}
+  void output (int fd);
+  tailq_entry<unwrap_callback_t> _lnk;
+private:
+  ptr<vartab_t> _vars;
+  bool _outputted;
+  unwrap_fn_t *_parent_fn;
 };
 
 /*
@@ -119,21 +139,51 @@ private:
 str mangle (const str &in);
 
 //
+// convert 
+//
+//   foo_t::max<int,int>::bar  => bar
+//
+str strip_to_method (const str &in);
+
+//
 // Unwrap Function Type
 //
 class unwrap_fn_t : public unwrap_el_t {
 public:
   unwrap_fn_t (const str &r, ptr<declarator_t> d, bool c)
     : _ret_type (r, d->pointer ()), _name (d->name ()),
-      _name_mangled (mangle (_name)), _isconst (c) {}
+      _name_mangled (mangle (_name)), _method_name (strip_to_method (_name)),
+      _isconst (c), _freezer (freezer ()),
+      _args (d->params ()) {}
   vartab_t *stack_vars () { return &_stack_vars; }
+  void output (int fd);
+  void add_callback (unwrap_callback_t *c) { _cbs.insert_tail (c); }
+  str fn_prefix () const { return _name_mangled; }
+
+  static var_t freezer_generic () ;
+  var_t freezer () const ;
+  str decl_casted_freezer () const;
+
+  str frznm () const { return _freezer.name (); }
+  str reenter_fn  () const ;
+  str frozen_arg (const str &i) const ;
+
 private:
   const type_t _ret_type;
   const str _name;
   const str _name_mangled;
+  const str _method_name;
   const bool _isconst;
-  vartab_t _args;
+  const var_t _freezer;
+
+  ptr<vartab_t> _args;
   vartab_t _stack_vars;
+  tailq<unwrap_callback_t, &unwrap_callback_t::_lnk> _cbs; 
+
+  void output_reenter (int fd);
+  void output_callbacks (int fd);
+  void output_freezer (int fd);
+  
 };
 
 class unwrap_shotgun_t;
@@ -147,11 +197,14 @@ public:
   vartab_t *stack_vars () { return _fn ? _fn->stack_vars () : NULL; }
   void set_decl_specifier (const str &s) { _decl_specifier = s; }
   str decl_specifier () const { return _decl_specifier; }
+  unwrap_fn_t *function () { return _fn; }
 
   void new_shotgun (unwrap_shotgun_t *g);
   unwrap_shotgun_t *shotgun () { return _shotgun; }
 
-private:
+  void output (int fd);
+
+protected:
   str _decl_specifier;
   unwrap_fn_t *_fn;
   unwrap_shotgun_t *_shotgun;
@@ -162,14 +215,7 @@ class unwrap_shotgun_t : public parse_state_t, public unwrap_el_t
 {
 public:
   unwrap_shotgun_t () {}
-};
-
-class unwrap_callback_t : public unwrap_el_t {
-public:
-  unwrap_callback_t (ptr<vartab_t> t) : _vars (t) {}
-private:
-  ptr<vartab_t> _vars;
-
+  void output (int fd);
 };
 
 extern parse_state_t state;
