@@ -32,6 +32,14 @@ var_t::decl () const
 }
 
 str
+var_t::ref_decl () const
+{
+  strbuf b;
+  b << _type.to_str () << "&" << _name;
+  return b;
+}
+
+str
 mangle (const str &in)
 {
   const char *i;
@@ -118,6 +126,12 @@ unwrap_fn_t::freezer_generic ()
 }
 
 var_t
+unwrap_fn_t::trig ()
+{
+  return var_t ("ptr<trig_t>", NULL, "trig");
+}
+
+var_t
 unwrap_fn_t::mk_freezer () const
 {
   strbuf b;
@@ -169,6 +183,14 @@ vartab_t::paramlist (strbuf &b) const
   }
 }
 
+str
+unwrap_fn_t::label (u_int id) const
+{
+  strbuf b;
+  b << _name_mangled << "__label" << id ;
+  return b;
+}
+
 //
 //
 //-----------------------------------------------------------------------
@@ -188,9 +210,11 @@ unwrap_callback_t::output_in_class (strbuf &b, int n)
 {
   _cb_id = n;
 
-  b << "  void cb" << n  << " (";
+  b << "  void cb" << n  << " ("
+    << unwrap_fn_t::trig ().decl () ;
   if (_vars) {
     for (u_int i = 0; i < _vars->size (); i++) {
+      b << ", ";
       const var_t &v = _vars->_vars[i];
       switch (v.get_asc ()) {
       case ARG:
@@ -201,16 +225,16 @@ unwrap_callback_t::output_in_class (strbuf &b, int n)
 	break;
       case CLASS:
 	b << v.decl ();
+	_shotgun->add_class_var (v);
 	break;
       default:
 	yyerror ("unknown variable type / unexepected runtime error");
 	break;
       }
-      b << ", ";
     }
   }
 
-  b << " trig_t trig)\n"
+  b << ")\n"
     << "  {\n";
   if (_vars) {
     for (u_int i = 0; i < _vars->_vars.size (); i++) {
@@ -306,6 +330,34 @@ unwrap_fn_t::output_freezer (int fd)
 }
 
 void
+unwrap_fn_t::output_stack_vars (strbuf &b)
+{
+  for (u_int i = 0; i < _stack_vars.size (); i++) {
+    const var_t &v = _stack_vars._vars[i];
+    b << "  " << v.ref_decl () << " = " 
+      << frznm () << "->_stack." << v.name () << ";\n" ;
+  } 
+}
+
+
+void
+unwrap_fn_t::output_jump_tab (strbuf &b)
+{
+  b << "  switch (" << freezer_generic ().name () << "->_jump_to"
+    << ") {\n";
+  for (u_int i = 0; i < _shotguns.size (); i++) {
+    int id = i + 1;
+    b << "  case " << id << ":\n"
+      << "    goto " << label (id) << ";\n"
+      << "    break;\n";
+    _shotguns[i]->set_id (id);
+  }
+  b << "  default:\n"
+    << "    break;\n"
+    << "  }\n";
+}
+
+void
 unwrap_fn_t::output_fn_header (int fd)
 {
   strbuf b;
@@ -317,8 +369,27 @@ unwrap_fn_t::output_fn_header (int fd)
   }
   b << freezer_generic ().decl () << ")\n"
     << "{\n"
-    << "}\n"
+    << "  " << _freezer.decl () << ";\n"
+    << "  if (!" << freezer_generic ().name() << ") {\n"
+    << "    ptr<" << _freezer.type ().base_type () << "> tmp" 
+    << " = New refcounted<" << _freezer.type ().base_type () << "> ();\n"
+    << "    " << freezer_generic (). name () << " = tmp;\n"
+    << "    " << frznm () << " = tmp;\n"
+    << "  } else {\n"
+    << "    " << _freezer.name () << " = reinterpret_cast<" 
+    << _freezer.type ().to_str () << "> (" << freezer_generic ().name () 
+    << ");\n"
+    << "  }\n\n"
     ;
+
+  output_stack_vars (b);
+  b << "\n";
+
+  output_jump_tab (b);
+
+  b.tosuio ()->output (fd);
+
+  // XXX hack : close the function with pass-through tokens
 }
 
 
@@ -332,7 +403,43 @@ unwrap_fn_t::output (int fd)
 void 
 unwrap_shotgun_t::output (int fd)
 {
+  strbuf b;
+  b << "  {\n";
+  const vartab_t *args = _fn->args ();
+  for (u_int i = 0; i < args->size (); i++) {
+    b << "    " <<  _fn->frznm () << "->_args." << args->_vars[i].name ()
+      << " = " << args->_vars[i].name () << ";\n";
+  }
+  if (_fn->classname ()) 
+    b << "    " << _fn->frznm () << "->_args.self = this;\n";
+  b << "    " << _fn->freezer_generic ().name () << "->set_jumpto (" << _id 
+    << ");\n"
+    << "\n";
 
+  b << "    " << _fn->trig ().decl () 
+    << " = trig_t::alloc (wrap ("
+    << _fn->freezer_generic ().name ()  
+    << ", &freezer_t::reenter));\n";
+
+  b.tosuio ()->output (fd);
+  b.tosuio ()->clear ();
+  for (unwrap_el_t *el = _elements.first; el; el = _elements.next (el)) {
+    el->output (fd);
+  }
+
+  b << "\n"
+    << "    return;\n"
+    << "  }\n"
+    << " " << _fn->label (_id) << ":\n"
+    ;
+
+  for (u_int i = 0; i < _class_vars.size (); i++) {
+    const var_t &v = _class_vars._vars[i];
+    b << "    " << v.name () << " = " 
+      << _fn->freezer ().name () << "->_class_tmp." << v.name () << ";\n";
+  }
+
+  b.tosuio ()->output (fd);
 }
 
 void
@@ -342,6 +449,19 @@ parse_state_t::output (int fd)
     el->output (fd);
   }
 }
+
+void
+unwrap_callback_t::output (int fd)
+{
+  strbuf b;
+  b << "wrap (" << _parent_fn->freezer ().name () << ", "
+    << "&" << _parent_fn->freezer ().type ().base_type () 
+    << "::cb" << _cb_id << ", " << _parent_fn->trig (). name ()
+    << ")";
+  b.tosuio ()->output (fd);
+
+}
+
 
 
 

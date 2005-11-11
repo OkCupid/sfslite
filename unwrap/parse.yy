@@ -103,7 +103,9 @@ fn:	T_FUNCTION '(' fn_declaration ')'
 
 fn_body: '{' fn_statements '}'
 	{
-	  /* hack in function body close */
+	  /* XXX: hack in function body close
+	   * better fix: store el_t's in the unwrap_fn_t object
+ 	   */
 	  state.passthrough ("}\n");
 	}
 	;
@@ -143,7 +145,10 @@ vars:	T_VARS '{' declaration_list_opt '}'
 
 shotgun: T_SHOTGUN '{' 
 	{
-	  state.new_shotgun (New unwrap_shotgun_t ());
+	  unwrap_fn_t *fn = state.function ();
+ 	  unwrap_shotgun_t *gun = New unwrap_shotgun_t (fn);
+	  state.new_shotgun (gun);
+	  fn->add_shotgun (gun);
 	}
 	shotgun_calls passthrough '}'
 	{
@@ -168,7 +173,8 @@ shotgun_call: passthrough callback passthrough ';'
 callback: '@' '(' callback_param_list_opt ')'
 	{ 
  	  unwrap_fn_t *fn = state.function ();
-	  unwrap_callback_t *c = New unwrap_callback_t ($3, fn);
+	  unwrap_shotgun_t *g = state.shotgun ();
+	  unwrap_callback_t *c = New unwrap_callback_t ($3, fn, g);
 	  fn->add_callback (c);
 	  $$ = c;
 	}

@@ -85,6 +85,7 @@ public:
   vartyp_t get_asc () const { return _asc; }
 
   str decl () const;
+  str ref_decl () const;
   str _name;
 
 private:
@@ -109,16 +110,18 @@ public:
 
 class unwrap_fn_t; 
 
+class unwrap_shotgun_t;
 class unwrap_callback_t : public unwrap_el_t {
 public:
-  unwrap_callback_t (ptr<vartab_t> t, unwrap_fn_t *f) : 
-    _vars (t), _parent_fn (f) {}
-  void output (int fd) {}
+  unwrap_callback_t (ptr<vartab_t> t, unwrap_fn_t *f, unwrap_shotgun_t *g) : 
+    _vars (t), _parent_fn (f), _shotgun (g), _cb_id (0) {}
+  void output (int fd) ;
   void output_in_class (strbuf &b, int n);
   tailq_entry<unwrap_callback_t> _lnk;
 private:
   ptr<vartab_t> _vars;
   unwrap_fn_t *_parent_fn;
+  unwrap_shotgun_t *_shotgun;
   int _cb_id;
 };
 
@@ -157,6 +160,8 @@ str mangle (const str &in);
 str strip_to_method (const str &in);
 str strip_off_method (const str &in);
 
+class unwrap_shotgun_t;
+
 //
 // Unwrap Function Type
 //
@@ -172,17 +177,24 @@ public:
   vartab_t *args () { return _args; }
   vartab_t *class_vars_tmp () { return &_class_vars_tmp; }
 
+  str classname () const { return _class; }
+  str name () const { return _name; }
+
   void output (int fd);
   void add_callback (unwrap_callback_t *c) { _cbs.insert_tail (c); }
+  void add_shotgun (unwrap_shotgun_t *g) { _shotguns.push_back (g); }
   str fn_prefix () const { return _name_mangled; }
 
   static var_t freezer_generic () ;
   str decl_casted_freezer () const;
-  var_t feezer () const { return _freezer; }
+  var_t freezer () const { return _freezer; }
+  static var_t trig () ;
 
   str frznm () const { return _freezer.name (); }
   str reenter_fn  () const ;
   str frozen_arg (const str &i) const ;
+
+  str label (u_int id) const ;
 
 
 private:
@@ -200,10 +212,13 @@ private:
   vartab_t _stack_vars;
   vartab_t _class_vars_tmp;
   tailq<unwrap_callback_t, &unwrap_callback_t::_lnk> _cbs; 
+  vec<unwrap_shotgun_t *> _shotguns;
 
   void output_reenter (strbuf &b);
   void output_freezer (int fd);
   void output_fn_header (int fd);
+  void output_stack_vars (strbuf &b);
+  void output_jump_tab (strbuf &b);
   
 };
 
@@ -229,6 +244,7 @@ public:
 
   void output (int fd);
 
+
 protected:
   str _decl_specifier;
   unwrap_fn_t *_fn;
@@ -239,8 +255,14 @@ protected:
 class unwrap_shotgun_t : public parse_state_t, public unwrap_el_t 
 {
 public:
-  unwrap_shotgun_t () {}
+  unwrap_shotgun_t (unwrap_fn_t *f) : _fn (f), _id (0) {}
   void output (int fd);
+  void set_id (int i) { _id = i; }
+  void add_class_var (const var_t &v) { _class_vars.add (v); }
+private:
+  unwrap_fn_t *_fn;
+  int _id;
+  vartab_t _class_vars;
 };
 
 extern parse_state_t state;
