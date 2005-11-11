@@ -59,19 +59,24 @@ private:
 class declarator_t;
 class var_t {
 public:
+  var_t (const str &n) : _name (n), _stack_var (true) {}
   var_t (const str &t, ptr<declarator_t> d);
   var_t (const str &t, const str &p, const str &n)
-    : _type (t, p), _name (n) {}
+    : _type (t, p), _name (n), _stack_var (true) {}
   var_t () {}
-private:
+protected:
   type_t _type;
 
 public:
   const str &name () const { return _name; }
   type_t *get_type () { return &_type; }
   const type_t * get_type_const () const { return &_type; }
+  void set_as_class_var () { _stack_var = false; }
 
   str _name;
+
+private:
+  bool _stack_var;
 };
 
 class vartab_t {
@@ -161,7 +166,9 @@ public:
 
 class unwrap_callback_t : public unwrap_el_t {
 public:
-  
+  unwrap_callback_t (ptr<vartab_t> t) : _vars (t) {}
+private:
+  ptr<vartab_t> _vars;
 
 };
 

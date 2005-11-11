@@ -68,9 +68,13 @@
 %type <decl> init_declarator declarator direct_declarator
 
 %type <vars> parameter_type_list_opt parameter_type_list parameter_list
+%type <vars> callback_param_list callback_param_list_opt
+
 %type <opt>  const_opt
 %type <fn>   fn_declaration
+
 %type <var>  parameter_declaration callback_class_var callback_stack_var
+%type <var>  callback_param
 
 %type <el>   fn_unwrap vars shotgun callback
 
@@ -158,20 +162,30 @@ shotgun_call: passthrough callback passthrough ';'
 	;
 
 callback: '@' '(' callback_param_list_opt ')'
+	{
+	  $$ = New unwrap_callback_t ($3);
+	}
 	;
 
-callback_param_list_opt: /* empty */
+callback_param_list_opt: /* empty */ 	{ $$ = New refcounted<vartab_t> (); }
 	| callback_param_list
 	;
 
 callback_param_list: callback_param
+	{
+	  $$ = New refcounted<vartab_t> ($1);
+	}
 	| callback_param_list ',' callback_param
+	{
+	  $1->add ($3);
+	  $$ = $1;
+	}
 	;
 
 identifier: T_ID
 	;
 
-callback_param: identifier
+callback_param: identifier             { $$ = var_t ($1); }
 	| callback_stack_var
 	| callback_class_var
 	;
@@ -187,7 +201,11 @@ callback_stack_var: '$' '(' parameter_declaration ')'
 	}
 	;
 
-callback_class_var: '%' '(' parameter_declaration ')'    { $$ = $3; }
+callback_class_var: '%' '(' parameter_declaration ')'    
+	{ 
+	   $3.set_as_class_var ();
+	   $$ = $3; 
+	}
 	;
 
 declaration_list_opt: /* empty */

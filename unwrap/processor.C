@@ -2,7 +2,7 @@
 #include "unwrap.h"
 
 var_t::var_t (const str &t, ptr<declarator_t> d)
-  : _type (t, d->pointer ()), _name (d->name ()) {}
+  : _type (t, d->pointer ()), _name (d->name ()), _stack_var (true) {}
 
 str
 mangle (const str &in)
@@ -51,7 +51,7 @@ parse_state_t::passthrough (const str &s)
 }
 
 void
-parse_state_t::new_shotgun (unwrap_shotgun *g)
+parse_state_t::new_shotgun (unwrap_shotgun_t *g)
 {
   _shotgun = g;
   _elements.insert_tail (g);
