@@ -77,8 +77,8 @@ FUNCTION(void sample_t::main_fn (int i, const char *x, cbb::ptr cb))
   //   %(..) clause, it can only do so with access to the full type
   //   system.  Since the unwrap tool does not understand types with
   //   this depth, you need to supply a type hint with %(...); so
-  //   something like %(str res3) is required to access the member
-  //   sample_t::res3 of type str.
+  //   something like %(str res2) is required to access the member
+  //   sample_t::res2 of type str.
   //
   SHOTGUN {
     fn1 (i, @($(ptr<int> res1)));
