@@ -12,6 +12,7 @@ public:
   trig_t (cbv c) : _cb (c), _killed (false) {}
   ~trig_t () { if (!_killed) (*_cb) (); }
   void kill () { _killed = true; }
+  static ptr<trig_t> alloc (cbv c) { return New refcounted<trig_t> (c); }
 private:
   cbv _cb;
   bool _killed;
