@@ -6,3 +6,4 @@
 - references/arrays in callbacks: @(&a, &v[40]);
 - test non-member functions
 - fix makefile system to include ex1.W/.C
+- C++-style intialization

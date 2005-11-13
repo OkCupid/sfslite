@@ -1,6 +1,8 @@
 ## Process this file with automake to produce Makefile.in
 # $Id$
 
+#SUBDIRS = samples
+
 LDADD = $(LIBASYNC) 
 
 sfsbin_PROGRAMS = unwrap
