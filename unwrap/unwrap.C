@@ -43,8 +43,8 @@ main (int argc, char *argv[])
   argc -= optind;
   argv += optind;
 
-  if (argc == 2) {
-    ifn = argv[1];
+  if (argc == 1) {
+    ifn = argv[0];
     if (!(ifh = fopen (ifn.cstr (), "r"))) {
       warn << "cannot open file: " << ifn << "\n";
       usage ();
@@ -54,14 +54,14 @@ main (int argc, char *argv[])
 
   int outfd;
   if (outfile) {
-    if ((outfd = open (outfile.cstr (), O_CREAT|O_WRONLY)) < 0) {
+    if ((outfd = open (outfile.cstr (), O_CREAT|O_WRONLY, 0644)) < 0) {
       warn << "cannot open file for writing: " << outfile << "\n";
     }
   } else {
     outfd = 1;
   }
 
-  yydebug = 1;
+  //yydebug = 1;
   
   // set up the dirty global variable to keep track of state while
   // running yacc
