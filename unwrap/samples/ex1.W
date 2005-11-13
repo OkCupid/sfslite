@@ -1,6 +1,11 @@
 // -*-c++-*-
 /* $Id$ */
 
+//
+// unwrap.h has a definition for the "trig_t" class, whose only purpose
+// is to call a callback upon deletion.  So it's especially useful when
+// combined with refcounting.
+//
 #include "unwrap.h"
 
 class sample_t {
@@ -11,6 +16,8 @@ private:
   void fn1 (int i, callback<void, ptr<int> >::ref cb);
   void fn2 (const char *x, callback<void, bool, str>::ref cb);
   void fn3 (int i, str s, callback<void, str, bool>::ref cb);
+
+  str res2;
 };
 
 void
@@ -53,15 +60,29 @@ sample_t::fn3 (int i, str s, callback<void, str, bool>::ref cb)
 FUNCTION(void sample_t::main_fn (int i, const char *x, cbb::ptr cb))
 {
   VARS {
-    str res2;
     bool status2;
     bool ret;
   }
   ret = false;
 
+  //
+  // Syntax: @(...) is converted into a "wrap" call, and
+  //   autogenerates a corresponding callback function.
+  //   Within @(...), you can specify "stack" variables from above,
+  //   allocate new "stack" variables on the fly with $(...) and
+  //   also refrence class variables with %(...).  
+  //
+  //   In the last case, even though the compiler has enough
+  //   information to determine the type of the variable within the
+  //   %(..) clause, it can only do so with access to the full type
+  //   system.  Since the unwrap tool does not understand types with
+  //   this depth, you need to supply a type hint with %(...); so
+  //   something like %(int a) is required to access the member
+  //   sample_t::a of type int.
+  //
   SHOTGUN {
     fn1 (i, @($(ptr<int> res1)));
-    fn2 (x, @(status2, res2));
+    fn2 (x, @(status2, %(str res2)));
   }
 
   if (res1 && status2) {
