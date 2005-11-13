@@ -186,7 +186,7 @@ public:
   str fn_prefix () const { return _name_mangled; }
 
   static var_t freezer_generic () ;
-  str decl_casted_freezer () const;
+  str decl_casted_freezer (bool do_lhs) const;
   var_t freezer () const { return _freezer; }
   static var_t trig () ;
 

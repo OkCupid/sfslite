@@ -141,12 +141,14 @@ unwrap_fn_t::mk_freezer () const
 }
 
 str
-unwrap_fn_t::decl_casted_freezer () const
+unwrap_fn_t::decl_casted_freezer (bool do_lhs) const
 {
   strbuf b;
-  b << "  " << _freezer.decl ()  << " =\n"
-    << "    reinterpret_cast<" << _freezer.type ().to_str () 
-    << "> (" << freezer_generic ().name () << ");";
+  if (do_lhs) {
+    b << "  " << _freezer.decl ()  << " =\n";
+  }
+  b << "    reinterpret_cast<" << _freezer.type ().to_str () 
+    << "> (static_cast<freezer_t *> (" << freezer_generic ().name () << "));";
   return b;
 }
 
@@ -263,7 +265,7 @@ unwrap_callback_t::output_in_class (strbuf &b, int n)
 void
 unwrap_fn_t::output_reenter (strbuf &b)
 {
-  b << "  void reetner ()\n"
+  b << "  void reenter ()\n"
     << "  {\n"
     << "    ";
 
@@ -297,18 +299,21 @@ unwrap_fn_t::output_freezer (int fd)
   }
 
   b << "  struct stack_t {\n"
+    << "    stack_t () {}\n"
     ;
   _stack_vars.declarations (b, "    ");
   b << "  };\n";
 
   b << "\n"
     << "  struct args_t {\n"
+    << "    args_t () {}\n"
     ;
   _args->declarations (b, "    ");
   b << "  };\n";
 
   b << "\n"
     << "  struct class_tmp_t {\n"
+    << "    class_tmp_t () {}\n"
     ;
   _class_vars_tmp.declarations (b, "    ");
  
@@ -317,7 +322,7 @@ unwrap_fn_t::output_freezer (int fd)
   output_reenter (b);
 
   b << "  stack_t _stack;\n"
-    << "  class_t _class_tmp;\n"
+    << "  class_tmp_t _class_tmp;\n"
     << "  args_t _args;\n" ;
 
   if (_class) {
@@ -343,8 +348,8 @@ unwrap_fn_t::output_stack_vars (strbuf &b)
 void
 unwrap_fn_t::output_jump_tab (strbuf &b)
 {
-  b << "  switch (" << freezer_generic ().name () << "->_jump_to"
-    << ") {\n";
+  b << "  switch (" << freezer_generic ().name () << "->jumpto ()) {\n"
+    ;
   for (u_int i = 0; i < _shotguns.size (); i++) {
     int id = i + 1;
     b << "  case " << id << ":\n"
@@ -376,9 +381,8 @@ unwrap_fn_t::output_fn_header (int fd)
     << "    " << freezer_generic (). name () << " = tmp;\n"
     << "    " << frznm () << " = tmp;\n"
     << "  } else {\n"
-    << "    " << _freezer.name () << " = reinterpret_cast<" 
-    << _freezer.type ().to_str () << "> (" << freezer_generic ().name () 
-    << ");\n"
+    << "    " << _freezer.name () << " = " << decl_casted_freezer (false)
+    << "\n"
     << "  }\n\n"
     ;
 
@@ -411,7 +415,7 @@ unwrap_shotgun_t::output (int fd)
       << " = " << args->_vars[i].name () << ";\n";
   }
   if (_fn->classname ()) 
-    b << "    " << _fn->frznm () << "->_args.self = this;\n";
+    b << "    " << _fn->frznm () << "->_self = this;\n";
   b << "    " << _fn->freezer_generic ().name () << "->set_jumpto (" << _id 
     << ");\n"
     << "\n";

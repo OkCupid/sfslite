@@ -81,8 +81,8 @@
 %%
 
 
-file:  passthrough
-	| file fn passthrough
+file:  passthrough		    { state.passthrough ($1); }
+	| file fn passthrough       { state.passthrough ($3); }
 	;
 
 passthrough: /* empty */	    { $$ = ""; }
@@ -113,7 +113,6 @@ fn_body: '{' fn_statements '}'
 /* declaration_specifiers is no longer optional ?! */
 fn_declaration: declaration_specifiers declarator const_opt
 	{
-	   $2->dump ();
 	   $$ = New unwrap_fn_t ($1, $2, $3);
 	}
 	;
