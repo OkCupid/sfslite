@@ -72,12 +72,24 @@ sample_t::fn3 (int i, str s, callback<void, str, bool>::ref cb)
 
 FUNCTION(void sample_t::main_fn (int i, const char *x, cbb::ptr cb))
 {
+  // all stack variables must be declared up front, in a VARS { ... }
+  // environment.  Think: C programming.
   VARS {
     bool status2;
     bool ret;
   }
+	
+  // variable initialization at declaration time does not yet work;
+  // it's on the TODO list
   ret = false;
 
+  //
+  // SHOTGUN {...}: Launch a series of parallel asynchronous function
+  //   calls; return control to the next statement after all calls
+  //   have completed. Each function called needs a callback specified;
+  //   Where the function normally takes a callback, specify instead
+  //   @(...), giving the variable that you want set when the call 
+  //   completes.
   //
   // Syntax: @(...) is converted into a "wrap" call, and
   //   autogenerates a corresponding callback function.
