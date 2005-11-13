@@ -11,11 +11,24 @@
 class sample_t {
 public:
   sample_t () {}
+  
+  /* 
+   * a new function, written with unrap; note that in the declaration,
+   * we need to make the last argument as given here: ptr<freezer_t> = NULL
+   */
   void main_fn (int i, const char *x, cbb::ptr cb, ptr<freezer_t> = NULL);
+
 private:
+
+  /*
+   * these are legacy functions that use the old technique ..
+   */
   void fn1 (int i, callback<void, ptr<int> >::ref cb);
   void fn2 (const char *x, callback<void, bool, str>::ref cb);
   void fn3 (int i, str s, callback<void, str, bool>::ref cb);
+  /* 
+   * end legacy
+   */
 
   str res2;
 };
