@@ -1,7 +1,6 @@
 
 - non-void functions (add RETURN { ... } feature)
  -- autogenerate default return values from retvalue's type
-- handle / parse out comments
 - array declarations
 - references/arrays in callbacks: @(&a, &v[40]);
 - test non-member functions
