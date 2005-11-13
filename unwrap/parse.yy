@@ -81,8 +81,8 @@
 %%
 
 
-file:  passthrough		    { state.passthrough ($1); }
-	| file fn passthrough       { state.passthrough ($3); }
+file:  passthrough 			{ state.passthrough ($1); }
+	| file fn passthrough       	{ state.passthrough ($3); }
 	;
 
 passthrough: /* empty */	    { $$ = ""; }
