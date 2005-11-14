@@ -18,16 +18,14 @@ private:
   bool _killed;
 };
 
-class freezer_t : public virtual refcount {
+class closure_t : public virtual refcount {
 public:
-  freezer_t () : _jumpto (0) {}
+  closure_t () : _jumpto (0) {}
   virtual void reenter () = 0;
   void set_jumpto (int i) { _jumpto = i; }
   u_int jumpto () const { return _jumpto; }
 protected:
   u_int _jumpto;
 };
-
-
 
 #endif /* _ASYNC_UNWRAP_H */

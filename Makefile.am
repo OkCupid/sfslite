@@ -5,7 +5,7 @@
 #
 # sfslite change
 #
-SUBDIRS = async rpcc arpc crypt sfsmisc contrib unwrap
+SUBDIRS = async rpcc arpc crypt sfsmisc contrib unwrap tutorial
 
 
 noinst_HEADERS = nfsconf.h

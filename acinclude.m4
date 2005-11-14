@@ -1677,6 +1677,7 @@ if test -f ${with_sfs}/Makefile -a -f ${with_sfs}/autoconf.h; then
     LIBSFS=${with_sfs}/libsfs/libsfs.la
     MALLOCK=${with_sfs}/sfsmisc/mallock.o
     RPCC=${with_sfs}/rpcc/rpcc
+    UNWRAP=${with_sfs}/unwrap/unwrap
 elif test -f ${with_sfs}/include/sfs/autoconf.h \
 	-a -f ${with_sfs}/lib/sfs/libasync.la; then
     sfsincludedir="${with_sfs}/include/sfs"
@@ -1695,6 +1696,7 @@ elif test -f ${with_sfs}/include/sfs/autoconf.h \
     LIBSFS=${with_sfs}/lib/libsfs.a
     MALLOCK=${sfslibdir}/mallock.o
     RPCC=${with_sfs}/bin/rpcc
+    UNWRAP=${with_sfs}/bin/unwrap
 else
     AC_MSG_ERROR("Can\'t find SFS libraries")
 fi
@@ -1712,6 +1714,7 @@ AC_SUBST(LIBSFSMISC)
 AC_SUBST(LIBSVC)
 AC_SUBST(LIBSFS)
 AC_SUBST(RPCC)
+AC_SUBST(UNWRAP)
 AC_SUBST(MALLOCK)
 AC_SUBST(NOPAGING)
 
