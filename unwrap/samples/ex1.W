@@ -7,6 +7,7 @@
 // combined with refcounting.
 //
 #include "unwrap.h"
+#include "async.h"
 
 class sample_t {
 public:
@@ -14,9 +15,9 @@ public:
   
   /* 
    * a new function, written with unrap; note that in the declaration,
-   * we need to make the last argument as given here: ptr<freezer_t> = NULL
+   * we need to make the last argument as given here: ptr<closure_t> = NULL
    */
-  void main_fn (int i, const char *x, cbb::ptr cb, ptr<freezer_t> = NULL);
+  void main_fn (int i, const char *x, cbb::ptr cb, ptr<closure_t> = NULL);
 
 private:
 
@@ -78,7 +79,7 @@ FUNCTION(void sample_t::main_fn (int i, const char *x, cbb::ptr cb))
     bool status2;
     bool ret;
     vec<int> v;
-    int i,j;
+    int j,k;
   }
 	
   // variable initialization at declaration time does not yet work;

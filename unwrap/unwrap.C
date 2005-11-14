@@ -61,11 +61,8 @@ main (int argc, char *argv[])
     outfd = 1;
   }
 
-  yydebug = 1;
-  
-  // set up the dirty global variable to keep track of state while
-  // running yacc
-  // state = New parse_state_t ();
+  // only on if YYDEBUG is on :(
+  //yydebug = 1;
 
   yyparse ();
 

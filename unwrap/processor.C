@@ -120,9 +120,9 @@ parse_state_t::new_shotgun (unwrap_shotgun_t *g)
 //
 
 var_t
-unwrap_fn_t::freezer_generic ()
+unwrap_fn_t::closure_generic ()
 {
-  return var_t ("ptr<freezer_t>", NULL, "__frz_g");
+  return var_t ("ptr<closure_t>", NULL, "__frz_g");
 }
 
 var_t
@@ -132,23 +132,23 @@ unwrap_fn_t::trig ()
 }
 
 var_t
-unwrap_fn_t::mk_freezer () const
+unwrap_fn_t::mk_closure () const
 {
   strbuf b;
-  b << _name_mangled << "__freezer_t";
+  b << _name_mangled << "__closure_t";
 
   return var_t (b, "*", "__frz");
 }
 
 str
-unwrap_fn_t::decl_casted_freezer (bool do_lhs) const
+unwrap_fn_t::decl_casted_closure (bool do_lhs) const
 {
   strbuf b;
   if (do_lhs) {
-    b << "  " << _freezer.decl ()  << " =\n";
+    b << "  " << _closure.decl ()  << " =\n";
   }
-  b << "    reinterpret_cast<" << _freezer.type ().to_str () 
-    << "> (static_cast<freezer_t *> (" << freezer_generic ().name () << "));";
+  b << "    reinterpret_cast<" << _closure.type ().to_str () 
+    << "> (static_cast<closure_t *> (" << closure_generic ().name () << "));";
   return b;
 }
 
@@ -283,13 +283,13 @@ unwrap_fn_t::output_reenter (strbuf &b)
 }
 
 void
-unwrap_fn_t::output_freezer (int fd)
+unwrap_fn_t::output_closure (int fd)
 {
   strbuf b;
-  b << "class " << _freezer.type ().base_type ()  << " : public freezer_t\n"
+  b << "class " << _closure.type ().base_type ()  << " : public closure_t\n"
     << "{\n"
     << "public:\n"
-    << "  " << _freezer.type ().base_type () << " () : freezer_t () {}\n"
+    << "  " << _closure.type ().base_type () << " () : closure_t () {}\n"
     << "\n"
     ;
 
@@ -348,7 +348,7 @@ unwrap_fn_t::output_stack_vars (strbuf &b)
 void
 unwrap_fn_t::output_jump_tab (strbuf &b)
 {
-  b << "  switch (" << freezer_generic ().name () << "->jumpto ()) {\n"
+  b << "  switch (" << closure_generic ().name () << "->jumpto ()) {\n"
     ;
   for (u_int i = 0; i < _shotguns.size (); i++) {
     int id = i + 1;
@@ -372,16 +372,16 @@ unwrap_fn_t::output_fn_header (int fd)
     _args->paramlist (b);
     b << ", ";
   }
-  b << freezer_generic ().decl () << ")\n"
+  b << closure_generic ().decl () << ")\n"
     << "{\n"
-    << "  " << _freezer.decl () << ";\n"
-    << "  if (!" << freezer_generic ().name() << ") {\n"
-    << "    ptr<" << _freezer.type ().base_type () << "> tmp" 
-    << " = New refcounted<" << _freezer.type ().base_type () << "> ();\n"
-    << "    " << freezer_generic (). name () << " = tmp;\n"
+    << "  " << _closure.decl () << ";\n"
+    << "  if (!" << closure_generic ().name() << ") {\n"
+    << "    ptr<" << _closure.type ().base_type () << "> tmp" 
+    << " = New refcounted<" << _closure.type ().base_type () << "> ();\n"
+    << "    " << closure_generic (). name () << " = tmp;\n"
     << "    " << frznm () << " = tmp;\n"
     << "  } else {\n"
-    << "    " << _freezer.name () << " = " << decl_casted_freezer (false)
+    << "    " << _closure.name () << " = " << decl_casted_closure (false)
     << "\n"
     << "  }\n\n"
     ;
@@ -400,7 +400,7 @@ unwrap_fn_t::output_fn_header (int fd)
 void 
 unwrap_fn_t::output (int fd)
 {
-  output_freezer (fd);
+  output_closure (fd);
   output_fn_header (fd);
 }
 
@@ -416,14 +416,14 @@ unwrap_shotgun_t::output (int fd)
   }
   if (_fn->classname ()) 
     b << "    " << _fn->frznm () << "->_self = this;\n";
-  b << "    " << _fn->freezer_generic ().name () << "->set_jumpto (" << _id 
+  b << "    " << _fn->closure_generic ().name () << "->set_jumpto (" << _id 
     << ");\n"
     << "\n";
 
   b << "    " << _fn->trig ().decl () 
     << " = trig_t::alloc (wrap ("
-    << _fn->freezer_generic ().name ()  
-    << ", &freezer_t::reenter));\n";
+    << _fn->closure_generic ().name ()  
+    << ", &closure_t::reenter));\n";
 
   b.tosuio ()->output (fd);
   b.tosuio ()->clear ();
@@ -440,7 +440,7 @@ unwrap_shotgun_t::output (int fd)
   for (u_int i = 0; i < _class_vars.size (); i++) {
     const var_t &v = _class_vars._vars[i];
     b << "    " << v.name () << " = " 
-      << _fn->freezer ().name () << "->_class_tmp." << v.name () << ";\n";
+      << _fn->closure ().name () << "->_class_tmp." << v.name () << ";\n";
   }
 
   b.tosuio ()->output (fd);
@@ -458,8 +458,8 @@ void
 unwrap_callback_t::output (int fd)
 {
   strbuf b;
-  b << "wrap (" << _parent_fn->freezer ().name () << ", "
-    << "&" << _parent_fn->freezer ().type ().base_type () 
+  b << "wrap (" << _parent_fn->closure ().name () << ", "
+    << "&" << _parent_fn->closure ().type ().base_type () 
     << "::cb" << _cb_id << ", " << _parent_fn->trig (). name ()
     << ")";
   b.tosuio ()->output (fd);

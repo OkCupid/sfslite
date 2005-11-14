@@ -149,23 +149,21 @@ shotgun: T_SHOTGUN '{'
 	  state.new_shotgun (gun);
 	  fn->add_shotgun (gun);
 	}
-	shotgun_calls passthrough '}'
+	callbacks_and_passthrough '}'
 	{
 	  $$ = state.shotgun ();
 	}
 	;
 
-shotgun_calls: /* empty */		
-	| shotgun_calls shotgun_call	
-	;
-
-shotgun_call: passthrough callback passthrough ';' 
+callbacks_and_passthrough: passthrough		
+	{ 
+	  state.shotgun ()->passthrough ($1); 
+	}
+	| callbacks_and_passthrough callback passthrough
 	{
 	  parse_state_t *sg = state.shotgun ();
-	  sg->passthrough ($1);
 	  sg->push ($2);
 	  sg->passthrough ($3);
-	  sg->passthrough (";");
 	}
 	;
 

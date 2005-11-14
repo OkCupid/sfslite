@@ -46,7 +46,7 @@ DNUM 	[+-]?[0-9]+
 XNUM 	[+-]?0x[0-9a-fA-F]
 
 %x FULL_PARSE FN_ENTER VARS_ENTER SHOTGUN_ENTER SHOTGUN_CB_ENTER SHOTGUN
-%x UNWRAP SHOTGUN_CB PAREN_ENTER UNWRAP_BASE C_COMMENT
+%x UNWRAP SHOTGUN_CB PAREN_ENTER UNWRAP_BASE C_COMMENT C_COMMENT_GOBBLE
 
 %%
 
@@ -135,16 +135,17 @@ static		return T_STATIC;
 
 <SHOTGUN>{
 \n		{ ++lineno; yylval.str = yytext; return T_PASSTHROUGH; }
-[^@{};\n/]+	{ yylval.str = yytext; return T_PASSTHROUGH; }
+[^@{}\n/]+	{ yylval.str = yytext; return T_PASSTHROUGH; }
 @		{ yy_push_state (SHOTGUN_CB_ENTER); return yytext[0]; }
-[;/]		{ return yytext[0]; }
+[{]		{ yy_push_state (SHOTGUN); yylval.str = yytext; 
+	          return T_PASSTHROUGH; }
 [}]		{ yy_pop_state (); return yytext[0]; }
 .		{ return yyerror ("illegal token found in SHOTGUN { ... } "); }
 }
 
 <UNWRAP_BASE,UNWRAP>{
 \n		{ yylval.str = yytext; ++lineno; return T_PASSTHROUGH; }
-[^VS{}\n]+|[VS]	{ yylval.str = yytext; return T_PASSTHROUGH; }
+[^VS{}\n/]+|[VS] { yylval.str = yytext; return T_PASSTHROUGH; }
 [{]		{ yylval.str = yytext; yy_push_state (UNWRAP); 
 		  return T_PASSTHROUGH; }
 
@@ -171,15 +172,31 @@ MEMBER   	{ yy_push_state (UNWRAP);
 
 FUNCTION	{ yy_push_state (FN_ENTER); return T_FUNCTION; }
 
-<FULL_PARSE,FN_ENTER,VARS_ENTER,SHOTGUN_ENTER,SHOTGUN_CB_ENTER,PAREN_ENTER,SHOTGUN_CB,SHOTGUN,UNWRAP,UNWRAP_BASE>{
 
-"//"[^\n]*\n	++lineno ;
-"//"[^\n]*	/* discard */ ;
-"/*"		{ yy_push_state (C_COMMENT); }
-
+<UNWRAP,UNWRAP_BASE>{
+"//"[^\n]*\n	{ ++lineno ; yylval.str = yytext; return T_PASSTHROUGH; }
+"//"[^\n]*	{ yylval.str = yytext; return T_PASSTHROUGH; }
+"/*"		{ yy_push_state (C_COMMENT); yylval.str = yytext;
+	          return T_PASSTHROUGH; }
 }
 
 <C_COMMENT>{
+"*/"		{ yy_pop_state (); yylval.str = yytext; return T_PASSTHROUGH; }
+"*"		{ yylval.str = yytext; return T_PASSTHROUGH ; }
+[^*\n]*		{ yylval.str = yytext; return T_PASSTHROUGH ; }
+\n		{ ++lineno; yylval.str = yytext; return T_PASSTHROUGH; }
+}
+
+
+<SHOTGUN_CB_ENTER,PAREN_ENTER,FULL_PARSE,SHOTGUN_CB,SHOTGUN,FN_ENTER,VARS_ENTER>{
+
+"//"[^\n]*\n	++lineno ;
+"//"[^\n]*	/* discard */ ;
+"/*"		{ yy_push_state (C_COMMENT_GOBBLE); }
+
+}
+
+<C_COMMENT_GOBBLE>{
 "*/"		{ yy_pop_state (); }
 "*"		/* ignore */ ;
 [^*\n]*		/* ignore */ ;

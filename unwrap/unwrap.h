@@ -170,7 +170,7 @@ public:
   unwrap_fn_t (const str &r, ptr<declarator_t> d, bool c)
     : _ret_type (r, d->pointer ()), _name (d->name ()),
       _name_mangled (mangle (_name)), _method_name (strip_to_method (_name)),
-      _class (strip_off_method (_name)), _isconst (c),_freezer (mk_freezer ()),
+      _class (strip_off_method (_name)), _isconst (c),_closure (mk_closure ()),
       _args (d->params ()) {}
 
   vartab_t *stack_vars () { return &_stack_vars; }
@@ -185,12 +185,12 @@ public:
   void add_shotgun (unwrap_shotgun_t *g) { _shotguns.push_back (g); }
   str fn_prefix () const { return _name_mangled; }
 
-  static var_t freezer_generic () ;
-  str decl_casted_freezer (bool do_lhs) const;
-  var_t freezer () const { return _freezer; }
+  static var_t closure_generic () ;
+  str decl_casted_closure (bool do_lhs) const;
+  var_t closure () const { return _closure; }
   static var_t trig () ;
 
-  str frznm () const { return _freezer.name (); }
+  str frznm () const { return _closure.name (); }
   str reenter_fn  () const ;
   str frozen_arg (const str &i) const ;
 
@@ -204,9 +204,9 @@ private:
   const str _method_name;
   const str _class;
   const bool _isconst;
-  const var_t _freezer;
+  const var_t _closure;
 
-  var_t mk_freezer () const ;
+  var_t mk_closure () const ;
 
   ptr<vartab_t> _args;
   vartab_t _stack_vars;
@@ -215,7 +215,7 @@ private:
   vec<unwrap_shotgun_t *> _shotguns;
 
   void output_reenter (strbuf &b);
-  void output_freezer (int fd);
+  void output_closure (int fd);
   void output_fn_header (int fd);
   void output_stack_vars (strbuf &b);
   void output_jump_tab (strbuf &b);
