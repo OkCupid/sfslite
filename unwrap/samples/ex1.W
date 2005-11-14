@@ -77,11 +77,26 @@ FUNCTION(void sample_t::main_fn (int i, const char *x, cbb::ptr cb))
   VARS {
     bool status2;
     bool ret;
+    vec<int> v;
+    int i,j;
   }
 	
   // variable initialization at declaration time does not yet work;
   // it's on the TODO list
   ret = false;
+
+  /*
+   *
+   * eventually want this to work.
+   *
+  for (i = 0; i < 2000; ) {
+    SHOTGUN {
+      for (j = 0; j < 20; j++, i++) {
+	fn3 (x, @(v[i]));
+      }
+    }
+  }
+  */
 
   //
   // SHOTGUN {...}: Launch a series of parallel asynchronous function
