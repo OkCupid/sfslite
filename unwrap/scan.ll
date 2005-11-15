@@ -73,13 +73,14 @@ signed		return T_SIGNED;
 unsigned	return T_UNSIGNED;
 static		return T_STATIC;
 
+{ID} 		{ yylval.str = yytext; return T_ID; }
+
 [{(]		{ yy_push_state (FULL_PARSE); return yytext[0]; }
 [})]		{ yy_pop_state (); return yytext[0]; }
 
 [<>;,:*]	{ return yytext[0]; }
 "::"		{ return T_2COLON; }
 
-{ID} 		{ yylval.str = yytext; return T_ID; }
 
 {DNUM}|{XNUM}	{ yylval.str = yytext; return T_NUM; }
 
@@ -137,11 +138,12 @@ static		return T_STATIC;
 
 
 <SHOTGUN_CB>{
-"("		{ yy_push_state (SHOTGUN_CB); return yytext[0]; }
 "["		{ yy_push_state (WRAP_BASE); return yytext[0]; }
+"("		{ yy_push_state (FULL_PARSE); 
+	          yy_push_state (EXPR);
+ 	  	  return yytext[0]; }
 {ID}		{ return std_ret (T_ID); }
 ")"		{ yy_pop_state (); return yytext[0]; }
-[%$]		{ yy_push_state (PAREN_ENTER); return yytext[0]; }
 ,		{ return yytext[0]; }
 .		{ return yyerror ("illegal token found in '@(..)'"); }
 }
@@ -157,8 +159,7 @@ static		return T_STATIC;
 
 <EXPR_BASE>{
 \n		++lineno;
-,		{ return yytext[0]; }
-")"		{ yy_pop_state (); return yytext[0]; }
+[,)]		{ yy_pop_state (); return yytext[0]; }
 .		{ return yyerror ("unbalanced paranthesis"); }
 }
 
