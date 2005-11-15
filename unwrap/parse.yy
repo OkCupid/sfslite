@@ -167,7 +167,25 @@ callbacks_and_passthrough: passthrough
 	}
 	;
 
-callback: '@' '(' callback_param_list_opt ')'
+wrap: '[' wrap_args ']'
+	;
+
+wrap_args: wrap_arg
+	| wrap_args ',' wrap_arg
+	;
+
+wrap_arg: passthrough
+	;
+
+callback: '@' '(' wrap ',' callback_param_list ')'
+	{
+ 	  unwrap_fn_t *fn = state.function ();
+	  unwrap_shotgun_t *g = state.shotgun ();
+	  unwrap_callback_t *c = New unwrap_callback_t ($5, fn, g);
+	  fn->add_callback (c);
+	  $$ = c;
+	}
+	| '@' '(' callback_param_list_opt ')'
 	{ 
  	  unwrap_fn_t *fn = state.function ();
 	  unwrap_shotgun_t *g = state.shotgun ();

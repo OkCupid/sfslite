@@ -34,6 +34,7 @@
 str filename = "(stdin)";
 int lineno = 1;
 static void switch_to_state (int i);
+static int std_ret (int i);
 %}
 
 %option stack
@@ -47,14 +48,16 @@ XNUM 	[+-]?0x[0-9a-fA-F]
 
 %x FULL_PARSE FN_ENTER VARS_ENTER SHOTGUN_ENTER SHOTGUN_CB_ENTER SHOTGUN
 %x UNWRAP SHOTGUN_CB PAREN_ENTER UNWRAP_BASE C_COMMENT C_COMMENT_GOBBLE
-%x EXPR EXPR_BASE
+%x EXPR EXPR_BASE WRAP WRAP_BASE
 
 %%
 
+<FN_ENTER,FULL_PARSE,SHOTGUN_ENTER,SHOTGUN_CB_ENTER,PAREN_ENTER,SHOTGUN_CB>{
+\n		++lineno;
+{WSPACE}+	/*discard*/;
+}
 
 <FULL_PARSE>{
-\n		++lineno;
-{WSPACE}+	/* discard */;
 
 const		return T_CONST;
 struct		return T_STRUCT;
@@ -85,9 +88,8 @@ static		return T_STATIC;
 
 }
 
+
 <FN_ENTER>{
-\n		++lineno;
-{WSPACE}+	/*discard*/;
 [(]		{ yy_push_state (FULL_PARSE); return yytext[0]; }
 [{]		{ switch_to_state (UNWRAP_BASE); return yytext[0]; }
 .		{ return yyerror ("illegal token found in function "
@@ -102,44 +104,53 @@ static		return T_STATIC;
 }
 
 <SHOTGUN_ENTER>{
-\n		++lineno;
-{WSPACE}+	/* discard */ ;
 [{]		{ switch_to_state (SHOTGUN); return yytext[0]; }
 .		{ return yyerror ("illegal token found between SHOTGUN "
 				  "and '{'");}
 }
 
 <SHOTGUN_CB_ENTER>{
-\n		++lineno;
-{WSPACE}+	/* discard */ ;
 [(\[]		{ switch_to_state (SHOTGUN_CB); return yytext[0]; }
 .		{ return yyerror ("illegal token found between '@' and '('"); }
 }
 
 <PAREN_ENTER>{
-\n		++lineno;
-{WSPACE}+	/*discard*/;
 [(]		{ switch_to_state (FULL_PARSE); return yytext[0]; }
 .		{ return yyerror ("illegal token found in $(..) or %(..)"); }
 }
 
-<SHOTGUN_CB>{
+
+<WRAP_BASE,WRAP>{
 \n		++lineno;
-{WSPACE}+	/*discard*/;
-[(\[]		{ yy_push_state (SHOTGUN_CB); return yytext[0]; }
-{ID}		{ yylval.str = yytext; return T_ID; }
-[)]		{ yy_pop_state (); return yytext[0]; }
+[^\[\],\n]+	{ return std_ret (T_PASSTHROUGH); }
+"["		{ yy_push_state (WRAP); return std_ret (T_PASSTHROUGH); }
+,		{ return yytext[0]; }
+}
+
+<WRAP_BASE>{
+"]"		{ yy_pop_state (); return yytext[0]; }
+}
+
+<WRAP>{
+"]"		{ yy_pop_state (); return std_ret (T_PASSTHROUGH); }
+}
+
+
+<SHOTGUN_CB>{
+"("		{ yy_push_state (SHOTGUN_CB); return yytext[0]; }
+"["		{ yy_push_state (WRAP_BASE); return yytext[0]; }
+{ID}		{ return std_ret (T_ID); }
+")"		{ yy_pop_state (); return yytext[0]; }
 [%$]		{ yy_push_state (PAREN_ENTER); return yytext[0]; }
 ,		{ return yytext[0]; }
 .		{ return yyerror ("illegal token found in '@(..)'"); }
 }
 
 <SHOTGUN>{
-\n		{ ++lineno; yylval.str = yytext; return T_PASSTHROUGH; }
-[^@{}\n/]+	{ yylval.str = yytext; return T_PASSTHROUGH; }
+\n		{ ++lineno; return std_ret (T_PASSTHROUGH); }
+[^@{}\n/]+	{ return std_ret (T_PASSTHROUGH); }
 @		{ yy_push_state (SHOTGUN_CB_ENTER); return yytext[0]; }
-[{]		{ yy_push_state (SHOTGUN); yylval.str = yytext; 
-	          return T_PASSTHROUGH; }
+[{]		{ yy_push_state (SHOTGUN); return std_ret (T_PASSTHROUGH); }
 [}]		{ yy_pop_state (); return yytext[0]; }
 .		{ return yyerror ("illegal token found in SHOTGUN { ... } "); }
 }
@@ -147,6 +158,7 @@ static		return T_STATIC;
 <EXPR_BASE>{
 \n		++lineno;
 ,		{ return yytext[0]; }
+")"		{ yy_pop_state (); return yytext[0]; }
 .		{ return yyerror ("unbalanced paranthesis"); }
 }
 
@@ -156,9 +168,8 @@ static		return T_STATIC;
 [^()\n,/]+	{ yylval.str = yytext; return T_PASSTHROUGH; }
 }
 
-<EXPR_BASE>{
-[)]		{ yylval.str = yytext; yy_pop_state ();
-                  return T_PASSTHROUGH; }
+<EXPR>{
+")"		{ yy_pop_state (); return std_ret (T_PASSTHROUGH); }
 }
 
 <UNWRAP_BASE,UNWRAP>{
@@ -206,7 +217,7 @@ FUNCTION	{ yy_push_state (FN_ENTER); return T_FUNCTION; }
 }
 
 
-<SHOTGUN_CB_ENTER,PAREN_ENTER,FULL_PARSE,SHOTGUN_CB,SHOTGUN,FN_ENTER,VARS_ENTER,EXPR,EXPR_BASE>{
+<SHOTGUN_CB_ENTER,PAREN_ENTER,FULL_PARSE,SHOTGUN_CB,SHOTGUN,FN_ENTER,VARS_ENTER,EXPR,EXPR_BASE,WRAP,WRAP_BASE>{
 
 "//"[^\n]*\n	++lineno ;
 "//"[^\n]*	/* discard */ ;
@@ -242,4 +253,11 @@ yywarn (str msg)
 {
   warnx << filename << ":" << lineno << ": Warning: " << msg << "\n";
   return 0;
+}
+
+int
+std_ret (int i)
+{
+  yylval.str = yytext;
+  return i;
 }

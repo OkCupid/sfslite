@@ -92,6 +92,26 @@ private:
   vartyp_t _asc;
 };
 
+class expr_t {
+public:
+  expr_t (const str &t, const str &p, const str &e) 
+    : _type (t, p), _expr (e) {}
+  expr_t (const var_t &v) : _type (v.type ()), _expr (v.name ()) {}
+
+protected:
+  type_t _type;
+  str _expr;
+
+public:
+  const type_t &type () const { return _type; }
+  const str &expr () const { return _expr; }
+};
+
+class expr_list_t {
+public:
+
+};
+
 class vartab_t {
 public:
   ~vartab_t () {}
@@ -120,6 +140,9 @@ public:
   tailq_entry<unwrap_callback_t> _lnk;
 private:
   ptr<vartab_t> _vars;
+  ptr<expr_list_t> _wrap_in;
+  ptr<expr_list_t> _call_with;
+
   unwrap_fn_t *_parent_fn;
   unwrap_shotgun_t *_shotgun;
   int _cb_id;
