@@ -122,7 +122,7 @@ parse_state_t::new_shotgun (unwrap_shotgun_t *g)
 var_t
 unwrap_fn_t::closure_generic ()
 {
-  return var_t ("ptr<closure_t>", NULL, "__frz_g");
+  return var_t ("ptr<closure_t>", NULL, "__cls_g");
 }
 
 var_t
@@ -137,7 +137,7 @@ unwrap_fn_t::mk_closure () const
   strbuf b;
   b << _name_mangled << "__closure_t";
 
-  return var_t (b, "*", "__frz");
+  return var_t (b, "*", "__cls");
 }
 
 str
@@ -164,7 +164,7 @@ str
 unwrap_fn_t::frozen_arg (const str &i) const
 {
   strbuf b;
-  b << frznm () << "->_args." << i ;
+  b << closure_nm () << "->_args." << i ;
   return b;
 }
 
@@ -340,7 +340,7 @@ unwrap_fn_t::output_stack_vars (strbuf &b)
   for (u_int i = 0; i < _stack_vars.size (); i++) {
     const var_t &v = _stack_vars._vars[i];
     b << "  " << v.ref_decl () << " = " 
-      << frznm () << "->_stack." << v.name () << ";\n" ;
+      << closure_nm () << "->_stack." << v.name () << ";\n" ;
   } 
 }
 
@@ -379,7 +379,7 @@ unwrap_fn_t::output_fn_header (int fd)
     << "    ptr<" << _closure.type ().base_type () << "> tmp" 
     << " = New refcounted<" << _closure.type ().base_type () << "> ();\n"
     << "    " << closure_generic (). name () << " = tmp;\n"
-    << "    " << frznm () << " = tmp;\n"
+    << "    " << closure_nm () << " = tmp;\n"
     << "  } else {\n"
     << "    " << _closure.name () << " = " << decl_casted_closure (false)
     << "\n"
@@ -411,11 +411,11 @@ unwrap_shotgun_t::output (int fd)
   b << "  {\n";
   const vartab_t *args = _fn->args ();
   for (u_int i = 0; i < args->size (); i++) {
-    b << "    " <<  _fn->frznm () << "->_args." << args->_vars[i].name ()
+    b << "    " <<  _fn->closure_nm () << "->_args." << args->_vars[i].name ()
       << " = " << args->_vars[i].name () << ";\n";
   }
   if (_fn->classname ()) 
-    b << "    " << _fn->frznm () << "->_self = this;\n";
+    b << "    " << _fn->closure_nm () << "->_self = this;\n";
   b << "    " << _fn->closure_generic ().name () << "->set_jumpto (" << _id 
     << ");\n"
     << "\n";

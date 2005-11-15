@@ -54,7 +54,7 @@ main (int argc, char *argv[])
 
   int outfd;
   if (outfile) {
-    if ((outfd = open (outfile.cstr (), O_CREAT|O_WRONLY, 0644)) < 0) {
+    if ((outfd = open (outfile.cstr (), O_CREAT|O_WRONLY|O_TRUNC, 0644)) < 0) {
       warn << "cannot open file for writing: " << outfile << "\n";
     }
   } else {

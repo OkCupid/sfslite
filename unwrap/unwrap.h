@@ -190,7 +190,7 @@ public:
   var_t closure () const { return _closure; }
   static var_t trig () ;
 
-  str frznm () const { return _closure.name (); }
+  str closure_nm () const { return _closure.name (); }
   str reenter_fn  () const ;
   str frozen_arg (const str &i) const ;
 

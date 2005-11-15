@@ -163,12 +163,12 @@ static		return T_STATIC;
 
 <UNWRAP_BASE,UNWRAP>{
 \n		{ yylval.str = yytext; ++lineno; return T_PASSTHROUGH; }
-[^VS{}\n/]+|[VS] { yylval.str = yytext; return T_PASSTHROUGH; }
+[^VSC{}\n/]+|[VSC] { yylval.str = yytext; return T_PASSTHROUGH; }
 [{]		{ yylval.str = yytext; yy_push_state (UNWRAP); 
 		  return T_PASSTHROUGH; }
 
 VARS		{ yy_push_state (VARS_ENTER); return T_VARS; }
-SHOTGUN		{ yy_push_state (SHOTGUN_ENTER); return T_SHOTGUN; }
+SHOTGUN|CRCC	{ yy_push_state (SHOTGUN_ENTER); return T_SHOTGUN; }
 }
 
 <UNWRAP>{
