@@ -48,6 +48,7 @@
 %token T_STATIC
 
 %token T_2COLON
+%token T_2AT
 
 /* Keywords for our new filter */
 %token T_VARS
