@@ -97,6 +97,8 @@ public:
   expr_t (const str &t, const str &p, const str &e) 
     : _type (t, p), _expr (e) {}
   expr_t (const var_t &v) : _type (v.type ()), _expr (v.name ()) {}
+  expr_t (const str &e) : _expr (e) {}
+  expr_t () {}
 
 protected:
   type_t _type;
@@ -107,10 +109,7 @@ public:
   const str &expr () const { return _expr; }
 };
 
-class expr_list_t {
-public:
-
-};
+typedef vec<expr_t> expr_list_t;
 
 class vartab_t {
 public:
@@ -133,18 +132,19 @@ class unwrap_fn_t;
 class unwrap_shotgun_t;
 class unwrap_callback_t : public unwrap_el_t {
 public:
-  unwrap_callback_t (ptr<vartab_t> t, unwrap_fn_t *f, unwrap_shotgun_t *g) : 
-    _vars (t), _parent_fn (f), _shotgun (g), _cb_id (0) {}
+  unwrap_callback_t (ptr<vartab_t> t, unwrap_fn_t *f, unwrap_shotgun_t *g,
+		     ptr<expr_list_t> e = NULL) : 
+    _vars (t), _parent_fn (f), _shotgun (g), _wrap_in (e), _cb_id (0) {}
   void output (int fd) ;
   void output_in_class (strbuf &b, int n);
   tailq_entry<unwrap_callback_t> _lnk;
 private:
   ptr<vartab_t> _vars;
-  ptr<expr_list_t> _wrap_in;
   ptr<expr_list_t> _call_with;
 
   unwrap_fn_t *_parent_fn;
   unwrap_shotgun_t *_shotgun;
+  ptr<expr_list_t> _wrap_in;
   int _cb_id;
 };
 
@@ -299,6 +299,8 @@ struct YYSTYPE {
   char              ch;
   unwrap_fn_t *     fn;
   unwrap_el_t *     el;
+  ptr<expr_list_t>  args;
+  expr_t            expr;
 
   vec<ptr<declarator_t> > decls;
 };

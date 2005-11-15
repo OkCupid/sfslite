@@ -77,6 +77,8 @@
 %type <var>  callback_param
 
 %type <el>   fn_unwrap vars shotgun callback
+%type <args> wrap wrap_args
+%type <expr> wrap_arg
 
 %%
 
@@ -168,20 +170,35 @@ callbacks_and_passthrough: passthrough
 	;
 
 wrap: '[' wrap_args ']'
+	{
+	  $$ = $2;
+	}
 	;
 
 wrap_args: wrap_arg
+	{
+	   ptr<expr_list_t> w = New refcounted<expr_list_t> ();
+	   w->push_back ($1);
+	   $$ = w;
+	}
 	| wrap_args ',' wrap_arg
+	{
+	  $1->push_back ($3);
+	  $$ = $1;
+	}
 	;
 
 wrap_arg: passthrough
+	{
+	  $$ = expr_t ($1);
+	}
 	;
 
 callback: '@' '(' wrap ',' callback_param_list ')'
 	{
  	  unwrap_fn_t *fn = state.function ();
 	  unwrap_shotgun_t *g = state.shotgun ();
-	  unwrap_callback_t *c = New unwrap_callback_t ($5, fn, g);
+	  unwrap_callback_t *c = New unwrap_callback_t ($5, fn, g, $3);
 	  fn->add_callback (c);
 	  $$ = c;
 	}
@@ -195,7 +212,7 @@ callback: '@' '(' wrap ',' callback_param_list ')'
 	}
 	;
 
-callback_param_list_opt: /* empty */ 	{ $$ = New refcounted<vartab_t> (); }
+callback_param_list_opt: /* empty */ { $$ = New refcounted<vartab_t> (); }
 	| callback_param_list
 	;
 
