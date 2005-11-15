@@ -47,6 +47,7 @@ XNUM 	[+-]?0x[0-9a-fA-F]
 
 %x FULL_PARSE FN_ENTER VARS_ENTER SHOTGUN_ENTER SHOTGUN_CB_ENTER SHOTGUN
 %x UNWRAP SHOTGUN_CB PAREN_ENTER UNWRAP_BASE C_COMMENT C_COMMENT_GOBBLE
+%x EXPR EXPR_BASE
 
 %%
 
@@ -111,7 +112,7 @@ static		return T_STATIC;
 <SHOTGUN_CB_ENTER>{
 \n		++lineno;
 {WSPACE}+	/* discard */ ;
-[(]		{ switch_to_state (SHOTGUN_CB); return yytext[0]; }
+[(\[]		{ switch_to_state (SHOTGUN_CB); return yytext[0]; }
 .		{ return yyerror ("illegal token found between '@' and '('"); }
 }
 
@@ -125,7 +126,7 @@ static		return T_STATIC;
 <SHOTGUN_CB>{
 \n		++lineno;
 {WSPACE}+	/*discard*/;
-[(]		{ yy_push_state (SHOTGUN_CB); return yytext[0]; }
+[(\[]		{ yy_push_state (SHOTGUN_CB); return yytext[0]; }
 {ID}		{ yylval.str = yytext; return T_ID; }
 [)]		{ yy_pop_state (); return yytext[0]; }
 [%$]		{ yy_push_state (PAREN_ENTER); return yytext[0]; }
@@ -141,6 +142,23 @@ static		return T_STATIC;
 	          return T_PASSTHROUGH; }
 [}]		{ yy_pop_state (); return yytext[0]; }
 .		{ return yyerror ("illegal token found in SHOTGUN { ... } "); }
+}
+
+<EXPR_BASE>{
+\n		++lineno;
+,		{ return yytext[0]; }
+.		{ return yyerror ("unbalanced paranthesis"); }
+}
+
+<EXPR,EXPR_BASE>{
+[(]		{ yylval.str = yytext; yy_push_state (EXPR); 
+                  return T_PASSTHROUGH; }
+[^()\n,/]+	{ yylval.str = yytext; return T_PASSTHROUGH; }
+}
+
+<EXPR_BASE>{
+[)]		{ yylval.str = yytext; yy_pop_state ();
+                  return T_PASSTHROUGH; }
 }
 
 <UNWRAP_BASE,UNWRAP>{
@@ -188,7 +206,7 @@ FUNCTION	{ yy_push_state (FN_ENTER); return T_FUNCTION; }
 }
 
 
-<SHOTGUN_CB_ENTER,PAREN_ENTER,FULL_PARSE,SHOTGUN_CB,SHOTGUN,FN_ENTER,VARS_ENTER>{
+<SHOTGUN_CB_ENTER,PAREN_ENTER,FULL_PARSE,SHOTGUN_CB,SHOTGUN,FN_ENTER,VARS_ENTER,EXPR,EXPR_BASE>{
 
 "//"[^\n]*\n	++lineno ;
 "//"[^\n]*	/* discard */ ;
