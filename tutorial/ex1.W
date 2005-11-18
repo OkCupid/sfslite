@@ -71,7 +71,7 @@ sample_t::fn3 (int i, str s, callback<void, str, bool>::ref cb)
 
 
 
-FUNCTION(void sample_t::main_fn (int i, const char *x, cbb::ptr cb))
+UNWRAP(void sample_t::main_fn (int i, const char *x, cbb::ptr cb))
 {
   // all stack variables must be declared up front, in a VARS { ... }
   // environment.  Think: C programming.
@@ -80,6 +80,7 @@ FUNCTION(void sample_t::main_fn (int i, const char *x, cbb::ptr cb))
     bool ret;
     vec<int> v;
     int j,k;
+    ptr<int> res1;
   }
 	
   // variable initialization at declaration time does not yet work;
@@ -122,13 +123,13 @@ FUNCTION(void sample_t::main_fn (int i, const char *x, cbb::ptr cb))
   //   sample_t::res2 of type str.
   //
   SHOTGUN {
-    fn1 (i, @($(ptr<int> res1)));
-    fn2 (x, @(status2, %(str res2)));
+    fn1 (i, @(res1) );
+    fn2 (x, @(status2, (str )%res2));
   }
 
   if (res1 && status2) {
     SHOTGUN {
-      fn3 (*res1, res2, @($(str res3), $(bool status3)));
+      fn3 (*res1, res2, @((str )$$res3, (bool )$$status3));
     }
     if (status3) {
       warn << "got legitimate result: " << res3 << "\n";

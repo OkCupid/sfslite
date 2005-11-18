@@ -24,8 +24,9 @@
 
 %{
 #include "unwrap.h"
+#include "parseopt.h"
 #define YYSTYPE YYSTYPE
-
+static var_t resolve_variable (const str &s);
 %}
 
 %token <str> T_ID
@@ -48,15 +49,14 @@
 %token T_STATIC
 
 %token T_2COLON
-%token T_2AT
+%token T_2PCT
 
 /* Keywords for our new filter */
 %token T_VARS
 %token T_SHOTGUN
-%token T_MEMBER
 %token T_FUNCTION
 
-%token T_2COLON
+%token T_2DOLLAR
 
 %type <str> pointer pointer_opt template_instantiation_arg
 %type <str> template_instantiation_list template_instantiation
@@ -64,22 +64,24 @@
 %type <str> template_instantiation_list_opt identifier
 %type <str> typedef_name type_qualifier_list_opt type_qualifier_list
 %type <str> type_qualifier type_specifier type_modifier_list
-%type <str> type_modifier declaration_specifiers passthrough
+%type <str> type_modifier declaration_specifiers passthrough 
+%type <str> expr_var_ref generic_expr
 
 %type <decl> init_declarator declarator direct_declarator
 
 %type <vars> parameter_type_list_opt parameter_type_list parameter_list
-%type <vars> callback_param_list callback_param_list_opt
+%type <exprs> callback_param_list 
+%type <pl2> callback_2part_param_list callback_2part_param_list_opt
 
 %type <opt>  const_opt
 %type <fn>   fn_declaration
 
-%type <var>  parameter_declaration callback_class_var callback_stack_var
-%type <var>  callback_param
+%type <var>  parameter_declaration
+%type <var>  callback_param casted_expr callback_class_var
+%type <typ>  cast
 
 %type <el>   fn_unwrap vars shotgun callback
-%type <args> wrap wrap_args
-%type <expr> wrap_arg
+%type <var>  expr callback_stack_var
 
 %%
 
@@ -170,60 +172,54 @@ callbacks_and_passthrough: passthrough
 	}
 	;
 
-wrap: '[' wrap_args ']'
-	{
-	  $$ = $2;
-	}
-	;
-
-wrap_args: wrap_arg
-	{
-	   ptr<expr_list_t> w = New refcounted<expr_list_t> ();
-	   w->push_back ($1);
-	   $$ = w;
-	}
-	| wrap_args ',' wrap_arg
-	{
-	  $1->push_back ($3);
-	  $$ = $1;
-	}
-	;
-
-wrap_arg: passthrough
-	{
-	  $$ = expr_t ($1);
-	}
-	;
-
-callback: '@' '(' wrap ',' callback_param_list ')'
-	{
- 	  unwrap_fn_t *fn = state.function ();
-	  unwrap_shotgun_t *g = state.shotgun ();
-	  unwrap_callback_t *c = New unwrap_callback_t ($5, fn, g, $3);
-	  fn->add_callback (c);
-	  $$ = c;
-	}
-	| '@' '(' callback_param_list_opt ')'
+callback_2part_param_list_opt:  /* empty */	
 	{ 
- 	  unwrap_fn_t *fn = state.function ();
-	  unwrap_shotgun_t *g = state.shotgun ();
-	  unwrap_callback_t *c = New unwrap_callback_t ($3, fn, g);
-	  fn->add_callback (c);
-	  $$ = c;
+	  $$ = NULL;
+	}
+	| callback_2part_param_list  		{ $$ = $1; }
+	;
+
+callback_2part_param_list: callback_param_list
+	{
+	  $$ = New refcounted<expr_list2_t> ($1);
+	}
+	| callback_param_list ';' 
+	{
+	  if (state.get_sym_bit ()) {
+	     yyerror ("Unexepected $,@ or % expression in wrap arguments");
+	  }
+	}
+	callback_param_list
+	{
+	  $$ = New refcounted<expr_list2_t> ($1, $4);
+	  state.check_backrefs ($4->size ());
 	}
 	;
 
-callback_param_list_opt: /* empty */ { $$ = New refcounted<vartab_t> (); }
-	| callback_param_list
+callback: '@' '(' 
+	{
+	   state.clear_backref_list ();
+	   state.clear_sym_bit ();
+	}
+	callback_2part_param_list_opt ')'
+	{
+ 	  unwrap_fn_t *fn = state.function ();
+	  unwrap_shotgun_t *g = state.shotgun ();
+	  unwrap_callback_t *c = 
+   	   New unwrap_callback_t ($4->call_with (), fn, g, $4->wrap_in ());
+	  fn->add_callback (c);
+	  $$ = c;
+	}
 	;
 
 callback_param_list: callback_param
 	{
-	  $$ = New refcounted<vartab_t> ($1);
+	  $$ = New refcounted<expr_list_t> ();
+	  $$->push_back ($1);
 	}
 	| callback_param_list ',' callback_param
 	{
-	  $1->add ($3);
+	  $1->push_back ($3);
 	  $$ = $1;
 	}
 	;
@@ -233,45 +229,75 @@ identifier: T_ID
 
 callback_param: identifier             
 	{   
-           var_t v;
-	   if (state.args ()->exists ($1)) {
-	     v = var_t ($1, ARG);
-	   } else if (state.stack_vars ()->exists ($1)) {
-	     v = var_t ($1, STACK);
-	   } else {
-	      strbuf b;
-	      b << "unbound variable in wrap: " << $1;
-	      yyerror (b);
-	   }
-	   $$ = v;
+           var_t e = resolve_variable ($1);
+	   $$ = e;
 	}
-	| callback_stack_var
-	| callback_class_var
+	| casted_expr 
 	;
 
-callback_stack_var: '$' '(' parameter_declaration ')'
+casted_expr: cast expr
 	{
-	  if (state.args ()->exists ($3.name ())) {
-	    strbuf b;
-	    b << "stack variable '" << $3.name () << "' shadows a parameter\n";
-	    yyerror (b);
-	  }
-	  if (!state.stack_vars ()->add ($3)) {
-	    strbuf b;
-	    b << "redefinition of stack variable: " << $3.name () << "\n";
-	    yyerror (b);
-	  }
-	  $3.set_asc (STACK);
-	  $$ = $3;
+	   $2.set_type ($1);
+	   $$ = $2;
+
+	   if ($$.get_asc () == STACK) {
+	      if (state.args ()->exists ($$.name ())) {
+	    	strbuf b;
+	    	b << "stack variable '" << $$.name () 
+                  << "' shadows a parameter";
+	        yyerror (b);
+	      }
+	      if (!state.stack_vars ()->add ($$)) {
+	    	strbuf b;
+	    	b << "redefinition of stack variable: " << $$.name () ;
+	    	yyerror (b);
+	      }
+	   } else if ($$.get_asc () == CLASS) {
+	      state.class_vars_tmp ()->add ($$);
+	      state.shotgun ()->add_class_var ($$);
+	   }
 	}
 	;
 
-callback_class_var: '%' '(' parameter_declaration ')'    
+expr: callback_class_var
+	| generic_expr			{ $$ = var_t ($1, EXPR); }
+	| callback_stack_var
+	;
+
+generic_expr:	passthrough	
+	| generic_expr expr_var_ref passthrough
+	{
+	   state.set_sym_bit ();
+	   CONCAT($1 << $2 << $3, $$);
+	}
+	;
+
+expr_var_ref: T_2PCT		{ $$ = "_self"; }
+	| '$' 			{ $$ = "_stack."; }
+	| '@' T_NUM		
+	{
+	  u_int i;
+	  assert (convertint ($2, &i));
+	  state.add_backref (i, get_yy_lineno ());
+	  $$ = str (strbuf ("_a%d", i));
+	}
+	;
+
+cast: '(' declaration_specifiers pointer_opt ')'
+	{
+	  $$ = type_t ($2, $3);
+	}
+	;
+
+callback_stack_var: T_2DOLLAR identifier
+	{
+	  $$ = var_t ($2, STACK);
+	}
+	;
+
+callback_class_var: '%' identifier
 	{ 
- 	   /* doesn't matter if it fails... */
-	   state.class_vars_tmp ()->add ($3);
-	   $3.set_asc (CLASS);
-	   $$ = $3; 
+	   $$ = var_t ($2, CLASS);
 	}
 	;
 
@@ -315,7 +341,7 @@ parameter_declaration: declaration_specifiers declarator
 	  if ($2->params ()) {
 	    warn << "parameters found when not expected\n";
 	  }
-	  $$ = var_t ($1, $2);
+	  $$ = var_t ($1, $2, ARG);
 	}
 	;
 
@@ -339,15 +365,15 @@ init_declarator_list:  init_declarator
 init_declarator: declarator
 	{
 	  vartab_t *t = state.stack_vars ();
-	  var_t v (state.decl_specifier (), $1);
+	  var_t v (state.decl_specifier (), $1, STACK);
 	  if (state.args ()->exists (v.name ())) {
 	    strbuf b;
-	    b << "stack variable '" << v.name () << "' shadows a parameter\n";
+	    b << "stack variable '" << v.name () << "' shadows a parameter";
 	    yyerror (b);
 	  }
 	  if (!t->add (v)) {
 	    strbuf b;
-	    b << "redefinition of stack variable: " << v.name () << "\n";
+	    b << "redefinition of stack variable: " << v.name () ;
  	    yyerror (b);
           }
 	}
@@ -491,3 +517,16 @@ pointer: '*'			{ $$ = "*"; }
 	;
 
 %%
+
+var_t
+resolve_variable (const str &s)
+{
+   const var_t *e;
+   if (!(e = state.stack_vars ()->lookup (s)) && 
+       !(e = state.args ()->lookup (s))) {
+      strbuf b;
+      b << "unbound variable in wrap: " << s;
+      yyerror (b);
+   }
+   return *e;
+}

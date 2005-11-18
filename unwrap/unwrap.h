@@ -19,8 +19,10 @@ extern int yyerror (str);
 extern int yyparse ();
 extern int yydebug;
 extern FILE *yyin;
+extern int get_yy_lineno ();
 
-typedef enum { NONE = 0, ARG = 1, STACK = 2, CLASS = 3 } vartyp_t ;
+
+typedef enum { NONE = 0, ARG = 1, STACK = 2, CLASS = 3, EXPR = 4 } vartyp_t ;
 
 class unwrap_el_t {
 public:
@@ -65,11 +67,13 @@ private:
 class declarator_t;
 class var_t {
 public:
-  var_t () : _asc (NONE) {}
+  var_t () {}
   var_t (const str &n, vartyp_t a = NONE) : _name (n), _asc (a) {}
-  var_t (const str &t, ptr<declarator_t> d);
-  var_t (const str &t, const str &p, const str &n)
-    : _type (t, p), _name (n), _asc (STACK) {}
+  var_t (const str &t, ptr<declarator_t> d, vartyp_t a = NONE);
+  var_t (const str &t, const str &p, const str &n, vartyp_t a = NONE) : 
+    _type (t, p), _name (n), _asc (a) {}
+  var_t (const type_t &t, const str &n, vartyp_t a = NONE)
+    : _type (t), _name (n), _asc (a) {}
 protected:
   type_t _type;
 
@@ -84,32 +88,18 @@ public:
   void set_asc (vartyp_t a) { _asc = a; }
   vartyp_t get_asc () const { return _asc; }
 
+  void set_type (const type_t &t) { _type = t; }
+
   str decl () const;
+  str decl (const str &prfx, int n) const;
   str ref_decl () const;
   str _name;
 
-private:
+protected:
   vartyp_t _asc;
 };
 
-class expr_t {
-public:
-  expr_t (const str &t, const str &p, const str &e) 
-    : _type (t, p), _expr (e) {}
-  expr_t (const var_t &v) : _type (v.type ()), _expr (v.name ()) {}
-  expr_t (const str &e) : _expr (e) {}
-  expr_t () {}
-
-protected:
-  type_t _type;
-  str _expr;
-
-public:
-  const type_t &type () const { return _type; }
-  const str &expr () const { return _expr; }
-};
-
-typedef vec<expr_t> expr_list_t;
+typedef vec<var_t> expr_list_t;
 
 class vartab_t {
 public:
@@ -132,16 +122,17 @@ class unwrap_fn_t;
 class unwrap_shotgun_t;
 class unwrap_callback_t : public unwrap_el_t {
 public:
-  unwrap_callback_t (ptr<vartab_t> t, unwrap_fn_t *f, unwrap_shotgun_t *g,
+  unwrap_callback_t (ptr<expr_list_t> t, unwrap_fn_t *f, unwrap_shotgun_t *g,
 		     ptr<expr_list_t> e = NULL) : 
-    _vars (t), _parent_fn (f), _shotgun (g), _wrap_in (e), _cb_id (0) {}
+    _call_with (t), _parent_fn (f), _shotgun (g), _wrap_in (e), _cb_id (0) {}
+  unwrap_callback_t () : _parent_fn (NULL), _shotgun (NULL), _wrap_in (0) {}
   void output (int fd) ;
   void output_in_class (strbuf &b, int n);
   tailq_entry<unwrap_callback_t> _lnk;
+  ptr<expr_list_t> wrap_in () { return _wrap_in; }
+  ptr<expr_list_t> call_with () { return _call_with; }
 private:
-  ptr<vartab_t> _vars;
   ptr<expr_list_t> _call_with;
-
   unwrap_fn_t *_parent_fn;
   unwrap_shotgun_t *_shotgun;
   ptr<expr_list_t> _wrap_in;
@@ -217,6 +208,8 @@ public:
   str reenter_fn  () const ;
   str frozen_arg (const str &i) const ;
 
+  unwrap_callback_t *last_callback () { return *_cbs.plast; }
+
   str label (u_int id) const ;
 
 
@@ -245,6 +238,25 @@ private:
   
 };
 
+class backref_t {
+public:
+  backref_t (u_int i, u_int l) : _index (i), _lineno (l) {}
+  u_int ref_index () const { return _index; }
+  u_int lineno () const { return _lineno; }
+protected:
+  u_int _index, _lineno;
+};
+
+class backref_list_t {
+public:
+  backref_list_t () {}
+  void clear () { _lst.clear (); }
+  void add (u_int i, u_int l) { _lst.push_back (backref_t (i, l)); }
+  bool check (u_int sz) const;
+private:
+  vec<backref_t> _lst;
+};
+
 class unwrap_shotgun_t;
 class parse_state_t {
 public:
@@ -267,12 +279,21 @@ public:
 
   void output (int fd);
 
+  void clear_sym_bit () { _sym_bit = false; }
+  void set_sym_bit () { _sym_bit = true; }
+  bool get_sym_bit () const { return _sym_bit; }
+
+  void clear_backref_list () { _backrefs.clear (); }
+  void add_backref (u_int i, u_int l) { _backrefs.add (i, l); }
+  bool check_backrefs (u_int i) const { return _backrefs.check (i); }
 
 protected:
   str _decl_specifier;
   unwrap_fn_t *_fn;
   unwrap_shotgun_t *_shotgun;
   tailq<unwrap_el_t, &unwrap_el_t::_lnk> _elements;
+  bool _sym_bit;
+  backref_list_t _backrefs;
 };
 
 class unwrap_shotgun_t : public parse_state_t, public unwrap_el_t 
@@ -288,6 +309,19 @@ private:
   vartab_t _class_vars;
 };
 
+class expr_list2_t {
+public:
+  expr_list2_t (ptr<expr_list_t> w) : _call_with (w) {}
+  expr_list2_t (ptr<expr_list_t> w, ptr<expr_list_t> c) 
+    : _wrap_in (w), _call_with (c) {}
+  ptr<expr_list_t> wrap_in () { return _wrap_in; }
+  ptr<expr_list_t> call_with () { return _call_with; }
+private:
+  ptr<expr_list_t> _wrap_in;
+  ptr<expr_list_t> _call_with;
+
+};
+
 extern parse_state_t state;
 
 struct YYSTYPE {
@@ -299,9 +333,9 @@ struct YYSTYPE {
   char              ch;
   unwrap_fn_t *     fn;
   unwrap_el_t *     el;
-  ptr<expr_list_t>  args;
-  expr_t            expr;
-
+  ptr<expr_list_t>  exprs;
+  type_t            typ;
+  ptr<expr_list2_t> pl2;
   vec<ptr<declarator_t> > decls;
 };
 extern YYSTYPE yylval;

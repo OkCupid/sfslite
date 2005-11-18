@@ -2,8 +2,8 @@
 #include "unwrap.h"
 #include "rxx.h"
 
-var_t::var_t (const str &t, ptr<declarator_t> d)
-  : _type (t, d->pointer ()), _name (d->name ()), _asc (NONE) {}
+var_t::var_t (const str &t, ptr<declarator_t> d, vartyp_t a)
+  : _type (t, d->pointer ()), _name (d->name ()), _asc (a) {}
 
 const var_t *
 vartab_t::lookup (const str &n) const
@@ -28,6 +28,14 @@ var_t::decl () const
 {
   strbuf b;
   b << _type.to_str () << _name;
+  return b;
+}
+
+str
+var_t::decl (const str &p, int n) const
+{
+  strbuf b;
+  b << _type.to_str () << p << n;
   return b;
 }
 
@@ -199,6 +207,33 @@ unwrap_fn_t::label (u_int id) const
 
 
 //-----------------------------------------------------------------------
+// sanity check functions
+
+bool
+backref_list_t::check (u_int sz) const
+{
+  for (u_int i = 0; i < _lst.size (); i++) {
+    if (_lst[i].ref_index () == 0) {
+      strbuf b;
+      b << "Back reference on line " << _lst[i].lineno ()
+	<< " is 0-indexed, but should be 1-indexed!";
+      yyerror (str (b));
+    } else if (_lst[i].ref_index () > sz) {
+      strbuf b;
+      b << "Back reference on line " << _lst[i].lineno ()
+	<< " overshoots wrapped-in arguments!";
+      yyerror (str (b));
+    }
+  }
+  return true;
+}
+
+
+//
+//-----------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------
 // Output Routines
 
 void 
@@ -214,49 +249,41 @@ unwrap_callback_t::output_in_class (strbuf &b, int n)
 
   b << "  void cb" << n  << " ("
     << unwrap_fn_t::trig ().decl () ;
-  if (_vars) {
-    for (u_int i = 0; i < _vars->size (); i++) {
-      b << ", ";
-      const var_t &v = _vars->_vars[i];
-      switch (v.get_asc ()) {
-      case ARG:
-	b << _parent_fn->args ()->lookup (v.name ())->decl ();
-	break;
-      case STACK:
-	b << _parent_fn->stack_vars ()->lookup (v.name ())->decl ();
-	break;
-      case CLASS:
-	b << v.decl ();
-	_shotgun->add_class_var (v);
-	break;
-      default:
-	yyerror ("unknown variable type / unexepected runtime error");
-	break;
-      }
+  if (_wrap_in) {
+    for (u_int i = 0; i < _wrap_in->size (); i++) {
+      b << ", " << (*_wrap_in)[i].decl ("_a", i+1);
     }
   }
 
+  if (_call_with) {
+    for (u_int i = 0; i < _call_with->size (); i++) {
+      b << ", " << (*_call_with)[i].decl ("_b", i+1);
+    }
+  }
   b << ")\n"
     << "  {\n";
-  if (_vars) {
-    for (u_int i = 0; i < _vars->_vars.size (); i++) {
-      const var_t &v = _vars->_vars[i];
+
+  if (_call_with) {
+    for (u_int i = 0; i < _call_with->size (); i++) {
+      const var_t &v = (*_call_with)[i];
       b << "    ";
       switch (v.get_asc ()) {
       case ARG:
-	b << "_args";
+	b << "_args." << v.name ();
 	break;
       case STACK:
-	b << "_stack";
+	b << "_stack." << v.name ();
 	break;
       case CLASS:
-	b << "_class_tmp";
+	b << "_class_tmp." << v.name ();
+	break;
+      case EXPR:
+	b << v.name ();
 	break;
       default:
 	assert (false);
       }
-      b << "." << _vars->_vars[i].name () << " = "  
-	<< _vars->_vars[i].name () << ";\n";
+      b << " = _b" << (i+1) << ";\n";
     }
   }
   b  << "  }\n\n";
@@ -344,7 +371,6 @@ unwrap_fn_t::output_stack_vars (strbuf &b)
   } 
 }
 
-
 void
 unwrap_fn_t::output_jump_tab (strbuf &b)
 {
@@ -394,8 +420,8 @@ unwrap_fn_t::output_fn_header (int fd)
   b.tosuio ()->output (fd);
 
   // XXX hack : close the function with pass-through tokens
+  // (see parse.yy for more details)
 }
-
 
 void 
 unwrap_fn_t::output (int fd)
@@ -461,13 +487,17 @@ unwrap_callback_t::output (int fd)
   b << "wrap (" << _parent_fn->closure ().name () << ", "
     << "&" << _parent_fn->closure ().type ().base_type () 
     << "::cb" << _cb_id << ", " << _parent_fn->trig (). name ()
-    << ")";
+    ;
+  if (_wrap_in) {
+    for (u_int i = 0; i < _wrap_in->size (); i++) {
+      b << ", ";
+      b << (*_wrap_in)[i].name ();
+    }
+  }
+  b << ")";
   b.tosuio ()->output (fd);
 
 }
-
-
-
 
 //
 //-----------------------------------------------------------------------

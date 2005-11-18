@@ -29,12 +29,18 @@
 
 #define YY_NO_UNPUT
 #define YY_SKIP_YYWRAP
+
+#ifdef yywrap
+# undef yywrap
+#endif
+
 #define yywrap() 1
 
 str filename = "(stdin)";
 int lineno = 1;
 static void switch_to_state (int i);
 static int std_ret (int i);
+int get_yy_lineno () { return lineno ;}
 %}
 
 %option stack
@@ -48,11 +54,11 @@ XNUM 	[+-]?0x[0-9a-fA-F]
 
 %x FULL_PARSE FN_ENTER VARS_ENTER SHOTGUN_ENTER SHOTGUN_CB_ENTER SHOTGUN
 %x UNWRAP SHOTGUN_CB PAREN_ENTER UNWRAP_BASE C_COMMENT C_COMMENT_GOBBLE
-%x EXPR EXPR_BASE WRAP WRAP_BASE ID_OR_NUM
+%x EXPR EXPR_BASE ID_OR_NUM NUM_ONLY SHOTGUN_BASE
 
 %%
 
-<FN_ENTER,FULL_PARSE,SHOTGUN_ENTER,SHOTGUN_CB_ENTER,PAREN_ENTER,SHOTGUN_CB,VARS_ENTER,ID_OR_NUM>{
+<FN_ENTER,FULL_PARSE,SHOTGUN_ENTER,SHOTGUN_CB_ENTER,PAREN_ENTER,SHOTGUN_CB,VARS_ENTER,ID_OR_NUM,NUM_ONLY>{
 \n		++lineno;
 {WSPACE}+	/*discard*/;
 }
@@ -61,6 +67,12 @@ XNUM 	[+-]?0x[0-9a-fA-F]
 {ID} 		{ yy_pop_state (); return std_ret (T_ID); }
 {DNUM}|{XNUM}	{ yy_pop_state (); return std_ret (T_NUM); }
 .		{ return yyerror ("expected an identifier or a number"); }
+}
+
+<NUM_ONLY>
+{
+{DNUM}|{XNUM}	{ yy_pop_state (); return std_ret (T_NUM); }
+.		{ return yyerror ("expected a number"); }
 }
 
 <FULL_PARSE>{
@@ -107,7 +119,7 @@ static		return T_STATIC;
 }
 
 <SHOTGUN_ENTER>{
-[{]		{ switch_to_state (SHOTGUN); return yytext[0]; }
+[{]		{ switch_to_state (SHOTGUN_BASE); return yytext[0]; }
 .		{ return yyerror ("illegal token found between SHOTGUN "
 				  "and '{'");}
 }
@@ -122,59 +134,66 @@ static		return T_STATIC;
 .		{ return yyerror ("illegal token found in $(..) or %(..)"); }
 }
 
-
-<WRAP_BASE,WRAP>{
-\n		++lineno;
-[^\[\],\n]+	{ return std_ret (T_PASSTHROUGH); }
-"["		{ yy_push_state (WRAP); return std_ret (T_PASSTHROUGH); }
-,		{ return yytext[0]; }
-}
-
-<WRAP_BASE>{
-"]"		{ yy_pop_state (); return yytext[0]; }
-}
-
-<WRAP>{
-"]"		{ yy_pop_state (); return std_ret (T_PASSTHROUGH); }
-}
-
-
 <SHOTGUN_CB>{
-"["		{ yy_push_state (WRAP_BASE); return yytext[0]; }
-"("		{ yy_push_state (FULL_PARSE); 
-	          yy_push_state (EXPR);
+"("		{ yy_push_state (EXPR_BASE); 
+	          yy_push_state (FULL_PARSE); /* will return the ')' */
  	  	  return yytext[0]; }
 {ID}		{ return std_ret (T_ID); }
 ")"		{ yy_pop_state (); return yytext[0]; }
-,		{ return yytext[0]; }
+[;,]		{ return yytext[0]; }
 .		{ return yyerror ("illegal token found in '@(..)'"); }
 }
 
-<SHOTGUN>{
+<SHOTGUN_BASE,SHOTGUN>{
 \n		{ ++lineno; return std_ret (T_PASSTHROUGH); }
 [^@{}\n/]+	{ return std_ret (T_PASSTHROUGH); }
 @		{ yy_push_state (SHOTGUN_CB_ENTER); return yytext[0]; }
 [{]		{ yy_push_state (SHOTGUN); return std_ret (T_PASSTHROUGH); }
+}
+
+<SHOTGUN_BASE>{
 [}]		{ yy_pop_state (); return yytext[0]; }
+}
+
+<SHOTGUN>{
+[}]		{ yy_pop_state (); return std_ret (T_PASSTHROUGH); }
+}
+
+<SHOTGUN_BASE,SHOTGUN>{
 .		{ return yyerror ("illegal token found in SHOTGUN { ... } "); }
 }
 
 <EXPR_BASE>{
 \n		++lineno;
-[,)]		{ yy_pop_state (); return yytext[0]; }
-.		{ return yyerror ("unbalanced paranthesis"); }
+[,;]		{ yy_pop_state (); return yytext[0]; }
+[)]		{ 
+	 	  /* 
+	           * XXX HACK; pop out of EXPR_BASE and also SHOTGUN_CB!!
+		   */
+	          yy_pop_state (); yy_pop_state (); return yytext[0]; 
+	        }
 }
 
 <EXPR,EXPR_BASE>{
 [(]		{ yylval.str = yytext; yy_push_state (EXPR); 
                   return T_PASSTHROUGH; }
-[^()\n,/$@%]+	{ yylval.str = yytext; return T_PASSTHROUGH; }
-"@@"		{ return T_2AT; }
-[%$@]		{ yy_push_state (ID_OR_NUM); return yytext[0]; }
+[^()\n/$@%,;]+	{ yylval.str = yytext; return T_PASSTHROUGH; }
+"%%"		{ return T_2PCT; }
+[$]		{ return yytext[0]; }
+[@]		{ yy_push_state (NUM_ONLY); return yytext[0]; }
+[%]		{ yy_push_state (ID_OR_NUM); return yytext[0]; }
+"$$"		{ yy_push_state (ID_OR_NUM); return T_2DOLLAR; }
 }
 
 <EXPR>{
+,		{ return std_ret (T_PASSTHROUGH); }
 ")"		{ yy_pop_state (); return std_ret (T_PASSTHROUGH); }
+;		{ return yyerror ("stray ';' found in expression"); }
+.		{ return yyerror ("illegal token found in @(...)"); }
+}
+
+<EXPR_BASE>{
+.		{ return yyerror ("unbalanced paranthesis"); }
 }
 
 <UNWRAP_BASE,UNWRAP>{
@@ -196,15 +215,10 @@ SHOTGUN|CRCC	{ yy_push_state (SHOTGUN_ENTER); return T_SHOTGUN; }
 [}]		{ return yytext[0]; }
 }
 
-[^MF\n]+|[MF]	{ yylval.str = yytext; return T_PASSTHROUGH ; }
+[^UF\n]+|[UF]	{ yylval.str = yytext; return T_PASSTHROUGH ; }
 \n		{ ++lineno; yylval.str = yytext; return T_PASSTHROUGH; }
 
-MEMBER   	{ yy_push_state (UNWRAP); 
-	          yy_push_state (FN_ENTER); 
-                  return T_MEMBER; 
-		}
-
-FUNCTION	{ yy_push_state (FN_ENTER); return T_FUNCTION; }
+UNWRAP|FUNCTION { yy_push_state (FN_ENTER); return T_FUNCTION; }
 
 
 <UNWRAP,UNWRAP_BASE>{
@@ -222,7 +236,7 @@ FUNCTION	{ yy_push_state (FN_ENTER); return T_FUNCTION; }
 }
 
 
-<SHOTGUN_CB_ENTER,PAREN_ENTER,FULL_PARSE,SHOTGUN_CB,SHOTGUN,FN_ENTER,VARS_ENTER,EXPR,EXPR_BASE,WRAP,WRAP_BASE>{
+<SHOTGUN_CB_ENTER,PAREN_ENTER,FULL_PARSE,SHOTGUN_CB,SHOTGUN,FN_ENTER,VARS_ENTER,EXPR,EXPR_BASE>{
 
 "//"[^\n]*\n	++lineno ;
 "//"[^\n]*	/* discard */ ;
