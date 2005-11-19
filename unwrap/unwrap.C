@@ -45,15 +45,17 @@ main (int argc, char *argv[])
 
   if (argc == 1) {
     ifn = argv[0];
-    if (!(ifh = fopen (ifn.cstr (), "r"))) {
-      warn << "cannot open file: " << ifn << "\n";
-      usage ();
+    if (ifn != "-") {
+      if (!(ifh = fopen (ifn.cstr (), "r"))) {
+	warn << "cannot open file: " << ifn << "\n";
+	usage ();
+      }
+      yyin = ifh;
     }
-    yyin = ifh;
   }
 
   int outfd;
-  if (outfile) {
+  if (outfile && outfile != "-") {
     if ((outfd = open (outfile.cstr (), O_CREAT|O_WRONLY|O_TRUNC, 0644)) < 0) {
       warn << "cannot open file for writing: " << outfile << "\n";
     }
