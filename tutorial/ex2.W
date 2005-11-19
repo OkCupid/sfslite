@@ -13,9 +13,9 @@
 // makes 3 parallel RPCs, dumps the results to stderr, and then 
 // returns via the callback cb. Ignore the last arg...
 //
-static void dostuff (str h, int port, cbb::ptr cb, ptr<closure_t> c = NULL);
+static void dostuff (str h, int port, cbb cb, ptr<closure_t> c = NULL);
 
-UNWRAP(void dostuff (str h, int port, cbb::ptr cb))
+UNWRAP(void dostuff (str h, int port, cbb cb))
 {
   // declare all of your "stack" variables here
   VARS {

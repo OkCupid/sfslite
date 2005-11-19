@@ -89,6 +89,7 @@ public:
   vartyp_t get_asc () const { return _asc; }
 
   void set_type (const type_t &t) { _type = t; }
+  str initializer () const { return _initializer; }
 
   str decl () const;
   str decl (const str &prfx, int n) const;
@@ -97,6 +98,7 @@ public:
 
 protected:
   vartyp_t _asc;
+  str _initializer;
 };
 
 typedef vec<var_t> expr_list_t;
@@ -109,7 +111,8 @@ public:
   u_int size () const { return _vars.size (); }
   bool add (var_t v) ;
   void declarations (strbuf &b, const str &padding) const;
-  void paramlist (strbuf &b) const;
+  void paramlist (strbuf &b, bool types = true) const;
+  void initialize (strbuf &b, bool self) const;
   bool exists (const str &n) const { return _tab[n]; }
   const var_t *lookup (const str &n) const;
 
@@ -153,11 +156,14 @@ public:
   str name () const { return _name; }
   ptr<vartab_t> params () { return _params; }
   void set_params (ptr<vartab_t> v) { _params = v; }
+  void set_initializer (const str &s) { _initializer = s; }
   void dump () const ;
+  str initializer () const { return _initializer; }
 private:
   const str _name;
   str _pointer;
   ptr<vartab_t> _params;
+  str _initializer;
 };
 
 // Convert:

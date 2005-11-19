@@ -54,11 +54,11 @@ XNUM 	[+-]?0x[0-9a-fA-F]
 
 %x FULL_PARSE FN_ENTER VARS_ENTER SHOTGUN_ENTER SHOTGUN_CB_ENTER SHOTGUN
 %x UNWRAP SHOTGUN_CB PAREN_ENTER UNWRAP_BASE C_COMMENT C_COMMENT_GOBBLE
-%x EXPR EXPR_BASE ID_OR_NUM NUM_ONLY SHOTGUN_BASE
+%x EXPR EXPR_BASE ID_OR_NUM NUM_ONLY SHOTGUN_BASE HALF_PARSE PP PP_BASE
 
 %%
 
-<FN_ENTER,FULL_PARSE,SHOTGUN_ENTER,SHOTGUN_CB_ENTER,PAREN_ENTER,SHOTGUN_CB,VARS_ENTER,ID_OR_NUM,NUM_ONLY>{
+<FN_ENTER,FULL_PARSE,SHOTGUN_ENTER,SHOTGUN_CB_ENTER,PAREN_ENTER,SHOTGUN_CB,VARS_ENTER,ID_OR_NUM,NUM_ONLY,HALF_PARSE>{
 \n		++lineno;
 {WSPACE}+	/*discard*/;
 }
@@ -75,7 +75,7 @@ XNUM 	[+-]?0x[0-9a-fA-F]
 .		{ return yyerror ("expected a number"); }
 }
 
-<FULL_PARSE>{
+<FULL_PARSE,HALF_PARSE>{
 
 const		return T_CONST;
 struct		return T_STRUCT;
@@ -94,15 +94,38 @@ static		return T_STATIC;
 {ID} 		{ return std_ret (T_ID); }
 {DNUM}|{XNUM}	{ return std_ret (T_NUM); }
 
-[{(]		{ yy_push_state (FULL_PARSE); return yytext[0]; }
+[{]		{ yy_push_state (FULL_PARSE); return yytext[0]; }
 [})]		{ yy_pop_state (); return yytext[0]; }
 
 [<>;,:*]	{ return yytext[0]; }
 "::"		{ return T_2COLON; }
+}
 
+<HALF_PARSE>{
+[(]		{ yy_push_state (PP_BASE); return yytext[0]; }
+}
+
+<PP_BASE>{
+[)]		{ yy_pop_state (); return yytext[0]; } 
+}
+
+<PP,PP_BASE>{
+\n		{ ++lineno; }
+[^()\n]+	{ return std_ret (T_PASSTHROUGH); }
+[(]		{ yy_push_state (PP); return std_ret (T_PASSTHROUGH); }
+}
+
+<PP>{
+[)]		{ yy_pop_state (); return std_ret (T_PASSTHROUGH); }
+}
+
+<FULL_PARSE>{
+[(]		{ yy_push_state (FULL_PARSE); return yytext[0]; }
+}
+
+<HALF_PARSE,FULL_PARSE>{
 .		{ return yyerror ("illegal token found in parsed "
 				  "environment"); }
-
 }
 
 
@@ -114,7 +137,7 @@ static		return T_STATIC;
 }
 
 <VARS_ENTER>{
-[{]		{ switch_to_state (FULL_PARSE); return yytext[0]; }
+[{]		{ switch_to_state (HALF_PARSE); return yytext[0]; }
 .		{ return yyerror ("illegal token found between VARS and '{'");}
 }
 
@@ -236,7 +259,7 @@ UNWRAP|FUNCTION { yy_push_state (FN_ENTER); return T_FUNCTION; }
 }
 
 
-<SHOTGUN_CB_ENTER,PAREN_ENTER,FULL_PARSE,SHOTGUN_CB,SHOTGUN,FN_ENTER,VARS_ENTER,EXPR,EXPR_BASE>{
+<SHOTGUN_CB_ENTER,PAREN_ENTER,FULL_PARSE,SHOTGUN_CB,SHOTGUN,FN_ENTER,VARS_ENTER,EXPR,EXPR_BASE,HALF_PARSE,PP,PP_BASE>{
 
 "//"[^\n]*\n	++lineno ;
 "//"[^\n]*	/* discard */ ;

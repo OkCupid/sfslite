@@ -17,7 +17,7 @@ public:
    * a new function, written with unrap; note that in the declaration,
    * we need to make the last argument as given here: ptr<closure_t> = NULL
    */
-  void main_fn (int i, const char *x, cbb::ptr cb, ptr<closure_t> = NULL);
+  void main_fn (int i, const char *x, cbb cb, ptr<closure_t> = NULL);
 
 private:
 
@@ -71,7 +71,7 @@ sample_t::fn3 (int i, str s, callback<void, str, bool>::ref cb)
 
 
 
-UNWRAP(void sample_t::main_fn (int i, const char *x, cbb::ptr cb))
+UNWRAP(void sample_t::main_fn (int i, const char *x, cbb cb))
 {
   // all stack variables must be declared up front, in a VARS { ... }
   // environment.  Think: C programming.

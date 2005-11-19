@@ -65,9 +65,11 @@ static var_t resolve_variable (const str &s);
 %type <str> typedef_name type_qualifier_list_opt type_qualifier_list
 %type <str> type_qualifier type_specifier type_modifier_list
 %type <str> type_modifier declaration_specifiers passthrough 
-%type <str> expr_var_ref generic_expr
+%type <str> expr_var_ref generic_expr cpp_initializer_opt
 
-%type <decl> init_declarator declarator direct_declarator
+%type <decl> init_declarator declarator direct_declarator 
+%type <decl> declarator_cpp direct_declarator_cpp
+
 
 %type <vars> parameter_type_list_opt parameter_type_list parameter_list
 %type <exprs> callback_param_list 
@@ -362,9 +364,13 @@ init_declarator_list:  init_declarator
 
 /* missing: C++-style initialization, C-style initiatlization
  */
-init_declarator: declarator
+init_declarator: declarator_cpp cpp_initializer_opt
 	{
+	  if ($2 && $2.len () > 0) 
+	    $1->set_initializer ($2);
+
 	  vartab_t *t = state.stack_vars ();
+
 	  var_t v (state.decl_specifier (), $1, STACK);
 	  if (state.args ()->exists (v.name ())) {
 	    strbuf b;
@@ -387,6 +393,26 @@ declarator: pointer_opt direct_declarator
 	}
 	;
 
+declarator_cpp: pointer_opt direct_declarator_cpp
+	{
+	  if ($1.len () > 0) 
+	    $2->set_pointer ($1);
+  	  $$ = $2;
+	}
+	;
+
+cpp_initializer_opt:	/* empty */		{ $$ = NULL; }
+	| '(' passthrough ')'
+	{
+	  $$ = $2;
+	}
+	;
+
+direct_declarator_cpp:	identifier 
+	{
+	  $$ = New refcounted<declarator_t> ($1);
+	}
+	;
 
 /* 
  * use "typedef_name" instead of identifier for C++-style names

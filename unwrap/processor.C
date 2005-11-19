@@ -3,7 +3,8 @@
 #include "rxx.h"
 
 var_t::var_t (const str &t, ptr<declarator_t> d, vartyp_t a)
-  : _type (t, d->pointer ()), _name (d->name ()), _asc (a) {}
+  : _type (t, d->pointer ()), _name (d->name ()), _asc (a), 
+    _initializer (d->initializer ()) {}
 
 const var_t *
 vartab_t::lookup (const str &n) const
@@ -185,11 +186,34 @@ vartab_t::declarations (strbuf &b, const str &padding) const
 }
 
 void
-vartab_t::paramlist (strbuf &b) const
+vartab_t::initialize (strbuf &b, bool self) const
+{
+  bool first = true;
+  for (u_int i = 0; i < size (); i++) {
+    if (self || _vars[i].initializer ()) {
+      if (!first) b << ", ";
+      first = false;
+      b << _vars[i].name () << " (";
+      if (self) {
+	b << _vars[i].name ();
+      } else {
+	b << _vars[i].initializer ();
+      }
+      b << ")";
+    }
+  }
+}
+
+void
+vartab_t::paramlist (strbuf &b, bool types) const
 {
   for (u_int i = 0; i < size () ; i++) {
     if (i != 0) b << ", ";
-    b << _vars[i].decl ();
+    if (types) {
+      b << _vars[i].decl ();
+    } else {
+      b << _vars[i].name ();
+    }
   }
 }
 
@@ -316,8 +340,15 @@ unwrap_fn_t::output_closure (int fd)
   b << "class " << _closure.type ().base_type ()  << " : public closure_t\n"
     << "{\n"
     << "public:\n"
-    << "  " << _closure.type ().base_type () << " () : closure_t () {}\n"
-    << "\n"
+    << "  " << _closure.type ().base_type () << " ("
+    ;
+  _args->paramlist (b);
+
+  b << ") : closure_t (), _args ("
+    ;
+  _args->paramlist (b, false);
+
+  b << ") {}\n"
     ;
 
   int i = 1;
@@ -326,15 +357,38 @@ unwrap_fn_t::output_closure (int fd)
   }
 
   b << "  struct stack_t {\n"
-    << "    stack_t () {}\n"
+    << "    stack_t () "
     ;
+
+  if (_stack_vars.size ()) {
+    strbuf i;
+    _stack_vars.initialize (i, false);
+    str s (i);
+    if (s && s.len () > 0) {
+      b << " : " << s << " ";
+    }
+  }
+  b << " {}\n";
+    
   _stack_vars.declarations (b, "    ");
   b << "  };\n";
 
   b << "\n"
     << "  struct args_t {\n"
-    << "    args_t () {}\n"
-    ;
+    << "    args_t (" ;
+
+  if (_args->size ()) 
+    _args->paramlist (b, true);
+
+  b << ")";
+  
+  if (_args->size ()) {
+    b << " : ";
+    _args->initialize (b, true);
+  }
+  
+  b << " {}\n";
+  
   _args->declarations (b, "    ");
   b << "  };\n";
 
@@ -403,7 +457,10 @@ unwrap_fn_t::output_fn_header (int fd)
     << "  " << _closure.decl () << ";\n"
     << "  if (!" << closure_generic ().name() << ") {\n"
     << "    ptr<" << _closure.type ().base_type () << "> tmp" 
-    << " = New refcounted<" << _closure.type ().base_type () << "> ();\n"
+    << " = New refcounted<" << _closure.type ().base_type () << "> ("
+    ;
+  _args->paramlist (b, false);
+  b << ");\n"
     << "    " << closure_generic (). name () << " = tmp;\n"
     << "    " << closure_nm () << " = tmp;\n"
     << "  } else {\n"
