@@ -64,7 +64,7 @@ main (int argc, char *argv[])
   }
 
   // only on if YYDEBUG is on :(
-  yydebug = 1;
+  //yydebug = 1;
 
   yyparse ();
 
