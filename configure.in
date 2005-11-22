@@ -250,9 +250,20 @@ fi
 
 dnl Add SFS libraries to LDADD by default.
 CPPFLAGS="$CPPFLAGS -I"'$(top_srcdir)'
-for lib in async arpc crypt sfsmisc sfsrodb adb; do
+
+dnl
+dnl on some Linuxes, there is /usr/include/err.h; we want to suck
+dnl in SFS's err.h instead, so we change the ordering of these includes
+dnl
+CPPFLAGS="-I"'$(top_srcdir)'"/async $CPPFLAGS"
+
+dnl
+dnl Everything can come AFTER the standard libraries
+dnl
+for lib in arpc crypt sfsmisc sfsrodb adb; do
     CPPFLAGS="$CPPFLAGS -I"'$(top_srcdir)'"/$lib"
 done
+
 CPPFLAGS="$CPPFLAGS -I"'$(top_builddir)'"/svc"
 CPPFLAGS="$CPPFLAGS -I"'$(top_srcdir)'"/svc"
 AC_SUBST(LIBASYNC)
