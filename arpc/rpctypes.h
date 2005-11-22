@@ -30,7 +30,17 @@
 #include "array.h"
 #include "union.h"
 #include "keyfunc.h"
+
+/*
+ * On some older Linux systems, #include "err.h" will suck in 
+ * /usr/include/err.h, which defines a function 'warnx'.  In the SFS context,
+ * warnx will be macro-substituted with a warnobj(0) instantiation, and
+ * the compile will break.  Prevent this inclusion by #define'ing the 
+ * guard to /usr/include/err.h, as below:
+ */
+#define _ERR_H
 #include "err.h"
+#undef _ERR_H 
 
 struct rpcgen_table {
   const char *name;
