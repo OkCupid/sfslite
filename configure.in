@@ -252,15 +252,17 @@ dnl Add SFS libraries to LDADD by default.
 CPPFLAGS="$CPPFLAGS -I"'$(top_srcdir)'
 
 dnl
-dnl on some Linuxes, there is /usr/include/err.h; we want to suck
-dnl in SFS's err.h instead, so we change the ordering of these includes
+dnl on some Linuxes, there are /usr/include/{err|crypt}.h; we want to suck
+dnl in SFS's {err|crypt}.h instead, so we change the ordering of these includes
 dnl
-CPPFLAGS="-I"'$(top_srcdir)'"/async $CPPFLAGS"
+for lib in crypt async; do
+    CPPFLAGS="-I"'$(top_srcdir)'"/$lib $CPPFLAGS"
+done
 
 dnl
 dnl Everything can come AFTER the standard libraries
 dnl
-for lib in arpc crypt sfsmisc sfsrodb adb; do
+for lib in arpc sfsmisc sfsrodb adb; do
     CPPFLAGS="$CPPFLAGS -I"'$(top_srcdir)'"/$lib"
 done
 
@@ -447,4 +449,6 @@ AC_ARG_WITH(sfsgroup,
 
 AC_OUTPUT(Makefile async/Makefile rpcc/Makefile arpc/Makefile
 	crypt/Makefile sfsmisc/Makefile contrib/Makefile unwrap/Makefile
-	tutorial/Makefile)
+	)
+
+dnl tutorial/Makefile is experimental and off by default
