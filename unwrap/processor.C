@@ -448,8 +448,8 @@ unwrap_fn_t::output_jump_tab (strbuf &b)
     << "  }\n";
 }
 
-void
-unwrap_fn_t::output_fn_header (int fd)
+str
+unwrap_fn_t::signature (bool d) const
 {
   strbuf b;
   b << _ret_type.to_str () << "\n"
@@ -458,7 +458,29 @@ unwrap_fn_t::output_fn_header (int fd)
     _args->paramlist (b);
     b << ", ";
   }
-  b << closure_generic ().decl () << ")\n"
+  b << closure_generic ().decl ();
+  if (d)
+    b << " = NULL";
+  b << ")";
+
+  return b;
+}
+
+void
+unwrap_fn_t::output_static_decl (int fd)
+{
+  strbuf b;
+  b << "static " << signature (true) << ";\n\n";
+  
+  b.tosuio ()->output (fd);
+}
+
+void
+unwrap_fn_t::output_fn_header (int fd)
+{
+  strbuf b;
+
+  b << signature (false)  << "\n"
     << "{\n"
     << "  " << _closure.decl () << ";\n"
     << "  if (!" << closure_generic ().name() << ") {\n"
@@ -489,6 +511,8 @@ unwrap_fn_t::output_fn_header (int fd)
 void 
 unwrap_fn_t::output (int fd)
 {
+  if (_opts & STATIC_DECL)
+    output_static_decl (fd);
   output_closure (fd);
   output_fn_header (fd);
 }

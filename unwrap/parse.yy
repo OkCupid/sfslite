@@ -54,7 +54,8 @@ static var_t resolve_variable (const str &s);
 /* Keywords for our new filter */
 %token T_VARS
 %token T_SHOTGUN
-%token T_FUNCTION
+%token T_UNWRAP
+%token T_UNWRAP_SD
 
 %token T_2DOLLAR
 
@@ -85,6 +86,8 @@ static var_t resolve_variable (const str &s);
 %type <el>   fn_unwrap vars shotgun callback
 %type <var>  expr callback_stack_var
 
+%type <opts> fn_open
+
 %%
 
 
@@ -101,8 +104,13 @@ passthrough: /* empty */	    { $$ = ""; }
 	}
 	;
 
-fn:	T_FUNCTION '(' fn_declaration ')' 
+fn_open: T_UNWRAP			{ $$ = 0; }
+	| T_UNWRAP_SD			{ $$ = STATIC_DECL; }
+	;
+
+fn:	fn_open '(' fn_declaration ')' 
 	{
+	   $3->set_opts ($1); 
 	   state.new_fn ($3);
 	}
 	fn_body 

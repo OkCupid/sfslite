@@ -241,7 +241,8 @@ SHOTGUN|CRCC	{ yy_push_state (SHOTGUN_ENTER); return T_SHOTGUN; }
 [^UF\n]+|[UF]	{ yylval.str = yytext; return T_PASSTHROUGH ; }
 \n		{ ++lineno; yylval.str = yytext; return T_PASSTHROUGH; }
 
-UNWRAP|FUNCTION { yy_push_state (FN_ENTER); return T_FUNCTION; }
+UNWRAP|FUNCTION { yy_push_state (FN_ENTER); return T_UNWRAP; }
+UNWRAP_SD	{ yy_push_state (FN_ENTER); return T_UNWRAP_SD; }
 
 
 <UNWRAP,UNWRAP_BASE>{

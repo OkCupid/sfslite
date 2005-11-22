@@ -182,6 +182,8 @@ str strip_off_method (const str &in);
 
 class unwrap_shotgun_t;
 
+#define STATIC_DECL           (1 << 0)
+
 //
 // Unwrap Function Type
 //
@@ -191,7 +193,7 @@ public:
     : _ret_type (r, d->pointer ()), _name (d->name ()),
       _name_mangled (mangle (_name)), _method_name (strip_to_method (_name)),
       _class (strip_off_method (_name)), _isconst (c),_closure (mk_closure ()),
-      _args (d->params ()) {}
+      _args (d->params ()), _opts (0) {}
 
   vartab_t *stack_vars () { return &_stack_vars; }
   vartab_t *args () { return _args; }
@@ -199,6 +201,10 @@ public:
 
   str classname () const { return _class; }
   str name () const { return _name; }
+  str signature (bool decl) const;
+
+  void set_opts (int i) { _opts = i; }
+  int opts () const { return _opts; }
 
   void output (int fd);
   void add_callback (unwrap_callback_t *c) { _cbs.insert_tail (c); }
@@ -217,7 +223,6 @@ public:
   unwrap_callback_t *last_callback () { return *_cbs.plast; }
 
   str label (u_int id) const ;
-
 
 private:
   const type_t _ret_type;
@@ -239,9 +244,11 @@ private:
   void output_reenter (strbuf &b);
   void output_closure (int fd);
   void output_fn_header (int fd);
+  void output_static_decl (int fd);
   void output_stack_vars (strbuf &b);
   void output_jump_tab (strbuf &b);
   
+  int _opts;
 };
 
 class backref_t {
@@ -343,6 +350,7 @@ struct YYSTYPE {
   type_t            typ;
   ptr<expr_list2_t> pl2;
   vec<ptr<declarator_t> > decls;
+  u_int             opts;
 };
 extern YYSTYPE yylval;
 extern str filename;
