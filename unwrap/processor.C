@@ -344,7 +344,11 @@ unwrap_fn_t::output_closure (int fd)
     ;
   _args->paramlist (b);
 
-  b << ") : closure_t (), _args ("
+  b << ") : closure_t (), _stack ("
+    ;
+  _args->paramlist (b, false);
+
+  b << "), _args ("
     ;
   _args->paramlist (b, false);
 
@@ -357,7 +361,9 @@ unwrap_fn_t::output_closure (int fd)
   }
 
   b << "  struct stack_t {\n"
-    << "    stack_t () "
+    << "    stack_t (";
+  _args->paramlist (b, true);
+  b << ")"
     ;
 
   if (_stack_vars.size ()) {
