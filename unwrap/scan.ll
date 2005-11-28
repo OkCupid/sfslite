@@ -298,3 +298,10 @@ std_ret (int i)
   yylval.str = yytext;
   return i;
 }
+
+void
+gcc_hack_use_static_functions ()
+{
+  assert (false);
+  (void )yy_top_state ();
+}
