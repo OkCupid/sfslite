@@ -29,11 +29,6 @@
 
 #define YY_NO_UNPUT
 #define YY_SKIP_YYWRAP
-
-#ifdef yywrap
-# undef yywrap
-#endif
-
 #define yywrap() 1
 
 str filename = "(stdin)";
@@ -44,7 +39,6 @@ int get_yy_lineno () { return lineno ;}
 %}
 
 %option stack
-%option noyywrap
 
 ID	[a-zA-Z_][a-zA-Z_0-9]*
 WSPACE	[ \t]

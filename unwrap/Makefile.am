@@ -5,7 +5,7 @@ LDADD = $(LIBASYNC)
 
 sfsbin_PROGRAMS = unwrap
 
-noinst_HEADERS = unwrap.h
+noinst_HEADERS = unwrap.h parse.h
 
 unwrap_SOURCES = unwrap.C parse.yy scan.ll processor.C
 unwrap_LDADD = $(LDADD)

@@ -4,7 +4,18 @@
 #ifndef _UNWRAP_H
 #define _UNWRAP_H
 
+#ifndef _NETDB_H
+# define _SKIP_NETDB_H
+# define _NETDB_H
+#endif
+
 #include "amisc.h"
+
+#ifdef _SKIP_NETDB_H
+# undef _NETDB_H
+#endif
+
+
 #include "vec.h"
 #include "union.h"
 #include "qhash.h"
