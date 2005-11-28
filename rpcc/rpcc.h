@@ -22,7 +22,32 @@
  *
  */
 
+
+/*
+ * netdb.h hack
+ *
+ * There is a conflict betwen flex version 2.5.4 and /usr/include/netdb.h
+ * on Linux. flex generates code that #define's __unused to be empty, but
+ * in struct gaicb within netdb.h, there is a member field of a struct
+ * called __unused, which gets blanked out, causing a compile error.
+ * (Note that netdb.h is included from sysconf.h).  Use this hack to
+ * not include netdb.h for now...
+ */
+#ifndef _NETDB_H
+# define _SKIP_NETDB_H
+# define _NETDB_H
+#endif
+
 #include "amisc.h"
+
+#ifdef _SKIP_NETDB_H
+# undef _NETDB_H
+# undef _SKIP_NETDB_H
+#endif
+/*
+ * end netdb.h hack
+ */
+
 #include "vec.h"
 #include "union.h"
 #include "qhash.h"

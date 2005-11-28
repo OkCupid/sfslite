@@ -1,9 +1,40 @@
 // -*-c++-*-
 /* $Id$ */
 
-#ifndef _UNWRAP_H
-#define _UNWRAP_H
+/*
+ *
+ * Copyright (C) 2005 Max Krohn (email: my last name AT MIT dot ORG)
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
+ * USA
+ *
+ */
 
+#ifndef _UNWRAP_UNWRAP_H
+#define _UNWRAP_UNWRAP_H
+
+/*
+ * netdb.h hack
+ *
+ * There is a conflict betwen flex version 2.5.4 and /usr/include/netdb.h
+ * on Linux. flex generates code that #define's __unused to be empty, but
+ * in struct gaicb within netdb.h, there is a member field of a struct
+ * called __unused, which gets blanked out, causing a compile error.
+ * (Note that netdb.h is included from sysconf.h).  Use this hack to
+ * not include netdb.h for now...
+ */
 #ifndef _NETDB_H
 # define _SKIP_NETDB_H
 # define _NETDB_H
@@ -13,8 +44,11 @@
 
 #ifdef _SKIP_NETDB_H
 # undef _NETDB_H
+# undef _SKIP_NETDB_H
 #endif
-
+/*
+ * end netdb.h hack
+ */
 
 #include "vec.h"
 #include "union.h"
@@ -368,4 +402,4 @@ extern str filename;
 
 #define CONCAT(in,out)  do { strbuf b; b << in; out = b; } while (0)
 
-#endif /* _UNWRAP_H */
+#endif /* _UNWRAP_UNWRAP_H */
