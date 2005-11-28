@@ -28,15 +28,14 @@ UNWRAP(void dostuff (str h, int port, cbb cb))
     ex2_struct_t r3;
     clnt_stat e1, e2, e3;
 
-    ex2_str_t a2;
+    ex2_str_t a2 ("go hang a salami i'm a lasagna hog");
 
-    bool ret;
+    bool ret (false);
+    int n (5);
     vec<int> rv;
     vec<clnt_stat> ev;
     int i;
-    int n;
   }
-  ret = false;
 
   // CRCC = "Call and Return to Current Continuation" 
   // Pass @(..) where the function expects a callback.  The arguments
@@ -51,7 +50,6 @@ UNWRAP(void dostuff (str h, int port, cbb cb))
     x = axprt_stream::alloc (fd);
     cli = aclnt::alloc (x, ex2_prog_1);
 
-    a2 = "go hang a salami i'm a lasagna hog";
 
     // When given more than 1 call, only return to current continuation
     // when the last call returns.
@@ -74,7 +72,6 @@ UNWRAP(void dostuff (str h, int port, cbb cb))
       // values given to us by callbacks into array locations.  In 
       // practice, this involves wrapping an index variable (i below)
       // into the callback.
-      n = 5;
       ev.setsize (n);
       rv.setsize (n);
 
