@@ -36,9 +36,8 @@ UNWRAP_SD(void dostuff (str h, int port, cbb cb))
     while (i < n_tot && !err) {
       CRCC* {
 	while (n_out < window_sz && i < n_tot && !err) {
+	  cli->call (EX_RANDOM, NULL, &results[i], @(i; (clnt_stat)$errs[@1]));
 	  n_out++; i++;
-	  cli->call (EX_RANDOM, NULL, &results[i-1], 
-		     @((int )i-1; (clnt_stat)$errs[@1]));
 	}
       } RESUME {
 	if (errs[@1]) {
