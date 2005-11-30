@@ -26,9 +26,9 @@ UNWRAP_SD (void try_rpc (str h, int port, cbb cb))
     a2 = "go hang a salami i'm a lasagna hog";
     
     CRCC {
-      cli->call (EX2_RANDOM, NULL, &r1, @(e1));
-      cli->call (EX2_REVERSE, &a2, &r2, @(e2));
-      cli->call (EX2_STRUCT, NULL, &r3, @(e3));
+      cli->call (EX_RANDOM, NULL, &r1, @(e1));
+      cli->call (EX_REVERSE, &a2, &r2, @(e2));
+      cli->call (EX_STRUCT, NULL, &r3, @(e3));
     }
     if (e1 || e2 || e3) {
       warn << "at least 1 RPC failed!\n";
