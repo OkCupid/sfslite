@@ -21,6 +21,13 @@ ex2_srv_t::ex2_srv_t (int fd)
 }
 
 void
+reply_rand (svccb *sbp)
+{
+  u_int i = rand () % 99999;
+  sbp->replyref (i);
+}
+
+void
 ex2_srv_t::dispatch (svccb *sbp)
 {
   if (!sbp) {
@@ -36,8 +43,7 @@ ex2_srv_t::dispatch (svccb *sbp)
     break;
   case EX2_RANDOM:
     {
-      u_int i = rand () % 99999;
-      sbp->replyref (i);
+      delaycb (rand () % 5, 0, wrap (reply_rand, sbp));
       break;
     }
   case EX2_REVERSE:

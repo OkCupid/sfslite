@@ -449,6 +449,7 @@ AC_ARG_WITH(sfsgroup,
 
 AC_OUTPUT(Makefile async/Makefile rpcc/Makefile arpc/Makefile
 	crypt/Makefile sfsmisc/Makefile contrib/Makefile unwrap/Makefile
+	tutorial/Makefile
 	)
 
 dnl tutorial/Makefile is experimental and off by default

@@ -3,9 +3,10 @@
 
 LDADD = $(LIBASYNC)  $(LIBARPC)
 
-noinst_PROGRAMS = ex1 ex2 ex2srv
+noinst_PROGRAMS = ex1 ex2 ex2srv ex3
 ex1_SOURCES = ex1.C 
 ex2_SOURCES = ex2.C ex2_prot.C
+ex3_SOURCES = ex3.C ex2_prot.C
 ex2srv_SOURCES = ex2_srv.C ex2_prot.C
 
 SUFFIXES = .W .C .x .h
@@ -24,4 +25,5 @@ ex2_prot.lo: ex2_prot.h
 
 ex1.C: ex1.W
 ex2.o: ex2_prot.h
+ex3.o: ex2_prot.h
 ex2_srv.o: ex2_prot.h

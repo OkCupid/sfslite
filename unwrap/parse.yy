@@ -54,8 +54,10 @@ static var_t resolve_variable (const str &s);
 /* Keywords for our new filter */
 %token T_VARS
 %token T_SHOTGUN
+%token T_CRCC_STAR
 %token T_UNWRAP
 %token T_UNWRAP_SD
+%token T_RESUME
 
 %token T_2DOLLAR
 
@@ -67,6 +69,7 @@ static var_t resolve_variable (const str &s);
 %type <str> type_qualifier type_specifier type_modifier_list
 %type <str> type_modifier declaration_specifiers passthrough 
 %type <str> expr_var_ref generic_expr cpp_initializer_opt
+%type <str> resume_opt resume resume_body resume_ref
 
 %type <decl> init_declarator declarator direct_declarator 
 %type <decl> declarator_cpp direct_declarator_cpp
@@ -83,7 +86,7 @@ static var_t resolve_variable (const str &s);
 %type <var>  callback_param casted_expr callback_class_var
 %type <typ>  cast
 
-%type <el>   fn_unwrap vars shotgun callback
+%type <el>   fn_unwrap vars shotgun callback crcc_star
 %type <var>  expr callback_stack_var
 
 %type <opts> fn_open
@@ -149,6 +152,7 @@ fn_statements: passthrough
 
 fn_unwrap: vars
 	| shotgun
+	| crcc_star
 	;
 
 vars:	T_VARS '{' declaration_list_opt '}'
@@ -166,6 +170,54 @@ shotgun: T_SHOTGUN '{'
 	}
 	callbacks_and_passthrough '}'
 	{
+	  $$ = state.shotgun ();
+	}
+	;
+
+resume_opt: /* empty */ { $$ = NULL; }
+	| resume
+	;
+
+resume: T_RESUME '{' resume_body '}'
+	{
+	  $$ = $3;
+	}
+	;
+
+resume_body: passthrough
+	| resume_body '@' resume_ref passthrough
+	{
+	  CONCAT($1 << $3 << $4, $$);
+	}
+	;
+
+resume_ref: T_NUM
+	{
+ 	  unwrap_crcc_star_t *cs = state.crcc_star ();
+	  int i;
+	  assert (convertint ($1, &i)); 
+	  cs->check_backref (i);
+ 	  cs->add_backref (i);
+	  $$ = cs->make_backref (i);
+	}
+	| '#'
+	{
+ 	  $$ = state.crcc_star ()->make_cb_ind_ref ();
+	}
+	;
+
+crcc_star: T_CRCC_STAR '{'
+	{
+	  unwrap_fn_t *fn = state.function ();
+ 	  unwrap_crcc_star_t *c = New unwrap_crcc_star_t (fn);
+	  state.new_shotgun (c);
+	  state.new_crcc_star (c);
+	  fn->add_shotgun (c);
+	  fn->hit_crcc_star ();
+	} 
+	callbacks_and_passthrough '}' resume_opt
+	{
+	  state.crcc_star ()->add_resume ($6);
 	  $$ = state.shotgun ();
 	}
 	;

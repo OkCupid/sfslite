@@ -3,7 +3,7 @@
 
 /*
  *
- * Copyright (C) 1998 David Mazieres (dm@uun.org)
+ * Copyright (C) 2005 Max Krohn (my last name AT mit DOT edu)
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -49,10 +49,11 @@ XNUM 	[+-]?0x[0-9a-fA-F]
 %x FULL_PARSE FN_ENTER VARS_ENTER SHOTGUN_ENTER SHOTGUN_CB_ENTER SHOTGUN
 %x UNWRAP SHOTGUN_CB PAREN_ENTER UNWRAP_BASE C_COMMENT C_COMMENT_GOBBLE
 %x EXPR EXPR_BASE ID_OR_NUM NUM_ONLY SHOTGUN_BASE HALF_PARSE PP PP_BASE
+%x RESUME_ENTER RESUME_BASE RESUME RESUME_PARSE EXPECT_RESUME
 
 %%
 
-<FN_ENTER,FULL_PARSE,SHOTGUN_ENTER,SHOTGUN_CB_ENTER,PAREN_ENTER,SHOTGUN_CB,VARS_ENTER,ID_OR_NUM,NUM_ONLY,HALF_PARSE>{
+<FN_ENTER,FULL_PARSE,SHOTGUN_ENTER,RESUME_ENTER,SHOTGUN_CB_ENTER,PAREN_ENTER,SHOTGUN_CB,VARS_ENTER,ID_OR_NUM,NUM_ONLY,HALF_PARSE,RESUME_PARSE,EXPECT_RESUME>{
 \n		++lineno;
 {WSPACE}+	/*discard*/;
 }
@@ -67,6 +68,12 @@ XNUM 	[+-]?0x[0-9a-fA-F]
 {
 {DNUM}|{XNUM}	{ yy_pop_state (); return std_ret (T_NUM); }
 .		{ return yyerror ("expected a number"); }
+}
+
+<RESUME_PARSE>{
+{DNUM}|{XNUM}	{ yy_pop_state (); return std_ret (T_NUM); }
+#		{ yy_pop_state (); return yytext[0]; }
+.		{ return yyerror ("expected a number or '#'"); }
 }
 
 <FULL_PARSE,HALF_PARSE>{
@@ -141,6 +148,12 @@ static		return T_STATIC;
 				  "and '{'");}
 }
 
+<RESUME_ENTER>{
+[{]		{ switch_to_state (RESUME_BASE); return yytext[0]; }
+.		{ return yyerror ("illegal token found between RESUME "
+				  "and '{'"); }
+}
+
 <SHOTGUN_CB_ENTER>{
 [(\[]		{ switch_to_state (SHOTGUN_CB); return yytext[0]; }
 .		{ return yyerror ("illegal token found between '@' and '('"); }
@@ -161,6 +174,13 @@ static		return T_STATIC;
 .		{ return yyerror ("illegal token found in '@(..)'"); }
 }
 
+<RESUME_BASE,RESUME>{
+\n		{ ++lineno; return std_ret (T_PASSTHROUGH); }
+[^@{}\n/]+	{ return std_ret (T_PASSTHROUGH); }
+@		{ yy_push_state (RESUME_PARSE); return yytext[0]; }
+[{]		{ yy_push_state (RESUME); return std_ret (T_PASSTHROUGH); }
+}
+
 <SHOTGUN_BASE,SHOTGUN>{
 \n		{ ++lineno; return std_ret (T_PASSTHROUGH); }
 [^@{}\n/]+	{ return std_ret (T_PASSTHROUGH); }
@@ -168,15 +188,16 @@ static		return T_STATIC;
 [{]		{ yy_push_state (SHOTGUN); return std_ret (T_PASSTHROUGH); }
 }
 
-<SHOTGUN_BASE>{
+
+<SHOTGUN_BASE,RESUME_BASE>{
 [}]		{ yy_pop_state (); return yytext[0]; }
 }
 
-<SHOTGUN>{
+<SHOTGUN,RESUME>{
 [}]		{ yy_pop_state (); return std_ret (T_PASSTHROUGH); }
 }
 
-<SHOTGUN_BASE,SHOTGUN>{
+<SHOTGUN_BASE,SHOTGUN,RESUME_BASE>{
 .		{ return yyerror ("illegal token found in SHOTGUN { ... } "); }
 }
 
@@ -215,12 +236,20 @@ static		return T_STATIC;
 
 <UNWRAP_BASE,UNWRAP>{
 \n		{ yylval.str = yytext; ++lineno; return T_PASSTHROUGH; }
-[^VSC{}\n/]+|[VSC] { yylval.str = yytext; return T_PASSTHROUGH; }
+[^VSCR{}\n/]+|[VSCR] { yylval.str = yytext; return T_PASSTHROUGH; }
 [{]		{ yylval.str = yytext; yy_push_state (UNWRAP); 
 		  return T_PASSTHROUGH; }
 
 VARS		{ yy_push_state (VARS_ENTER); return T_VARS; }
 SHOTGUN|CRCC	{ yy_push_state (SHOTGUN_ENTER); return T_SHOTGUN; }
+CRCC\*|CALL	{ yy_push_state (EXPECT_RESUME);
+	          yy_push_state (SHOTGUN_ENTER); 
+	          return T_CRCC_STAR; }
+}
+
+<EXPECT_RESUME>{
+RESUME		{ switch_to_state (RESUME_ENTER); return T_RESUME; }
+[^R\n/ ]+|[R]   { yy_pop_state (); return std_ret (T_PASSTHROUGH); }
 }
 
 <UNWRAP>{
@@ -254,7 +283,7 @@ UNWRAP_SD	{ yy_push_state (FN_ENTER); return T_UNWRAP_SD; }
 }
 
 
-<SHOTGUN_CB_ENTER,PAREN_ENTER,FULL_PARSE,SHOTGUN_CB,SHOTGUN,FN_ENTER,VARS_ENTER,EXPR,EXPR_BASE,HALF_PARSE,PP,PP_BASE>{
+<SHOTGUN_CB_ENTER,PAREN_ENTER,FULL_PARSE,SHOTGUN_CB,SHOTGUN,FN_ENTER,VARS_ENTER,EXPR,EXPR_BASE,HALF_PARSE,PP,PP_BASE,EXPECT_RESUME>{
 
 "//"[^\n]*\n	++lineno ;
 "//"[^\n]*	/* discard */ ;

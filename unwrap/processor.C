@@ -6,6 +6,58 @@ var_t::var_t (const str &t, ptr<declarator_t> d, vartyp_t a)
   : _type (t, d->pointer ()), _name (d->name ()), _asc (a), 
     _initializer (d->initializer ()) {}
 
+unwrap_callback_t::unwrap_callback_t (ptr<expr_list_t> t, 
+				      unwrap_fn_t *f, 
+				      unwrap_shotgun_t *g, 
+				      ptr<expr_list_t> e) 
+  : _call_with (t), _parent_fn (f), _shotgun (g), _wrap_in (e), _cb_ind (0),
+    _last_wrap_ind (g->advance_wrap_ind (_call_with)),
+    _local_cb_ind (g->add_callback (this))
+{}
+
+#define CLOSURE               "__cls"
+#define CLOSURE_DATA_INCLASS  "_data"
+#define CLOSURE_DATA          CLOSURE "->" CLOSURE_DATA_INCLASS
+#define CLOSURE_TMP           "__cls_tmp"
+#define CLOSURE_TMP_G         "__cls_tmp_g"
+#define CLOSURE_TMP_DATA      CLOSURE_TMP "->" CLOSURE_DATA_INCLASS
+
+str
+unwrap_fn_t::closure_tmp_data () const
+{
+  return need_tmp_closure () ? str (CLOSURE_TMP_DATA) : closure_data_nm ();
+}
+
+str
+unwrap_fn_t::closure_tmp () const 
+{
+  return need_tmp_closure () ? str (CLOSURE_TMP) : closure_nm ();
+}
+
+str
+unwrap_fn_t::closure_tmp_g () const
+{
+  return need_tmp_closure () ? str (CLOSURE_TMP_G) : 
+    closure_generic ().name ();
+}
+
+str
+type_t::mk_ptr () const
+{
+  strbuf b;
+  b << "ptr<" << _base_type << " >";
+  return b;
+}
+
+str
+type_t::alloc_ptr (const str &n, const str &args) const
+{
+  my_strbuf_t b;
+  b.mycat (mk_ptr ()) << " " << n << " = New refcounted<"
+		      << _base_type << " > (" << args << ")";
+  return b;
+}
+
 const var_t *
 vartab_t::lookup (const str &n) const
 {
@@ -118,10 +170,32 @@ parse_state_t::passthrough (const str &s)
 }
 
 void
+parse_state_t::new_crcc_star (unwrap_crcc_star_t *c)
+{
+  _crcc_star = c;
+}
+
+void
 parse_state_t::new_shotgun (unwrap_shotgun_t *g)
 {
   _shotgun = g;
   _elements.insert_tail (g);
+}
+
+void
+unwrap_fn_t::add_shotgun (unwrap_shotgun_t *g)
+{
+  _shotguns.push_back (g); 
+  g->set_id (_shotguns.size ());
+}
+
+int
+unwrap_crcc_star_t::advance_wrap_ind (ptr<expr_list_t> l)
+{
+  int r = _nxt_var_ind;
+  if (l) 
+    _nxt_var_ind += l->size ();
+  return r;
 }
 
 //-----------------------------------------------------------------------
@@ -148,6 +222,17 @@ unwrap_fn_t::mk_closure () const
 
   return var_t (b, "*", "__cls");
 }
+
+var_t
+unwrap_fn_t::mk_closure_data () const
+{
+  strbuf b;
+  b << _name_mangled << "__closure_data_t";
+
+  return var_t (b, "*", "_data");
+}
+
+
 
 str
 unwrap_fn_t::decl_casted_closure (bool do_lhs) const
@@ -225,6 +310,7 @@ unwrap_fn_t::label (u_int id) const
   return b;
 }
 
+
 //
 //
 //-----------------------------------------------------------------------
@@ -252,6 +338,19 @@ backref_list_t::check (u_int sz) const
   return true;
 }
 
+bool
+unwrap_crcc_star_t::check_backref (int i)
+{
+  if (i == 0) 
+    yyerror ("Back references to wrapped-in args are 1-indexed "
+	     "(not 0-indexed)");
+
+  // i can be equal to _nxt_var_ind, since we are 1-indexed
+  if (i > _nxt_var_ind)
+    yyerror ("Back reference to wrapped-in arg is out of range");
+  return true;
+}
+
 
 //
 //-----------------------------------------------------------------------
@@ -260,28 +359,87 @@ backref_list_t::check (u_int sz) const
 //-----------------------------------------------------------------------
 // Output Routines
 
+
+str
+unwrap_crcc_star_t::make_resume_ref (bool inclass)
+{
+  strbuf b;
+  if (!inclass)
+    b << CLOSURE_DATA;
+  else
+    b << CLOSURE_DATA_INCLASS;
+  b << "->_resume"  << _id;
+  return b;
+}
+
+str
+unwrap_crcc_star_t::make_backref (int i, bool inclass)
+{
+  strbuf b;
+  str p = make_resume_ref (inclass);
+  b << p << "._a" << i;
+  return b;
+}
+
+str
+unwrap_crcc_star_t::make_cb_ind_ref (bool inclass)
+{
+  strbuf b;
+  str p = make_resume_ref (inclass);
+  b << p << "._cb_ind";
+  return b;
+}
+
 void 
 unwrap_passthrough_t::output (int fd)
 {
   _buf.tosuio ()->output (fd);
 }
+
+bool
+unwrap_shotgun_t::output_trig (strbuf &b)
+{
+  b << unwrap_fn_t::trig ().decl () ;
+  return true;
+}
+
+bool
+unwrap_crcc_star_t::output_trig (strbuf &b)
+{
+  return false;
+}
+
   
 void 
 unwrap_callback_t::output_in_class (strbuf &b, int n)
 {
-  _cb_id = n;
+  bool first = true;
+  _cb_ind = n;
 
-  b << "  void cb" << n  << " ("
-    << unwrap_fn_t::trig ().decl () ;
+  b << "  void cb" << n  << " (";
+
+  // Regular unwrap_shotgun_t's need triggers wrapped in, whereas
+  // CRCC*'s don't.
+  if (_shotgun->output_trig (b))
+    first = false;
+
   if (_wrap_in) {
     for (u_int i = 0; i < _wrap_in->size (); i++) {
-      b << ", " << (*_wrap_in)[i].decl ("_a", i+1);
+
+      if (first) first = false;
+      else b << ", ";
+      
+      b << (*_wrap_in)[i].decl ("_a", i+1);
     }
   }
 
   if (_call_with) {
     for (u_int i = 0; i < _call_with->size (); i++) {
-      b << ", " << (*_call_with)[i].decl ("_b", i+1);
+
+      if (first) first = false;
+      else b << ", ";
+
+      b << (*_call_with)[i].decl ("_b", i+1);
     }
   }
   b << ")\n"
@@ -290,7 +448,7 @@ unwrap_callback_t::output_in_class (strbuf &b, int n)
   if (_call_with) {
     for (u_int i = 0; i < _call_with->size (); i++) {
       const var_t &v = (*_call_with)[i];
-      b << "    ";
+      b << "    _data->";
       switch (v.get_asc ()) {
       case ARG:
 	b << "_args." << v.name ();
@@ -310,18 +468,56 @@ unwrap_callback_t::output_in_class (strbuf &b, int n)
       b << " = _b" << (i+1) << ";\n";
     }
   }
+
+  _shotgun->output_continuation (this, b);
+
   b  << "  }\n\n";
 }
 
 void
+unwrap_crcc_star_t::output_continuation (unwrap_callback_t *cb, strbuf &b)
+{
+  int base = cb->last_wrap_ind ();
+  
+  //
+  // output
+  // 
+  // _data->_resume4.a9 = _a3;
+  //
+  for (u_int i = 0; cb->wrap_in () && i< cb->wrap_in ()->size (); i++) {
+    int ind = i + base +1;
+    if (_backrefs[ind]) {
+      str r = make_backref (ind, true);
+      b << "    ";
+      b.cat (r.cstr (), true);
+      b << " = _a" << (i+1) << ";\n";
+    }
+  }
+
+  // output
+  //
+  //  _resume4._cb_ind = 10;
+  //
+  b << "    ";
+  str r = make_cb_ind_ref (true);
+  b.cat (r.cstr (), true);
+  b << " = " << cb->local_cb_ind () << ";\n";
+
+  b << "    reenter ();\n";
+}
+
+
+void
 unwrap_fn_t::output_reenter (strbuf &b)
 {
-  b << "  void reenter ()\n"
-    << "  {\n"
+  b << "  void reenter (";
+  str tmp = closure_generic ().decl ();
+  b.cat (tmp.cstr (), true);
+  b << ") {\n"
     << "    ";
 
   if (_class)
-    b << "_self->";
+    b <<  "_self->";
 
   b << _method_name << " (";
 
@@ -329,36 +525,91 @@ unwrap_fn_t::output_reenter (strbuf &b)
     b << "_args." << _args->_vars[i].name ();
     b << ", ";
   }
-  b << "mkref (this));\n"
+  tmp = closure_generic ().name ();
+  b.cat (tmp.cstr (), true);
+  b << ");\n"
     << "  }\n\n";
+}
+
+void
+unwrap_crcc_star_t::output_resume_struct_member (strbuf &b)
+{
+  if (_backrefs.size ()) {
+    b << "  resume_" << _id << "_t _resume" << _id << ";\n";
+  }
+}
+
+void
+unwrap_crcc_star_t::output_resume_struct (strbuf &b)
+{
+  int j = 1;
+  bool first = false;
+  b << "  struct resume_" << _id << "_t {\n";
+  for (u_int i = 0; i < _callbacks.size (); i++) {
+    unwrap_callback_t *cb = _callbacks[i];
+    for (u_int k = 0; cb->wrap_in () && k < cb->wrap_in ()->size (); k++) {
+      if (_backrefs[j]) {
+	var_t v = (*cb->wrap_in ())[k];
+
+	str t = v.type ().to_str ();
+	b << "   ";
+	b.cat (t.cstr (), true);
+	b << " _a" << j << ";\n";
+      }
+      j++;
+    }
+  }
+  b << "    int _cb_ind;\n"
+    << "  };\n\n";
 }
 
 void
 unwrap_fn_t::output_closure (int fd)
 {
   strbuf b;
-  b << "class " << _closure.type ().base_type ()  << " : public closure_t\n"
+
+  b << "class " << _closure.type ().base_type () 
+    << " : public closure_t "
     << "{\n"
     << "public:\n"
-    << "  " << _closure.type ().base_type () << " ("
+    << "  " << _closure.type ().base_type () 
+    << " (ptr<" << _closure_data.type ().base_type () 
+    << "> d) : _data (d) {}\n\n";
+
+  int i = 1;
+  for (unwrap_callback_t *cb = _cbs.first ; cb; cb = _cbs.next (cb)) {
+    cb->output_in_class (b, i++);
+  }
+  b << "\n"
+    << "  void reenter () { " << CLOSURE_DATA_INCLASS 
+    << "->reenter (mkref (this)); }\n"
+    << "  ptr<" << _closure_data.type ().base_type () << "> _data;\n"
+    << "};\n\n";
+
+  b.tosuio ()->output (fd);
+}
+
+void
+unwrap_fn_t::output_closure_data (int fd)
+{
+  strbuf b;
+  b << "class " << _closure_data.type ().base_type ()  
+    << " {\n"
+    << "public:\n"
+    << "  " << _closure_data.type ().base_type () << " ("
     ;
   _args->paramlist (b);
 
-  b << ") : closure_t (), _stack ("
+  b << ") : _stack ("
     ;
   _args->paramlist (b, false);
 
   b << "), _args ("
     ;
   _args->paramlist (b, false);
+  b << ") {}\n";
 
-  b << ") {}\n"
-    ;
-
-  int i = 1;
-  for (unwrap_callback_t *cb = _cbs.first ; cb; cb = _cbs.next (cb)) {
-    cb->output_in_class (b, i++);
-  }
+  output_reenter (b);
 
   b << "  struct stack_t {\n"
     << "    stack_t (";
@@ -406,7 +657,10 @@ unwrap_fn_t::output_closure (int fd)
  
   b << "  };\n\n";
 
-  output_reenter (b);
+  for (u_int j = 0; j < _shotguns.size (); j++) {
+    _shotguns[j]->output_resume_struct (b);
+  }
+
 
   b << "  stack_t _stack;\n"
     << "  class_tmp_t _class_tmp;\n"
@@ -416,9 +670,26 @@ unwrap_fn_t::output_closure (int fd)
     b << "  " << _class << " *_self;\n";
   }
 
+  for (u_int j = 0; j < _shotguns.size (); j++) {
+    _shotguns[j]->output_resume_struct_member (b);
+  }
+
   b << "};\n\n";
 
   b.tosuio ()->output (fd);
+}
+
+str
+unwrap_fn_t::closure_data_nm () const
+{
+  strbuf b;
+  str s;
+  s = closure_nm ();
+  b.cat (s.cstr (), true);
+  b << "->";
+  s = _closure_data.name ();
+  b.cat (s.cstr (), true);
+  return b;
 }
 
 void
@@ -427,7 +698,7 @@ unwrap_fn_t::output_stack_vars (strbuf &b)
   for (u_int i = 0; i < _stack_vars.size (); i++) {
     const var_t &v = _stack_vars._vars[i];
     b << "  " << v.ref_decl () << " = " 
-      << closure_nm () << "->_stack." << v.name () << ";\n" ;
+      << closure_data_nm () << "->_stack." << v.name () << ";\n" ;
   } 
 }
 
@@ -441,7 +712,6 @@ unwrap_fn_t::output_jump_tab (strbuf &b)
     b << "  case " << id << ":\n"
       << "    goto " << label (id) << ";\n"
       << "    break;\n";
-    _shotguns[i]->set_id (id);
   }
   b << "  default:\n"
     << "    break;\n"
@@ -478,19 +748,25 @@ unwrap_fn_t::output_static_decl (int fd)
 void
 unwrap_fn_t::output_fn_header (int fd)
 {
-  strbuf b;
+  my_strbuf_t b;
 
   b << signature (false)  << "\n"
     << "{\n"
     << "  " << _closure.decl () << ";\n"
     << "  if (!" << closure_generic ().name() << ") {\n"
-    << "    ptr<" << _closure.type ().base_type () << "> tmp" 
-    << " = New refcounted<" << _closure.type ().base_type () << "> ("
     ;
-  _args->paramlist (b, false);
-  b << ");\n"
-    << "    " << closure_generic (). name () << " = tmp;\n"
-    << "    " << closure_nm () << " = tmp;\n"
+
+  strbuf dat;
+  dat << "New refcounted<" << _closure_data.type().base_type () << "> (";
+  _args->paramlist (dat, false);
+  dat << ")";
+
+  b << "  ";
+  b.mycat (_closure.type ().alloc_ptr (CLOSURE_TMP,  str (dat)));
+  b << ";\n"
+    << "    " << closure_generic (). name () << " = "
+    << CLOSURE_TMP << ";\n"
+    << "    " << closure_nm () << " = " << CLOSURE_TMP << ";\n"
     << "  } else {\n"
     << "    " << _closure.name () << " = " << decl_casted_closure (false)
     << "\n"
@@ -513,6 +789,7 @@ unwrap_fn_t::output (int fd)
 {
   if (_opts & STATIC_DECL)
     output_static_decl (fd);
+  output_closure_data (fd);
   output_closure (fd);
   output_fn_header (fd);
 }
@@ -520,24 +797,42 @@ unwrap_fn_t::output (int fd)
 void 
 unwrap_shotgun_t::output (int fd)
 {
-  strbuf b;
+  my_strbuf_t b;
+  str tmp;
+
   b << "  {\n";
   const vartab_t *args = _fn->args ();
   for (u_int i = 0; i < args->size (); i++) {
-    b << "    " <<  _fn->closure_nm () << "->_args." << args->_vars[i].name ()
+    b << "    " <<  CLOSURE_DATA << "->_args." << args->_vars[i].name ()
       << " = " << args->_vars[i].name () << ";\n";
   }
+
+  if (_fn->need_tmp_closure ()) {
+    // copy the closure to a temporary place
+    b << "    ";
+    b.mycat (_fn->closure ().type ().alloc_ptr (CLOSURE_TMP, CLOSURE_DATA)) 
+      << ";\n";
+    
+    // also make a temporary generic version of it
+    b << "    ";
+    b.mycat (_fn->closure_generic ().type ().to_str ())
+      << " " <<  CLOSURE_TMP_G <<  " = " CLOSURE_TMP << ";\n";
+  }
+      
   if (_fn->classname ()) 
-    b << "    " << _fn->closure_nm () << "->_self = this;\n";
-  b << "    " << _fn->closure_generic ().name () << "->set_jumpto (" << _id 
+    b << "    " << CLOSURE_TMP_DATA << "->_self = this;\n";
+
+  b << "    " << CLOSURE_TMP << "->set_jumpto (" << _id 
     << ");\n"
     << "\n";
 
-  b << "    " << _fn->trig ().decl () 
-    << " = trig_t::alloc (wrap ("
-    << _fn->closure_generic ().name ()  
-    << ", &closure_t::reenter));\n";
-
+  if (use_trig ()) {
+    b << "    " << _fn->trig ().decl () 
+      << " = trig_t::alloc (wrap (";
+    b.mycat ( _fn->closure_tmp_g ())
+      << ", &closure_t::reenter));\n";
+  }
+  
   b.tosuio ()->output (fd);
   b.tosuio ()->clear ();
   for (unwrap_el_t *el = _elements.first; el; el = _elements.next (el)) {
@@ -553,9 +848,17 @@ unwrap_shotgun_t::output (int fd)
   for (u_int i = 0; i < _class_vars.size (); i++) {
     const var_t &v = _class_vars._vars[i];
     b << "    " << v.name () << " = " 
-      << _fn->closure ().name () << "->_class_tmp." << v.name () << ";\n";
+      << CLOSURE_DATA << "->_class_tmp." << v.name () << ";\n";
   }
 
+  b.tosuio ()->output (fd);
+}
+
+void
+unwrap_crcc_star_t::output (int fd)
+{
+  unwrap_shotgun_t::output (fd);
+  strbuf b (_resume);
   b.tosuio ()->output (fd);
 }
 
@@ -571,10 +874,13 @@ void
 unwrap_callback_t::output (int fd)
 {
   strbuf b;
-  b << "wrap (" << _parent_fn->closure ().name () << ", "
+  b << "wrap (" << _parent_fn->closure_tmp () << ", "
     << "&" << _parent_fn->closure ().type ().base_type () 
-    << "::cb" << _cb_id << ", " << _parent_fn->trig (). name ()
-    ;
+    << "::cb" << _cb_ind;
+
+  if (_shotgun->use_trig ())
+    b << ", " << _parent_fn->trig (). name ();
+
   if (_wrap_in) {
     for (u_int i = 0; i < _wrap_in->size (); i++) {
       b << ", ";
