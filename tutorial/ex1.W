@@ -1,155 +1,28 @@
 // -*-c++-*-
 /* $Id$ */
 
-//
-// unwrap.h has a definition for the "trig_t" class, whose only purpose
-// is to call a callback upon deletion.  So it's especially useful when
-// combined with refcounting.
-//
 #include "unwrap.h"
-#include "async.h"
-
-class sample_t {
-public:
-  sample_t () {}
+#include "parseopt.h"
+ 
+UNWRAP_SD (void try_connect (str h, int port))
+{
+  VARS { int fd; }
+  CRCC { tcpconnect (h, port, @(fd)); }
+  if (fd >= 0) {
+    warn << "Connection succeeded!\n";
+    exit (0);
+  } else {
+    warn << "Connection failed!\n";
+    exit (1);
+  }
+}
+ 
+int main (int argc, char *argv[])
+{
+  int port;
+  if (argc != 3 || !convertint (argv[2], &port))
+    fatal << "usage: ex2 <hostname> <port>\n";
   
-  /* 
-   * a new function, written with unrap; note that in the declaration,
-   * we need to make the last argument as given here: ptr<closure_t> = NULL
-   */
-  void main_fn (int i, const char *x, cbb cb, ptr<closure_t> = NULL);
-
-private:
-
-  /*
-   * these are legacy functions that use the old technique ..
-   */
-  void fn1 (int i, callback<void, ptr<int> >::ref cb);
-  void fn2 (const char *x, callback<void, bool, str>::ref cb);
-  void fn3 (int i, str s, callback<void, str, bool>::ref cb);
-  /* 
-   * end legacy
-   */
-
-  str res2;
-};
-
-void
-fn1_cb (int i, callback<void, ptr<int> >::ref cb)
-{
-  (*cb) (New refcounted<int> (i+4));
-}
-
-void
-sample_t::fn1 (int i, callback<void, ptr<int> >::ref cb)
-{
-  delaycb (2, 0, wrap (fn1_cb, i, cb));
-}
-
-void
-fn2_cb (str s, callback<void, bool, str>::ref cb)
-{
-  strbuf b;
-  b << s << ";" << s ;
-  (*cb) (true, str (b));
-
-}
-
-void 
-sample_t::fn2 (const char *x, callback<void, bool, str>::ref cb)
-{
-  delaycb (3, 0, wrap (fn2_cb, str (x), cb));
-}
-
-void
-sample_t::fn3 (int i, str s, callback<void, str, bool>::ref cb)
-{
-  strbuf b;
-  b << s << ": " << i;
-  (*cb) (str (b), true);
-}
-
-
-
-UNWRAP(void sample_t::main_fn (int i, const char *x, cbb cb))
-{
-  // all stack variables must be declared up front, in a VARS { ... }
-  // environment.  Think: C programming.
-  VARS {
-    bool status2;
-    bool ret;
-    vec<int> v;
-    int j,k;
-    ptr<int> res1;
-  }
-	
-  // variable initialization at declaration time does not yet work;
-  // it's on the TODO list
-  ret = false;
-
-  /*
-   *
-   * eventually want this to work.
-   *
-  for (i = 0; i < 2000; ) {
-    SHOTGUN {
-      for (j = 0; j < 20; j++, i++) {
-	fn3 (x, @(v[i]));
-      }
-    }
-  }
-  */
-
-  //
-  // SHOTGUN {...}: Launch a series of parallel asynchronous function
-  //   calls; return control to the next statement after all calls
-  //   have completed. Each function called needs a callback specified;
-  //   Where the function normally takes a callback, specify instead
-  //   @(...), giving the variable that you want set when the call 
-  //   completes.
-  //
-  // Syntax: @(...) is converted into a "wrap" call, and
-  //   autogenerates a corresponding callback function.
-  //   Within @(...), you can specify "stack" variables from above,
-  //   allocate new "stack" variables on the fly with $(...) and
-  //   also refrence class variables with %(...).  
-  //
-  //   In the last case, even though the compiler has enough
-  //   information to determine the type of the variable within the
-  //   %(..) clause, it can only do so with access to the full type
-  //   system.  Since the unwrap tool does not understand types with
-  //   this depth, you need to supply a type hint with %(...); so
-  //   something like %(str res2) is required to access the member
-  //   sample_t::res2 of type str.
-  //
-  SHOTGUN {
-    fn1 (i, @(res1) );
-    fn2 (x, @(status2, (str )%res2));
-  }
-
-  if (res1 && status2) {
-    SHOTGUN {
-      fn3 (*res1, res2, @((str )$$res3, (bool )$$status3));
-    }
-    if (status3) {
-      warn << "got legitimate result: " << res3 << "\n";
-      ret = true;
-    }
-  }
-  (*cb) (ret);
-}
-
-static void
-cb (bool status)
-{
-  warn << "main_fn returned with status=" << status << "\n";
-  exit (0);
-}
-
-int
-main (int argc, char *arv[])
-{
-  sample_t s;
-  s.main_fn (10, "footime", wrap (cb));
+  try_connect (argv[1], port);
   amain ();
 }
