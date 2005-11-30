@@ -5,7 +5,7 @@
 #
 # sfslite change
 #
-SUBDIRS = async rpcc arpc crypt sfsmisc contrib unwrap tutorial
+SUBDIRS = async rpcc arpc crypt sfsmisc contrib unwrap 
 
 #experimental...
 #tutorial
