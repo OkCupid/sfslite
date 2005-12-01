@@ -2,9 +2,7 @@
 // -*-c++-*-
 /* $Id$ */
 
-// unwrap.h needs to be included if you filter through unwrap...
 #include "unwrap.h"
-
 #include "arpc.h"
 #include "parseopt.h"
 #include "ex_prot.h"
@@ -16,9 +14,9 @@ UNWRAP_SD(void dostuff (str h, int port, cbb cb))
     int fd;
     ptr<axprt_stream> x;
     ptr<aclnt> cli;
-    vec<int> results;
+    vec<int> res;
     vec<clnt_stat> errs;
-    int n_tot (40), window_sz (5),  n_out (0), i (0);
+    int n_tot (40), window_sz (5),  n_out (0), i (0), cid;
     bool err (false);
   }
 
@@ -28,7 +26,7 @@ UNWRAP_SD(void dostuff (str h, int port, cbb cb))
     warn ("%s:%d: connection failed: %m\n", h.cstr(), port);
     err = true;
   } else {
-    results.setsize (n_tot);
+    res.setsize (n_tot);
     errs.setsize (n_tot);
     x = axprt_stream::alloc (fd);
     cli = aclnt::alloc (x, ex_prog_1);
@@ -36,15 +34,16 @@ UNWRAP_SD(void dostuff (str h, int port, cbb cb))
     while (i < n_tot && !err) {
       CRCC* {
 	while (n_out < window_sz && i < n_tot && !err) {
-	  cli->call (EX_RANDOM, NULL, &results[i], @(i; (clnt_stat)$errs[@1]));
-	  n_out++; i++;
+	  n_out++; 
+	  cid = i++;
+	  cli->call (EX_RANDOM, NULL, &res[cid], @(cid; (clnt_stat)$errs[@1]));
 	}
       } RESUME {
 	if (errs[@1]) {
 	  warn << "RPC error: " << errs[@1] << "\n";
 	  err = true;
 	} else {
-	  warn << "Success " << @1 << ": " << results[@1] << "\n";
+	  warn << "Success " << @1 << ": " << res[@1] << "\n";
 	}
 	n_out --;
       }
