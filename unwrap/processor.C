@@ -502,12 +502,7 @@ unwrap_crcc_star_t::output_continuation (unwrap_callback_t *cb, strbuf &b)
   str r = make_cb_ind_ref (true);
   b.cat (r.cstr (), true);
   b << " = " << cb->local_cb_ind () << ";\n";
-
-  // delaycb (0,0) to avoid nasty race conditions with setting counters
-  // and immediate return
-  b << "    delaycb (0, 0, wrap (mkref (this), &"
-    << _fn->closure ().type ().base_type ()
-    << "::reenter));\n";
+  b << "    reenter ();\n";
 }
 
 
