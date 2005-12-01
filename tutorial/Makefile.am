@@ -3,11 +3,12 @@
 
 LDADD = $(LIBASYNC)  $(LIBARPC)
 
-noinst_PROGRAMS = ex1 ex2 ex2srv ex3
+noinst_PROGRAMS = ex1 ex2 exsrv ex3 ex4
 ex1_SOURCES = ex1.C 
-ex2_SOURCES = ex2.C ex2_prot.C
-ex3_SOURCES = ex3.C ex2_prot.C
-ex2srv_SOURCES = ex2_srv.C ex2_prot.C
+ex2_SOURCES = ex2.C ex_prot.C
+ex3_SOURCES = ex3.C ex_prot.C
+ex4_SOURCES = ex4.C ex_prot.C
+exsrv_SOURCES = exsrv.C ex_prot.C
 
 SUFFIXES = .W .C .x .h
 
@@ -18,12 +19,16 @@ SUFFIXES = .W .C .x .h
 .x.C:
 	-$(RPCC) -c $< || rm -f $@
 
-ex2_prot.C: ex2_prot.x
-ex2_prot.h: ex2_prot.x
-ex2_prot.o: ex2_prot.h
-ex2_prot.lo: ex2_prot.h
+ex_prot.C: ex_prot.x
+ex_prot.h: ex_prot.x
+ex_prot.o: ex_prot.h
+ex_prot.lo: ex_prot.h
 
-ex1.C: ex1.W
-ex2.o: ex2_prot.h
-ex3.o: ex2_prot.h
-ex2_srv.o: ex2_prot.h
+ex2.o: ex_prot.h
+ex3.o: ex_prot.h
+ex4.o: ex_prot.h
+exsrv.o: ex_prot.h
+
+.PHONY: bldclean
+bldclean:
+	rm -f ex1.C ex2.C ex3.C ex4.C ex_prot.C ex_prot.h

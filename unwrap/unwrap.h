@@ -279,6 +279,7 @@ public:
 
   str closure_nm () const { return _closure.name (); }
   str closure_data_nm () const;
+  var_t closure_data () const { return _closure_data; }
   str reenter_fn  () const ;
   str frozen_arg (const str &i) const ;
 

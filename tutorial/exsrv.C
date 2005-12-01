@@ -1,23 +1,23 @@
 
 
-#include "ex2_prot.h"
+#include "ex_prot.h"
 #include "async.h"
 #include "arpc.h"
 #include "parseopt.h"
 
-class ex2_srv_t {
+class exsrv_t {
 public:
   void dispatch (svccb *cb);
-  ex2_srv_t (int fd) ;
+  exsrv_t (int fd) ;
   ptr<axprt_stream> x;
   ptr<asrv> s;
 };
 
-ex2_srv_t::ex2_srv_t (int fd)
+exsrv_t::exsrv_t (int fd)
 {
   tcp_nodelay (fd);
   x = axprt_stream::alloc (fd);
-  s = asrv::alloc (x, ex2_prog_1, wrap (this, &ex2_srv_t::dispatch));
+  s = asrv::alloc (x, ex_prog_1, wrap (this, &exsrv_t::dispatch));
 }
 
 void
@@ -28,7 +28,7 @@ reply_rand (svccb *sbp)
 }
 
 void
-ex2_srv_t::dispatch (svccb *sbp)
+exsrv_t::dispatch (svccb *sbp)
 {
   if (!sbp) {
     warn << "EOF on socket recevied; shutting down\n";
@@ -38,19 +38,19 @@ ex2_srv_t::dispatch (svccb *sbp)
 
   u_int p = sbp->proc ();
   switch (p) {
-  case EX2_NULL:
+  case EX_NULL:
     sbp->reply (NULL);
     break;
-  case EX2_RANDOM:
+  case EX_RANDOM:
     {
       delaycb (rand () % 5, 0, wrap (reply_rand, sbp));
       break;
     }
-  case EX2_REVERSE:
+  case EX_REVERSE:
     {
-      ex2_str_t *arg = sbp->Xtmpl getarg<ex2_str_t> ();
+      ex_str_t *arg = sbp->Xtmpl getarg<ex_str_t> ();
       str s = *arg;
-      ex2_str_t ret;
+      ex_str_t ret;
       mstr m (s.len ());
       const char *cp = s.cstr ();
       char *mp = m.cstr () + s.len () - 1;
@@ -63,9 +63,9 @@ ex2_srv_t::dispatch (svccb *sbp)
       break;
     }
 
-  case EX2_STRUCT:
+  case EX_STRUCT:
     {
-      ex2_struct_t s;
+      ex_struct_t s;
       s.s = "hello, world!";
       s.u = 34444;
       sbp->replyref (s);
@@ -86,7 +86,7 @@ new_connection (int lfd)
   int newfd = accept (lfd, reinterpret_cast<sockaddr *> (&sin), &sinlen);
   if (newfd >= 0) {
     warn ("accepting connection from %s\n", inet_ntoa (sin.sin_addr));
-    vNew ex2_srv_t (newfd);
+    vNew exsrv_t (newfd);
   } else if (errno != EAGAIN) {
     warn ("accept failure: %m\n");
   }
@@ -111,7 +111,7 @@ main (int argc, char *argv[])
 {
   int port;
   if (argc != 2 || !convertint (argv[1], &port))
-    fatal << "usage: ex2_srv <port>\n";
+    fatal << "usage: exsrv <port>\n";
 
   init_server (port);
   amain ();

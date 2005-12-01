@@ -3,6 +3,7 @@
 
 #include "unwrap.h"
 #include "parseopt.h"
+#include "arpc.h"
 #include "ex_prot.h"
 
 UNWRAP_SD (void try_rpc (str h, int port, cbb cb))
