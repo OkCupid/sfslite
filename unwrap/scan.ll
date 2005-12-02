@@ -176,14 +176,14 @@ static		return T_STATIC;
 
 <RESUME_BASE,RESUME>{
 \n		{ ++lineno; return std_ret (T_PASSTHROUGH); }
-[^@{}\n/]+	{ return std_ret (T_PASSTHROUGH); }
+[^@{}\n/]+|"/"	{ return std_ret (T_PASSTHROUGH); }
 @		{ yy_push_state (RESUME_PARSE); return yytext[0]; }
 [{]		{ yy_push_state (RESUME); return std_ret (T_PASSTHROUGH); }
 }
 
 <SHOTGUN_BASE,SHOTGUN>{
 \n		{ ++lineno; return std_ret (T_PASSTHROUGH); }
-[^@{}\n/]+	{ return std_ret (T_PASSTHROUGH); }
+[^@{}\n/]+|"/"	{ return std_ret (T_PASSTHROUGH); }
 @		{ yy_push_state (SHOTGUN_CB_ENTER); return yytext[0]; }
 [{]		{ yy_push_state (SHOTGUN); return std_ret (T_PASSTHROUGH); }
 }
@@ -195,10 +195,6 @@ static		return T_STATIC;
 
 <SHOTGUN,RESUME>{
 [}]		{ yy_pop_state (); return std_ret (T_PASSTHROUGH); }
-}
-
-<SHOTGUN_BASE,SHOTGUN,RESUME_BASE>{
-.		{ return yyerror ("illegal token found in SHOTGUN { ... } "); }
 }
 
 <EXPR_BASE>{
@@ -215,7 +211,7 @@ static		return T_STATIC;
 <EXPR,EXPR_BASE>{
 [(]		{ yylval.str = yytext; yy_push_state (EXPR); 
                   return T_PASSTHROUGH; }
-[^()\n/$@%,;]+	{ yylval.str = yytext; return T_PASSTHROUGH; }
+[^()\n/$@%,;]+|[/]	{ return std_ret (T_PASSTHROUGH); }
 "%%"		{ return T_2PCT; }
 [$]		{ return yytext[0]; }
 [@]		{ yy_push_state (NUM_ONLY); return yytext[0]; }
@@ -227,16 +223,12 @@ static		return T_STATIC;
 ,		{ return std_ret (T_PASSTHROUGH); }
 ")"		{ yy_pop_state (); return std_ret (T_PASSTHROUGH); }
 ;		{ return yyerror ("stray ';' found in expression"); }
-.		{ return yyerror ("illegal token found in @(...)"); }
 }
 
-<EXPR_BASE>{
-.		{ return yyerror ("unbalanced paranthesis"); }
-}
 
 <UNWRAP_BASE,UNWRAP>{
 \n		{ yylval.str = yytext; ++lineno; return T_PASSTHROUGH; }
-[^VSCR{}\n/]+|[VSCR] { yylval.str = yytext; return T_PASSTHROUGH; }
+[^VSCR{}\n/]+|[VSCR/] { yylval.str = yytext; return T_PASSTHROUGH; }
 [{]		{ yylval.str = yytext; yy_push_state (UNWRAP); 
 		  return T_PASSTHROUGH; }
 
@@ -249,7 +241,7 @@ CRCC\*|CALL	{ yy_push_state (EXPECT_RESUME);
 
 <EXPECT_RESUME>{
 RESUME		{ switch_to_state (RESUME_ENTER); return T_RESUME; }
-[^R\n/ ]+|[R]   { yy_pop_state (); return std_ret (T_PASSTHROUGH); }
+[^R\n/ ]+|[R/]  { yy_pop_state (); return std_ret (T_PASSTHROUGH); }
 }
 
 <UNWRAP>{
@@ -258,7 +250,7 @@ RESUME		{ switch_to_state (RESUME_ENTER); return T_RESUME; }
 }
 
 <UNWRAP_BASE>{
-[}]		{ return yytext[0]; }
+[}]		{ yy_pop_state (); return yytext[0]; }
 }
 
 [^UF\n]+|[UF]	{ yylval.str = yytext; return T_PASSTHROUGH ; }

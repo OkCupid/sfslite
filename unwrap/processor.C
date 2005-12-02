@@ -542,7 +542,6 @@ void
 unwrap_crcc_star_t::output_resume_struct (strbuf &b)
 {
   int j = 1;
-  bool first = false;
   b << "  struct resume_" << _id << "_t {\n";
   for (u_int i = 0; i < _callbacks.size (); i++) {
     unwrap_callback_t *cb = _callbacks[i];

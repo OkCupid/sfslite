@@ -236,7 +236,7 @@ callbacks_and_passthrough: passthrough
 
 callback_2part_param_list_opt:  /* empty */	
 	{ 
-	  $$ = NULL;
+	  $$ = New refcounted<expr_list2_t> ();
 	}
 	| callback_2part_param_list  		{ $$ = $1; }
 	;
@@ -533,7 +533,11 @@ type_specifier: T_VOID		{ $$ = "void" ; }
 	| typedef_name
 	;
 
+/*
+ * hack for now -- not real C syntax
+ */
 type_qualifier:	T_CONST		{ $$ = "const"; }
+	| T_STRUCT		{ $$ = "struct"; }
 	;
 
 type_qualifier_list: type_qualifier

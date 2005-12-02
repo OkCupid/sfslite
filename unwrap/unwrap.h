@@ -451,6 +451,7 @@ private:
 
 class expr_list2_t {
 public:
+  expr_list2_t () {}
   expr_list2_t (ptr<expr_list_t> w) : _call_with (w) {}
   expr_list2_t (ptr<expr_list_t> w, ptr<expr_list_t> c) 
     : _wrap_in (w), _call_with (c) {}
