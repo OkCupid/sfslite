@@ -292,7 +292,7 @@ public:
   str closure_tmp_data () const;
   str closure_tmp () const;
   str closure_tmp_g () const;
-  bool need_tmp_closure () const { return /* _crcc_star_present */ true; }
+  bool need_tmp_closure () const { return _crcc_star_present; }
   void hit_crcc_star () { _crcc_star_present = true; }
 
 private:
