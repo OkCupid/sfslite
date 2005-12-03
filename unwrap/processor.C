@@ -596,22 +596,22 @@ unwrap_fn_t::output_closure_data (int fd)
     << "public:\n"
     << "  " << _closure_data.type ().base_type () << " ("
     ;
-  _args->paramlist (b);
+  if (_args) _args->paramlist (b);
 
   b << ") : _stack ("
     ;
-  _args->paramlist (b, false);
+  if (_args) _args->paramlist (b, false);
 
   b << "), _args ("
     ;
-  _args->paramlist (b, false);
+  if (_args) _args->paramlist (b, false);
   b << ") {}\n";
 
   output_reenter (b);
 
   b << "  struct stack_t {\n"
     << "    stack_t (";
-  _args->paramlist (b, true);
+  if (_args) _args->paramlist (b, true);
   b << ")"
     ;
 
@@ -632,19 +632,19 @@ unwrap_fn_t::output_closure_data (int fd)
     << "  struct args_t {\n"
     << "    args_t (" ;
 
-  if (_args->size ()) 
+  if (_args && _args->size ()) 
     _args->paramlist (b, true);
 
   b << ")";
   
-  if (_args->size ()) {
+  if (_args && _args->size ()) {
     b << " : ";
     _args->initialize (b, true);
   }
   
   b << " {}\n";
-  
-  _args->declarations (b, "    ");
+ 
+ if (_args)  _args->declarations (b, "    ");
   b << "  };\n";
 
   b << "\n"
@@ -756,7 +756,8 @@ unwrap_fn_t::output_fn_header (int fd)
 
   strbuf dat;
   dat << "New refcounted<" << _closure_data.type().base_type () << "> (";
-  _args->paramlist (dat, false);
+  if (_args)
+    _args->paramlist (dat, false);
   dat << ")";
 
   b << "  ";
