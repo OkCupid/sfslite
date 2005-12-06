@@ -1,0 +1,11 @@
+
+$Id$
+
+
+0.8.4
+ - Fix warn() statements in paillier.C so that they compile onf ia64
+ - Fix bugs in unwrap for trivial input files; was accessing NULL
+   pointers.
+
+0.8.3 and before
+ - Undocumented
