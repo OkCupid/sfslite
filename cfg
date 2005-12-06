@@ -28,7 +28,12 @@ then
     rm $CFG
 fi
 
+
 touch $CFG
+
+echo "#!/bin/sh" >> $CFG
+echo "" >> $CFG
+
 if [ $DEBUG ]
 then
     echo "export DEBUG=\"$DEBUG\"" >> $CFG
