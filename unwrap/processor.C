@@ -818,12 +818,15 @@ unwrap_shotgun_t::output (int fd)
       << " " <<  CLOSURE_TMP_G <<  " = " CLOSURE_TMP << ";\n";
   }
       
-  if (_fn->classname ()) 
-    b << "    " << CLOSURE_TMP_DATA << "->_self = this;\n";
+  if (_fn->classname ()) {
+    b << "    ";
+    b.mycat (_fn->closure_tmp_data ()) << "->_self = this;\n";
+  }
 
-  b << "    " << CLOSURE_TMP << "->set_jumpto (" << _id 
-    << ");\n"
-    << "\n";
+  b << "    ";
+  b.mycat (_fn->closure_tmp ()) << "->set_jumpto (" << _id 
+			       << ");\n"
+			       << "\n";
 
   if (use_trig ()) {
     b << "    " << _fn->trig ().decl () 
