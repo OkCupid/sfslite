@@ -105,8 +105,8 @@ bool
 paillier_pub::E (bigint &m, const bigint &r) const
 {
   if (m >= n) {
-    warn ("paillier_pub::E: input too large [m %u, n %u]\n", 
-	  m.nbits (), n.nbits ());
+    warn << "paillier_pub::E: input too large [m " << m.nbits () 
+	 << " n " << n.nbits () << "]\n";
     return false;
   }
   
@@ -411,7 +411,7 @@ bigint
 pre_paillier (const str &msg, size_t nbits)
 {
   if (msg.len () > nbits) {
-    warn ("pre_paillier: message too large [len %d]\n", msg.len ());
+    warn << "pre_paillier: message too large [len " << msg.len () << "]\n";
     return 0;
   }
   
@@ -425,8 +425,8 @@ str
 post_paillier (const bigint &m, size_t msglen, size_t nbits)
 {
   if (m.nbits () > nbits || msglen > nbits) {
-    warn ("post_paillier: message too large [len %d buf %d bits %d]\n", 
-	  m.nbits (), msglen, nbits);
+    warn << "post_paillier: message too large [len " << m.nbits ()
+	 << " buf " << msglen << " bits " << nbits << "]\n";
     return NULL;
   }
 
