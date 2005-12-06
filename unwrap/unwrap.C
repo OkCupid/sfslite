@@ -27,13 +27,18 @@ main (int argc, char *argv[])
   make_sync (1);
   make_sync (2);
 
-  while ((ch = getopt (argc, argv, "do:")) != -1)
+  while ((ch = getopt (argc, argv, "vdo:")) != -1)
     switch (ch) {
     case 'd':
       debug = true;
       break;
     case 'o':
       outfile = optarg;
+      break;
+    case 'v':
+      warnx << "unwrap tool\n"
+	    << "sfslite version " << VERSION << "\n";
+      exit (0);
       break;
     default:
       usage ();
