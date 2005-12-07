@@ -8,7 +8,7 @@ parse_state_t state;
 static void
 usage ()
 {
-  warnx << "usage: " << progname << " [-o <outfile>] <infile>\n";
+  warnx << "usage: " << progname << " [-o <outfile>] [<infile>]\n";
   exit (1);
 }
 
