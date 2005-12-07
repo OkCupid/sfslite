@@ -122,9 +122,9 @@ fi
 set -x
 chmod +x setup
 $LIBTOOLIZE $LTI_ARGS
-aclocal15
+aclocal
 autoheader
-automake15 $AM_ARGS
+automake $AM_ARGS
 $AUTOCONF
 set +x
 
