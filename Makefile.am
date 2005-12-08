@@ -11,6 +11,7 @@ TUTORIAL =
 endif
 
 SUBDIRS = async rpcc arpc crypt sfsmisc contrib unwrap $(TUTORIAL)
+DIST_SUBDIRS = $(SUBDIRS)
 #
 # end sfslite change
 #

@@ -454,13 +454,12 @@ dnl    - prune other directories
 dnl
 SFS_TUTORIAL
 
-if test "$with_tutorial" = "yes"; then
-   ac_config_files="$ac_config_files tutorial/Makefile"
-fi
-
 AC_OUTPUT(Makefile async/Makefile rpcc/Makefile arpc/Makefile
-	crypt/Makefile sfsmisc/Makefile contrib/Makefile unwrap/Makefile
-	)
+	crypt/Makefile sfsmisc/Makefile contrib/Makefile unwrap/Makefile)
+
+if test "$with_tutorial" = "yes"; then
+	AC_OUTPUT(tutorial/Makefile)
+fi
 dnl
 dnl end SFSlite changes
 dnl

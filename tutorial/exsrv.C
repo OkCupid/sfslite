@@ -54,7 +54,7 @@ exsrv_t::dispatch (svccb *sbp)
       mstr m (s.len ());
       const char *cp = s.cstr ();
       char *mp = m.cstr () + s.len () - 1;
-      for (cp ; *cp; cp++) {
+      for ( ; *cp; cp++) {
 	*mp = *cp;
 	mp--;
       }
