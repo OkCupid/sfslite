@@ -98,12 +98,12 @@ file:  passthrough 			{ state.passthrough ($1); }
 	| file fn passthrough       	{ state.passthrough ($3); }
 	;
 
-passthrough: /* empty */	    { $$ = ""; }
+passthrough: /* empty */	    { $$ = lstr (get_yy_lineno ()); }
 	| passthrough T_PASSTHROUGH 
 	{
 	   strbuf b ($1);
 	   b << $2;
-	   $$ = str (b);
+	   $$ = lstr ($1.lineno (), b);
 	}
 	;
 
@@ -124,14 +124,14 @@ fn_body: '{' fn_statements '}'
 	  /* XXX: hack in function body close
 	   * better fix: store el_t's in the unwrap_fn_t object
  	   */
-	  state.passthrough ("}\n");
+	  state.passthrough (lstr (get_yy_lineno (), "}"));
 	}
 	;
 
 /* declaration_specifiers is no longer optional ?! */
 fn_declaration: declaration_specifiers declarator const_opt
 	{
-	   $$ = New unwrap_fn_t ($1, $2, $3);
+	   $$ = New unwrap_fn_t ($1, $2, $3, get_yy_lineno ());
 	}
 	;
 
@@ -174,7 +174,7 @@ shotgun: T_SHOTGUN '{'
 	}
 	;
 
-resume_opt: /* empty */ { $$ = NULL; }
+resume_opt: /* empty */ { $$ = lstr (get_yy_lineno (), NULL); }
 	| resume
 	;
 
@@ -187,7 +187,7 @@ resume: T_RESUME '{' resume_body '}'
 resume_body: passthrough
 	| resume_body '@' resume_ref passthrough
 	{
-	  CONCAT($1 << $3 << $4, $$);
+	  CONCAT($1.lineno (), $1 << $3 << $4, $$);
 	}
 	;
 
@@ -198,11 +198,11 @@ resume_ref: T_NUM
 	  assert (convertint ($1, &i)); 
 	  cs->check_backref (i);
  	  cs->add_backref (i);
-	  $$ = cs->make_backref (i);
+	  $$ = lstr (get_yy_lineno (), cs->make_backref (i));
 	}
 	| '#'
 	{
- 	  $$ = state.crcc_star ()->make_cb_ind_ref ();
+ 	  $$ = lstr (get_yy_lineno (), state.crcc_star ()->make_cb_ind_ref ());
 	}
 	;
 
@@ -330,18 +330,18 @@ generic_expr:	passthrough
 	| generic_expr expr_var_ref passthrough
 	{
 	   state.set_sym_bit ();
-	   CONCAT($1 << $2 << $3, $$);
+	   CONCAT($1.lineno (), $1 << $2 << $3, $$);
 	}
 	;
 
-expr_var_ref: T_2PCT		{ $$ = "_self"; }
-	| '$' 			{ $$ = "_stack."; }
+expr_var_ref: T_2PCT		{ $$ = lstr (get_yy_lineno (), "_self"); }
+	| '$' 			{ $$ = lstr (get_yy_lineno (), "_stack."); }
 	| '@' T_NUM		
 	{
 	  u_int i;
 	  assert (convertint ($2, &i));
 	  state.add_backref (i, get_yy_lineno ());
-	  $$ = str (strbuf ("_a%d", i));
+	  $$ = lstr (get_yy_lineno (), strbuf ("_a%d", i));
 	}
 	;
 
@@ -461,7 +461,7 @@ declarator_cpp: pointer_opt direct_declarator_cpp
 	}
 	;
 
-cpp_initializer_opt:	/* empty */		{ $$ = NULL; }
+cpp_initializer_opt:	/* empty */ { $$ = lstr (get_yy_lineno (), NULL); }
 	| '(' passthrough ')'
 	{
 	  $$ = $2;
@@ -499,7 +499,7 @@ direct_declarator: typedef_name
  */
 declaration_specifiers: type_modifier_list type_specifier
 	{
-	   CONCAT($1 << " " << $2, $$);
+	   CONCAT($1.lineno (), $1 << " " << $2, $$);
 	}
 	;
 
@@ -514,7 +514,7 @@ type_modifier:  type_qualifier
 type_modifier_list: /* empty */ { $$ = ""; }
 	| type_modifier_list type_modifier
 	{
-	  CONCAT ($1 << " " << $2, $$);
+	  CONCAT ($1.lineno (), $1 << " " << $2, $$);
 	}
 	;
 	
@@ -543,7 +543,7 @@ type_qualifier:	T_CONST		{ $$ = "const"; }
 type_qualifier_list: type_qualifier
 	| type_qualifier_list type_qualifier
 	{
-	  CONCAT($1 << " " << $2, $$);
+	  CONCAT($1.lineno (), $1 << " " << $2, $$);
 	}
 	;
 
@@ -558,13 +558,13 @@ type_qualifier_list_opt: /* empty */ { $$ = ""; }
 typedef_name:  typedef_name_single
 	| typedef_name T_2COLON typedef_name_single
 	{
-	   CONCAT($1 << "::" << $3, $$);
+	   CONCAT($1.lineno (), $1 << "::" << $3, $$);
 	}
 	;
 
 typedef_name_single: identifier template_instantiation_opt
 	{
-          CONCAT($1 << $2, $$);
+          CONCAT($1.lineno (), $1 << $2, $$);
 	}
 	;
 
@@ -574,7 +574,7 @@ template_instantiation_opt: /* empty */ 	{ $$ = ""; }
 
 template_instantiation: '<' template_instantiation_list_opt '>'
 	{
-	  CONCAT("<" << $2 << ">", $$);
+	  CONCAT($2.lineno (), "<" << $2 << ">", $$);
 	}
 	;
 
@@ -585,13 +585,13 @@ template_instantiation_list_opt: /* empty */   { $$ = "" ; }
 template_instantiation_list: template_instantiation_arg
 	| template_instantiation_list ',' template_instantiation_arg
 	{
-	  CONCAT($1 << " , " << $3, $$);
+	  CONCAT($1.lineno (), $1 << " , " << $3, $$);
 	}
 	;
 
 template_instantiation_arg: declaration_specifiers pointer_opt
 	{
-	  CONCAT($1 << " " << $2, $$);
+	  CONCAT($1.lineno (), $1 << " " << $2, $$);
 	}
 	;
 
@@ -602,7 +602,7 @@ pointer_opt: /* empty */	{ $$ = ""; }
 pointer: '*'			{ $$ = "*"; }
 	| '*' type_qualifier_list_opt pointer
 	{
-	  CONCAT(" * " << $2 << $3, $$);
+	  CONCAT($2.lineno (), " * " << $2 << $3, $$);
 	}
 	;
 

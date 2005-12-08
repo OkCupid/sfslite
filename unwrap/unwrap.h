@@ -66,8 +66,19 @@ extern int yydebug;
 extern FILE *yyin;
 extern int get_yy_lineno ();
 
-
 typedef enum { NONE = 0, ARG = 1, STACK = 2, CLASS = 3, EXPR = 4 } vartyp_t ;
+
+class lstr : public str {
+public:
+  lstr () : str (), _lineno (0) {}
+  lstr (const char *c) : str (c), _lineno (0) {}
+  lstr (u_int ln, const str &s) : str (s), _lineno (ln) {}
+  lstr (u_int ln) : str (""), _lineno (ln) {}
+  void set_lineno (u_int l) { _lineno = l; }
+  u_int lineno () const { return _lineno; }
+private:
+  u_int _lineno;
+};
 
 class unwrap_el_t {
 public:
@@ -86,12 +97,12 @@ public:
 
 class unwrap_passthrough_t : public unwrap_el_t {
 public:
-  unwrap_passthrough_t (const str &s) { append (s); }
-  bool append (const str &s) { _strs.push_back (s); _buf << s; return true; }
+  unwrap_passthrough_t (const lstr &s) { append (s); }
+  bool append (const lstr &s) { _strs.push_back (s); _buf << s; return true; }
   void output (int fd);
 private:
   strbuf _buf;
-  vec<str> _strs;
+  vec<lstr> _strs;
 };
 
 class type_t {
@@ -248,12 +259,13 @@ class unwrap_shotgun_t;
 //
 class unwrap_fn_t : public unwrap_el_t {
 public:
-  unwrap_fn_t (const str &r, ptr<declarator_t> d, bool c)
+  unwrap_fn_t (const str &r, ptr<declarator_t> d, bool c, u_int l)
     : _ret_type (r, d->pointer ()), _name (d->name ()),
       _name_mangled (mangle (_name)), _method_name (strip_to_method (_name)),
       _class (strip_off_method (_name)), _isconst (c),
       _closure (mk_closure ()), _closure_data (mk_closure_data ()),
-      _args (d->params ()), _opts (0), _crcc_star_present (false) {}
+      _args (d->params ()), _opts (0), _crcc_star_present (false),
+      _lineno (l) {}
 
   vartab_t *stack_vars () { return &_stack_vars; }
   vartab_t *args () { return _args; }
@@ -324,6 +336,7 @@ private:
   
   int _opts;
   bool _crcc_star_present;
+  u_int _lineno;
 };
 
 class backref_t {
@@ -349,10 +362,12 @@ class unwrap_shotgun_t;
 class unwrap_crcc_star_t;
 class parse_state_t {
 public:
-  parse_state_t () : _crcc_star (NULL) {}
+  parse_state_t () : _crcc_star (NULL), 
+		     _xlate_line_numbers (false),
+		     _need_line_xlate (true) {}
   void new_fn (unwrap_fn_t *f) { new_el (f); _fn = f; }
   void new_el (unwrap_el_t *e) { _fn = NULL; _elements.insert_tail (e); }
-  void passthrough (const str &s) ;
+  void passthrough (const lstr &l) ;
   void push (unwrap_el_t *e) { _elements.insert_tail (e); }
 
   // access variable tables in the currently active function
@@ -380,6 +395,11 @@ public:
   void add_backref (u_int i, u_int l) { _backrefs.add (i, l); }
   bool check_backrefs (u_int i) const { return _backrefs.check (i); }
 
+  void set_xlate_line_numbers (bool f) { _xlate_line_numbers = f; }
+  void set_infile_name (const str &i) { _infile_name = i; }
+  void output_line_xlate (int fd, int ln) ;
+  void need_line_xlate () { _need_line_xlate = true; }
+
 protected:
   str _decl_specifier;
   unwrap_fn_t *_fn;
@@ -388,6 +408,10 @@ protected:
   tailq<unwrap_el_t, &unwrap_el_t::_lnk> _elements;
   bool _sym_bit;
   backref_list_t _backrefs;
+
+  str _infile_name;
+  bool _xlate_line_numbers;
+  bool _need_line_xlate;
 };
 
 class unwrap_shotgun_t : public parse_state_t, public unwrap_el_t 
@@ -426,7 +450,7 @@ public:
     : unwrap_shotgun_t (f), _nxt_var_ind (0) {}
 
   bool check_backref (int i);
-  void add_resume (const str &s) { _resume = s; }
+  void add_resume (const lstr &s) { _resume = s; }
   void add_backref (int i) { _backrefs.insert (i); }
 
   // overloaded virtual functions
@@ -445,7 +469,7 @@ public:
 
 private:
   int _nxt_var_ind;
-  str _resume;
+  lstr _resume;
   bhash<int> _backrefs;
 };
 
@@ -464,10 +488,11 @@ private:
 };
 
 extern parse_state_t state;
+extern str infile_name;
 
 
 struct YYSTYPE {
-  ::str             str;
+  ::lstr            str;
   ptr<declarator_t> decl;
   ptr<vartab_t>     vars;
   var_t             var;
@@ -490,6 +515,11 @@ public:
 };
 
 
-#define CONCAT(in,out)  do { strbuf b; b << in; out = b; } while (0)
+#define CONCAT(ln,in,out)                                 \
+do {                                                      \
+      strbuf b;                                           \
+      b << in;                                            \
+      out = lstr (ln, b);                                 \
+} while (0)
 
 #endif /* _UNWRAP_UNWRAP_H */

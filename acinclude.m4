@@ -2018,3 +2018,12 @@ ac_cv_path_install_c=$INSTALL
 ])
 ])
 
+dnl
+dnl Compile (optionally) tutorial functions
+dnl
+AC_DEFUN([SFS_TUTORIAL],
+[AC_ARG_ENABLE(tutorial,
+--enable-tutorial  	compile tutorial files)
+test "${enable_tutorial+set}" = "set" && with_tutorial="yes"
+AM_CONDITIONAL(USE_TUTORIAL, test "$with_tutorial" = "yes")
+])

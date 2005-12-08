@@ -4,7 +4,7 @@ dnl Process this file with autoconf to produce a configure script.
 dnl
 
 AC_INIT(acinclude.m4)
-AM_INIT_AUTOMAKE(sfslite,0.8.5a)
+AM_INIT_AUTOMAKE(sfslite,0.8.5pre)
 dnl AC_INIT(sfs,0.7.2)
 dnl AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER(config.h)
@@ -446,9 +446,23 @@ AC_ARG_WITH(sfsuser,
 AC_ARG_WITH(sfsgroup,
 --with-sfsgroup=name      Name of sfs group)
 
+dnl
+dnl being SFSlite changes
+dnl
+dnl    - add unwrap and tutorial stuff
+dnl    - prune other directories
+dnl
+SFS_TUTORIAL
+
+if test "$with_tutorial" = "yes"; then
+   ac_config_files="$ac_config_files tutorial/Makefile"
+fi
 
 AC_OUTPUT(Makefile async/Makefile rpcc/Makefile arpc/Makefile
 	crypt/Makefile sfsmisc/Makefile contrib/Makefile unwrap/Makefile
 	)
+dnl
+dnl end SFSlite changes
+dnl
 
-dnl tutorial/Makefile is experimental and off by default
+

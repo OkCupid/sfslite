@@ -8,27 +8,30 @@ parse_state_t state;
 static void
 usage ()
 {
-  warnx << "usage: " << progname << " [-o <outfile>] [<infile>]\n";
+  warnx << "usage: " << progname << " [-L] [-o <outfile>] [<infile>]\n";
   exit (1);
 }
 
 int
 main (int argc, char *argv[])
 {
-  str ifn;
   setprogname (argv[0]);
   FILE *ifh = NULL;
   int ch;
   str outfile;
   bool debug = false;
-
+  bool no_line_numbers = false;
+  str ifn;
   
   make_sync (0);
   make_sync (1);
   make_sync (2);
 
-  while ((ch = getopt (argc, argv, "vdo:")) != -1)
+  while ((ch = getopt (argc, argv, "Lvdo:")) != -1)
     switch (ch) {
+    case 'L':
+      no_line_numbers = true;
+      break;
     case 'd':
       debug = true;
       break;
@@ -45,6 +48,9 @@ main (int argc, char *argv[])
       break;
     }
 
+  if (getenv ("NO_LINE_NUMBERS"))
+    no_line_numbers = true;
+
   argc -= optind;
   argv += optind;
 
@@ -58,6 +64,10 @@ main (int argc, char *argv[])
       yyin = ifh;
     }
   }
+
+  state.set_infile_name (ifn);
+  state.set_xlate_line_numbers ((ifn && ifn != "-" && !no_line_numbers) 
+				? true : false);
 
   int outfd;
   if (outfile && outfile != "-") {

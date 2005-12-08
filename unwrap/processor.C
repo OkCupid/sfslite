@@ -162,7 +162,7 @@ declarator_t::dump () const
 }
 
 void
-parse_state_t::passthrough (const str &s)
+parse_state_t::passthrough (const lstr &s)
 {
   if (!*_elements.plast || !(*_elements.plast)->append (s)) 
     _elements.insert_tail (New unwrap_passthrough_t (s));
@@ -393,6 +393,8 @@ unwrap_crcc_star_t::make_cb_ind_ref (bool inclass)
 void 
 unwrap_passthrough_t::output (int fd)
 {
+  if (_strs.size ()) 
+    state.output_line_xlate (fd, _strs[0].lineno ());
   _buf.tosuio ()->output (fd);
 }
 
@@ -747,6 +749,9 @@ void
 unwrap_fn_t::output_fn_header (int fd)
 {
   my_strbuf_t b;
+  
+  state.need_line_xlate ();
+  state.output_line_xlate (fd, _lineno);
 
   b << signature (false)  << "\n"
     << "{\n"
@@ -778,6 +783,8 @@ unwrap_fn_t::output_fn_header (int fd)
   output_jump_tab (b);
 
   b.tosuio ()->output (fd);
+
+  state.need_line_xlate ();
 
   // XXX hack : close the function with pass-through tokens
   // (see parse.yy for more details)
@@ -837,6 +844,11 @@ unwrap_shotgun_t::output (int fd)
   
   b.tosuio ()->output (fd);
   b.tosuio ()->clear ();
+
+  // now we are returning to mainly pass-through code, but with some
+  // callbacks thrown in (which won't change the line-spacing)
+  state.need_line_xlate ();
+
   for (unwrap_el_t *el = _elements.first; el; el = _elements.next (el)) {
     el->output (fd);
   }
@@ -853,6 +865,7 @@ unwrap_shotgun_t::output (int fd)
       << CLOSURE_DATA << "->_class_tmp." << v.name () << ";\n";
   }
 
+  state.need_line_xlate ();
   b.tosuio ()->output (fd);
 }
 
@@ -867,6 +880,7 @@ unwrap_crcc_star_t::output (int fd)
 void
 parse_state_t::output (int fd)
 {
+  output_line_xlate (fd, 1);
   for (unwrap_el_t *el = _elements.first; el; el = _elements.next (el)) {
     el->output (fd);
   }
@@ -892,6 +906,17 @@ unwrap_callback_t::output (int fd)
   b << ")";
   b.tosuio ()->output (fd);
 
+}
+
+void
+parse_state_t::output_line_xlate (int fd, int ln)
+{
+  if (_xlate_line_numbers && _need_line_xlate) {
+    strbuf b;
+    b << "# " << ln << " \"" << _infile_name << "\"\n";
+    b.tosuio ()->output (fd);
+    _need_line_xlate = false;
+  }
 }
 
 //

@@ -1,7 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 # $Id$
 
-LDADD = $(LIBASYNC)  $(LIBARPC)
+LDADD =  $(LIBARPC) $(LIBASYNC)  
 
 noinst_PROGRAMS = ex1 ex2 exsrv ex3 ex4
 ex1_SOURCES = ex1.C 
@@ -28,6 +28,11 @@ ex2.o: ex_prot.h
 ex3.o: ex_prot.h
 ex4.o: ex_prot.h
 exsrv.o: ex_prot.h
+
+ex3.C: $(srcdir)/ex3.W
+ex1.C: $(srcdir)/ex1.W
+ex2.C: $(srcdir)/ex2.W
+ex4.C: $(srcdir)/ex4.W
 
 .PHONY: bldclean
 bldclean:

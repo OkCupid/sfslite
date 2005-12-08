@@ -1,9 +1,11 @@
+$Id$
 
 When Syncing from SFS to SFSlite: A Checklist
 ---------------------------------------------
  - acinclude.m4
     - copy over SFS_TAG macro
     - ditto for SFS_MMAP and INSTALL_C
+    - ditto for SFS_TUTORIAL
  - configure.in
     - copy block of code from begin sfslite to end sfslite
     - meaning, we need new rules for sfsincludedir, sfslibdir, etc, that
@@ -11,6 +13,7 @@ When Syncing from SFS to SFSlite: A Checklist
     - also make sure the m4 macro SFS_TAG is being called from here.
     - dnl the SFS_CHECK_NFSMNT macro
     - dnl the SFS_USER macro
+    - prune the AC_OUTPUT list, and add the tutorial conditional build, too
  - Makefile.am
     - David usually doesn't update this; Needs a bunch of syncs.
  - async/Makefile.am

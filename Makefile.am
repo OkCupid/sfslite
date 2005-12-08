@@ -1,14 +1,19 @@
 ## Process this file with automake to produce Makefile.in
 ## $Id$
 
-
 #
 # sfslite change
 #
-SUBDIRS = async rpcc arpc crypt sfsmisc contrib unwrap 
+if USE_TUTORIAL
+TUTORIAL = tutorial
+else
+TUTORIAL =
+endif
 
-#experimental...
-#tutorial
+SUBDIRS = async rpcc arpc crypt sfsmisc contrib unwrap $(TUTORIAL)
+#
+# end sfslite change
+#
 
 
 noinst_HEADERS = nfsconf.h
