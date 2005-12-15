@@ -4,7 +4,7 @@ dnl Process this file with autoconf to produce a configure script.
 dnl
 
 AC_INIT(acinclude.m4)
-AM_INIT_AUTOMAKE(sfslite,0.8.5pre)
+AM_INIT_AUTOMAKE(sfslite,0.8.6a)
 dnl AC_INIT(sfs,0.7.2)
 dnl AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER(config.h)
@@ -455,7 +455,7 @@ dnl
 SFS_TUTORIAL
 
 AC_OUTPUT(Makefile async/Makefile rpcc/Makefile arpc/Makefile
-	crypt/Makefile sfsmisc/Makefile contrib/Makefile unwrap/Makefile)
+	crypt/Makefile sfsmisc/Makefile contrib/Makefile tame/Makefile)
 
 if test "$with_tutorial" = "yes"; then
 	AC_OUTPUT(tutorial/Makefile)
