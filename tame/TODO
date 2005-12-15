@@ -1,0 +1,9 @@
+
+- non-void functions (add RETURN { ... } feature)
+ -- autogenerate default return values from retvalue's type
+- array declarations
+- references/arrays in callbacks: @(&a, &v[40]);
+- test non-member functions
+- fix makefile system to include ex1.W/.C
+- C++-style intialization
+- passthrough comments unless in CB env...

@@ -10,7 +10,7 @@ else
 TUTORIAL =
 endif
 
-SUBDIRS = async rpcc arpc crypt sfsmisc contrib unwrap $(TUTORIAL)
+SUBDIRS = async rpcc arpc crypt sfsmisc contrib tame $(TUTORIAL)
 DIST_SUBDIRS = $(SUBDIRS)
 #
 # end sfslite change

@@ -1,7 +1,7 @@
 // -*-c++-*-
 /* $Id$ */
 
-#include "unwrap.h"
+#include "tame.h"
 #include "parseopt.h"
  
 TAME (static void try_connect (str h, int port))

@@ -21,7 +21,7 @@ AC_SUBST(LDEPS)
 AC_SUBST(LDADD)
 
 AC_SUBST(RPCC)
-AC_SUBST(UNWRAP)
+AC_SUBST(TAME)
 
 AC_CANONICAL_HOST
 
@@ -44,7 +44,7 @@ AC_PROG_LN_S
 dnl AC_PROG_MAKE_SET
 AC_PATH_PROGS(M4, gm4 gnum4 m4, '$(top_srcdir)/missing')
 test "$RPCC" || RPCC='$(top_builddir)/rpcc/rpcc'
-test "$UNWRAP" || UNWRAP='$(top_builddir)/unwrap/unwrap'
+test "$TAME" || TAME='$(top_builddir)/tame/tame'
 
 dnl Check for X Windows
 AC_PATH_XTRA

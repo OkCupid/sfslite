@@ -12,9 +12,9 @@ null_SOURCES = null.C
 exsrv_SOURCES = exsrv.C ex_prot.C
 ex4m_SOURCES = ex4m.C ex_prot.C
 
-SUFFIXES = .W .C .x .h
+SUFFIXES = .T .C .x .h
 
-.W.C:
+.T.C:
 	-$(UNWRAP) -L -o $@ $< || rm -f $@
 .x.h:
 	-$(RPCC) -h $< || rm -f $@
@@ -31,11 +31,11 @@ ex3.o: ex_prot.h
 ex4.o: ex_prot.h
 exsrv.o: ex_prot.h
 
-ex3.C: $(srcdir)/ex3.W
-ex1.C: $(srcdir)/ex1.W
-ex2.C: $(srcdir)/ex2.W
-ex4.C: $(srcdir)/ex4.W
-null.C: $(srcdir)/null.W
+ex3.C: $(srcdir)/ex3.T
+ex1.C: $(srcdir)/ex1.T
+ex2.C: $(srcdir)/ex2.T
+ex4.C: $(srcdir)/ex4.T
+null.C: $(srcdir)/null.T
 
 .PHONY: bldclean
 bldclean:
