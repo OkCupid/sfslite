@@ -15,7 +15,7 @@ ex4m_SOURCES = ex4m.C ex_prot.C
 SUFFIXES = .T .C .x .h
 
 .T.C:
-	-$(UNWRAP) -L -o $@ $< || rm -f $@
+	-$(TAME) -L -o $@ $< || rm -f $@
 .x.h:
 	-$(RPCC) -h $< || rm -f $@
 .x.C:
