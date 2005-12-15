@@ -6,7 +6,7 @@
 #include "ex_prot.h"
 #include "arpc.h"
  
-UNWRAP_SD (void try_rpc (str h, int port, cbb cb))
+TAME (static void try_rpc (str h, int port, cbb cb))
 {
   VARS {
     bool ret (false);
@@ -17,7 +17,7 @@ UNWRAP_SD (void try_rpc (str h, int port, cbb cb))
     vec<clnt_stat> ev;
   }
   
-  CRCC { tcpconnect (h, port, @(fd)); }
+  BLOCK { tcpconnect (h, port, @(fd)); }
  
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", h.cstr(), port);
@@ -28,9 +28,9 @@ UNWRAP_SD (void try_rpc (str h, int port, cbb cb))
     ev.setsize (n);
     rv.setsize (n);
  
-    CRCC {
+    BLOCK {
       for (i = 0; i < n; i++) {
-        cli->call (EX_RANDOM, NULL, &rv[i], @(i; (clnt_stat )$ev[@1] ) );
+        cli->call (EX_RANDOM, NULL, &rv[i], @(ev[i]) );
       }
     }
     ret = true;

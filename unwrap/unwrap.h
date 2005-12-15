@@ -89,6 +89,24 @@ public:
   tailq_entry<unwrap_el_t> _lnk;
 };
 
+class element_list_t : public unwrap_el_t {
+public:
+  virtual void output (int fd);
+  void passthrough (const lstr &l) ;
+  void push (unwrap_el_t *e) { _lst.insert_tail (e); }
+protected:
+  tailq<unwrap_el_t, &unwrap_el_t::_lnk> _lst;
+};
+
+class unwrap_env_t : public element_list_t {
+public:
+  virtual void output (int fd) { element_list_t::output (fd); }
+  virtual bool is_jumpto () const { return false; }
+  virtual void set_id (int id) {}
+  virtual int id () const { return 0; }
+};
+
+
 class unwrap_vars_t : public unwrap_el_t {
 public:
   unwrap_vars_t () {}
@@ -159,7 +177,12 @@ protected:
   str _initializer;
 };
 
-typedef vec<var_t> expr_list_t;
+class expr_list_t : public vec<var_t>
+{
+public:
+  void output_vars (strbuf &b, bool first = false, const str &prfx = NULL,
+		    const str &sffx = NULL);
+};
 
 class vartab_t {
 public:
@@ -180,36 +203,48 @@ public:
 
 class unwrap_fn_t; 
 
-class unwrap_shotgun_t;
-class unwrap_callback_t : public unwrap_el_t {
+class unwrap_block_t;
+class unwrap_nonblock_t;
+class unwrap_join_t;
+
+class unwrap_callback_t : public unwrap_env_t {
 public:
-  unwrap_callback_t (ptr<expr_list_t> t, unwrap_fn_t *f, unwrap_shotgun_t *g,
-		     ptr<expr_list_t> e = NULL);
-  unwrap_callback_t () : 
-    _parent_fn (NULL), _shotgun (NULL), _wrap_in (0),
-    _last_wrap_ind (0) {}
-  void output (int fd) ;
-  void output_in_class (strbuf &b, int n);
+  unwrap_callback_t (ptr<expr_list_t> l) : _call_with (l) {}
 
-  int last_wrap_ind () const { return _last_wrap_ind; }
-  int local_cb_ind () const { return _local_cb_ind; }
-  int global_cb_ind () const { return _cb_ind; }
-
-  tailq_entry<unwrap_callback_t> _lnk;
-  ptr<expr_list_t> wrap_in () { return _wrap_in; }
+  virtual void output (int fd) { unwrap_env_t::output (fd); }
+  virtual void output_in_class (strbuf &b) = 0;
+  virtual void output_generic (strbuf &b) = 0;
+  
   ptr<expr_list_t> call_with () { return _call_with; }
-private:
+protected:
   ptr<expr_list_t> _call_with;
+};
+
+class unwrap_block_callback_t : public unwrap_callback_t {
+public:
+  unwrap_block_callback_t (unwrap_fn_t *fn, unwrap_block_t *b, 
+			   ptr<expr_list_t> l);
+  ~unwrap_block_callback_t () {}
+  void output (int fd);
+  void output_in_class (strbuf &b);
+  void output_generic (strbuf &b) {}
+  int global_cb_ind () const { return _cb_ind; }
+private:
   unwrap_fn_t *_parent_fn;
-  unwrap_shotgun_t *_shotgun;
-  ptr<expr_list_t> _wrap_in;
+  unwrap_block_t *_block;
   int _cb_ind;   // global CB id
+};
 
-  // within a CRCC* environment, all wrapped-in args are considered
-  // sequentially, so we need to continue counting across CBs
-  int _last_wrap_ind; 
-
-  int _local_cb_ind; // CB id local to this CRCC {... } block
+class unwrap_nonblock_callback_t : public unwrap_callback_t {
+public:
+  unwrap_nonblock_callback_t (unwrap_nonblock_t *n, ptr<expr_list_t> l)
+    : unwrap_callback_t (l), _nonblock (n) {}
+  void output (int fd);
+  void output_in_class (strbuf &b) {}
+  void output_generic (strbuf &b);
+  str cb_name () const;
+private:
+  unwrap_nonblock_t *_nonblock;
 };
 
 /*
@@ -250,22 +285,29 @@ str mangle (const str &in);
 str strip_to_method (const str &in);
 str strip_off_method (const str &in);
 
-class unwrap_shotgun_t;
+class unwrap_block_t;
 
 #define STATIC_DECL           (1 << 0)
 
 //
 // Unwrap Function Type
 //
-class unwrap_fn_t : public unwrap_el_t {
+class unwrap_fn_t : public element_list_t {
 public:
-  unwrap_fn_t (const str &r, ptr<declarator_t> d, bool c, u_int l)
-    : _ret_type (r, d->pointer ()), _name (d->name ()),
-      _name_mangled (mangle (_name)), _method_name (strip_to_method (_name)),
-      _class (strip_off_method (_name)), _isconst (c),
-      _closure (mk_closure ()), _closure_data (mk_closure_data ()),
-      _args (d->params ()), _opts (0), _crcc_star_present (false),
-      _lineno (l) {}
+  unwrap_fn_t (u_int o, const str &r, ptr<declarator_t> d, bool c, u_int l)
+    : _ret_type (r, d->pointer ()), 
+      _name (d->name ()),
+      _name_mangled (mangle (_name)), 
+      _method_name (strip_to_method (_name)),
+      _class (strip_off_method (_name)), 
+      _self (_class, "*", "_self"),
+      _isconst (c),
+      _closure (mk_closure ()), 
+      _args (d->params ()), 
+      _opts (o),
+      _lineno (l),
+      _n_labels (0)
+  { }
 
   vartab_t *stack_vars () { return &_stack_vars; }
   vartab_t *args () { return _args; }
@@ -278,9 +320,17 @@ public:
   void set_opts (int i) { _opts = i; }
   int opts () const { return _opts; }
 
+  void jump_out (strbuf &b, int i);
+
   void output (int fd);
-  void add_callback (unwrap_callback_t *c) { _cbs.insert_tail (c); }
-  void add_shotgun (unwrap_shotgun_t *g) ;
+
+  int add_callback (unwrap_block_callback_t *c) 
+  { _cbs.push_back (c); return _cbs.size (); }
+
+  void add_nonblock_callback (unwrap_nonblock_callback_t *c)
+  { _nbcbs.push_back (c); }
+
+  void add_env (unwrap_env_t *g) ;
 
   str fn_prefix () const { return _name_mangled; }
 
@@ -290,22 +340,12 @@ public:
   static var_t trig () ;
 
   str closure_nm () const { return _closure.name (); }
-  str closure_data_nm () const;
-  var_t closure_data () const { return _closure_data; }
   str reenter_fn  () const ;
   str frozen_arg (const str &i) const ;
 
-  unwrap_callback_t *last_callback () { return *_cbs.plast; }
+  unwrap_callback_t *last_callback () { return _cbs.back (); }
 
   str label (u_int id) const ;
-
-  // either use tmp closure or not, depending on whether or not
-  // there was a CRCC* in this function
-  str closure_tmp_data () const;
-  str closure_tmp () const;
-  str closure_tmp_g () const;
-  bool need_tmp_closure () const { return _crcc_star_present; }
-  void hit_crcc_star () { _crcc_star_present = true; }
 
 private:
   const type_t _ret_type;
@@ -313,62 +353,50 @@ private:
   const str _name_mangled;
   const str _method_name;
   const str _class;
+  const var_t _self;
+
   const bool _isconst;
   const var_t _closure;
-  const var_t _closure_data;
 
   var_t mk_closure () const ;
-  var_t mk_closure_data () const;
 
   ptr<vartab_t> _args;
   vartab_t _stack_vars;
   vartab_t _class_vars_tmp;
-  tailq<unwrap_callback_t, &unwrap_callback_t::_lnk> _cbs; 
-  vec<unwrap_shotgun_t *> _shotguns;
+  vec<unwrap_block_callback_t *> _cbs; 
+  vec<unwrap_nonblock_callback_t *> _nbcbs;
+  vec<unwrap_env_t *> _envs;
 
   void output_reenter (strbuf &b);
   void output_closure (int fd);
-  void output_closure_data (int fd);
-  void output_fn_header (int fd);
+  void output_fn (int fd);
   void output_static_decl (int fd);
   void output_stack_vars (strbuf &b);
   void output_jump_tab (strbuf &b);
+  void output_generic (int fd);
   
   int _opts;
-  bool _crcc_star_present;
   u_int _lineno;
+  u_int _n_labels;
 };
 
-class backref_t {
+class parse_state_t : public element_list_t {
 public:
-  backref_t (u_int i, u_int l) : _index (i), _lineno (l) {}
-  u_int ref_index () const { return _index; }
-  u_int lineno () const { return _lineno; }
-protected:
-  u_int _index, _lineno;
-};
+  parse_state_t () : _xlate_line_numbers (false),
+		     _need_line_xlate (true) 
+  {
+    _lists.push_back (this);
+  }
 
-class backref_list_t {
-public:
-  backref_list_t () {}
-  void clear () { _lst.clear (); }
-  void add (u_int i, u_int l) { _lst.push_back (backref_t (i, l)); }
-  bool check (u_int sz) const;
-private:
-  vec<backref_t> _lst;
-};
-
-class unwrap_shotgun_t;
-class unwrap_crcc_star_t;
-class parse_state_t {
-public:
-  parse_state_t () : _crcc_star (NULL), 
-		     _xlate_line_numbers (false),
-		     _need_line_xlate (true) {}
   void new_fn (unwrap_fn_t *f) { new_el (f); _fn = f; }
-  void new_el (unwrap_el_t *e) { _fn = NULL; _elements.insert_tail (e); }
-  void passthrough (const lstr &l) ;
-  void push (unwrap_el_t *e) { _elements.insert_tail (e); }
+  void new_el (unwrap_el_t *e) { _fn = NULL; push (e); }
+
+  void passthrough (const lstr &l) { top_list ()->passthrough (l); }
+  void push (unwrap_el_t *e) { top_list ()->push (e); }
+
+  element_list_t *top_list () { return _lists.back (); }
+  void push_list (element_list_t *l) { _lists.push_back (l); }
+  void pop_list () { _lists.pop_back (); }
 
   // access variable tables in the currently active function
   vartab_t *stack_vars () { return _fn ? _fn->stack_vars () : NULL; }
@@ -379,21 +407,21 @@ public:
   str decl_specifier () const { return _decl_specifier; }
   unwrap_fn_t *function () { return _fn; }
 
-  void new_shotgun (unwrap_shotgun_t *g);
-  unwrap_shotgun_t *shotgun () { return _shotgun; }
+  void new_block (unwrap_block_t *g);
+  unwrap_block_t *block () { return _block; }
+  void clear_block () { _block = NULL; }
 
-  void new_crcc_star (unwrap_crcc_star_t *s);
-  unwrap_crcc_star_t *crcc_star () { return _crcc_star; }
+  void new_nonblock (unwrap_nonblock_t *s);
+  unwrap_nonblock_t *nonblock () { return _nonblock; }
+
+  void new_join (unwrap_join_t *j);
+  unwrap_join_t *join () { return _join; }
 
   void output (int fd);
 
   void clear_sym_bit () { _sym_bit = false; }
   void set_sym_bit () { _sym_bit = true; }
   bool get_sym_bit () const { return _sym_bit; }
-
-  void clear_backref_list () { _backrefs.clear (); }
-  void add_backref (u_int i, u_int l) { _backrefs.add (i, l); }
-  bool check_backrefs (u_int i) const { return _backrefs.check (i); }
 
   void set_xlate_line_numbers (bool f) { _xlate_line_numbers = f; }
   void set_infile_name (const str &i) { _infile_name = i; }
@@ -403,39 +431,35 @@ public:
 protected:
   str _decl_specifier;
   unwrap_fn_t *_fn;
-  unwrap_shotgun_t *_shotgun;
-  unwrap_crcc_star_t *_crcc_star;
-  tailq<unwrap_el_t, &unwrap_el_t::_lnk> _elements;
+  unwrap_block_t *_block;
+  unwrap_nonblock_t *_nonblock;
+  unwrap_join_t *_join;
   bool _sym_bit;
-  backref_list_t _backrefs;
+
+  // lists of elements (to reflect nested structure)
+  vec<element_list_t *> _lists;
 
   str _infile_name;
   bool _xlate_line_numbers;
   bool _need_line_xlate;
 };
 
-class unwrap_shotgun_t : public parse_state_t, public unwrap_el_t 
-{
+class unwrap_block_t : public unwrap_env_t {
 public:
-  unwrap_shotgun_t (unwrap_fn_t *f) :  _fn (f), _id (0) {}
-  ~unwrap_shotgun_t () {}
-
-  virtual void output (int fd);
+  unwrap_block_t (unwrap_fn_t *f) : _fn (f), _id (0) {}
+  ~unwrap_block_t () {}
+  
+  void output (int fd);
+  bool is_jumpto () const { return true; }
   void set_id (int i) { _id = i; }
+  int id () const { return _id; }
   void add_class_var (const var_t &v) { _class_vars.add (v); }
-
+  
   int add_callback (unwrap_callback_t *cb) 
   { 
     _callbacks.push_back (cb); 
     return _callbacks.size ();
   }
-
-  virtual int advance_wrap_ind (ptr<expr_list_t> l) { return 0; }
-  virtual bool output_trig (strbuf &b);
-  virtual void output_continuation (unwrap_callback_t *cb, strbuf &b) {}
-  virtual void output_resume_struct (strbuf &b) {}
-  virtual void output_resume_struct_member (strbuf &b) {}
-  virtual bool use_trig () const { return true; }
 
 protected:
   unwrap_fn_t *_fn;
@@ -443,53 +467,38 @@ protected:
   vartab_t _class_vars;
   vec<unwrap_callback_t *> _callbacks;
 };
-
-class unwrap_crcc_star_t : public unwrap_shotgun_t {
-public:
-  unwrap_crcc_star_t (unwrap_fn_t *f) 
-    : unwrap_shotgun_t (f), _nxt_var_ind (0) {}
-
-  bool check_backref (int i);
-  void add_resume (const lstr &s) { _resume = s; }
-  void add_backref (int i) { _backrefs.insert (i); }
-
-  // overloaded virtual functions
-  int advance_wrap_ind (ptr<expr_list_t> l);
-  bool output_trig (strbuf &b);
-  void output_continuation (unwrap_callback_t *cb, strbuf &b);
-  void output_resume_struct (strbuf &b);
-  void output_resume_struct_member (strbuf &b);
-  bool use_trig () const { return false; }
-  void output (int fd);
   
-
-  str make_resume_ref (bool inclass = false);
-  str make_backref (int i, bool inclass = false);
-  str make_cb_ind_ref (bool inclass = false);
-
+class unwrap_nonblock_t : public unwrap_env_t {
+public:
+  unwrap_nonblock_t (ptr<expr_list_t> l) : _args (l) {}
+  ~unwrap_nonblock_t () {}
+  void output (int fd) { element_list_t::output (fd); }
+  u_int n_args () const { return _args->size () - 1; }
+  var_t join_group () const { return (*_args)[0]; }
+  var_t arg (u_int i) const { return (*_args)[i+1]; }
+  void output_vars (strbuf &b, bool first, const str &prfx, const str &sffx);
 private:
-  int _nxt_var_ind;
-  lstr _resume;
-  bhash<int> _backrefs;
+  ptr<expr_list_t> _args;
 };
 
-class expr_list2_t {
+class unwrap_join_t : public unwrap_env_t {
 public:
-  expr_list2_t () {}
-  expr_list2_t (ptr<expr_list_t> w) : _call_with (w) {}
-  expr_list2_t (ptr<expr_list_t> w, ptr<expr_list_t> c) 
-    : _wrap_in (w), _call_with (c) {}
-  ptr<expr_list_t> wrap_in () { return _wrap_in; }
-  ptr<expr_list_t> call_with () { return _call_with; }
+  unwrap_join_t (unwrap_fn_t *f, ptr<expr_list_t> l) : _fn (f), _args (l) {}
+  bool is_jumpto () const { return true; }
+  void set_id (int i) { _id = i; }
+  int id () const { return _id; }
+  void output (int fd);
+  var_t join_group () const { return (*_args)[0]; }
+  var_t arg (u_int i) const { return (*_args)[i+1]; }
+  u_int n_args () const { return _args->size () - 1; }
 private:
-  ptr<expr_list_t> _wrap_in;
-  ptr<expr_list_t> _call_with;
-
+  unwrap_fn_t *_fn;
+  ptr<expr_list_t> _args;
+  int _id;
 };
 
 extern parse_state_t state;
 extern str infile_name;
-
 
 struct YYSTYPE {
   ::lstr            str;
@@ -502,7 +511,6 @@ struct YYSTYPE {
   unwrap_el_t *     el;
   ptr<expr_list_t>  exprs;
   type_t            typ;
-  ptr<expr_list2_t> pl2;
   vec<ptr<declarator_t> > decls;
   u_int             opts;
 };

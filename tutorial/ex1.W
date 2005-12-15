@@ -4,10 +4,10 @@
 #include "unwrap.h"
 #include "parseopt.h"
  
-UNWRAP_SD (void try_connect (str h, int port))
+TAME (static void try_connect (str h, int port))
 {
   VARS { int fd; }
-  CRCC { tcpconnect (h, port, @(fd)); }
+  BLOCK { tcpconnect (h, port, @(fd)); }
   if (fd >= 0) {
     warn << "Connection succeeded!\n";
     exit (0);

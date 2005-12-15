@@ -46,14 +46,15 @@ SYM	[{}<>;,():*\[\]]
 DNUM 	[+-]?[0-9]+
 XNUM 	[+-]?0x[0-9a-fA-F]
 
-%x FULL_PARSE FN_ENTER VARS_ENTER SHOTGUN_ENTER SHOTGUN_CB_ENTER SHOTGUN
-%x UNWRAP SHOTGUN_CB PAREN_ENTER UNWRAP_BASE C_COMMENT C_COMMENT_GOBBLE
-%x EXPR EXPR_BASE ID_OR_NUM NUM_ONLY SHOTGUN_BASE HALF_PARSE PP PP_BASE
-%x RESUME_ENTER RESUME_BASE RESUME RESUME_PARSE EXPECT_RESUME
+%x FULL_PARSE FN_ENTER VARS_ENTER BLOCK_ENTER CB_ENTER EXPECT_CB
+%x UNWRAP TAME_BASE C_COMMENT C_COMMENT_GOBBLE TAME
+%x ID_OR_NUM NUM_ONLY EXPECT_CB_BASE HALF_PARSE PP PP_BASE
+%x NONBLOCK_ENTER JOIN_ENTER JOIN_LIST JOIN_LIST_BASE
+%x EXPR_LIST EXPR_LIST_BASE ID_LIST
 
 %%
 
-<FN_ENTER,FULL_PARSE,SHOTGUN_ENTER,RESUME_ENTER,SHOTGUN_CB_ENTER,PAREN_ENTER,SHOTGUN_CB,VARS_ENTER,ID_OR_NUM,NUM_ONLY,HALF_PARSE,RESUME_PARSE,EXPECT_RESUME>{
+<FN_ENTER,FULL_PARSE,CB_ENTER,VARS_ENTER,ID_LIST,ID_OR_NUM,NUM_ONLY,HALF_PARSE,BLOCK_ENTER,NONBLOCK_ENTER,JOIN_ENTER,JOIN_LIST,JOIN_LIST_BASE,EXPR_LIST,EXPR_LIST_BASE>{
 \n		++lineno;
 {WSPACE}+	/*discard*/;
 }
@@ -68,12 +69,6 @@ XNUM 	[+-]?0x[0-9a-fA-F]
 {
 {DNUM}|{XNUM}	{ yy_pop_state (); return std_ret (T_NUM); }
 .		{ return yyerror ("expected a number"); }
-}
-
-<RESUME_PARSE>{
-{DNUM}|{XNUM}	{ yy_pop_state (); return std_ret (T_NUM); }
-#		{ yy_pop_state (); return yytext[0]; }
-.		{ return yyerror ("expected a number or '#'"); }
 }
 
 <FULL_PARSE,HALF_PARSE>{
@@ -95,7 +90,6 @@ static		return T_STATIC;
 {ID} 		{ return std_ret (T_ID); }
 {DNUM}|{XNUM}	{ return std_ret (T_NUM); }
 
-[{]		{ yy_push_state (FULL_PARSE); return yytext[0]; }
 [})]		{ yy_pop_state (); return yytext[0]; }
 
 [<>;,:*]	{ return yytext[0]; }
@@ -106,13 +100,29 @@ static		return T_STATIC;
 [(]		{ yy_push_state (PP_BASE); return yytext[0]; }
 }
 
+<FULL_PARSE>{
+[({]		{ yy_push_state (FULL_PARSE); return yytext[0]; }
+}
+
+<FULL_PARSE,HALF_PARSE>{
+.		{ return yyerror ("illegal token found in parsed "
+				  "environment"); }
+}
+
+<FN_ENTER>{
+[(]		{ yy_push_state (FULL_PARSE); return yytext[0]; }
+[{]		{ switch_to_state (TAME_BASE); return yytext[0]; }
+.		{ return yyerror ("illegal token found in function "
+				  "environment"); }
+}
+
 <PP_BASE>{
 [)]		{ yy_pop_state (); return yytext[0]; } 
 }
 
 <PP,PP_BASE>{
 \n		{ ++lineno; }
-[^()\n]+	{ return std_ret (T_PASSTHROUGH); }
+[^()\n/]+|"/"	{ return std_ret (T_PASSTHROUGH); }
 [(]		{ yy_push_state (PP); return std_ret (T_PASSTHROUGH); }
 }
 
@@ -120,147 +130,118 @@ static		return T_STATIC;
 [)]		{ yy_pop_state (); return std_ret (T_PASSTHROUGH); }
 }
 
-<FULL_PARSE>{
-[(]		{ yy_push_state (FULL_PARSE); return yytext[0]; }
-}
-
-<HALF_PARSE,FULL_PARSE>{
-.		{ return yyerror ("illegal token found in parsed "
-				  "environment"); }
-}
-
-
-<FN_ENTER>{
-[(]		{ yy_push_state (FULL_PARSE); return yytext[0]; }
-[{]		{ switch_to_state (UNWRAP_BASE); return yytext[0]; }
-.		{ return yyerror ("illegal token found in function "
-				  "environment"); }
-}
 
 <VARS_ENTER>{
 [{]		{ switch_to_state (HALF_PARSE); return yytext[0]; }
 .		{ return yyerror ("illegal token found between VARS and '{'");}
 }
 
-<SHOTGUN_ENTER>{
-[{]		{ switch_to_state (SHOTGUN_BASE); return yytext[0]; }
-.		{ return yyerror ("illegal token found between SHOTGUN "
+<BLOCK_ENTER>{
+[{]		{ switch_to_state (EXPECT_CB_BASE); return yytext[0]; }
+.		{ return yyerror ("illegal token found between BLOCK "
 				  "and '{'");}
 }
 
-<RESUME_ENTER>{
-[{]		{ switch_to_state (RESUME_BASE); return yytext[0]; }
-.		{ return yyerror ("illegal token found between RESUME "
-				  "and '{'"); }
+<NONBLOCK_ENTER>{
+[(]		{ yy_push_state (EXPR_LIST_BASE); return yytext[0]; }
+[{]		{ switch_to_state (EXPECT_CB_BASE); return yytext[0]; }
+.		{ return yyerror ("illegal token found between NONBLOCK "
+				  "and '{'");}
 }
 
-<SHOTGUN_CB_ENTER>{
-[(\[]		{ switch_to_state (SHOTGUN_CB); return yytext[0]; }
+<JOIN_ENTER>{
+[(]		{ yy_push_state (JOIN_LIST_BASE); return yytext[0]; }
+[{]		{ switch_to_state (TAME_BASE); return yytext[0]; }
+.		{ return yyerror ("illegal token found between NONBLOCK "
+				  "and '{'");}
+}
+
+<JOIN_LIST_BASE,JOIN_LIST>{
+[(]		{ yy_push_state (JOIN_LIST); return std_ret (T_PASSTHROUGH); }
+[^(),/\n]+|"/"	{ return std_ret (T_PASSTHROUGH); }
+}
+
+<JOIN_LIST>{
+[)]		{ yy_pop_state (); return std_ret (T_PASSTHROUGH); }
+[,]		{ return std_ret (T_PASSTHROUGH); }
+}
+
+<JOIN_LIST_BASE>{
+[,]		{ switch_to_state (ID_LIST); return yytext[0]; }
+[)]		{ yy_pop_state (); return yytext[0]; }
+}
+
+
+<CB_ENTER>{
+[(]		{ switch_to_state (EXPR_LIST_BASE); return yytext[0]; }
 .		{ return yyerror ("illegal token found between '@' and '('"); }
 }
 
-<PAREN_ENTER>{
-[(]		{ switch_to_state (FULL_PARSE); return yytext[0]; }
-.		{ return yyerror ("illegal token found in $(..) or %(..)"); }
-}
-
-<SHOTGUN_CB>{
-"("		{ yy_push_state (EXPR_BASE); 
-	          yy_push_state (FULL_PARSE); /* will return the ')' */
- 	  	  return yytext[0]; }
+<ID_LIST>{
 {ID}		{ return std_ret (T_ID); }
-")"		{ yy_pop_state (); return yytext[0]; }
-[;,]		{ return yytext[0]; }
-.		{ return yyerror ("illegal token found in '@(..)'"); }
+[,]		{ return yytext[0]; }
+[)]		{ yy_pop_state (); return yytext[0]; }
 }
 
-<RESUME_BASE,RESUME>{
+<EXPR_LIST_BASE,EXPR_LIST>{
+[(]		{ yy_push_state (EXPR_LIST); return std_ret (T_PASSTHROUGH); }
+[^(),/\n]+|"/"	{ return std_ret (T_PASSTHROUGH); }
+}
+
+<EXPR_LIST>{
+[,]		{ return std_ret (T_PASSTHROUGH); }
+[)]		{ yy_pop_state (); return std_ret (T_PASSTHROUGH); }
+}
+
+<EXPR_LIST_BASE>{
+[)]		{ yy_pop_state (); return yytext[0]; }
+[,]		{ return yytext[0]; }
+}
+
+<EXPECT_CB_BASE,EXPECT_CB>{
 \n		{ ++lineno; return std_ret (T_PASSTHROUGH); }
 [^@{}\n/]+|"/"	{ return std_ret (T_PASSTHROUGH); }
-@		{ yy_push_state (RESUME_PARSE); return yytext[0]; }
-[{]		{ yy_push_state (RESUME); return std_ret (T_PASSTHROUGH); }
-}
-
-<SHOTGUN_BASE,SHOTGUN>{
-\n		{ ++lineno; return std_ret (T_PASSTHROUGH); }
-[^@{}\n/]+|"/"	{ return std_ret (T_PASSTHROUGH); }
-@		{ yy_push_state (SHOTGUN_CB_ENTER); return yytext[0]; }
-[{]		{ yy_push_state (SHOTGUN); return std_ret (T_PASSTHROUGH); }
+@		{ yy_push_state (CB_ENTER); return yytext[0]; }
+[{]		{ yy_push_state (EXPECT_CB); return std_ret (T_PASSTHROUGH); }
 }
 
 
-<SHOTGUN_BASE,RESUME_BASE>{
+<EXPECT_CB_BASE>{
 [}]		{ yy_pop_state (); return yytext[0]; }
 }
 
-<SHOTGUN,RESUME>{
+<EXPECT_CB>{
 [}]		{ yy_pop_state (); return std_ret (T_PASSTHROUGH); }
 }
 
-<EXPR_BASE>{
-\n		++lineno;
-[,;]		{ yy_pop_state (); return yytext[0]; }
-[)]		{ 
-	 	  /* 
-	           * XXX HACK; pop out of EXPR_BASE and also SHOTGUN_CB!!
-		   */
-	          yy_pop_state (); yy_pop_state (); return yytext[0]; 
-	        }
-}
-
-<EXPR,EXPR_BASE>{
-[(]		{ yylval.str = yytext; yy_push_state (EXPR); 
-                  return T_PASSTHROUGH; }
-[^()\n/$@%,;]+|[/]	{ return std_ret (T_PASSTHROUGH); }
-"%%"		{ return T_2PCT; }
-[$]		{ return yytext[0]; }
-[@]		{ yy_push_state (NUM_ONLY); return yytext[0]; }
-[%]		{ yy_push_state (ID_OR_NUM); return yytext[0]; }
-"$$"		{ yy_push_state (ID_OR_NUM); return T_2DOLLAR; }
-}
-
-<EXPR>{
-,		{ return std_ret (T_PASSTHROUGH); }
-")"		{ yy_pop_state (); return std_ret (T_PASSTHROUGH); }
-;		{ return yyerror ("stray ';' found in expression"); }
-}
-
-
-<UNWRAP_BASE,UNWRAP>{
+<TAME,TAME_BASE>{
 \n		{ yylval.str = yytext; ++lineno; return T_PASSTHROUGH; }
-[^VSCR{}\n/]+|[VSCR/] { yylval.str = yytext; return T_PASSTHROUGH; }
-[{]		{ yylval.str = yytext; yy_push_state (UNWRAP); 
+[^VBNJ{}\n/]+|[VBNJ/] { yylval.str = yytext; return T_PASSTHROUGH; }
+[{]		{ yylval.str = yytext; yy_push_state (TAME); 
 		  return T_PASSTHROUGH; }
 
 VARS		{ yy_push_state (VARS_ENTER); return T_VARS; }
-SHOTGUN|CRCC	{ yy_push_state (SHOTGUN_ENTER); return T_SHOTGUN; }
-CRCC\*|CALL	{ yy_push_state (EXPECT_RESUME);
-	          yy_push_state (SHOTGUN_ENTER); 
-	          return T_CRCC_STAR; }
+BLOCK		{ yy_push_state (BLOCK_ENTER); return T_BLOCK; }
+NONBLOCK	{ yy_push_state (NONBLOCK_ENTER); return T_NONBLOCK; }
+JOIN		{ yy_push_state (JOIN_ENTER); return T_JOIN; }
+
 }
 
-<EXPECT_RESUME>{
-RESUME		{ switch_to_state (RESUME_ENTER); return T_RESUME; }
-[^R\n/ ]+|[R/]  { yy_pop_state (); return std_ret (T_PASSTHROUGH); }
-}
-
-<UNWRAP>{
+<TAME>{
 [}]		{ yylval.str = yytext; yy_pop_state ();
 	    	  return T_PASSTHROUGH; }
 }
 
-<UNWRAP_BASE>{
+<TAME_BASE>{
 [}]		{ yy_pop_state (); return yytext[0]; }
 }
 
-[^UF\n]+|[UF]	{ yylval.str = yytext; return T_PASSTHROUGH ; }
+[^T\n]+|[T]	{ yylval.str = yytext; return T_PASSTHROUGH ; }
 \n		{ ++lineno; yylval.str = yytext; return T_PASSTHROUGH; }
 
-UNWRAP|FUNCTION { yy_push_state (FN_ENTER); return T_UNWRAP; }
-UNWRAP_SD	{ yy_push_state (FN_ENTER); return T_UNWRAP_SD; }
+TAME            	{ yy_push_state (FN_ENTER); return T_TAME; }
 
-
-<UNWRAP,UNWRAP_BASE>{
+<TAME,TAME_BASE>{
 "//"[^\n]*\n	{ ++lineno ; yylval.str = yytext; return T_PASSTHROUGH; }
 "//"[^\n]*	{ yylval.str = yytext; return T_PASSTHROUGH; }
 "/*"		{ yy_push_state (C_COMMENT); yylval.str = yytext;
@@ -275,7 +256,7 @@ UNWRAP_SD	{ yy_push_state (FN_ENTER); return T_UNWRAP_SD; }
 }
 
 
-<SHOTGUN_CB_ENTER,PAREN_ENTER,FULL_PARSE,SHOTGUN_CB,SHOTGUN,FN_ENTER,VARS_ENTER,EXPR,EXPR_BASE,HALF_PARSE,PP,PP_BASE,EXPECT_RESUME>{
+<CB_ENTER,FULL_PARSE,FN_ENTER,VARS_ENTER,HALF_PARSE,PP,PP_BASE,EXPR_LIST,EXPR_LIST_BASE,ID_LIST,BLOCK_ENTER,NONBLOCK_ENTER,JOIN_ENTER>{
 
 "//"[^\n]*\n	++lineno ;
 "//"[^\n]*	/* discard */ ;

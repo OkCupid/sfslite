@@ -52,12 +52,11 @@ static var_t resolve_variable (const str &s);
 %token T_2PCT
 
 /* Keywords for our new filter */
+%token T_TAME
 %token T_VARS
-%token T_SHOTGUN
-%token T_CRCC_STAR
-%token T_UNWRAP
-%token T_UNWRAP_SD
-%token T_RESUME
+%token T_BLOCK
+%token T_NONBLOCK
+%token T_JOIN
 
 %token T_2DOLLAR
 
@@ -68,28 +67,23 @@ static var_t resolve_variable (const str &s);
 %type <str> typedef_name type_qualifier_list_opt type_qualifier_list
 %type <str> type_qualifier type_specifier type_modifier_list
 %type <str> type_modifier declaration_specifiers passthrough 
-%type <str> expr_var_ref generic_expr cpp_initializer_opt
-%type <str> resume_opt resume resume_body resume_ref
+%type <str> cpp_initializer_opt
 
 %type <decl> init_declarator declarator direct_declarator 
 %type <decl> declarator_cpp direct_declarator_cpp
 
 
 %type <vars> parameter_type_list_opt parameter_type_list parameter_list
-%type <exprs> callback_param_list 
-%type <pl2> callback_2part_param_list callback_2part_param_list_opt
+%type <exprs> expr_list join_list id_list_opt id_list
 
 %type <opt>  const_opt
 %type <fn>   fn_declaration
 
 %type <var>  parameter_declaration
-%type <var>  callback_param casted_expr callback_class_var
-%type <typ>  cast
 
-%type <el>   fn_unwrap vars shotgun callback crcc_star
-%type <var>  expr callback_stack_var
+%type <el>   fn_tame vars block nonblock callback join
 
-%type <opts> fn_open
+%type <opts> static_opt
 
 %%
 
@@ -107,31 +101,26 @@ passthrough: /* empty */	    { $$ = lstr (get_yy_lineno ()); }
 	}
 	;
 
-fn_open: T_UNWRAP			{ $$ = 0; }
-	| T_UNWRAP_SD			{ $$ = STATIC_DECL; }
-	;
-
-fn:	fn_open '(' fn_declaration ')' 
+fn:	T_TAME '(' fn_declaration ')' '{'
 	{
-	   $3->set_opts ($1); 
-	   state.new_fn ($3);
+	  state.new_fn ($3);
+	  state.push_list ($3);
 	}
-	fn_body 
-	;
-
-fn_body: '{' fn_statements '}'
+	fn_statements '}'
 	{
-	  /* XXX: hack in function body close
-	   * better fix: store el_t's in the unwrap_fn_t object
- 	   */
 	  state.passthrough (lstr (get_yy_lineno (), "}"));
+	  state.pop_list ();
 	}
+	;
+
+static_opt: T_STATIC 	{ $$ = STATIC_DECL; }
+	| /* empty */	{ $$ = 0; }
 	;
 
 /* declaration_specifiers is no longer optional ?! */
-fn_declaration: declaration_specifiers declarator const_opt
+fn_declaration: static_opt declaration_specifiers declarator const_opt
 	{
-	   $$ = New unwrap_fn_t ($1, $2, $3, get_yy_lineno ());
+	   $$ = New unwrap_fn_t ($1, $2, $3, $4, get_yy_lineno ());
 	}
 	;
 
@@ -143,16 +132,17 @@ fn_statements: passthrough
 	{
 	  state.passthrough ($1);
 	}
-	| fn_statements fn_unwrap passthrough
+	| fn_statements fn_tame passthrough
 	{
 	  state.push ($2);
 	  state.passthrough ($3);
 	}
 	;
 
-fn_unwrap: vars
-	| shotgun
-	| crcc_star
+fn_tame: vars
+	| block
+	| nonblock
+	| join
 	;
 
 vars:	T_VARS '{' declaration_list_opt '}'
@@ -161,207 +151,138 @@ vars:	T_VARS '{' declaration_list_opt '}'
 	}
 	;
 
-shotgun: T_SHOTGUN '{' 
+block: T_BLOCK '{' 
 	{
 	  unwrap_fn_t *fn = state.function ();
- 	  unwrap_shotgun_t *gun = New unwrap_shotgun_t (fn);
-	  state.new_shotgun (gun);
-	  fn->add_shotgun (gun);
+ 	  unwrap_block_t *bl = New unwrap_block_t (fn);
+	  state.new_block (bl);
+	  fn->add_env (bl);
+	  state.push_list (bl);
 	}
 	callbacks_and_passthrough '}'
 	{
-	  $$ = state.shotgun ();
+ 	  state.pop_list ();
+	  $$ = state.block ();
+	  state.clear_block ();
 	}
 	;
 
-resume_opt: /* empty */ { $$ = lstr (get_yy_lineno (), NULL); }
-	| resume
+id_list_opt: /* empty */  { $$ = NULL; }
+	| id_list
 	;
 
-resume: T_RESUME '{' resume_body '}'
+id_list:  ',' identifier
 	{
-	  $$ = $3;
+	  $$ = New refcounted<expr_list_t> ();
+	  $$->push_back (var_t ()); // reserve 1 empty spot!
+	  $$->push_back (var_t ($2, STACK));
+	}
+	| id_list ',' identifier
+	{
+	  $1->push_back (var_t ($3, STACK));
+	  $$ = $1;
 	}
 	;
 
-resume_body: passthrough
-	| resume_body '@' resume_ref passthrough
+join_list: passthrough id_list_opt
 	{
-	  CONCAT($1.lineno (), $1 << $3 << $4, $$);
+	  if ($2) {
+	    (*$2)[0] = var_t ($1, EXPR);
+	    $$ = $2;
+	  } else {
+	    $$ = New refcounted<expr_list_t> ();
+	    $$->push_back (var_t ($1, EXPR));
+	  }
 	}
 	;
 
-resume_ref: T_NUM
+expr_list: passthrough	
 	{
- 	  unwrap_crcc_star_t *cs = state.crcc_star ();
-	  int i;
-	  assert (convertint ($1, &i)); 
-	  cs->check_backref (i);
- 	  cs->add_backref (i);
-	  $$ = lstr (get_yy_lineno (), cs->make_backref (i));
+	  $$ = New refcounted<expr_list_t> ();
+	  $$->push_back (var_t ($1, EXPR));
 	}
-	| '#'
+	|
+	expr_list ',' passthrough
 	{
- 	  $$ = lstr (get_yy_lineno (), state.crcc_star ()->make_cb_ind_ref ());
+	  $1->push_back (var_t ($3, EXPR));
+	  $$ = $1;
 	}
 	;
 
-crcc_star: T_CRCC_STAR '{'
+nonblock: T_NONBLOCK '(' expr_list ')' '{'
 	{
 	  unwrap_fn_t *fn = state.function ();
- 	  unwrap_crcc_star_t *c = New unwrap_crcc_star_t (fn);
-	  state.new_shotgun (c);
-	  state.new_crcc_star (c);
-	  fn->add_shotgun (c);
-	  fn->hit_crcc_star ();
+ 	  unwrap_nonblock_t *c = New unwrap_nonblock_t ($3);
+	  state.new_nonblock (c);
+	  fn->add_env (c);
+	  state.push_list (c);
+	  state.passthrough (lstr (get_yy_lineno (), "{"));
 	} 
-	callbacks_and_passthrough '}' resume_opt
+	callbacks_and_passthrough '}'
 	{
-	  state.crcc_star ()->add_resume ($6);
-	  $$ = state.shotgun ();
+	  state.passthrough (lstr (get_yy_lineno (), "}"));
+	  state.pop_list ();
+	  $$ = state.nonblock ();
+	}
+	;
+
+join: T_JOIN '(' join_list ')' '{' 
+	{
+	  unwrap_fn_t *fn = state.function ();
+	  unwrap_join_t *jn = New unwrap_join_t (fn, $3);
+	  state.new_join (jn);
+	  fn->add_env (jn);
+	  state.passthrough (lstr (get_yy_lineno (), "{"));
+	  state.push_list (jn);
+	}
+	fn_statements '}'
+	{
+	  state.pop_list ();
+	  state.passthrough (lstr (get_yy_lineno (), "}"));
+	  $$ = state.join ();
 	}
 	;
 
 callbacks_and_passthrough: passthrough		
 	{ 
-	  state.shotgun ()->passthrough ($1); 
+	  state.passthrough ($1); 
 	}
 	| callbacks_and_passthrough callback passthrough
 	{
-	  parse_state_t *sg = state.shotgun ();
-	  sg->push ($2);
-	  sg->passthrough ($3);
+	  state.push ($2);
+	  state.passthrough ($3);
 	}
 	;
 
-callback_2part_param_list_opt:  /* empty */	
-	{ 
-	  $$ = New refcounted<expr_list2_t> ();
-	}
-	| callback_2part_param_list  		{ $$ = $1; }
-	;
-
-callback_2part_param_list: callback_param_list
+callback: '@' '(' expr_list ')'
 	{
-	  $$ = New refcounted<expr_list2_t> ($1);
-	}
-	| callback_param_list ';' 
-	{
-	  if (state.get_sym_bit ()) {
-	     yyerror ("Unexepected $,@ or % expression in wrap arguments");
+  	  unwrap_fn_t *fn = state.function ();
+	  if (state.block ()) {
+ 	    // Callbacks are labeled serially within a function; the 
+	    // constructor sets this ID.
+	    $$ = New unwrap_block_callback_t (fn, state.block (), $3);
+	  } else {
+	    assert ( state.nonblock ());
+	    unwrap_nonblock_callback_t *cb = 
+              New unwrap_nonblock_callback_t (state.nonblock (), $3);
+	    fn->add_nonblock_callback (cb);
+	    $$ = cb;
 	  }
-	}
-	callback_param_list
-	{
-	  $$ = New refcounted<expr_list2_t> ($1, $4);
-	  state.check_backrefs ($4->size ());
-	}
-	;
-
-callback: '@' '(' 
-	{
-	   state.clear_backref_list ();
-	   state.clear_sym_bit ();
-	}
-	callback_2part_param_list_opt ')'
-	{
- 	  unwrap_fn_t *fn = state.function ();
-	  unwrap_shotgun_t *g = state.shotgun ();
-	  unwrap_callback_t *c = 
-   	   New unwrap_callback_t ($4->call_with (), fn, g, $4->wrap_in ());
-	  fn->add_callback (c);
-	  $$ = c;
-	}
-	;
-
-callback_param_list: callback_param
-	{
-	  $$ = New refcounted<expr_list_t> ();
-	  $$->push_back ($1);
-	}
-	| callback_param_list ',' callback_param
-	{
-	  $1->push_back ($3);
-	  $$ = $1;
 	}
 	;
 
 identifier: T_ID
 	;
 
-callback_param: identifier             
-	{   
-           var_t e = resolve_variable ($1);
-	   $$ = e;
-	}
-	| casted_expr 
-	;
-
-casted_expr: cast expr
-	{
-	   $2.set_type ($1);
-	   $$ = $2;
-
-	   if ($$.get_asc () == STACK) {
-	      if (state.args ()->exists ($$.name ())) {
-	    	strbuf b;
-	    	b << "stack variable '" << $$.name () 
-                  << "' shadows a parameter";
-	        yyerror (b);
-	      }
-	      if (!state.stack_vars ()->add ($$)) {
-	    	strbuf b;
-	    	b << "redefinition of stack variable: " << $$.name () ;
-	    	yyerror (b);
-	      }
-	   } else if ($$.get_asc () == CLASS) {
-	      state.class_vars_tmp ()->add ($$);
-	      state.shotgun ()->add_class_var ($$);
-	   }
-	}
-	;
-
-expr: callback_class_var
-	| generic_expr			{ $$ = var_t ($1, EXPR); }
-	| callback_stack_var
-	;
-
-generic_expr:	passthrough	
-	| generic_expr expr_var_ref passthrough
-	{
-	   state.set_sym_bit ();
-	   CONCAT($1.lineno (), $1 << $2 << $3, $$);
-	}
-	;
-
-expr_var_ref: T_2PCT		{ $$ = lstr (get_yy_lineno (), "_self"); }
-	| '$' 			{ $$ = lstr (get_yy_lineno (), "_stack."); }
-	| '@' T_NUM		
-	{
-	  u_int i;
-	  assert (convertint ($2, &i));
-	  state.add_backref (i, get_yy_lineno ());
-	  $$ = lstr (get_yy_lineno (), strbuf ("_a%d", i));
-	}
-	;
-
+/*
+ * No longer need casts..
+ *
 cast: '(' declaration_specifiers pointer_opt ')'
 	{
 	  $$ = type_t ($2, $3);
 	}
 	;
-
-callback_stack_var: T_2DOLLAR identifier
-	{
-	  $$ = var_t ($2, STACK);
-	}
-	;
-
-callback_class_var: '%' identifier
-	{ 
-	   $$ = var_t ($2, CLASS);
-	}
-	;
+ */
 
 declaration_list_opt: /* empty */
 	| declaration_list

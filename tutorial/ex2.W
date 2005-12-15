@@ -6,7 +6,7 @@
 #include "arpc.h"
 #include "ex_prot.h"
 
-UNWRAP_SD (void try_rpc (str h, int port, cbb cb))
+TAME (static void try_rpc (str h, int port, cbb cb))
 {
   VARS {
     bool ret (false);
@@ -26,7 +26,7 @@ UNWRAP_SD (void try_rpc (str h, int port, cbb cb))
     cli = aclnt::alloc (x, ex_prog_1);
     a2 = "go hang a salami i'm a lasagna hog";
     
-    CRCC {
+    BLOCK {
       cli->call (EX_RANDOM, NULL, &r1, @(e1));
       cli->call (EX_REVERSE, &a2, &r2, @(e2));
       cli->call (EX_STRUCT, NULL, &r3, @(e3));
