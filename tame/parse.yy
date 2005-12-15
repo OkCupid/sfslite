@@ -26,7 +26,6 @@
 #include "tame.h"
 #include "parseopt.h"
 #define YYSTYPE YYSTYPE
-static var_t resolve_variable (const str &s);
 %}
 
 %token <str> T_ID
@@ -529,15 +528,3 @@ pointer: '*'			{ $$ = "*"; }
 
 %%
 
-var_t
-resolve_variable (const str &s)
-{
-   const var_t *e;
-   if (!(e = state.stack_vars ()->lookup (s)) && 
-       !(e = state.args ()->lookup (s))) {
-      strbuf b;
-      b << "unbound variable in wrap: " << s;
-      yyerror (b);
-   }
-   return *e;
-}
