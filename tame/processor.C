@@ -677,7 +677,7 @@ tame_fn_t::output_generic (int fd)
 void
 tame_fn_t::jump_out (strbuf &b, int id)
 {
-  for (u_int i = 0; i < args ()->size (); i++) {
+  for (u_int i = 0; args () && i < args ()->size (); i++) {
     b << "    " <<  CLOSURE << "->_args." << args ()->_vars[i].name ()
       << " = " << args ()->_vars[i].name () << ";\n";
   }

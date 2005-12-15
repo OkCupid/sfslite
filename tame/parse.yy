@@ -352,7 +352,8 @@ init_declarator: declarator_cpp cpp_initializer_opt
 	  vartab_t *t = state.stack_vars ();
 
 	  var_t v (state.decl_specifier (), $1, STACK);
-	  if (state.args ()->exists (v.name ())) {
+	  if (state.args () &&
+              state.args ()->exists (v.name ())) {
 	    strbuf b;
 	    b << "stack variable '" << v.name () << "' shadows a parameter";
 	    yyerror (b);
