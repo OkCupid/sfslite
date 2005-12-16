@@ -68,6 +68,12 @@ extern int get_yy_lineno ();
 
 typedef enum { NONE = 0, ARG = 1, STACK = 2, CLASS = 3, EXPR = 4 } vartyp_t ;
 
+class my_strbuf_t : public strbuf {
+public:
+  strbuf & mycat (const str &s) { cat (s.cstr (), true); return (*this); }
+};
+
+
 class lstr : public str {
 public:
   lstr () : str (), _lineno (0) {}
@@ -169,6 +175,7 @@ public:
 
   str decl () const;
   str decl (const str &prfx, int n) const;
+  str decl (const str &prfx) const;
   str ref_decl () const;
   str _name;
 
@@ -184,6 +191,8 @@ public:
 		    const str &sffx = NULL);
 };
 
+typedef enum { DECLARATIONS, NAMES, TYPES } list_mode_t;
+
 class vartab_t {
 public:
   ~vartab_t () {}
@@ -192,7 +201,7 @@ public:
   u_int size () const { return _vars.size (); }
   bool add (var_t v) ;
   void declarations (strbuf &b, const str &padding) const;
-  void paramlist (strbuf &b, bool types = true) const;
+  void paramlist (strbuf &b, list_mode_t m, str prfx = NULL) const;
   void initialize (strbuf &b, bool self) const;
   bool exists (const str &n) const { return _tab[n]; }
   const var_t *lookup (const str &n) const;
@@ -315,7 +324,7 @@ public:
 
   str classname () const { return _class; }
   str name () const { return _name; }
-  str signature (bool decl) const;
+  str signature (bool decl, str prfx = NULL) const;
 
   void set_opts (int i) { _opts = i; }
   int opts () const { return _opts; }
@@ -372,8 +381,10 @@ private:
   void output_fn (int fd);
   void output_static_decl (int fd);
   void output_stack_vars (strbuf &b);
+  void output_arg_references (strbuf &b);
   void output_jump_tab (strbuf &b);
   void output_generic (int fd);
+  void output_set_method_pointer (my_strbuf_t &b);
   
   int _opts;
   u_int _lineno;
@@ -516,12 +527,6 @@ struct YYSTYPE {
 };
 extern YYSTYPE yylval;
 extern str filename;
-
-class my_strbuf_t : public strbuf {
-public:
-  strbuf & mycat (const str &s) { cat (s.cstr (), true); return (*this); }
-};
-
 
 #define CONCAT(ln,in,out)                                 \
 do {                                                      \

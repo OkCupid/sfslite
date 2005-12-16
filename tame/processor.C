@@ -45,6 +45,7 @@ void element_list_t::output (int fd) { _lst.traverse (wrap (output_el, fd)); }
 #define CLOSURE               "__cls"
 #define CLOSURE_RFCNT         "__cls_r"
 #define CLOSURE_GENERIC       "__cls_g"
+#define TAME_PREFIX           "__tame_"
 
 str
 type_t::mk_ptr () const
@@ -94,6 +95,17 @@ var_t::decl (const str &p, int n) const
 {
   strbuf b;
   b << _type.to_str () << p << n;
+  return b;
+}
+
+str
+var_t::decl (const str &p) const
+{
+  strbuf b;
+  b << _type.to_str ();
+  if (p)
+    b << p;
+  b << _name;
   return b;
 }
 
@@ -284,14 +296,27 @@ vartab_t::initialize (strbuf &b, bool self) const
 }
 
 void
-vartab_t::paramlist (strbuf &b, bool types) const
+vartab_t::paramlist (strbuf &b, list_mode_t list_mode, str prfx) const
 {
   for (u_int i = 0; i < size () ; i++) {
     if (i != 0) b << ", ";
-    if (types) {
-      b << _vars[i].decl ();
-    } else {
+    switch (list_mode) {
+    case DECLARATIONS:
+      b << _vars[i].decl (prfx);
+      break;
+    case NAMES:
+      if (prfx)
+	b << prfx;
       b << _vars[i].name ();
+      break;
+    case TYPES:
+      {
+	b.cat (_vars[i].type ().to_str ().cstr (), true);
+	break;
+      }
+    default:
+      assert (false);
+      break;
     }
   }
 }
@@ -430,10 +455,17 @@ tame_fn_t::output_reenter (strbuf &b)
     ;
 
   b << "    ";
-  if (_class)
-    b <<  "_self->";
+  if (_class) {
+    b << "(";
+    if (!(_opts & STATIC_DECL)) {
+      b << "(*_self).";
+    }
+    b << "*_method) ";
+  } else {
+    b << "_name ";
+  }
 
-  b << _method_name << " (";
+  b << " (";
 
   for (u_int i = 0; _args && i < _args->_vars.size (); i++) {
     b << "_args." << _args->_vars[i].name ();
@@ -441,6 +473,25 @@ tame_fn_t::output_reenter (strbuf &b)
   }
   b << "mkref (this));\n"
     << "  }\n\n";
+}
+
+void
+tame_fn_t::output_set_method_pointer (my_strbuf_t &b)
+{
+  b << "  typedef " ;
+  b.mycat (_ret_type.to_str ()) << " (";
+  if (!(_opts & STATIC_DECL)) {
+    b << _class << "::";
+  }
+  b << "*method_type_t) (";
+  if (_args) {
+    _args->paramlist (b, TYPES);
+    b << ", ";
+  }
+  b << "ptr<closure_t>);\n";
+
+  b << "  void set_method_pointer (method_type_t m) { _method = m; }\n\n";
+    
 }
 
 void
@@ -462,7 +513,7 @@ tame_fn_t::output_closure (int fd)
   }
 
   if (_args) {
-    _args->paramlist (b);
+    _args->paramlist (b, DECLARATIONS);
   }
 
   b << ") : ";
@@ -474,17 +525,21 @@ tame_fn_t::output_closure (int fd)
 
   b << " _stack ("
     ;
-  if (_args) _args->paramlist (b, false);
+  if (_args) _args->paramlist (b, NAMES);
   b << "), _args ("
     ;
 
-  if (_args) _args->paramlist (b, false);
+  if (_args) _args->paramlist (b, NAMES);
   b << ")";
 
   for ( u_int i = 1; i <= _cbs.size (); i++) {
     b << ", _block" << i << " (0)";
   }
   b << " {}\n\n";
+
+  if (_class) {
+    output_set_method_pointer (b);
+  }
 
   for (u_int i = 0; i < _cbs.size (); i++) {
     _cbs[i]->output_in_class (b);
@@ -496,7 +551,7 @@ tame_fn_t::output_closure (int fd)
   // output the stack structure
   b << "  struct stack_t {\n"
     << "    stack_t (";
-  if (_args) _args->paramlist (b, true);
+  if (_args) _args->paramlist (b, DECLARATIONS);
   b << ")" ;
 
   // output stack declaration
@@ -519,7 +574,7 @@ tame_fn_t::output_closure (int fd)
     << "  struct args_t {\n"
     << "    args_t (" ;
   if (_args && _args->size ()) 
-    _args->paramlist (b, true);
+    _args->paramlist (b, DECLARATIONS);
   b << ")";
   if (_args && _args->size ()) {
     b << " : ";
@@ -530,10 +585,13 @@ tame_fn_t::output_closure (int fd)
   b << "  };\n";
 
   if (_class) {
+    b << "  ";
     b.mycat (_self.decl ()) << ";\n";
   }
   b << "  stack_t _stack;\n"
     << "  args_t _args;\n" ;
+  if (_class)
+    b << "  method_type_t _method;\n";
 
   for (u_int i = 1; i <= _cbs.size (); i++) {
     b << "  int _block" << i << ";\n";
@@ -552,6 +610,16 @@ tame_fn_t::output_stack_vars (strbuf &b)
     b << "  " << v.ref_decl () << " = " 
       << closure_nm () << "->_stack." << v.name () << ";\n" ;
   } 
+}
+
+void
+tame_fn_t::output_arg_references (strbuf &b)
+{
+  for (u_int i = 0; _args && i < _args->size (); i++) {
+    const var_t &v = _args->_vars[i];
+    b << "  " << v.ref_decl () << " = "
+      << closure_nm () << "->_args." << v.name () << ";\n";
+  }
 }
 
 void
@@ -574,13 +642,13 @@ tame_fn_t::output_jump_tab (strbuf &b)
 }
 
 str
-tame_fn_t::signature (bool d) const
+tame_fn_t::signature (bool d, str prfx) const
 {
   strbuf b;
   b << _ret_type.to_str () << "\n"
     << _name << "(";
   if (_args) {
-    _args->paramlist (b);
+    _args->paramlist (b, DECLARATIONS, prfx);
     b << ", ";
   }
   b << closure_generic ().decl ();
@@ -608,7 +676,7 @@ tame_fn_t::output_fn (int fd)
   state.need_line_xlate ();
   state.output_line_xlate (fd, _lineno);
 
-  b << signature (false)  << "\n"
+  b << signature (false, TAME_PREFIX)  << "\n"
     << "{\n"
     << "  " << _closure.decl () << ";\n"
     << "  "
@@ -617,8 +685,6 @@ tame_fn_t::output_fn (int fd)
   b << " " << CLOSURE_RFCNT << ";\n"
     << "  if (!" << closure_generic ().name() << ") {\n"
     ;
-
-  strbuf dat;
 
   b << "    " << CLOSURE_RFCNT << " = New refcounted<"
     << _closure.type().base_type () << "> (";
@@ -630,11 +696,18 @@ tame_fn_t::output_fn (int fd)
   }
 
   if (_args)
-    _args->paramlist (b, false);
+    _args->paramlist (b, NAMES, TAME_PREFIX);
+
   b << ");\n"
     << "    " << CLOSURE << " = " << CLOSURE_RFCNT << ";\n"
-    << "    " << CLOSURE_GENERIC << " = " << CLOSURE_RFCNT << ";\n"
-    << "  } else {\n"
+    << "    " << CLOSURE_GENERIC << " = " << CLOSURE_RFCNT << ";\n";
+
+  if (_class) {
+    b << "    " << CLOSURE << "->set_method_pointer (&" << _name << ");\n";
+  }
+
+
+  b << "  } else {\n"
     << "    " << _closure.name () << " = " << decl_casted_closure (false)
     << "\n"
     << "    " << CLOSURE_RFCNT << " = mkref (" << CLOSURE << ");\n"
@@ -642,6 +715,8 @@ tame_fn_t::output_fn (int fd)
     ;
 
   output_stack_vars (b);
+  b << "\n";
+  output_arg_references (b);
   b << "\n";
 
   output_jump_tab (b);
@@ -677,11 +752,6 @@ tame_fn_t::output_generic (int fd)
 void
 tame_fn_t::jump_out (strbuf &b, int id)
 {
-  for (u_int i = 0; args () && i < args ()->size (); i++) {
-    b << "    " <<  CLOSURE << "->_args." << args ()->_vars[i].name ()
-      << " = " << args ()->_vars[i].name () << ";\n";
-  }
-
   b << "    " << CLOSURE << "->set_jumpto (" << id 
     << ");\n"
     << "\n";
@@ -715,6 +785,7 @@ tame_block_t::output (int fd)
     << "      return;\n"
     << "  }\n"
     << " " << _fn->label (_id) << ":\n"
+    << "    ;\n"
     ;
 
   state.need_line_xlate ();

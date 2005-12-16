@@ -65,7 +65,7 @@
 %type <str> template_instantiation_list_opt identifier
 %type <str> typedef_name type_qualifier_list_opt type_qualifier_list
 %type <str> type_qualifier type_specifier type_modifier_list
-%type <str> type_modifier declaration_specifiers passthrough 
+%type <str> type_modifier declaration_specifiers passthrough expr
 %type <str> cpp_initializer_opt
 
 %type <decl> init_declarator declarator direct_declarator 
@@ -93,6 +93,15 @@ file:  passthrough 			{ state.passthrough ($1); }
 
 passthrough: /* empty */	    { $$ = lstr (get_yy_lineno ()); }
 	| passthrough T_PASSTHROUGH 
+	{
+	   strbuf b ($1);
+	   b << $2;
+	   $$ = lstr ($1.lineno (), b);
+	}
+	;
+
+expr:	T_PASSTHROUGH		   { $$ = lstr (get_yy_lineno (), $1); }
+	| expr T_PASSTHROUGH
 	{
 	   strbuf b ($1);
 	   b << $2;
@@ -195,17 +204,17 @@ join_list: passthrough id_list_opt
 	}
 	;
 
-expr_list_opt:	/* empty */	{ $$ = New refcounted<expr_list> (); }
+expr_list_opt:	/* empty */	{ $$ = New refcounted<expr_list_t> (); }
 	| expr_list
 	;
 
-expr_list: passthrough	
+expr_list: expr
 	{
 	  $$ = New refcounted<expr_list_t> ();
 	  $$->push_back (var_t ($1, EXPR));
 	}
 	|
-	expr_list ',' passthrough
+	expr_list ',' expr
 	{
 	  $1->push_back (var_t ($3, EXPR));
 	  $$ = $1;

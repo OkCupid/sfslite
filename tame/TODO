@@ -1,6 +1,6 @@
 
 - non-void functions (add RETURN { ... } feature)
  -- autogenerate default return values from retvalue's type
-- static members handled properly
 - better indentation
 - RETURN made to look more like return; 
+- better handle of args (see ex4m.C)

@@ -18,6 +18,8 @@ __nonblock_cb_1_1 (ptr<closure_t> hold, J *jg,
 }
 
 
+
+
 static  void 
 dostuff( str h,  int port,  cbb cb, ptr<closure_t> __cls_g = NULL);
 
@@ -65,15 +67,16 @@ public:
   args_t _args;
 
   int _block1;
+
 };
 
 void 
-dostuff( str h,  int port,  cbb cb, ptr<closure_t> __cls_g)
+dostuff( str __tame_h,  int __tame_port,  cbb __tame_cb, ptr<closure_t> __cls_g)
 {
   ptr<dostuff__closure_t> __cls_r;
   dostuff__closure_t *__cls; // speed up to not use smart pointer ?
   if (!__cls_g) {
-    __cls_r = New refcounted<dostuff__closure_t > (h, port, cb);
+    __cls_r = New refcounted<dostuff__closure_t > (__tame_h, __tame_port, __tame_cb);
     __cls = __cls_r;
   } else {
     __cls = reinterpret_cast<dostuff__closure_t *> 
@@ -93,6 +96,10 @@ dostuff( str h,  int port,  cbb cb, ptr<closure_t> __cls_g)
   int &cid = __cls->_stack.cid;
   bool &err = __cls->_stack.err;
   join_group_t<int> &RPC = __cls->_stack.RPC;
+
+  str &h = __cls->_args.h;
+  int &port = __cls->_args.port;
+  cbb &cb = __cls->_args.cb;
   
   switch (__cls->jumpto ()) {
   case 1:
@@ -106,9 +113,6 @@ dostuff( str h,  int port,  cbb cb, ptr<closure_t> __cls_g)
   }
   
   {
-    __cls->_args.h = h;
-    __cls->_args.port = port;
-    __cls->_args.cb = cb;
     __cls->set_jumpto (1);
 
     // in the case that all calls finish immediately, we still want to 

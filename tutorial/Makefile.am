@@ -3,11 +3,12 @@
 
 LDADD =  $(LIBARPC) $(LIBASYNC)  
 
-noinst_PROGRAMS = ex4 ex1 ex2 exsrv ex3 ex4m null
+noinst_PROGRAMS = ex4 ex1 ex2 exsrv ex3 ex4m null ex5
 ex1_SOURCES = ex1.C 
 ex2_SOURCES = ex2.C ex_prot.C
 ex3_SOURCES = ex3.C ex_prot.C
 ex4_SOURCES = ex4.C ex_prot.C
+ex5_SOURCES = ex5.C ex_prot.C
 null_SOURCES = null.C
 exsrv_SOURCES = exsrv.C ex_prot.C
 ex4m_SOURCES = ex4m.C ex_prot.C
@@ -35,8 +36,9 @@ ex3.C: $(srcdir)/ex3.T
 ex1.C: $(srcdir)/ex1.T
 ex2.C: $(srcdir)/ex2.T
 ex4.C: $(srcdir)/ex4.T
+ex5.C: $(srcdir)/ex5.T
 null.C: $(srcdir)/null.T
 
 .PHONY: bldclean
 bldclean:
-	rm -f ex1.C ex2.C ex3.C ex4.C ex_prot.C ex_prot.h
+	rm -f ex1.C ex2.C ex3.C ex4.C ex_prot.C ex_prot.h ex5.C
