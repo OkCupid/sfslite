@@ -73,7 +73,7 @@
 
 
 %type <vars> parameter_type_list_opt parameter_type_list parameter_list
-%type <exprs> expr_list join_list id_list_opt id_list
+%type <exprs> expr_list join_list id_list_opt id_list expr_list_opt
 
 %type <opt>  const_opt
 %type <fn>   fn_declaration
@@ -195,6 +195,10 @@ join_list: passthrough id_list_opt
 	}
 	;
 
+expr_list_opt:	/* empty */	{ $$ = New refcounted<expr_list> (); }
+	| expr_list
+	;
+
 expr_list: passthrough	
 	{
 	  $$ = New refcounted<expr_list_t> ();
@@ -253,7 +257,7 @@ callbacks_and_passthrough: passthrough
 	}
 	;
 
-callback: '@' '(' expr_list ')'
+callback: '@' '(' expr_list_opt ')'
 	{
   	  tame_fn_t *fn = state.function ();
 	  if (state.block ()) {
