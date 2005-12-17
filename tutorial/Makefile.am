@@ -41,6 +41,8 @@ null.C: $(srcdir)/null.T
 
 .PHONY: bldclean
 bldclean:
-	rm -f ex1.C ex2.C ex3.C ex4.C ex_prot.C ex_prot.h ex5.C
+	rm -f $(CLEANFILES)
 
-EXTRA_DIST: ex1.T ex2.T ex3.T ex4.T ex5.T ex_prot.x
+EXTRA_DIST = ex1.T ex2.T ex3.T ex4.T ex5.T ex_prot.x null.T
+
+CLEANFILES = core *.core ex1.C ex2.C ex3.C ex4.C ex5.C ex_prot.C ex_prot.h
