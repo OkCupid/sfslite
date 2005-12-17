@@ -462,7 +462,7 @@ tame_fn_t::output_reenter (strbuf &b)
     }
     b << "*_method) ";
   } else {
-    b << "_name ";
+    b << _name ;
   }
 
   b << " (";
