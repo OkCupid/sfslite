@@ -3,4 +3,4 @@
  -- autogenerate default return values from retvalue's type
 - better indentation
 - RETURN made to look more like return; 
-- better handle of args (see ex4m.C)
+- template support
