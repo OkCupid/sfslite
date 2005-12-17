@@ -35,7 +35,12 @@ str filename = "(stdin)";
 int lineno = 1;
 static void switch_to_state (int i);
 static int std_ret (int i);
+static int tame_ret (int s, int t);
 int get_yy_lineno () { return lineno ;}
+int tame_on = 1;
+int gobble_flag =0;
+
+#define GOBBLE_RET if (!gobble_flag) return std_ret (T_PASSTHROUGH)
 %}
 
 %option stack
@@ -47,10 +52,11 @@ DNUM 	[+-]?[0-9]+
 XNUM 	[+-]?0x[0-9a-fA-F]
 
 %x FULL_PARSE FN_ENTER VARS_ENTER BLOCK_ENTER CB_ENTER EXPECT_CB
-%x TAME_BASE C_COMMENT C_COMMENT_GOBBLE TAME
+%x TAME_BASE C_COMMENT CXX_COMMENT TAME
 %x ID_OR_NUM NUM_ONLY EXPECT_CB_BASE HALF_PARSE PP PP_BASE
 %x NONBLOCK_ENTER JOIN_ENTER JOIN_LIST JOIN_LIST_BASE
-%x EXPR_LIST EXPR_LIST_BASE ID_LIST GO_WILD
+%x EXPR_LIST EXPR_LIST_BASE ID_LIST 
+%x GO_WILD GO_WILD_C GO_WILD_CXX
 
 %%
 
@@ -216,14 +222,14 @@ static		return T_STATIC;
 
 <TAME,TAME_BASE>{
 \n		{ yylval.str = yytext; ++lineno; return T_PASSTHROUGH; }
-[^VBNJ{}\n/]+|[VBNJ/] { yylval.str = yytext; return T_PASSTHROUGH; }
+[^VBNJT{}\n/]+|[VBNJT/] { yylval.str = yytext; return T_PASSTHROUGH; }
 [{]		{ yylval.str = yytext; yy_push_state (TAME); 
 		  return T_PASSTHROUGH; }
 
-VARS		{ yy_push_state (VARS_ENTER); return T_VARS; }
-BLOCK		{ yy_push_state (BLOCK_ENTER); return T_BLOCK; }
-NONBLOCK	{ yy_push_state (NONBLOCK_ENTER); return T_NONBLOCK; }
-JOIN		{ yy_push_state (JOIN_ENTER); return T_JOIN; }
+VARS		{ return tame_ret (VARS_ENTER, T_VARS); }
+BLOCK		{ return tame_ret (BLOCK_ENTER, T_BLOCK); }
+NONBLOCK	{ return tame_ret (NONBLOCK_ENTER, T_NONBLOCK); }
+JOIN		{ return tame_ret (JOIN_ENTER, T_JOIN); }
 
 }
 
@@ -236,45 +242,46 @@ JOIN		{ yy_push_state (JOIN_ENTER); return T_JOIN; }
 [}]		{ yy_pop_state (); return yytext[0]; }
 }
 
-[^T\n]+|[T]	{ yylval.str = yytext; return T_PASSTHROUGH ; }
+
+<TAME,TAME_BASE,INITIAL>{
+"//"		{ yy_push_state (CXX_COMMENT); gobble_flag = 0;
+	          return std_ret (T_PASSTHROUGH); }
+"/*"		{ yy_push_state (C_COMMENT); gobble_flag = 0;
+	          return std_ret (T_PASSTHROUGH); }
+}
+
+<INITIAL>{
+TAME           	{ return tame_ret (FN_ENTER, T_TAME); }
+[^T\n/]+|[T/]	{ yylval.str = yytext; return T_PASSTHROUGH ; }
 \n		{ ++lineno; yylval.str = yytext; return T_PASSTHROUGH; }
-
-TAME           	{ yy_push_state (FN_ENTER); return T_TAME; }
-
-<GO_WILD>{
-\n		{ ++lineno; return std_ret (T_PASSTHROUGH); }
-TAME_ON		{ yy_pop_state (); return std_ret (T_PASSTHROUGH); }
-[^T\n]+|[T]	{ return std_ret (T_PASSTHROUGH); }
 }
 
-<TAME,TAME_BASE>{
-"//"[^\n]*\n	{ ++lineno ; yylval.str = yytext; return T_PASSTHROUGH; }
-"//"[^\n]*	{ yylval.str = yytext; return T_PASSTHROUGH; }
-"/*"		{ yy_push_state (C_COMMENT); yylval.str = yytext;
-	          return T_PASSTHROUGH; }
+<CXX_COMMENT>{
+\n		{ ++lineno; yy_pop_state (); GOBBLE_RET; }
+"//"		{ yy_push_state (CXX_COMMENT); gobble_flag = 0;
+	          return std_ret (T_PASSTHROUGH); }
+"/*"		{ yy_push_state (C_COMMENT); gobble_flag = 0;
+	          return std_ret (T_PASSTHROUGH); }
+[^T\n]+|[T]	{ GOBBLE_RET; }
+TAME_OFF	{ tame_on = 0; GOBBLE_RET; }
+TAME_ON		{ tame_on = 1; GOBBLE_RET; }
 }
+
 
 <C_COMMENT>{
-TAME_OFF	{ yy_push_state (GO_WILD); return std_ret (T_PASSTHROUGH); }
-"*/"		{ yy_pop_state (); return std_ret (T_PASSTHROUGH); }
-[^*\nT]+|[*T]	{ return std_ret (T_PASSTHROUGH); }
-\n		{ ++lineno; yylval.str = yytext; return T_PASSTHROUGH; }
+TAME_OFF	{ tame_on = 0; GOBBLE_RET; }
+TAME_ON		{ tame_on = 1; GOBBLE_RET; }
+"*/"		{ yy_pop_state (); GOBBLE_RET; }
+[^*\nT]+|[*T]	{ GOBBLE_RET; }
+\n		{ ++lineno; yylval.str = yytext; GOBBLE_RET; }
 }
 
 
 <CB_ENTER,FULL_PARSE,FN_ENTER,VARS_ENTER,HALF_PARSE,PP,PP_BASE,EXPR_LIST,EXPR_LIST_BASE,ID_LIST,BLOCK_ENTER,NONBLOCK_ENTER,JOIN_ENTER>{
 
-"//"[^\n]*\n	++lineno ;
-"//"[^\n]*	/* discard */ ;
-"/*"		{ yy_push_state (C_COMMENT_GOBBLE); }
+"//"		{ gobble_flag = 1; yy_push_state (CXX_COMMENT); }
+"/*"		{ gobble_flag = 1; yy_push_state (C_COMMENT); }
 
-}
-
-<C_COMMENT_GOBBLE>{
-"*/"		{ yy_pop_state (); }
-"*"		/* ignore */ ;
-[^*\n]*		/* ignore */ ;
-\n		++lineno; 
 }
 
 %%
@@ -312,4 +319,15 @@ gcc_hack_use_static_functions ()
 {
   assert (false);
   (void )yy_top_state ();
+}
+
+int
+tame_ret (int s, int t)
+{
+  if (tame_on) {
+    yy_push_state (s);
+    return t;
+  } else {
+    return std_ret (T_PASSTHROUGH);
+  }
 }

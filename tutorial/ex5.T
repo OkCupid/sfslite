@@ -21,6 +21,32 @@ private:
   str _name;
 };
 
+// TAME_OFF
+typedef enum { BLOCK_FOO = 1, NONBLOCK_FOO = 2, JOIN_FOO = 3, 
+	       TAME_FOO = 5 } my_enum_t;
+/* TAME_ON */
+
+static void foo_func (my_enum_t e)
+{
+  /* TAME_OFF */
+  switch (e) {
+  case BLOCK_FOO:
+    warn << "case 1\n";
+    break;
+  case NONBLOCK_FOO:
+    warn << "case 2\n";
+    break;
+  case JOIN_FOO:
+    warn << "case 3\n";
+    break;
+  case TAME_FOO:
+    warn << "case 5\n";
+    break;
+  }
+  // TAME_ON
+}
+
+
 TAME(void remote_host_t::dostuff_private (int port, cbb cb))
 {
   // declare all of your "stack" variables here
@@ -102,6 +128,10 @@ main (int argc, char *argv[])
 
   remote_host_t h (argv[1]);
   h.dostuff (port, wrap (finish));
+
+  // TAME_OFF
+  foo_func (TAME_FOO);
+  // TAME_ON
   
   amain ();
 }
