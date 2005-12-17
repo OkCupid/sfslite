@@ -50,7 +50,7 @@ XNUM 	[+-]?0x[0-9a-fA-F]
 %x TAME_BASE C_COMMENT C_COMMENT_GOBBLE TAME
 %x ID_OR_NUM NUM_ONLY EXPECT_CB_BASE HALF_PARSE PP PP_BASE
 %x NONBLOCK_ENTER JOIN_ENTER JOIN_LIST JOIN_LIST_BASE
-%x EXPR_LIST EXPR_LIST_BASE ID_LIST
+%x EXPR_LIST EXPR_LIST_BASE ID_LIST GO_WILD
 
 %%
 
@@ -239,7 +239,13 @@ JOIN		{ yy_push_state (JOIN_ENTER); return T_JOIN; }
 [^T\n]+|[T]	{ yylval.str = yytext; return T_PASSTHROUGH ; }
 \n		{ ++lineno; yylval.str = yytext; return T_PASSTHROUGH; }
 
-TAME            	{ yy_push_state (FN_ENTER); return T_TAME; }
+TAME           	{ yy_push_state (FN_ENTER); return T_TAME; }
+
+<GO_WILD>{
+\n		{ ++lineno; return std_ret (T_PASSTHROUGH); }
+TAME_ON		{ yy_pop_state (); return std_ret (T_PASSTHROUGH); }
+[^T\n]+|[T]	{ return std_ret (T_PASSTHROUGH); }
+}
 
 <TAME,TAME_BASE>{
 "//"[^\n]*\n	{ ++lineno ; yylval.str = yytext; return T_PASSTHROUGH; }
@@ -249,9 +255,9 @@ TAME            	{ yy_push_state (FN_ENTER); return T_TAME; }
 }
 
 <C_COMMENT>{
-"*/"		{ yy_pop_state (); yylval.str = yytext; return T_PASSTHROUGH; }
-"*"		{ yylval.str = yytext; return T_PASSTHROUGH ; }
-[^*\n]*		{ yylval.str = yytext; return T_PASSTHROUGH ; }
+TAME_OFF	{ yy_push_state (GO_WILD); return std_ret (T_PASSTHROUGH); }
+"*/"		{ yy_pop_state (); return std_ret (T_PASSTHROUGH); }
+[^*\nT]+|[*T]	{ return std_ret (T_PASSTHROUGH); }
 \n		{ ++lineno; yylval.str = yytext; return T_PASSTHROUGH; }
 }
 
