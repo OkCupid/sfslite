@@ -43,6 +43,9 @@ ex4.C: $(srcdir)/ex4.T
 ex5.C: $(srcdir)/ex5.T
 null.C: $(srcdir)/null.T
 
+dist-hook:
+        cd $(distdir) && rm -f $(CLEANFILES)
+
 .PHONY: bldclean
 bldclean:
 	rm -f $(CLEANFILES)
