@@ -506,7 +506,7 @@ tame_fn_t::output_closure (int fd)
     << "  " << _closure.type ().base_type () 
     << " (";
 
-  if (_class) {
+  if (need_self ()) {
     b.cat (_self.decl (), true);
     if (_args)
       b << ", ";
@@ -517,7 +517,7 @@ tame_fn_t::output_closure (int fd)
   }
 
   b << ") : ";
-  if (_class) {
+  if (need_self ()) {
     str s = _self.name ();
     b.mycat (s) << " (";
     b.mycat (s) << "), ";
@@ -584,7 +584,7 @@ tame_fn_t::output_closure (int fd)
   if (_args)  _args->declarations (b, "    ");
   b << "  };\n";
 
-  if (_class) {
+  if (need_self ()) {
     b << "  ";
     b.mycat (_self.decl ()) << ";\n";
   }
@@ -689,7 +689,7 @@ tame_fn_t::output_fn (int fd)
   b << "    " << CLOSURE_RFCNT << " = New refcounted<"
     << _closure.type().base_type () << "> (";
 
-  if (_class) {
+  if (need_self ()) {
     b << "this";
     if (_args)
       b << ", ";
@@ -732,7 +732,7 @@ tame_fn_t::output_fn (int fd)
 void 
 tame_fn_t::output (int fd)
 {
-  if (_opts & STATIC_DECL)
+  if ((_opts & STATIC_DECL) && !_class)
     output_static_decl (fd);
   output_generic (fd);
   output_closure (fd);

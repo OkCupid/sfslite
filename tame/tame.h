@@ -329,6 +329,8 @@ public:
   void set_opts (int i) { _opts = i; }
   int opts () const { return _opts; }
 
+  bool need_self () const { return (_class && !(_opts & STATIC_DECL)); }
+
   void jump_out (strbuf &b, int i);
 
   void output (int fd);
