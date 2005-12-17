@@ -44,7 +44,7 @@ ex5.C: $(srcdir)/ex5.T
 null.C: $(srcdir)/null.T
 
 dist-hook:
-        cd $(distdir) && rm -f $(CLEANFILES)
+	cd $(distdir) && rm -f $(CLEANFILES)
 
 .PHONY: bldclean
 bldclean:
@@ -53,4 +53,4 @@ bldclean:
 EXTRA_DIST = ex1.T ex2.T ex3.T ex3b.T ex4.T ex5.T ex_prot.x null.T
 
 CLEANFILES = core *.core ex1.C ex2.C ex3.C ex3b.C ex4.C ex5.C ex_prot.C \
-	ex_prot.h
+	ex_prot.h null.C
