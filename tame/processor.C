@@ -384,15 +384,17 @@ tame_nonblock_callback_t::output_generic (strbuf &b)
     }
     b << "> p";
   }
-  if (N_w) {
-    b << ",\n";
-    b << "\t\tvalue_set_t<";
-    for (u_int i = 1; i <= N_w; i++) {
-      if (i != 1) b << ", ";
-      b << "W" << i;
-    }
-    b << "> w";
+
+  // output a value set even if there are no values to wrap in;
+  // for now this makes things much simpler.
+  b << ",\n";
+  b << "\t\tvalue_set_t<";
+  for (u_int i = 1; i <= N_w; i++) {
+    if (i != 1) b << ", ";
+    b << "W" << i;
   }
+  b << "> w";
+
   if (N_p) {
     b << ",\n\t\t";
     for (u_int i = 1; i <= N_p; i++) {
@@ -875,12 +877,14 @@ tame_nonblock_callback_t::output (int fd)
   }
   b << ")";
 
-  if (_nonblock->n_args ()) {
-    b << ", value_set_t<";
+  // note we ouput an empty value set if there are no values
+  // to wrap in.
+  b << ", value_set_t<";
+  if (_nonblock->n_args ()) 
     _nonblock->output_vars (b, true, "typeof (", ")");
-    b << "> (";
+  b << "> (";
+  if (_nonblock->n_args ()) 
     _nonblock->output_vars (b, true, NULL, NULL);
-  }
 
   b << ")))";
 
