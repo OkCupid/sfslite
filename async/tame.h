@@ -7,9 +7,36 @@
 
 #include "async.h"
 
-class closure_t : public virtual refcount {
+/**
+ * hold a pointer to an object without actually increasing its
+ * reference count; have a refcounted bool to know if the object
+ * is safe to access or not. Should be used on object of type
+ * 'weak_referenceable_t', but we template it so we don't need
+ * to cast up.
+ */
+template<class T>
+class weak_ref_t {
+public:
+  weak_ref_t (ptr<T> c) : _p (c), _df (c->destroyed ()) {}
+  T *pointer () { return *_df ? NULL : _p; }
+private:
+  T *_p;
+  ptr<bool> _df;
+};
+
+class weak_referenceable_t : public virtual refcount {
+public:
+  weak_referenceable_t () : _destroyed (New refcounted<bool> (false)) {}
+  virtual ~weak_referenceable_t () { *_destroyed = true; }
+  ptr<bool> destroyed () { return _destroyed; }
+private:
+  ptr<bool> _destroyed;
+};
+
+class closure_t : public weak_referenceable_t {
 public:
   closure_t () : _jumpto (0) {}
+  closure_t () {}
   void set_jumpto (int i) { _jumpto = i; }
   u_int jumpto () const { return _jumpto; }
 
