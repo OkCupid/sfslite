@@ -79,7 +79,7 @@ TAME(void remote_host_t::dostuff_private (int port, cbb cb))
       // launch an asychronous function call, but don't
       // block on its return. Associate the call with the 
       // join group 'window' and the index value 'i'
-      NONBLOCK (&window, i) {
+      NONBLOCK (window, i) {
 	cli->call (EX_RANDOM, NULL, &res[i], @(errs[i]));
       }
     }
@@ -90,7 +90,7 @@ TAME(void remote_host_t::dostuff_private (int port, cbb cb))
       // Block until a call has returned; when it has, get
       // the index variable associated with the call, and assign
       // it to 'return_id' for the scope of the JOIN block.
-      JOIN (&window, return_id) {
+      JOIN (window, return_id) {
 	if (errs[return_id]) {
 	  err_occurred = true;
 	  warn << "RPC error: " << errs[return_id] << "\n";
@@ -101,7 +101,7 @@ TAME(void remote_host_t::dostuff_private (int port, cbb cb))
 	  // another should be launched. but don't bother launching
 	  // more if an error occurred.
 	  if (i < n_tot && !err_occurred) {
-	    NONBLOCK (&window, i) {
+	    NONBLOCK (window, i) {
 	      cli->call (EX_RANDOM, NULL, &res[i], @(errs[i]));
 	    }
 	    i++;

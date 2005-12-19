@@ -8,13 +8,13 @@
 #include "ex_prot.h"
 
 template<class J, class P1, class W1> static void 
-__nonblock_cb_1_1 (ptr<closure_t> hold, J *jg, 
+__nonblock_cb_1_1 (ptr<closure_t> hold, J jg, 
 		 pointer_set1_t<P1> p, value_set_t<W1> w, P1 v)
 {
   *p.p1 = v;
 
   // always return to the main loop to avoid funny race conditions.
-  delaycb (0, 0, wrap (jg, &J::join, w));
+  delaycb (0, 0, jg.make_join_cb (w));
 }
 
 
@@ -154,7 +154,7 @@ dostuff( str __tame_h,  int __tame_port,  cbb __tame_cb, ptr<closure_t> __cls_g)
 		  wrap (__nonblock_cb_1_1<typeof (RPC), 
 			typeof(errs[cid]), typeof (cid)>, 
 			__cls_g,
-			&RPC, 
+			RPC, 
 			pointer_set1_t<typeof(errs[cid])> (&errs[cid]),
 			value_set_t<typeof(cid)> (cid)
 			)));
@@ -183,7 +183,7 @@ dostuff( str __tame_h,  int __tame_port,  cbb __tame_cb, ptr<closure_t> __cls_g)
 			      typeof(errs[cid]), 
 			      typeof (cid)>,
 			      __cls_g,
-			      &RPC, 
+			      RPC, 
 			      pointer_set1_t<typeof(errs[cid])> (&errs[cid]),
 			      value_set_t<typeof(cid)> (cid)
 			      )));

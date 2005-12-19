@@ -30,12 +30,12 @@ TAME (static void try_rpc (str h, int port, cbb cb))
     rv.setsize (n);
  
     for (i = 0; i < n; i++) {
-      NONBLOCK (&JG) {
+      NONBLOCK (JG) {
 	cli->call (EX_RANDOM, NULL, &rv[i], @(ev[i]) );
       }
     }
     while (JG.need_join ()) {
-      JOIN (&JG) {}
+      JOIN (JG) {}
     }
 
     ret = true;

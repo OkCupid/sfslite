@@ -103,13 +103,9 @@ public:
   static value_set_t<T1,T2,T3,T4> to_vs () 
   { return value_set_t<T1,T2,T3,T4> (); }
 
+  cbv make_join_cb (value_set_t<T1,T2,T3,T4> w)
+  { return wrap (_pointer, &join_group_pointer_t<T1,T2,T3,T4>::join, w); }
 
-  // hackish way for returning the join method on the underlying
-  // pointer class, given this wrapper object.
-  typedef void (join_group_pointer_t<T1,T2,T3,T4>::*join_method_t) 
-    (value_set_t<T1,T2,T3,T4>);
-  static join_method_t join_method ()
-  { return &join_group_pointer_t<T1,T2,T3,T4>::join; }
 private:
   ptr<join_group_pointer_t<T1,T2,T3,T4> > _pointer;
 };

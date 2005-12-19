@@ -374,7 +374,7 @@ tame_nonblock_callback_t::output_generic (strbuf &b)
   }
   b << "> static void\n";
   b.cat (cb_name ().cstr (), true);
-  b << " (ptr<closure_t> hold, J *jg";
+  b << " (ptr<closure_t> hold, J jg";
   if (N_p) {
     b << ",\n";
     b << "\t\tpointer_set" << N_p << "_t<";
@@ -407,7 +407,7 @@ tame_nonblock_callback_t::output_generic (strbuf &b)
     b << "  *p.p" << i << " = v" << i << ";\n";
   }
   b << "\n";
-  b << "  delaycb (0, 0, wrap (jg, &J::join, w));\n"
+  b << "  delaycb (0, 0, jg.make_join_cb (w));\n"
     << "}\n\n";
 }
   
@@ -860,9 +860,9 @@ tame_nonblock_callback_t::output (int fd)
   tmp << "(" << _nonblock->join_group ().name () << ")";
   str jgn = tmp;
   
-  b << "(" << jgn << "->launch_one (), "
+  b << "(" << jgn << ".launch_one (), "
     << "wrap (";
-  b.mycat (cb_name ()) << "<typeof (*" << jgn << ")";
+  b.mycat (cb_name ()) << "<typeof " << jgn << "";
 
   _call_with->output_vars (b, false, "typeof (", ")");
   _nonblock->output_vars (b, false, "typeof (", ")");
@@ -896,12 +896,16 @@ tame_nonblock_callback_t::output (int fd)
 void
 tame_join_t::output (int fd)
 {
+  strbuf tmp;
+  tmp << "(" << join_group ().name () << ")";
+  str jgn = tmp;
+
   my_strbuf_t b;
   b << "  ";
   b.mycat (_fn->label (_id)) << ":\n";
-  b << "    typeof ((" << join_group ().name () << ")->to_vs ()) "
+  b << "    typeof (" << jgn << ".to_vs ()) "
     << JOIN_VALUE << ";\n";
-  b << "    if ((" <<  join_group ().name () << ")->pending (&" 
+  b << "    if (" <<  jgn << ".pending (&" 
     << JOIN_VALUE << ")) {\n";
   
   for (u_int i = 0; i < n_args (); i++) {
@@ -920,8 +924,8 @@ tame_join_t::output (int fd)
   
   _fn->jump_out (b, _id);
   
-  b << "      (" << join_group ().name ()
-    << ")->set_join_cb (wrap (" << CLOSURE_RFCNT
+  b << "      " << jgn
+    << ".set_join_cb (wrap (" << CLOSURE_RFCNT
     << ", &" << _fn->reenter_fn () << "));\n"
     << "      return;\n"
     << "  }\n\n";
