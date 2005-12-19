@@ -874,8 +874,8 @@ tame_nonblock_callback_t::output (int fd)
     _call_with->output_vars (b, true, "typeof (", ")");
     b << "> (";
     _call_with->output_vars (b, true, "&(", ")");
+    b << ")";
   }
-  b << ")";
 
   // note we ouput an empty value set if there are no values
   // to wrap in.

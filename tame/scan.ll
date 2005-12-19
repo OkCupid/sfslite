@@ -92,6 +92,7 @@ double		return T_DOUBLE;
 signed		return T_SIGNED;
 unsigned	return T_UNSIGNED;
 static		return T_STATIC;
+long\s+long	return T_LONG_LONG;
 
 {ID} 		{ return std_ret (T_ID); }
 {DNUM}|{XNUM}	{ return std_ret (T_NUM); }

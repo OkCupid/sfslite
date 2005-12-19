@@ -3,19 +3,24 @@
 
 LDADD =  $(LIBARPC) $(LIBASYNC)  
 
-noinst_PROGRAMS = ex4 ex1 ex2 exsrv ex3 ex4m null ex5 ex3b
+noinst_PROGRAMS = ex1 ex2 ex3 ex3b ex4m ex4 ex5 ex6 ex7 exsrv null
 ex1_SOURCES = ex1.C 
 ex2_SOURCES = ex2.C ex_prot.C
 ex3_SOURCES = ex3.C ex_prot.C
 ex3b_SOURCES = ex3b.C ex_prot.C
 ex4_SOURCES = ex4.C ex_prot.C
 ex5_SOURCES = ex5.C ex_prot.C
+ex6_SOURCES = ex6.C
+ex7_SOURCES = ex7.C
 null_SOURCES = null.C
 exsrv_SOURCES = exsrv.C ex_prot.C
 ex4m_SOURCES = ex4m.C ex_prot.C
 
 SUFFIXES = .T .C .x .h
 
+##
+## compile with the -L flag to suppress line # translation
+##
 .T.C:
 	-$(TAME) -L -o $@ $< || rm -f $@
 .x.h:
@@ -41,6 +46,8 @@ ex3.C: $(srcdir)/ex3.T
 ex3b.C: $(srcdir)/ex3b.T
 ex4.C: $(srcdir)/ex4.T
 ex5.C: $(srcdir)/ex5.T
+ex6.C: $(srcdir)/ex6.T
+ex7.C: $(srcdir)/ex7.T
 null.C: $(srcdir)/null.T
 
 dist-hook:
@@ -50,7 +57,8 @@ dist-hook:
 bldclean:
 	rm -f $(CLEANFILES)
 
-EXTRA_DIST = ex1.T ex2.T ex3.T ex3b.T ex4.T ex5.T ex_prot.x null.T
+EXTRA_DIST = ex1.T ex2.T ex3.T ex3b.T ex4.T ex5.T ex_prot.x null.T ex6.T \
+	ex7.T
 
 CLEANFILES = core *.core ex1.C ex2.C ex3.C ex3b.C ex4.C ex5.C ex_prot.C \
-	ex_prot.h null.C
+	ex_prot.h null.C ex6.C ex7.C

@@ -10,7 +10,7 @@
 class closure_t : public virtual refcount {
 public:
   closure_t () : _jumpto (0) {}
-  ~closure_t () {}
+  ~closure_t () { warn << "~closure()\n"; }
   void set_jumpto (int i) { _jumpto = i; }
   u_int jumpto () const { return _jumpto; }
 
@@ -45,6 +45,7 @@ public:
   void set_join_cb (cbv::ptr c) { _join_cb = c; }
 
   void launch_one () { _n_out ++; }
+  void rejoin () { _n_out ++; }
 
   void join (value_set_t<T1, T2, T3, T4> v) 
   {
@@ -95,6 +96,7 @@ public:
 
   void set_join_cb (cbv::ptr c) { _pointer->set_join_cb (c); }
   void launch_one () { _pointer->launch_one (); }
+  void rejoin () { _pointer->rejoin (); }
   bool need_join () const { return _pointer->need_join (); }
   ptr<join_group_pointer_t<T1,T2,T3,T4> > pointer () { return _pointer; }
   bool pending (value_set_t<T1, T2, T3, T4> *p)

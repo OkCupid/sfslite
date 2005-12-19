@@ -41,6 +41,7 @@
 %token T_SHORT
 %token T_INT
 %token T_LONG
+%token T_LONG_LONG
 %token T_FLOAT
 %token T_DOUBLE
 %token T_SIGNED
@@ -462,6 +463,7 @@ type_specifier: T_VOID		{ $$ = "void" ; }
 	| T_SHORT		{ $$ = "short"; }
 	| T_INT			{ $$ = "int" ; }
 	| T_LONG		{ $$ = "long" ; }
+	| T_LONG_LONG		{ $$ = "long long"; }
 	| T_FLOAT		{ $$ = "float"; }
 	| T_DOUBLE		{ $$ = "double" ; }
 	| typedef_name
