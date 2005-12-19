@@ -8,7 +8,22 @@ parse_state_t state;
 static void
 usage ()
 {
-  warnx << "usage: " << progname << " [-L] [-o <outfile>] [<infile>]\n";
+  warnx << "usage: " << progname << " [-Lhv] [-o <outfile>] [<infile>]\n"
+	<< "\n"
+	<< "  Flags:\n"
+	<< "    -L  disable line number translation\n"
+	<< "    -h  show this screen\n"
+	<< "    -v  show version number and exit\n"
+	<< "\n"
+	<< "  Options:\n"
+	<< "    -o  specify output file\n"
+	<< "\n"
+	<< "  If no input or output files are specified, then standard in\n"
+	<< "  and out are assumed, respectively.\n"
+	<< "\n"
+	<< "  Line number translation can also be suppressed by setting\n"
+	<< "  the TAME_NO_LINE_NUMBERS environment variable.\n";
+    
   exit (1);
 }
 
@@ -29,6 +44,9 @@ main (int argc, char *argv[])
 
   while ((ch = getopt (argc, argv, "Lvdo:")) != -1)
     switch (ch) {
+    case 'h':
+      usage ();
+      break;
     case 'L':
       no_line_numbers = true;
       break;
@@ -48,7 +66,7 @@ main (int argc, char *argv[])
       break;
     }
 
-  if (getenv ("NO_LINE_NUMBERS"))
+  if (getenv ("TAME_NO_LINE_NUMBERS"))
     no_line_numbers = true;
 
   argc -= optind;
