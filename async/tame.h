@@ -7,36 +7,10 @@
 
 #include "async.h"
 
-/**
- * hold a pointer to an object without actually increasing its
- * reference count; have a refcounted bool to know if the object
- * is safe to access or not. Should be used on object of type
- * 'weak_referenceable_t', but we template it so we don't need
- * to cast up.
- */
-template<class T>
-class weak_ref_t {
-public:
-  weak_ref_t (ptr<T> c) : _p (c), _df (c->destroyed ()) {}
-  T *pointer () { return *_df ? NULL : _p; }
-private:
-  T *_p;
-  ptr<bool> _df;
-};
-
-class weak_referenceable_t : public virtual refcount {
-public:
-  weak_referenceable_t () : _destroyed (New refcounted<bool> (false)) {}
-  virtual ~weak_referenceable_t () { *_destroyed = true; }
-  ptr<bool> destroyed () { return _destroyed; }
-private:
-  ptr<bool> _destroyed;
-};
-
-class closure_t : public weak_referenceable_t {
+class closure_t : public virtual refcount {
 public:
   closure_t () : _jumpto (0) {}
-  closure_t () {}
+  ~closure_t () {}
   void set_jumpto (int i) { _jumpto = i; }
   u_int jumpto () const { return _jumpto; }
 
@@ -59,11 +33,14 @@ struct value_set_t {
   T4 v4;
 };
 
-
 template<class T1 = int, class T2 = int, class T3 = int, class T4 = int>
-class join_group_t {
+class join_group_pointer_t : public virtual refcount {
 public:
-  join_group_t () : _n_out (0) {}
+  join_group_pointer_t () : _n_out (0) {}
+
+  // warning for now
+  ~join_group_pointer_t () 
+  { if (need_join ()) warn << "abandoning unjoined threads...\n"; }
 
   void set_join_cb (cbv::ptr c) { _join_cb = c; }
 
@@ -104,6 +81,37 @@ private:
 
   // callback to call once
   cbv::ptr _join_cb;
+};
+
+/**
+ * @brief A wrapper class around a join group pointer for tighter code
+ */
+template<class T1 = int, class T2 = int, class T3 = int, class T4 = int>
+class join_group_t {
+public:
+  join_group_t () 
+    : _pointer (New refcounted<join_group_pointer_t<T1,T2,T3,T4> > ()) {}
+  join_group_t (ptr<join_group_pointer_t<T1,T2,T3,T4> > p) : _pointer (p) {}
+
+  void set_join_cb (cbv::ptr c) { _pointer->set_join_cb (c); }
+  void launch_one () { _pointer->launch_one (); }
+  bool need_join () const { return _pointer->need_join (); }
+  ptr<join_group_pointer_t<T1,T2,T3,T4> > pointer () { return _pointer; }
+  bool pending (value_set_t<T1, T2, T3, T4> *p)
+  { return _pointer->pending (p); }
+
+  static value_set_t<T1,T2,T3,T4> to_vs () 
+  { return value_set_t<T1,T2,T3,T4> (); }
+
+
+  // hackish way for returning the join method on the underlying
+  // pointer class, given this wrapper object.
+  typedef void (join_group_pointer_t<T1,T2,T3,T4>::*join_method_t) 
+    (value_set_t<T1,T2,T3,T4>);
+  static join_method_t join_method ()
+  { return &join_group_pointer_t<T1,T2,T3,T4>::join; }
+private:
+  ptr<join_group_pointer_t<T1,T2,T3,T4> > _pointer;
 };
 
 
