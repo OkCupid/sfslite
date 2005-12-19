@@ -235,19 +235,6 @@ if test "$sfs_cv_have_dev_xfs" = yes; then
 	Define if your kernel has the Arla file system's XFS device)
 fi
 
-SFS_SLEEPYCAT(4.3 4.2 4.1 4.0 3.3 3.2 3.1, no)
-AC_SUBST(DBLIB)
-AC_SUBST(DBDEPS)
-DBLIB='$(top_builddir)/sfsrodb/libsfsrodb.a'
-DBDEPS='$(top_builddir)/sfsrodb/libsfsrodb.a'
-if test "${USE_DB}" != no; then
-	CPPFLAGS="$CPPFLAGS -DSLEEPYCAT"
-	DBLIB="$DBLIB $DB_LIB"
-else
-	DBLIB="$DBLIB"' $(top_builddir)/adb/libbtree.a'
-	DBDEPS="$DBDEPS"' $(top_builddir)/adb/libbtree.a'
-fi
-
 dnl Add SFS libraries to LDADD by default.
 CPPFLAGS="$CPPFLAGS -I"'$(top_srcdir)'
 
