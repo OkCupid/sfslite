@@ -6,6 +6,7 @@ When Syncing from SFS to SFSlite: A Checklist
     - copy over SFS_TAG macro
     - ditto for SFS_MMAP and INSTALL_C
     - ditto for SFS_TUTORIAL
+    - ditto for SFS_GMP
  - configure.in
     - copy block of code from begin sfslite to end sfslite
     - meaning, we need new rules for sfsincludedir, sfslibdir, etc, that
@@ -14,6 +15,7 @@ When Syncing from SFS to SFSlite: A Checklist
     - dnl the SFS_CHECK_NFSMNT macro
     - dnl the SFS_USER macro
     - prune the AC_OUTPUT list, and add the tutorial conditional build, too
+    - delete all berkeley DB stuff
  - Makefile.am
     - David usually doesn't update this; Needs a bunch of syncs.
  - async/Makefile.am
