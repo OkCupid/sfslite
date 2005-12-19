@@ -6,9 +6,17 @@
 #include "parseopt.h"
 #include "ex_prot.h"
 
+/**
+ * Given a vector of N hosts, connect to all of them on the given port.
+ * When the first connection is established, return controle via 'done',
+ * and close the remaining stragglers.
+ *
+ * @param hosts the hosts to try
+ * @param port the port to try on
+ * @param done the callback to call when the first has returned.
+ */
 TAME(static void connect (vec<str> hosts, int port, cbi done))
 {
-  // declare all of your "stack" variables here
   VARS {
     int fd (-1);
     u_int i;
@@ -40,6 +48,15 @@ TAME(static void connect (vec<str> hosts, int port, cbi done))
   }
 }
 
+/**
+ * Get fastest Web page, where 'fast' is defined by how fast the DNS
+ * lookup and TCP session establishment are.  Once connected, request
+ * for "/" and dump the response to standard output.
+ *
+ * @param hosts the hosts to try
+ * @param port the port to try on
+ * @param done the callback to call when done
+ */
 TAME(static void get_fastest_web_page (vec<str> hosts, int port, cbb done))
 {
   VARS {
@@ -48,23 +65,66 @@ TAME(static void get_fastest_web_page (vec<str> hosts, int port, cbb done))
     join_group_t<> read_jg, write_jg;
   }
 
-  // get the fastest connection
+  //
+  // get the fastest connection, and dump the result into 'fd'
+  //
   BLOCK { connect (hosts, port, @(fd)); }
 
+  //
+  // A dirt simple HTTP 1.0 request
+  //
   req << "GET / HTTP/1.0\n\n";
   
+  //
+  // Call 'fdcb' to select on a file descriptor.  In this case we're
+  // selecting on the TCP connection to the 'fastest' Web server, and
+  // selecting for 'write'.  Once the socket is writeable, we'll be
+  // callback.  Note that '@()' generates a callback of type 
+  // callback<void> -- i.e., a callback that doesn't 'return' any
+  // parameters.
+  //
+  // Also note that 'fdcb' is a bit different from the asychronous
+  // functions we've seen so far, in that it can call us back multiple
+  // times.  That is, fdcb will call us back every time the socket
+  // 'fd' is available for writing.
+  //
   NONBLOCK (write_jg) { fdcb (fd, selwrite, @()); }
   
   while (true) {
     JOIN (write_jg) {
+
+      //
+      // Use this syntax to output the results of the string buffer
+      // 'req' to the socket 'fd'. At this point, fdcb has returned,
+      // signalling that the socket 'fd' is writable.  If for some
+      // reason we were lied to, write() will return <0 inside of
+      // suio::output() below, but with errno set to EAGAIN; then 
+      // suio::output() will return 0, and we'll try the write again the 
+      // next time through the loop.  A return from suio::output() that
+      // is negative signals a non-retryable error, and we'll bail out.
+      //
       if (req.tosuio ()->output (fd) < 0) {
 	warn << "write failed...\n";
 	fdcb (fd, selwrite, NULL);
 	(*done) (false);
 	return;
       }
-      if (req.tosuio ()->resid ()) 
+
+      //
+      // suio::resid() returns the # of bytes left to write.  If there
+      // are any bytes left to write, we'll need to be called back from
+      // fdcb again, and we'll therefore need to join again.  Use the
+      // join_group_t::rejoin call to schedule an additional join for
+      // this join group.
+      //
+      if (req.tosuio ()->resid ()) {
 	write_jg.rejoin ();
+      }
+
+      // 
+      // otherwise, no more writing left to do, and we are no longer
+      // interested in writing to 'fd'
+      //
       else {
 	fdcb (fd, selwrite, NULL);
 	break;
@@ -72,8 +132,15 @@ TAME(static void get_fastest_web_page (vec<str> hosts, int port, cbb done))
     }
   }
 
+  // 
+  // As before, but now we need to schedule a callback for reading
+  //
   NONBLOCK (read_jg) { fdcb (fd, selread, @()); }
 
+  //
+  // The details of the reading loop are almost identical to the
+  // writing loop above.
+  //
   while (true) {
     JOIN (read_jg) {
       if ((rc = resp.tosuio ()->input (fd)) < 0 && errno != EAGAIN) {
@@ -91,7 +158,14 @@ TAME(static void get_fastest_web_page (vec<str> hosts, int port, cbb done))
     }
   }
 
+  // 
+  // dump the response to standard output
+  //
   resp.tosuio ()->output (1);
+
+  // 
+  // success!
+  //
   (*done) (true);
 }
 
