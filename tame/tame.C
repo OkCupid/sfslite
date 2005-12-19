@@ -79,6 +79,11 @@ main (int argc, char *argv[])
 	warn << "cannot open file: " << ifn << "\n";
 	usage ();
       }
+
+      // the filename variable is local to scan.ll, which will need
+      // it to output message messages. It defaults to '(stdin)'
+      filename = ifn;
+
       yyin = ifh;
     }
   }
