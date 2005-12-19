@@ -10,7 +10,7 @@
 class closure_t : public virtual refcount {
 public:
   closure_t () : _jumpto (0) {}
-  ~closure_t () { warn << "~closure()\n"; }
+  ~closure_t () {}
   void set_jumpto (int i) { _jumpto = i; }
   u_int jumpto () const { return _jumpto; }
 
