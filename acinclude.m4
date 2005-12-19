@@ -1006,12 +1006,11 @@ if test "$with_gmp"; then
 	AC_MSG_ERROR([Could not find gmp.h header])
     fi
 
-    #LDFLAGS="$LDFLAGS -L${with_gmp}/lib"
-    #LIBGMP=-lgmp
     if test -f "${with_gmp}/lib/libgmp.la"; then
 	LIBGMP="${with_gmp}/lib/libgmp.la"
     else
-	LIBGMP="${with_gmp}/lib/libgmp.a"
+    	LDFLAGS="$LDFLAGS -L${with_gmp}/lib"
+    	LIBGMP=-lgmp
     fi
     AC_MSG_RESULT([$LIBGMP])
 elif test "$GMP_DIR"; then
