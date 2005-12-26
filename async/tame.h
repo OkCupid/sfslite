@@ -9,13 +9,27 @@
 
 class closure_t : public virtual refcount {
 public:
-  closure_t () : _jumpto (0) {}
-  ~closure_t () {}
+  closure_t (bool c = false) : 
+    _jumpto (0), 
+    _destroyed (New refcounted<bool> (false)), 
+    _ceocc_count (0),
+    _has_ceocc (c)
+  {}
+  virtual ~closure_t () { *_destroyed = true; }
   void set_jumpto (int i) { _jumpto = i; }
   u_int jumpto () const { return _jumpto; }
+  bool destroyed_flag () { return _destroyed; }
+
+  // "Call-Exactly-Once Checked Continuation"
+  void inc_ceocc_count () { _ceocc_count ++; }
+  void set_has_ceocc (bool f) { _has_ceocc = f; }
+  void enforce_ceocc (const str &loc);
 
 protected:
   u_int _jumpto;
+  ptr<bool> _destroyed;
+  int _ceocc_count;
+  bool _has_ceocc;
 };
 
 template<class T1 = int, class T2 = int, class T3 = int, class T4 = int>

@@ -50,3 +50,12 @@ tame_error (const str &loc, const str &msg)
   if (tame_options & TAME_ERROR_FATAL)
     panic ("abort on TAME failure");
 }
+
+void
+closure_t::enforce_ceocc (const str &l)
+{
+  if (_has_ceocc && _ceocc_count != 1) {
+    strbuf e ("CEOCC called %d times; expected exactly 1 call!", _ceocc_count);
+    tame_error (l, e);
+  }
+}
