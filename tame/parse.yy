@@ -49,7 +49,9 @@
 %token T_STATIC
 
 %token T_2COLON
-%token T_2PCT
+%token T_RETURN
+%token T_UNBLOCK
+%token T_RESUME
 
 /* Keywords for our new filter */
 %token T_TAME
@@ -81,7 +83,8 @@
 
 %type <var>  parameter_declaration
 
-%type <el>   fn_tame vars block nonblock callback join
+%type <el>   fn_tame vars block nonblock callback join return_statement
+%type <ret>  return_keyword
 
 %type <opts> static_opt
 
@@ -152,11 +155,27 @@ fn_tame: vars
 	| block
 	| nonblock
 	| join
+	| return_statement
 	;
 
 vars:	T_VARS '{' declaration_list_opt '}'
 	{
 	  $$ = New tame_vars_t ();
+	}
+	;
+
+return_keyword:	
+	  T_RETURN	{ $$ = New tame_ret_t (state.function ()); }
+	| T_UNBLOCK	{ $$ = New tame_unblock_t (state.function ()); }
+	| T_RESUME	{ $$ = New tame_resume_t (state.function ()); }
+	;
+
+return_statement: return_keyword passthrough ';'
+	{
+	   if ($2)
+	     $1->add_params ($2);
+ 	   $1->passthrough (lstr (get_yy_lineno (), ";"));
+	   $$ = $1;
 	}
 	;
 

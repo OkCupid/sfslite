@@ -55,8 +55,7 @@ XNUM 	[+-]?0x[0-9a-fA-F]
 %x TAME_BASE C_COMMENT CXX_COMMENT TAME
 %x ID_OR_NUM NUM_ONLY EXPECT_CB_BASE HALF_PARSE PP PP_BASE
 %x NONBLOCK_ENTER JOIN_ENTER JOIN_LIST JOIN_LIST_BASE
-%x EXPR_LIST EXPR_LIST_BASE ID_LIST 
-%x GO_WILD GO_WILD_C GO_WILD_CXX
+%x EXPR_LIST EXPR_LIST_BASE ID_LIST RETURN_PARAMS
 
 %%
 
@@ -223,15 +222,18 @@ long\s+long	return T_LONG_LONG;
 
 <TAME,TAME_BASE>{
 \n		{ yylval.str = yytext; ++lineno; return T_PASSTHROUGH; }
-[^VBNJT{}\n/]+|[VBNJT/] { yylval.str = yytext; return T_PASSTHROUGH; }
+[^VBNJTrUR{}\n/]+|[VBNJTrUR/] { yylval.str = yytext; return T_PASSTHROUGH; }
 [{]		{ yylval.str = yytext; yy_push_state (TAME); 
 		  return T_PASSTHROUGH; }
 
-VARS		{ return tame_ret (VARS_ENTER, T_VARS); }
-BLOCK		{ return tame_ret (BLOCK_ENTER, T_BLOCK); }
-NONBLOCK	{ return tame_ret (NONBLOCK_ENTER, T_NONBLOCK); }
-JOIN		{ return tame_ret (JOIN_ENTER, T_JOIN); }
+VARS/[ \t\n{/]		{ return tame_ret (VARS_ENTER, T_VARS); }
+BLOCK/[ \t\n{/]		{ return tame_ret (BLOCK_ENTER, T_BLOCK); }
+NONBLOCK/[ \t\n(/] 	{ return tame_ret (NONBLOCK_ENTER, T_NONBLOCK); }
+JOIN/[ \t\n(/]		{ return tame_ret (JOIN_ENTER, T_JOIN); }
 
+return/[ \t\n(/;]	{ yy_push_state (RETURN_PARAMS); return T_RETURN; }
+RESUME/[ \t\n(/;]	{ yy_push_state (RETURN_PARAMS); return T_RESUME; }
+UNBLOCK/[ \t\n(/;]	{ yy_push_state (RETURN_PARAMS); return T_UNBLOCK; }
 }
 
 <TAME>{
@@ -252,7 +254,7 @@ JOIN		{ return tame_ret (JOIN_ENTER, T_JOIN); }
 }
 
 <INITIAL>{
-TAME           	{ return tame_ret (FN_ENTER, T_TAME); }
+TAME/[ \t\n(/] 	{ return tame_ret (FN_ENTER, T_TAME); }
 [^T\n/]+|[T/]	{ yylval.str = yytext; return T_PASSTHROUGH ; }
 \n		{ ++lineno; yylval.str = yytext; return T_PASSTHROUGH; }
 }
@@ -268,6 +270,12 @@ TAME_OFF	{ tame_on = 0; GOBBLE_RET; }
 TAME_ON		{ tame_on = 1; GOBBLE_RET; }
 }
 
+<RETURN_PARAMS>{
+\n			{ ++lineno; return std_ret (T_PASSTHROUGH); }
+;			{ yy_pop_state (); return yytext[0]; }
+[^\n;]+			{ return std_ret (T_PASSTHROUGH); }
+}
+
 
 <C_COMMENT>{
 TAME_OFF	{ tame_on = 0; GOBBLE_RET; }
@@ -278,7 +286,7 @@ TAME_ON		{ tame_on = 1; GOBBLE_RET; }
 }
 
 
-<CB_ENTER,FULL_PARSE,FN_ENTER,VARS_ENTER,HALF_PARSE,PP,PP_BASE,EXPR_LIST,EXPR_LIST_BASE,ID_LIST,BLOCK_ENTER,NONBLOCK_ENTER,JOIN_ENTER>{
+<CB_ENTER,FULL_PARSE,FN_ENTER,VARS_ENTER,HALF_PARSE,PP,PP_BASE,EXPR_LIST,EXPR_LIST_BASE,ID_LIST,BLOCK_ENTER,NONBLOCK_ENTER,JOIN_ENTER,RETURN_PARAMS>{
 
 "//"		{ gobble_flag = 1; yy_push_state (CXX_COMMENT); }
 "/*"		{ gobble_flag = 1; yy_push_state (C_COMMENT); }

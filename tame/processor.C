@@ -946,3 +946,22 @@ parse_state_t::output_line_xlate (int fd, int ln)
 
 //
 //-----------------------------------------------------------------------
+
+//-----------------------------------------------------------------------
+// handle return semantics
+//
+
+void
+tame_ret_t::output (int fd)
+{
+  strbuf b;
+  b << "return /* SHIT DOG */";
+  if (_params)
+    b << _params;
+  b.tosuio ()->output (fd);
+  tame_env_t::output (fd);
+}
+
+
+//
+//-----------------------------------------------------------------------

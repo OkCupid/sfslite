@@ -45,6 +45,7 @@ TAME (static void try_rpc (str h, int port, cbb cb))
     }
   }
   (*cb) (ret);
+  return ();
 }
  
 static void finish (bool rc)

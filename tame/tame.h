@@ -112,7 +112,6 @@ public:
   virtual int id () const { return 0; }
 };
 
-
 class tame_vars_t : public tame_el_t {
 public:
   tame_vars_t () {}
@@ -393,6 +392,27 @@ private:
   u_int _n_labels;
 };
 
+class tame_ret_t : public tame_env_t 
+{
+public:
+  tame_ret_t (tame_fn_t *f) : _fn (f) {}
+  void add_params (const lstr &l) { _params = l; }
+  virtual void output (int fd);
+protected:
+  tame_fn_t *_fn;
+  lstr _params;
+};
+
+class tame_unblock_t : public tame_ret_t {
+public:
+  tame_unblock_t (tame_fn_t *f) : tame_ret_t (f) {}
+};
+
+class tame_resume_t : public tame_unblock_t {
+public:
+  tame_resume_t (tame_fn_t *f) : tame_unblock_t (f) {}
+};
+
 class parse_state_t : public element_list_t {
 public:
   parse_state_t () : _xlate_line_numbers (false),
@@ -526,6 +546,7 @@ struct YYSTYPE {
   type_t            typ;
   vec<ptr<declarator_t> > decls;
   u_int             opts;
+  tame_ret_t *       ret;
 };
 extern YYSTYPE yylval;
 extern str filename;
