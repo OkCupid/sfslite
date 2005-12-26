@@ -12,7 +12,7 @@ TAME(static void dostuff (vec<str> hosts, int port, cbi done))
   VARS {
     int fd (-1);
     u_int i;
-    join_group_t<u_int> JG;
+    join_group_t<u_int> JG (__FILE__, __LINE__);
   }
 
   for (i = 0; i < hosts.size (); i++) {

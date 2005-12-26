@@ -33,14 +33,34 @@ struct value_set_t {
   T4 v4;
 };
 
+/**
+ * functions defined in tame.C, mainly for reporting errors, and
+ * determinig what will happen when an error occurs. Change the
+ * runtime behavior of what happens in an error via TAME_OPTIONS
+ */
+void tame_error (const str &loc, const str &msg);
+INIT(tame_init);
+
+
 template<class T1 = int, class T2 = int, class T3 = int, class T4 = int>
 class join_group_pointer_t : public virtual refcount {
 public:
-  join_group_pointer_t () : _n_out (0) {}
+  join_group_pointer_t (const char *f, int l) : 
+    _n_out (0), _file (f), _lineno (l)  {}
 
   // warning for now
   ~join_group_pointer_t () 
-  { if (need_join ()) warn << "abandoning unjoined threads...\n"; }
+  { 
+    // XXX - find some way to identify this join, either by filename
+    // and line number, or other ways.
+    if (need_join ()) {
+      str s = (_file && _lineno) ?
+	str (strbuf ("%s:%d", _file, _lineno)) :
+	str ("(unknown)");
+      tame_error (s, "non-joined continuations leaked!"); 
+    }
+  }
+
 
   void set_join_cb (cbv::ptr c) { _join_cb = c; }
 
@@ -82,6 +102,10 @@ private:
 
   // callback to call once
   cbv::ptr _join_cb;
+
+  // try to debug leaked joiners
+  const char *_file;
+  int _lineno;
 };
 
 /**
@@ -90,8 +114,8 @@ private:
 template<class T1 = int, class T2 = int, class T3 = int, class T4 = int>
 class join_group_t {
 public:
-  join_group_t () 
-    : _pointer (New refcounted<join_group_pointer_t<T1,T2,T3,T4> > ()) {}
+  join_group_t (const char *f = NULL, int l = 0) 
+    : _pointer (New refcounted<join_group_pointer_t<T1,T2,T3,T4> > (f, l)) {}
   join_group_t (ptr<join_group_pointer_t<T1,T2,T3,T4> > p) : _pointer (p) {}
 
   void set_join_cb (cbv::ptr c) { _pointer->set_join_cb (c); }
@@ -145,6 +169,8 @@ struct pointer_set4_t {
 };
 
 
-#define CLOSURE ptr<closure_t> __frame = NULL
+#define CLOSURE        ptr<closure_t> __frame = NULL
+#define TAME_OPTIONS   "TAME_OPTIONS"
+
 
 #endif /* _ASYNC_UNWRAP_H */
