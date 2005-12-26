@@ -120,7 +120,8 @@ fn:	T_TAME '(' fn_declaration ')' '{'
 	}
 	fn_statements '}'
 	{
-	  state.push (New tame_fn_return_t (state.function ()));
+	  state.push (New tame_fn_return_t (get_yy_lineno (), 
+				            state.function ()));
 	  state.passthrough (lstr (get_yy_lineno (), "}"));
 	  state.pop_list ();
 	}
@@ -166,9 +167,14 @@ vars:	T_VARS '{' declaration_list_opt '}'
 	;
 
 return_keyword:	
-	  T_RETURN	{ $$ = New tame_ret_t (state.function ()); }
-	| T_UNBLOCK	{ $$ = New tame_unblock_t (state.function ()); }
-	| T_RESUME	{ $$ = New tame_resume_t (state.function ()); }
+	  T_RETURN  { $$ = New tame_ret_t (get_yy_lineno (), 
+	                                   state.function ()); }
+
+	| T_UNBLOCK { $$ = New tame_unblock_t (get_yy_lineno (), 
+	                                       state.function ()); }
+
+	| T_RESUME  { $$ = New tame_resume_t (get_yy_lineno (), 
+	                                      state.function ()); }
 	;
 
 return_statement: return_keyword passthrough ';'

@@ -338,7 +338,9 @@ tame_fn_t::label (str s) const
 str
 tame_fn_t::label (u_int id) const
 {
-  return label (strbuf ("%ud", id));
+  strbuf b;
+  b << id;
+  return label (b);
 }
 
 
@@ -972,8 +974,14 @@ parse_state_t::output_line_xlate (int fd, int ln)
 void
 tame_ret_t::output (int fd)
 {
-  strbuf b;
-  b << "return /* SHIT DOG */";
+  my_strbuf_t b;
+
+  if (_fn->do_cceoc ()) {
+    b.mycat (_fn->static_sentinel_check ());
+    state.need_line_xlate ();
+  }
+  
+  b << "return ";
   if (_params)
     b << _params;
   b.tosuio ()->output (fd);
@@ -981,19 +989,89 @@ tame_ret_t::output (int fd)
 }
 
 void
+tame_unblock_t::output (int fd)
+{
+  my_strbuf_t b;
+  b << "\n"
+    << "  {\n"
+    << "    " << CLOSURE << "->inc_cceoc_count ();\n"
+    ;
+
+  b << "    ";
+  b.mycat (_fn->static_sentinel_set ());
+
+  b.tosuio ()->output (fd);
+  b.tosuio ()->clear ();
+
+  state.need_line_xlate ();
+  state.output_line_xlate (fd, _line_number);
+
+
+  b << "    (*" << cceoc_label << ") ";
+  if (_params)
+    b << _params;
+  else
+    b << "()";
+
+  b.tosuio ()->output (fd);
+  b.tosuio ()->clear ();
+  tame_env_t::output (fd);
+
+  b << "\n"
+    << "  }\n";
+  b.tosuio ()->output (fd);
+  state.need_line_xlate ();
+}
+
+void
+tame_resume_t::output (int fd)
+{
+  tame_unblock_t::output (fd);
+  my_strbuf_t b;
+  b.mycat (_fn->static_sentinel_check ());
+  b << "  return;\n";
+  b.tosuio ()->output (fd);
+  state.need_line_xlate ();
+}
+
+void
 tame_fn_return_t::output (int fd)
 {
   if (_fn->do_cceoc ()) {
     my_strbuf_t b;
-    b << " ";
-    b.mycat (_fn->label ("return")) 
-      << ":\n"
-      << "  tame_global_int = "
-      << _fn->cceoc_sentinel ().name () << ";\n"
-      << "  return;\n";
+    b.mycat (_fn->static_sentinel_check ());
+    b << "  " << CLOSURE << "->enforce_cceoc (\"";
+    b.mycat (state.loc (_line_number)) << "\");\n";
+
     b.tosuio ()->output (fd);
     state.need_line_xlate ();
   }
+}
+
+str
+tame_fn_t::static_sentinel_set () const
+{
+  strbuf b;
+  b << "  " << cceoc_sentinel ().name () << " = 0;\n";
+  return b;
+
+}
+
+str
+tame_fn_t::static_sentinel_check () const
+{
+  strbuf b;
+  b << "  " << TAME_GLOBAL_INT << " = " << cceoc_sentinel ().name () << ";\n";
+  return b;
+}
+
+str
+parse_state_t::loc (u_int l) const
+{
+  strbuf b;
+  b << _infile_name << ":" << l << ": in function " 
+    << function_const ().name ();
+  return b;
 }
 
 

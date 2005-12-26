@@ -53,10 +53,10 @@ tame_error (const str &loc, const str &msg)
 }
 
 void
-closure_t::enforce_ceocc (const str &l)
+closure_t::enforce_cceoc (const str &l)
 {
-  if (_has_ceocc && _ceocc_count != 1) {
-    strbuf e ("CEOCC called %d times; expected exactly 1 call!", _ceocc_count);
+  if (_has_cceoc && _cceoc_count != 1) {
+    strbuf e ("CEOCC called %d times; expected exactly 1 call!", _cceoc_count);
     tame_error (l, e);
   }
 }

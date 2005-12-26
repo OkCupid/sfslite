@@ -311,7 +311,7 @@ public:
       _self (_class, "*", "_self"),
       _isconst (c),
       _closure (mk_closure ()), 
-      _cceoc_sentinel ("int", NULL, "_cceoc_sentinel_int"),
+      _cceoc_sentinel ("int", NULL, "_cceoc_not_called_if_unitialized"),
       _args (d->params ()), 
       _opts (o),
       _lineno (l),
@@ -322,6 +322,8 @@ public:
   vartab_t *args () { return _args; }
   vartab_t *class_vars_tmp () { return &_class_vars_tmp; }
   var_t cceoc_sentinel () const { return _cceoc_sentinel; }
+  str static_sentinel_check () const;
+  str static_sentinel_set () const;
 
   bool do_cceoc () const;
 
@@ -400,31 +402,35 @@ private:
 
 class tame_fn_return_t : public tame_el_t {
 public:
-  tame_fn_return_t (tame_fn_t *f) : _fn (f) {}
+  tame_fn_return_t (u_int l, tame_fn_t *f) : _line_number (l), _fn (f) {}
   void output (int fd);
 private:
+  u_int _line_number;
   tame_fn_t *_fn;
 };
 
 class tame_ret_t : public tame_env_t 
 {
 public:
-  tame_ret_t (tame_fn_t *f) : _fn (f) {}
+  tame_ret_t (u_int l, tame_fn_t *f) : _line_number (l), _fn (f) {}
   void add_params (const lstr &l) { _params = l; }
   virtual void output (int fd);
 protected:
+  u_int _line_number;
   tame_fn_t *_fn;
   lstr _params;
 };
 
 class tame_unblock_t : public tame_ret_t {
 public:
-  tame_unblock_t (tame_fn_t *f) : tame_ret_t (f) {}
+  tame_unblock_t (u_int l, tame_fn_t *f) : tame_ret_t (l, f) {}
+  virtual void output (int fd);
 };
 
 class tame_resume_t : public tame_unblock_t {
 public:
-  tame_resume_t (tame_fn_t *f) : tame_unblock_t (f) {}
+  tame_resume_t (u_int l, tame_fn_t *f) : tame_unblock_t (l, f) {}
+  void output (int fd);
 };
 
 class parse_state_t : public element_list_t {
@@ -453,6 +459,7 @@ public:
   void set_decl_specifier (const str &s) { _decl_specifier = s; }
   str decl_specifier () const { return _decl_specifier; }
   tame_fn_t *function () { return _fn; }
+  const tame_fn_t &function_const () const { return *_fn; }
 
   void new_block (tame_block_t *g);
   tame_block_t *block () { return _block; }
@@ -474,6 +481,7 @@ public:
   void set_infile_name (const str &i) { _infile_name = i; }
   void output_line_xlate (int fd, int ln) ;
   void need_line_xlate () { _need_line_xlate = true; }
+  str loc (u_int l) const ;
 
 protected:
   str _decl_specifier;
@@ -577,7 +585,6 @@ do {                                                      \
  * constants, etc.
  */
 extern const char *cceoc_label;
-
-
+#define TAME_GLOBAL_INT                   "tame_global_int"
 
 #endif /* _TAME_TAME_H */
