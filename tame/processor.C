@@ -214,6 +214,12 @@ tame_fn_t::add_env (tame_env_t *e)
     e->set_id (++_n_labels);
 }
 
+bool
+tame_fn_t::do_cceoc () const
+{
+  return _args->lookup (cceoc_label);
+}
+
 //-----------------------------------------------------------------------
 // Output utility routines
 //
@@ -322,11 +328,17 @@ vartab_t::paramlist (strbuf &b, list_mode_t list_mode, str prfx) const
 }
 
 str
-tame_fn_t::label (u_int id) const
+tame_fn_t::label (str s) const
 {
   strbuf b;
-  b << _name_mangled << "__label" << id ;
+  b << _name_mangled << "__label_" << s;
   return b;
+}
+
+str
+tame_fn_t::label (u_int id) const
+{
+  return label (strbuf ("%ud", id));
 }
 
 
@@ -679,8 +691,14 @@ tame_fn_t::output_fn (int fd)
   state.output_line_xlate (fd, _lineno);
 
   b << signature (false, TAME_PREFIX)  << "\n"
-    << "{\n"
-    << "  " << _closure.decl () << ";\n"
+    << "{\n";
+  
+  if (do_cceoc ()) {
+    b << "  " << _cceoc_sentinel.decl () << ";\n";
+  }
+
+
+  b << "  " << _closure.decl () << ";\n"
     << "  "
     ;
   b.mycat (_closure.type ().mk_ptr ());
@@ -960,6 +978,22 @@ tame_ret_t::output (int fd)
     b << _params;
   b.tosuio ()->output (fd);
   tame_env_t::output (fd);
+}
+
+void
+tame_fn_return_t::output (int fd)
+{
+  if (_fn->do_cceoc ()) {
+    my_strbuf_t b;
+    b << " ";
+    b.mycat (_fn->label ("return")) 
+      << ":\n"
+      << "  tame_global_int = "
+      << _fn->cceoc_sentinel ().name () << ";\n"
+      << "  return;\n";
+    b.tosuio ()->output (fd);
+    state.need_line_xlate ();
+  }
 }
 
 

@@ -120,6 +120,7 @@ fn:	T_TAME '(' fn_declaration ')' '{'
 	}
 	fn_statements '}'
 	{
+	  state.push (New tame_fn_return_t (state.function ()));
 	  state.passthrough (lstr (get_yy_lineno (), "}"));
 	  state.pop_list ();
 	}

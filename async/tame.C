@@ -8,6 +8,7 @@
 #define   TAME_ERROR_FATAL       (1 << 1)
 
 int tame_options;
+int tame_global_int;
 
 int tame_init::count;
 

@@ -186,5 +186,7 @@ struct pointer_set4_t {
 #define CLOSURE        ptr<closure_t> __frame = NULL
 #define TAME_OPTIONS   "TAME_OPTIONS"
 
+extern int tame_global_int;
+
 
 #endif /* _ASYNC_UNWRAP_H */

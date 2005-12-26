@@ -8,7 +8,8 @@ parse_state_t state;
 static void
 usage ()
 {
-  warnx << "usage: " << progname << " [-Lhv] [-o <outfile>] [<infile>]\n"
+  warnx << "usage: " << progname << " [-Lhv] [-C <cceoc>] "
+	<< "[-o <outfile>] [<infile>]\n"
 	<< "\n"
 	<< "  Flags:\n"
 	<< "    -L  disable line number translation\n"
@@ -16,6 +17,7 @@ usage ()
 	<< "    -v  show version number and exit\n"
 	<< "\n"
 	<< "  Options:\n"
+	<< "    -C  specify argname for checked call-exactly-once continuation"
 	<< "    -o  specify output file\n"
 	<< "\n"
 	<< "  If no input or output files are specified, then standard in\n"
@@ -36,16 +38,20 @@ main (int argc, char *argv[])
   str outfile;
   bool debug = false;
   bool no_line_numbers = false;
+  const char *c;
   str ifn;
   
   make_sync (0);
   make_sync (1);
   make_sync (2);
 
-  while ((ch = getopt (argc, argv, "Lvdo:")) != -1)
+  while ((ch = getopt (argc, argv, "C:Lvdo:")) != -1)
     switch (ch) {
     case 'h':
       usage ();
+      break;
+    case 'C':
+      cceoc_label = optarg;
       break;
     case 'L':
       no_line_numbers = true;
@@ -68,6 +74,9 @@ main (int argc, char *argv[])
 
   if (getenv ("TAME_NO_LINE_NUMBERS"))
     no_line_numbers = true;
+
+  if ((c = getenv ("CCEOC_PARAM_NAME")))
+    cceoc_label = c;
 
   argc -= optind;
   argv += optind;

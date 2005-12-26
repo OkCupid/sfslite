@@ -311,6 +311,7 @@ public:
       _self (_class, "*", "_self"),
       _isconst (c),
       _closure (mk_closure ()), 
+      _cceoc_sentinel ("int", NULL, "_cceoc_sentinel_int"),
       _args (d->params ()), 
       _opts (o),
       _lineno (l),
@@ -320,6 +321,9 @@ public:
   vartab_t *stack_vars () { return &_stack_vars; }
   vartab_t *args () { return _args; }
   vartab_t *class_vars_tmp () { return &_class_vars_tmp; }
+  var_t cceoc_sentinel () const { return _cceoc_sentinel; }
+
+  bool do_cceoc () const;
 
   str classname () const { return _class; }
   str name () const { return _name; }
@@ -355,6 +359,7 @@ public:
 
   tame_callback_t *last_callback () { return _cbs.back (); }
 
+  str label (str s) const;
   str label (u_int id) const ;
 
 private:
@@ -367,6 +372,7 @@ private:
 
   const bool _isconst;
   const var_t _closure;
+  const var_t _cceoc_sentinel;
 
   var_t mk_closure () const ;
 
@@ -390,6 +396,14 @@ private:
   int _opts;
   u_int _lineno;
   u_int _n_labels;
+};
+
+class tame_fn_return_t : public tame_el_t {
+public:
+  tame_fn_return_t (tame_fn_t *f) : _fn (f) {}
+  void output (int fd);
+private:
+  tame_fn_t *_fn;
 };
 
 class tame_ret_t : public tame_env_t 
@@ -557,6 +571,12 @@ do {                                                      \
       b << in;                                            \
       out = lstr (ln, b);                                 \
 } while (0)
+
+
+/*
+ * constants, etc.
+ */
+extern const char *cceoc_label;
 
 
 
