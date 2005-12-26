@@ -192,6 +192,7 @@ block: T_BLOCK '{'
  	  tame_block_t *bl = New tame_block_t (fn);
 	  state.new_block (bl);
 	  fn->add_env (bl);
+	  fn->hit_tame_block ();
 	  state.push_list (bl);
 	}
 	callbacks_and_passthrough '}'

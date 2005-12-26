@@ -315,7 +315,8 @@ public:
       _args (d->params ()), 
       _opts (o),
       _lineno (l),
-      _n_labels (0)
+      _n_labels (0),
+      _n_blocks (0)
   { }
 
   vartab_t *stack_vars () { return &_stack_vars; }
@@ -354,6 +355,8 @@ public:
   str decl_casted_closure (bool do_lhs) const;
   var_t closure () const { return _closure; }
   static var_t trig () ;
+
+  void hit_tame_block () { _n_blocks++; }
 
   str closure_nm () const { return _closure.name (); }
   str reenter_fn  () const ;
@@ -398,6 +401,7 @@ private:
   int _opts;
   u_int _lineno;
   u_int _n_labels;
+  u_int _n_blocks;
 };
 
 

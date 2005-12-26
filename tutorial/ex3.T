@@ -16,6 +16,8 @@ TAME (static void try_rpc (str h, int port, cbb cceoc))
     vec<int> rv;
     vec<clnt_stat> ev;
   }
+
+  BLOCK {}
   
   BLOCK { tcpconnect (h, port, @(fd)); }
  

@@ -206,9 +206,13 @@ long\s+long	return T_LONG_LONG;
 
 <EXPECT_CB_BASE,EXPECT_CB>{
 \n		{ ++lineno; return std_ret (T_PASSTHROUGH); }
-[^@{}\n/]+|"/"	{ return std_ret (T_PASSTHROUGH); }
+[^ \t@{}\n/]+|[ \t/]	{ return std_ret (T_PASSTHROUGH); }
 @		{ yy_push_state (CB_ENTER); return yytext[0]; }
 [{]		{ yy_push_state (EXPECT_CB); return std_ret (T_PASSTHROUGH); }
+goto/[ \t\n]	{ return yyerror ("cannot goto from within a BLOCK or "
+				  "NONBLOCK environment"); }
+return/[ \t\n(;] { return yyerror ("cannot return from withing a BLOCK or "
+				   "NONBLOCK environment."); }
 }
 
 
@@ -222,7 +226,7 @@ long\s+long	return T_LONG_LONG;
 
 <TAME,TAME_BASE>{
 \n		{ yylval.str = yytext; ++lineno; return T_PASSTHROUGH; }
-[^VBNJTrUR{}\n/]+|[VBNJTrUR/] { yylval.str = yytext; return T_PASSTHROUGH; }
+[^ \t{}\n/]+|[ \t/] { yylval.str = yytext; return T_PASSTHROUGH; }
 [{]		{ yylval.str = yytext; yy_push_state (TAME); 
 		  return T_PASSTHROUGH; }
 

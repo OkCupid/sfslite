@@ -25,6 +25,8 @@ public:
   void set_has_cceoc (bool f) { _has_cceoc = f; }
   void enforce_cceoc (const str &loc);
 
+  void end_of_scope_checks (str loc);
+
 protected:
   u_int _jumpto;
   ptr<bool> _destroyed;

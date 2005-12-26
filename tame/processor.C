@@ -532,7 +532,9 @@ tame_fn_t::output_closure (int fd)
     _args->paramlist (b, DECLARATIONS);
   }
 
-  b << ") : ";
+  str cceoc = str (do_cceoc () ? "true" : "false");
+
+  b << ") : closure_t (" << cceoc << "), ";
   if (need_self ()) {
     str s = _self.name ();
     b.mycat (s) << " (";
@@ -548,7 +550,7 @@ tame_fn_t::output_closure (int fd)
   if (_args) _args->paramlist (b, NAMES);
   b << ")";
 
-  for ( u_int i = 1; i <= _cbs.size (); i++) {
+  for ( u_int i = 1; i <= _n_blocks ; i++) {
     b << ", _block" << i << " (0)";
   }
   b << " {}\n\n";
@@ -609,7 +611,7 @@ tame_fn_t::output_closure (int fd)
   if (_class)
     b << "  method_type_t _method;\n";
 
-  for (u_int i = 1; i <= _cbs.size (); i++) {
+  for (u_int i = 1; i <= _n_blocks; i++) {
     b << "  int _block" << i << ";\n";
   }
 
@@ -1049,11 +1051,8 @@ tame_ret_t::return_checks (my_strbuf_t &b)
   str loc = state.loc (_line_number);
   if (_fn->do_cceoc ()) {
     b.mycat (_fn->static_sentinel_check ());
-    b << "  " << CLOSURE << "->enforce_cceoc (\"";
-    b.mycat (loc) << "\");\n";
   }
-  b << "  delaycb (0, 0, wrap (check_closure_destroyed, str (\""
-    << loc << "\"), " << CLOSURE << "->destroyed_flag ()));\n";
+  b << "  " << CLOSURE << "->end_of_scope_checks (\"" << loc << "\");\n";
 }
 
 void
