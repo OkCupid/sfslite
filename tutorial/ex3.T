@@ -44,7 +44,7 @@ TAME (static void try_rpc (str h, int port, cbb cceoc))
       }
     }
   }
-  RESUME (ret);
+  UNBLOCK (ret);
   fd ++;
 }
  

@@ -217,7 +217,7 @@ tame_fn_t::add_env (tame_env_t *e)
 bool
 tame_fn_t::do_cceoc () const
 {
-  return _args->lookup (cceoc_label);
+  return _args && _args->lookup (cceoc_label);
 }
 
 //-----------------------------------------------------------------------
@@ -689,6 +689,7 @@ tame_fn_t::output_fn (int fd)
 {
   my_strbuf_t b;
   
+  state.set_fn (this);
   state.need_line_xlate ();
   state.output_line_xlate (fd, _lineno);
 
@@ -977,7 +978,8 @@ tame_ret_t::output (int fd)
   my_strbuf_t b;
 
   if (_fn->do_cceoc ()) {
-    b.mycat (_fn->static_sentinel_check ());
+    b << "  do {\n";
+    return_checks (b);
     state.need_line_xlate ();
   }
   
@@ -986,6 +988,11 @@ tame_ret_t::output (int fd)
     b << _params;
   b.tosuio ()->output (fd);
   tame_env_t::output (fd);
+  b.tosuio ()->clear ();
+  if (_fn->do_cceoc ()) {
+    b << "  } while (0);\n";
+    b.tosuio ()->output (fd);
+  }
 }
 
 void
@@ -993,7 +1000,7 @@ tame_unblock_t::output (int fd)
 {
   my_strbuf_t b;
   b << "\n"
-    << "  {\n"
+    << "  do {\n"
     << "    " << CLOSURE << "->inc_cceoc_count ();\n"
     ;
 
@@ -1016,36 +1023,47 @@ tame_unblock_t::output (int fd)
   b.tosuio ()->output (fd);
   b.tosuio ()->clear ();
   tame_env_t::output (fd);
+  b << "\n";
+  b.tosuio ()->output (fd);
+  b.tosuio ()->clear ();
 
-  b << "\n"
-    << "  }\n";
+  resume_output (fd);
+
+  b  << "  } while (0);\n";
   b.tosuio ()->output (fd);
   state.need_line_xlate ();
 }
 
 void
-tame_resume_t::output (int fd)
+tame_resume_t::resume_output (int fd)
 {
-  tame_unblock_t::output (fd);
   my_strbuf_t b;
-  b.mycat (_fn->static_sentinel_check ());
+  return_checks (b);
   b << "  return;\n";
   b.tosuio ()->output (fd);
-  state.need_line_xlate ();
+}
+
+void 
+tame_ret_t::return_checks (my_strbuf_t &b)
+{
+  str loc = state.loc (_line_number);
+  if (_fn->do_cceoc ()) {
+    b.mycat (_fn->static_sentinel_check ());
+    b << "  " << CLOSURE << "->enforce_cceoc (\"";
+    b.mycat (loc) << "\");\n";
+  }
+  b << "  delaycb (0, 0, wrap (check_closure_destroyed, str (\""
+    << loc << "\"), " << CLOSURE << "->destroyed_flag ()));\n";
 }
 
 void
 tame_fn_return_t::output (int fd)
 {
-  if (_fn->do_cceoc ()) {
-    my_strbuf_t b;
-    b.mycat (_fn->static_sentinel_check ());
-    b << "  " << CLOSURE << "->enforce_cceoc (\"";
-    b.mycat (state.loc (_line_number)) << "\");\n";
-
-    b.tosuio ()->output (fd);
-    state.need_line_xlate ();
-  }
+  my_strbuf_t b;
+  return_checks (b);
+  
+  b.tosuio ()->output (fd);
+  state.need_line_xlate ();
 }
 
 str

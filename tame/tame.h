@@ -400,14 +400,6 @@ private:
   u_int _n_labels;
 };
 
-class tame_fn_return_t : public tame_el_t {
-public:
-  tame_fn_return_t (u_int l, tame_fn_t *f) : _line_number (l), _fn (f) {}
-  void output (int fd);
-private:
-  u_int _line_number;
-  tame_fn_t *_fn;
-};
 
 class tame_ret_t : public tame_env_t 
 {
@@ -415,22 +407,32 @@ public:
   tame_ret_t (u_int l, tame_fn_t *f) : _line_number (l), _fn (f) {}
   void add_params (const lstr &l) { _params = l; }
   virtual void output (int fd);
+  void return_checks (my_strbuf_t &b);
 protected:
   u_int _line_number;
   tame_fn_t *_fn;
   lstr _params;
 };
 
+class tame_fn_return_t : public tame_ret_t {
+public:
+  tame_fn_return_t (u_int l, tame_fn_t *f) : tame_ret_t (l, f) {}
+  void output (int fd);
+};
+
 class tame_unblock_t : public tame_ret_t {
 public:
   tame_unblock_t (u_int l, tame_fn_t *f) : tame_ret_t (l, f) {}
+  virtual ~tame_unblock_t () {}
   virtual void output (int fd);
+  virtual void resume_output (int fd) {}
 };
 
 class tame_resume_t : public tame_unblock_t {
 public:
   tame_resume_t (u_int l, tame_fn_t *f) : tame_unblock_t (l, f) {}
-  void output (int fd);
+  ~tame_resume_t () {}
+  void resume_output (int fd);
 };
 
 class parse_state_t : public element_list_t {
@@ -443,6 +445,7 @@ public:
 
   void new_fn (tame_fn_t *f) { new_el (f); _fn = f; }
   void new_el (tame_el_t *e) { _fn = NULL; push (e); }
+  void set_fn (tame_fn_t *f) { _fn = f; }
 
   void passthrough (const lstr &l) { top_list ()->passthrough (l); }
   void push (tame_el_t *e) { top_list ()->push (e); }

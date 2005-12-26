@@ -18,7 +18,7 @@ public:
   virtual ~closure_t () { *_destroyed = true; }
   void set_jumpto (int i) { _jumpto = i; }
   u_int jumpto () const { return _jumpto; }
-  bool destroyed_flag () { return _destroyed; }
+  ptr<bool> destroyed_flag () { return _destroyed; }
 
   // "Call-Exactly-Once Checked Continuation"
   void inc_cceoc_count () { _cceoc_count ++; }
@@ -31,6 +31,8 @@ protected:
   int _cceoc_count;
   bool _has_cceoc;
 };
+
+void check_closure_destroyed (str loc, ptr<bool> flag);
 
 template<class T1 = int, class T2 = int, class T3 = int, class T4 = int>
 struct value_set_t {

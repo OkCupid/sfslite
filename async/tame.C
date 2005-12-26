@@ -60,3 +60,10 @@ closure_t::enforce_cceoc (const str &l)
     tame_error (l, e);
   }
 }
+
+void
+check_closure_destroyed (str loc, ptr<bool> flag)
+{
+  if (!*flag) 
+    tame_error (loc, "reference to closure leaked");
+}
