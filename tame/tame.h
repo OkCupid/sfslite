@@ -217,7 +217,8 @@ class tame_join_t;
 
 class tame_callback_t : public tame_env_t {
 public:
-  tame_callback_t (ptr<expr_list_t> l) : _call_with (l) {}
+  tame_callback_t (u_int ln, ptr<expr_list_t> l) 
+    : _line_number (ln), _call_with (l) {}
 
   virtual void output (int fd) { tame_env_t::output (fd); }
   virtual void output_in_class (strbuf &b) = 0;
@@ -225,12 +226,13 @@ public:
   
   ptr<expr_list_t> call_with () { return _call_with; }
 protected:
+  u_int _line_number;
   ptr<expr_list_t> _call_with;
 };
 
 class tame_block_callback_t : public tame_callback_t {
 public:
-  tame_block_callback_t (tame_fn_t *fn, tame_block_t *b, 
+  tame_block_callback_t (u_int ln, tame_fn_t *fn, tame_block_t *b, 
 			   ptr<expr_list_t> l);
   ~tame_block_callback_t () {}
   void output (int fd);
@@ -245,8 +247,8 @@ private:
 
 class tame_nonblock_callback_t : public tame_callback_t {
 public:
-  tame_nonblock_callback_t (tame_nonblock_t *n, ptr<expr_list_t> l)
-    : tame_callback_t (l), _nonblock (n) {}
+  tame_nonblock_callback_t (u_int ln, tame_nonblock_t *n, ptr<expr_list_t> l)
+    : tame_callback_t (ln, l), _nonblock (n) {}
   void output (int fd);
   void output_in_class (strbuf &b) {}
   void output_generic (strbuf &b);

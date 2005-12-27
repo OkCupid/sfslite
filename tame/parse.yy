@@ -300,11 +300,13 @@ callback: '@' '(' expr_list_opt ')'
 	  if (state.block ()) {
  	    // Callbacks are labeled serially within a function; the 
 	    // constructor sets this ID.
-	    $$ = New tame_block_callback_t (fn, state.block (), $3);
+	    $$ = New tame_block_callback_t (get_yy_lineno (), 
+				            fn, state.block (), $3);
 	  } else {
 	    assert ( state.nonblock ());
 	    tame_nonblock_callback_t *cb = 
-              New tame_nonblock_callback_t (state.nonblock (), $3);
+              New tame_nonblock_callback_t (get_yy_lineno (), 
+				            state.nonblock (), $3);
 	    fn->add_nonblock_callback (cb);
 	    $$ = cb;
 	  }

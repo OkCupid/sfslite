@@ -32,10 +32,10 @@ var_t::var_t (const str &t, ptr<declarator_t> d, vartyp_t a)
 // note that a callback ID is only necessary in the (optimized case)
 // of adding a callback to a BLOCK {...} block within a function
 //
-tame_block_callback_t::tame_block_callback_t (tame_fn_t *f, 
+tame_block_callback_t::tame_block_callback_t (u_int ln, tame_fn_t *f, 
 						  tame_block_t *g, 
 						  ptr<expr_list_t> l) 
-  : tame_callback_t (l), _parent_fn (f), _block (g),
+  : tame_callback_t (ln, l), _parent_fn (f), _block (g),
     _cb_ind (_parent_fn->add_callback (this))
 {}
 
@@ -455,6 +455,12 @@ tame_block_callback_t::output_in_class (strbuf &b)
   for (u_int i = 1; i <= N_p; i++) {
     b << "    *p.p" << i << " = v" << i << ";\n";
   }
+
+  str loc = state.loc (_line_number);
+  b << "    if (-- _cb_num_calls" << _cb_ind << " < 0 ) {\n"
+    << "      tame_error (\"" << loc << "\", \"callback overcalled!\");\n"
+    << "    }\n";
+
   b << "    if (!--_block" << _cb_ind << ")\n"
     << "      delaycb (0, 0, wrap (mkref (this), &"
     ;
@@ -553,6 +559,11 @@ tame_fn_t::output_closure (int fd)
   for ( u_int i = 1; i <= _n_blocks ; i++) {
     b << ", _block" << i << " (0)";
   }
+
+  for ( u_int i = 1; i <= _cbs.size (); i++) {
+    b << ", _cb_num_calls" << i << " (0)";
+  }
+
   b << " {}\n\n";
 
   if (_class) {
@@ -613,6 +624,10 @@ tame_fn_t::output_closure (int fd)
 
   for (u_int i = 1; i <= _n_blocks; i++) {
     b << "  int _block" << i << ";\n";
+  }
+
+  for (u_int i = 1; i <= _cbs.size () ; i++) {
+    b << "  int _cb_num_calls" << i << ";\n";
   }
 
   b << "};\n\n";
@@ -856,6 +871,7 @@ tame_block_callback_t::output (int fd)
   int bid = _block->id ();
   my_strbuf_t b;
   b << "(++" << CLOSURE << "->_block" << bid << ", "
+    << "++" << CLOSURE << "->_cb_num_calls" << _cb_ind << ", "
     << "wrap (" << CLOSURE_RFCNT << ", &" 
     << _parent_fn->closure ().type ().base_type () << "::cb" << _cb_ind
     ;
