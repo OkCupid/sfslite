@@ -10,15 +10,13 @@ TAME (static void try_rpc (str h, int port, cbb cceoc))
 {
   VARS {
     bool ret (false);
-    int fd, n (5), i;
+    int fd, n (5);
     ptr<axprt_stream> x;
     ptr<aclnt> cli;
     vec<int> rv;
     vec<clnt_stat> ev;
   }
 
-  BLOCK {}
-  
   BLOCK { tcpconnect (h, port, @(fd)); }
  
   if (fd < 0) {
@@ -31,13 +29,13 @@ TAME (static void try_rpc (str h, int port, cbb cceoc))
     rv.setsize (n);
  
     BLOCK {
-      for (i = 0; i < n; i++) {
+      for (int i = 0; i < n; i++) {
         cli->call (EX_RANDOM, NULL, &rv[i], @(ev[i]) );
       }
     }
     ret = true;
     // check for n-fold success as usual
-    for (i = 0 ; i < n; i++) {
+    for (int i = 0 ; i < n; i++) {
       if (ev[i]) {
         warn << "A failure: " << ev[i] << "\n";
         ret = false;
