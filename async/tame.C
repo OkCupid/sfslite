@@ -68,10 +68,14 @@ check_closure_destroyed (str loc, ptr<bool> flag)
     tame_error (loc, "reference to closure leaked");
 }
 
+
 void
 closure_t::end_of_scope_checks (str loc)
 {
   if (_has_cceoc)
     enforce_cceoc (loc);
-  delaycb (0, 0, wrap (check_closure_destroyed, loc, _destroyed));
+
+  set_weak_finalize_cb (wrap (check_closure_destroyed, loc, 
+			      destroyed_flag ()));
+  weak_decref ();
 }

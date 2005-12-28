@@ -6,19 +6,70 @@
 #define _ASYNC_UNWRAP_H
 
 #include "async.h"
+#include "qhash.h"
 
-class closure_t : public virtual refcount {
+template<class T>
+class weak_refcounted_t {
+public:
+  weak_refcounted_t () :
+    _destroyed_flag (New refcounted<bool> (false)),
+    _refcnt (1) {}
+
+  virtual ~weak_refcounted_t () { *_destroyed_flag = true; }
+
+  void weak_incref () { _refcount++; }
+
+  void weak_decref () 
+  {
+    assert ( --_refcnt >= 0);
+    if (!_refcnt) {
+      cbv::ptr c = _weak_finalize_cb;
+      _weak_finalize_cb = NULL;
+      if (c) 
+	delaycb (0,0,c);
+    }
+  }
+  
+  ptr<bool> destroyed_flag () { return _destroyed_flag; }
+  void set_weak_finalize_cb (cbv::ptr c) { _weak_finalize_cb = c; }
+
+private:
+  ptr<bool> _destroyed_flag;
+  int _refcnt;
+  cbv::ptr _weak_finalize_cb;
+};
+
+/**
+ * Weak reference: hold a pointer to an object, without increasing its
+ * refcount, but still knowing whether or not it's been destroyed.
+ * If destroyed, don't access it!
+ *
+ * @param T a class that implements the method ptr<bool> destroyed_flag()
+ */
+template<class T>
+class weak_ref_t {
+public:
+  weak_ref_t (weak_refcounted_t<T> *p) : 
+    _pointer (p), 
+    _destroyed_flag (p->destroyed_flag ()) {}
+  T * pointer () { return (*_destroyed_flag ? NULL : _pointer); }
+  
+private:
+  weak_refcounted_t<T>         *_pointer;
+  ptr<bool>                    _destroyed_flag;
+};
+
+class closure_t : public virtual refcount , 
+		  public weak_refcounted_t<closure_t>
+{
 public:
   closure_t (bool c = false) : 
     _jumpto (0), 
-    _destroyed (New refcounted<bool> (false)), 
     _cceoc_count (0),
     _has_cceoc (c)
   {}
-  virtual ~closure_t () { *_destroyed = true; }
   void set_jumpto (int i) { _jumpto = i; }
   u_int jumpto () const { return _jumpto; }
-  ptr<bool> destroyed_flag () { return _destroyed; }
 
   // "Call-Exactly-Once Checked Continuation"
   void inc_cceoc_count () { _cceoc_count ++; }
@@ -29,7 +80,6 @@ public:
 
 protected:
   u_int _jumpto;
-  ptr<bool> _destroyed;
   int _cceoc_count;
   bool _has_cceoc;
 };
@@ -58,7 +108,6 @@ struct value_set_t {
  */
 void tame_error (const str &loc, const str &msg);
 INIT(tame_init);
-
 
 template<class T1 = int, class T2 = int, class T3 = int, class T4 = int>
 class join_group_pointer_t : public virtual refcount {
@@ -124,6 +173,11 @@ private:
   // try to debug leaked joiners
   const char *_file;
   int _lineno;
+
+  // keep weak references to all of the closures that we references;
+  // when we go out of scope, we will unregister at those closures,
+  // so the closures can detect closure leaks!
+  qhash<u_int, weak_ref_t<closure_t> > _closures;
 };
 
 /**
