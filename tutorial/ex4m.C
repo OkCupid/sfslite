@@ -7,14 +7,14 @@
 #include "parseopt.h"
 #include "ex_prot.h"
 
-template<class J, class P1, class W1> static void 
-__nonblock_cb_1_1 (ptr<closure_t> hold, J jg, 
+template<class P1, class W1> static void 
+__nonblock_cb_1_1 (ptr<closure_t> hold, ptr<joiner_t<W1> > j,
 		 pointer_set1_t<P1> p, value_set_t<W1> w, P1 v)
 {
   *p.p1 = v;
 
   // always return to the main loop to avoid funny race conditions.
-  delaycb (0, 0, jg.make_join_cb (w));
+  j->join (w);
 }
 
 
@@ -151,10 +151,9 @@ dostuff( str __tame_h,  int __tame_port,  cbb __tame_cb, ptr<closure_t> __cls_g)
       cid = i++;
       cli->call (EX_RANDOM, NULL, &res[cid],
 		 (RPC.launch_one (),
-		  wrap (__nonblock_cb_1_1<typeof (RPC), 
-			typeof(errs[cid]), typeof (cid)>, 
+		  wrap (__nonblock_cb_1_1<typeof(errs[cid]), typeof (cid)>, 
 			__cls_g,
-			RPC, 
+			RPC.make_joiner ("<function location XXX>"), 
 			pointer_set1_t<typeof(errs[cid])> (&errs[cid]),
 			value_set_t<typeof(cid)> (cid)
 			)));
@@ -179,11 +178,10 @@ dostuff( str __tame_h,  int __tame_port,  cbb __tame_cb, ptr<closure_t> __cls_g)
 	    cid = i++;
 	    cli->call (EX_RANDOM, NULL, &res[cid],
 		       (RPC.launch_one (),
-			wrap (__nonblock_cb_1_1<typeof (RPC), 
-			      typeof(errs[cid]), 
+			wrap (__nonblock_cb_1_1< typeof(errs[cid]), 
 			      typeof (cid)>,
 			      __cls_g,
-			      RPC, 
+			      RPC.make_joiner ("<function location YYY>"), 
 			      pointer_set1_t<typeof(errs[cid])> (&errs[cid]),
 			      value_set_t<typeof(cid)> (cid)
 			      )));

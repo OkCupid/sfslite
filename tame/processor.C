@@ -377,18 +377,33 @@ tame_nonblock_callback_t::output_generic (strbuf &b)
 
   if (generic_cb_exists (N_w, N_p))
     return;
+  bool first = true;
 
   generic_cb_declare (N_w, N_p);
-  b << "template<class J";
-  for (u_int i = 1; i <= N_p; i++) {
-    b << ", class P" << i;
+  if (N_p > 0 || N_w > 0) {
+    b << "template<";
+    for (u_int i = 1; i <= N_p; i++) {
+      if (first) first = false;
+      else b << ", ";
+      b << "class P" << i;
+    }
+    for (u_int i = 1; i <= N_w; i++) {
+      if (first) first = false;
+      else b << ", ";
+    b << "class W" << i;
+    }
+    b << "> ";
   }
-  for (u_int i = 1; i <= N_w; i++) {
-    b << ", class W" << i;
-  }
-  b << "> static void\n";
+  b << "static void\n";
   b.cat (cb_name ().cstr (), true);
-  b << " (ptr<closure_t> hold, J jg";
+  b << " (ptr<closure_t> hold, "
+    << "ptr<joiner_t<";
+  for (u_int i = 1; i <= N_w; i++) {
+    if (i != 1) b << ", ";
+    b << "W" << i;
+  }
+  b << "> > j";
+  
   if (N_p) {
     b << ",\n";
     b << "\t\tpointer_set" << N_p << "_t<";
@@ -421,7 +436,7 @@ tame_nonblock_callback_t::output_generic (strbuf &b)
     b << "  *p.p" << i << " = v" << i << ";\n";
   }
   b << "\n";
-  b << "  delaycb (0, 0, jg.make_join_cb (w));\n"
+  b << "  j->join (w);\n"
     << "}\n\n";
 }
   
@@ -461,7 +476,7 @@ tame_block_callback_t::output_in_class (strbuf &b)
     << "      tame_error (\"" << loc << "\", \"callback overcalled!\");\n"
     << "    }\n";
 
-  b << "    if (!--_block" << _cb_ind << ")\n"
+  b << "    if (!--_block" << _block->id () << ")\n"
     << "      delaycb (0, 0, wrap (mkref (this), &"
     ;
   b.cat (_parent_fn->reenter_fn ().cstr (), true);
@@ -839,7 +854,7 @@ parse_state_t::output (int fd)
   element_list_t::output (fd);
 }
 
-void
+bool
 expr_list_t::output_vars (strbuf &b, bool first, const str &prfx, 
 			  const str &sffx)
 {
@@ -850,9 +865,10 @@ expr_list_t::output_vars (strbuf &b, bool first, const str &prfx,
     b << (*this)[i].name ();
     if (sffx) b << sffx;
   }
+  return first;
 }
 
-void
+bool
 tame_nonblock_t::output_vars (strbuf &b, bool first, const str &prfx,
 				const str &sffx)
 {
@@ -863,6 +879,7 @@ tame_nonblock_t::output_vars (strbuf &b, bool first, const str &prfx,
     b << arg (i).name ();
     if (sffx) b << sffx;
   }
+  return first;
 }
 
 void
@@ -898,15 +915,24 @@ tame_nonblock_callback_t::output (int fd)
   strbuf tmp;
   tmp << "(" << _nonblock->join_group ().name () << ")";
   str jgn = tmp;
+  str loc = state.loc (_line_number);
   
-  b << "(" << jgn << ".launch_one (), "
+  b << "(" << jgn << ".launch_one (" CLOSURE_GENERIC "), "
     << "wrap (";
-  b.mycat (cb_name ()) << "<typeof " << jgn << "";
+  b.mycat (cb_name ());
 
-  _call_with->output_vars (b, false, "typeof (", ")");
-  _nonblock->output_vars (b, false, "typeof (", ")");
+  if (_call_with->size () || _nonblock->n_args ()) {
+    b << " <";
 
-  b << ">, " << CLOSURE_GENERIC << ", " << jgn;
+    bool first = true;
+
+    first = _call_with->output_vars (b, first, "typeof (", ")");
+    first = _nonblock->output_vars (b, first, "typeof (", ")");
+    
+    b << ">";
+  }
+  b << ", " CLOSURE_GENERIC ", " << jgn 
+    << ".make_joiner (\"" << loc << "\")";
 
   if (_call_with->size ()) {
     b << ", pointer_set" << _call_with->size () << "_t<";

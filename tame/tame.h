@@ -186,7 +186,7 @@ protected:
 class expr_list_t : public vec<var_t>
 {
 public:
-  void output_vars (strbuf &b, bool first = false, const str &prfx = NULL,
+  bool output_vars (strbuf &b, bool first = false, const str &prfx = NULL,
 		    const str &sffx = NULL);
 };
 
@@ -540,7 +540,7 @@ public:
   u_int n_args () const { return _args->size () - 1; }
   var_t join_group () const { return (*_args)[0]; }
   var_t arg (u_int i) const { return (*_args)[i+1]; }
-  void output_vars (strbuf &b, bool first, const str &prfx, const str &sffx);
+  bool output_vars (strbuf &b, bool first, const str &prfx, const str &sffx);
 private:
   ptr<expr_list_t> _args;
 };

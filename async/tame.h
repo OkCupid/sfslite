@@ -11,13 +11,16 @@
 template<class T>
 class weak_refcounted_t {
 public:
-  weak_refcounted_t () :
+  weak_refcounted_t (T *p) :
+    _pointer (p),
     _destroyed_flag (New refcounted<bool> (false)),
     _refcnt (1) {}
 
   virtual ~weak_refcounted_t () { *_destroyed_flag = true; }
 
-  void weak_incref () { _refcount++; }
+  void weak_incref () { _refcnt++; }
+
+  T * pointer () { return _pointer; }
 
   void weak_decref () 
   {
@@ -29,11 +32,13 @@ public:
 	delaycb (0,0,c);
     }
   }
+  operator T *() { return static_cast<T *> (this); }
   
   ptr<bool> destroyed_flag () { return _destroyed_flag; }
   void set_weak_finalize_cb (cbv::ptr c) { _weak_finalize_cb = c; }
 
 private:
+  T        *_pointer;
   ptr<bool> _destroyed_flag;
   int _refcnt;
   cbv::ptr _weak_finalize_cb;
@@ -50,23 +55,30 @@ template<class T>
 class weak_ref_t {
 public:
   weak_ref_t (weak_refcounted_t<T> *p) : 
-    _pointer (p), 
+    _pointer (p->pointer ()), 
     _destroyed_flag (p->destroyed_flag ()) {}
+
   T * pointer () { return (*_destroyed_flag ? NULL : _pointer); }
+
+  void weak_decref () { if (pointer ()) pointer ()->weak_decref (); }
   
 private:
-  weak_refcounted_t<T>         *_pointer;
+  T                            *_pointer;
   ptr<bool>                    _destroyed_flag;
 };
+
+u_int64_t closure_serial_number = 0;
 
 class closure_t : public virtual refcount , 
 		  public weak_refcounted_t<closure_t>
 {
 public:
   closure_t (bool c = false) : 
+    weak_refcounted_t<closure_t> (this),
     _jumpto (0), 
     _cceoc_count (0),
-    _has_cceoc (c)
+    _has_cceoc (c),
+    _id (++closure_serial_number)
   {}
   void set_jumpto (int i) { _jumpto = i; }
   u_int jumpto () const { return _jumpto; }
@@ -77,11 +89,13 @@ public:
   void enforce_cceoc (const str &loc);
 
   void end_of_scope_checks (str loc);
+  u_int64_t id () { return _id; }
 
 protected:
   u_int _jumpto;
   int _cceoc_count;
   bool _has_cceoc;
+  u_int64_t _id;
 };
 
 void check_closure_destroyed (str loc, ptr<bool> flag);
@@ -115,6 +129,7 @@ class join_group_pointer_t
     public weak_refcounted_t<join_group_pointer_t<T1,T2,T3,T4> > {
 public:
   join_group_pointer_t (const char *f, int l) : 
+    weak_refcounted_t<join_group_pointer_t<T1,T2,T3,T4> > (this),
     _n_out (0), _file (f), _lineno (l)  {}
 
   ~join_group_pointer_t () 
@@ -128,20 +143,30 @@ public:
       tame_error (s, "non-joined continuations leaked!"); 
     }
 
-    // XXX write me
-    // unregister with weakly referenced closures
-
+    // unregister all closures by weakly decref'ing them
+    for (u_int i = 0; i < _closures.size (); i++)
+      _closures[i].weak_decref ();
   }
 
-
-  // XXX write me -- what happens when a closure is registered with
-  // this join group
-  void register_closure (ptr<closure_t> c) {}
-
+  void register_closure (ptr<closure_t> c) 
+  {
+    // make sure that each closure is registered only once!
+    u_int p = c->id ();
+    if (!_closure_bhash[p]) {
+      c->weak_incref ();
+      _closure_bhash.insert (p);
+      _closures.push_back (weak_ref_t<closure_t> (c));
+    }
+  }
 
   void set_join_cb (cbv::ptr c) { _join_cb = c; }
 
-  void launch_one () { _n_out ++; }
+  void launch_one (ptr<closure_t> c = NULL) 
+  { 
+    if (c)
+      register_closure (c);
+    rejoin ();
+  }
   void rejoin () { _n_out ++; }
 
   void join (value_set_t<T1, T2, T3, T4> v) 
@@ -187,43 +212,38 @@ private:
   // keep weak references to all of the closures that we references;
   // when we go out of scope, we will unregister at those closures,
   // so the closures can detect closure leaks!
-  qhash<u_int, weak_ref_t<closure_t> > _closures;
+  bhash<u_int>                _closure_bhash;
+  vec<weak_ref_t<closure_t> > _closures;
 };
 
-template<class T1, class T2, class T3, class T4>
-class join_group_weak_ref_t 
-  : public virtual refcount,
-    public weak_ref_t<join_group_pointer_t<T1,T2,T3,T3> >
-{
+template<class T1 = int, class T2 = int, class T3 = int, class T4 = int>
+class joiner_t : public virtual refcount {
 public:
-  join_group_weak_ref_t (join_group_pointer_t<T1,T2,T3,T4> p)
-    : weak_ref_t<join_group_pointer_t<T1,T2,T3,T4> > (p) {}
-  
-  cbv make_join_cb (value_set_t<T1,T2,T3,T4> w, str loc)
-  {
-    loc = l;
-    return wrap (mkref (this), 
-		 &join_group_weak_ref_t<T1,T2,T3,T4>::join,
-		 w);
-  }
-
-  void error ()
-  {
-    tame_error (loc, "join_group went out of scope");
-  }
+  joiner_t (ptr<join_group_pointer_t<T1,T2,T3,T4> > p, const str &l) 
+    : _weak_ref (*p), _loc (l) {}
 
   void join (value_set_t<T1,T2,T3,T4> w)
   {
-    if (*_destroyed_flag) {
+    delaycb (0, 0, wrap (mkref (this), &joiner_t<T1,T2,T3,T4>::join_cb, w));
+  }
+  
+private:
+  void error ()
+  {
+    tame_error (_loc, "join_group went out of scope");
+  }
+  
+  void join_cb (value_set_t<T1,T2,T3,T4> w)
+  {
+    if (!_weak_ref.pointer ()) {
       error ();
     } else {
-      _pointer->join (w);
+      _weak_ref.pointer ()->join (w);
     }
   }
 
-private:
-  str loc;
-    
+  weak_ref_t<join_group_pointer_t<T1,T2,T3,T4> > _weak_ref;
+  str _loc;
 };
 
 /**
@@ -237,7 +257,7 @@ public:
   join_group_t (ptr<join_group_pointer_t<T1,T2,T3,T4> > p) : _pointer (p) {}
 
   void set_join_cb (cbv::ptr c) { _pointer->set_join_cb (c); }
-  void launch_one () { _pointer->launch_one (); }
+  void launch_one (ptr<closure_t> c = NULL) { _pointer->launch_one (c); }
   void rejoin () { _pointer->rejoin (); }
   bool need_join () const { return _pointer->need_join (); }
   ptr<join_group_pointer_t<T1,T2,T3,T4> > pointer () { return _pointer; }
@@ -247,8 +267,8 @@ public:
   static value_set_t<T1,T2,T3,T4> to_vs () 
   { return value_set_t<T1,T2,T3,T4> (); }
 
-  cbv make_join_cb (value_set_t<T1,T2,T3,T4> w)
-  { return wrap (_pointer, &join_group_pointer_t<T1,T2,T3,T4>::join, w); }
+  ptr<joiner_t<T1,T2,T3,T4> > make_joiner (const str &loc) 
+  { return New refcounted<joiner_t<T1,T2,T3,T4> > (_pointer, loc); }
 
 private:
   ptr<join_group_pointer_t<T1,T2,T3,T4> > _pointer;
