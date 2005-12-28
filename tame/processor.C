@@ -970,6 +970,7 @@ tame_join_t::output (int fd)
     << "  }\n\n";
 
   b.tosuio ()->output (fd);
+  state.need_line_xlate ();
 }
 
 void
