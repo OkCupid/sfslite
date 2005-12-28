@@ -110,12 +110,13 @@ void tame_error (const str &loc, const str &msg);
 INIT(tame_init);
 
 template<class T1 = int, class T2 = int, class T3 = int, class T4 = int>
-class join_group_pointer_t : public virtual refcount {
+class join_group_pointer_t 
+  : public virtual refcount ,
+    public weak_refcounted_t<join_group_pointer_t<T1,T2,T3,T4> > {
 public:
   join_group_pointer_t (const char *f, int l) : 
     _n_out (0), _file (f), _lineno (l)  {}
 
-  // warning for now
   ~join_group_pointer_t () 
   { 
     // XXX - find some way to identify this join, either by filename
@@ -126,7 +127,16 @@ public:
 	str ("(unknown)");
       tame_error (s, "non-joined continuations leaked!"); 
     }
+
+    // XXX write me
+    // unregister with weakly referenced closures
+
   }
+
+
+  // XXX write me -- what happens when a closure is registered with
+  // this join group
+  void register_closure (ptr<closure_t> c) {}
 
 
   void set_join_cb (cbv::ptr c) { _join_cb = c; }
@@ -178,6 +188,42 @@ private:
   // when we go out of scope, we will unregister at those closures,
   // so the closures can detect closure leaks!
   qhash<u_int, weak_ref_t<closure_t> > _closures;
+};
+
+template<class T1, class T2, class T3, class T4>
+class join_group_weak_ref_t 
+  : public virtual refcount,
+    public weak_ref_t<join_group_pointer_t<T1,T2,T3,T3> >
+{
+public:
+  join_group_weak_ref_t (join_group_pointer_t<T1,T2,T3,T4> p)
+    : weak_ref_t<join_group_pointer_t<T1,T2,T3,T4> > (p) {}
+  
+  cbv make_join_cb (value_set_t<T1,T2,T3,T4> w, str loc)
+  {
+    loc = l;
+    return wrap (mkref (this), 
+		 &join_group_weak_ref_t<T1,T2,T3,T4>::join,
+		 w);
+  }
+
+  void error ()
+  {
+    tame_error (loc, "join_group went out of scope");
+  }
+
+  void join (value_set_t<T1,T2,T3,T4> w)
+  {
+    if (*_destroyed_flag) {
+      error ();
+    } else {
+      _pointer->join (w);
+    }
+  }
+
+private:
+  str loc;
+    
 };
 
 /**
