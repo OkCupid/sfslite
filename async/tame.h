@@ -9,6 +9,15 @@
 #include "qhash.h"
 
 template<class T>
+class generic_wrapper_t {
+public:
+  generic_wrapper_t (T o) : _obj (o) {}
+  T obj () const { return _obj; }
+private:
+  const T _obj;
+};
+
+template<class T>
 class weak_refcounted_t {
 public:
   weak_refcounted_t (T *p) :
@@ -79,7 +88,8 @@ public:
     _cceoc_count (0),
     _has_cceoc (c),
     _id (++closure_serial_number)
-  {}
+  { warn << "closure () => " << _id << "\n";}
+  ~closure_t () { warn << _id << "~closure_t ()\n"; }
   void set_jumpto (int i) { _jumpto = i; }
   u_int jumpto () const { return _jumpto; }
 
@@ -134,6 +144,7 @@ public:
 
   ~join_group_pointer_t () 
   { 
+    warn << "~join_group_pointer_t ()\n";
     // XXX - find some way to identify this join, either by filename
     // and line number, or other ways.
     if (need_join ()) {
