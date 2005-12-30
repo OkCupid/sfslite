@@ -227,7 +227,10 @@ return/[ \t\n(;] { return yyerror ("cannot return from withing a BLOCK or "
 
 <TAME,TAME_BASE>{
 \n		{ yylval.str = yytext; ++lineno; return T_PASSTHROUGH; }
-[^ \t{}\n/]+|[ \t/] { yylval.str = yytext; return T_PASSTHROUGH; }
+
+[^ \t{}\n/BNJRUVr]+|[ \t/BNJRUVr] { yylval.str = yytext; 
+	 			    return T_PASSTHROUGH; }
+
 [{]		{ yylval.str = yytext; yy_push_state (TAME); 
 		  return T_PASSTHROUGH; }
 

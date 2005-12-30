@@ -261,7 +261,6 @@ public:
 
   ~join_group_pointer_t () 
   { 
-    warn << "~join_group_pointer_t ()\n";
     // XXX - find some way to identify this join, either by filename
     // and line number, or other ways.
     if (need_join ()) {
