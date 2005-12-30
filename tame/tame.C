@@ -51,7 +51,7 @@ main (int argc, char *argv[])
       usage ();
       break;
     case 'C':
-      cceoc_label = optarg;
+      cceoc_argname = optarg;
       break;
     case 'L':
       no_line_numbers = true;
@@ -75,8 +75,8 @@ main (int argc, char *argv[])
   if (getenv ("TAME_NO_LINE_NUMBERS"))
     no_line_numbers = true;
 
-  if ((c = getenv ("CCEOC_PARAM_NAME")))
-    cceoc_label = c;
+  if ((c = getenv ("CCEOC_ARGNAME")))
+    cceoc_argname = c;
 
   argc -= optind;
   argv += optind;

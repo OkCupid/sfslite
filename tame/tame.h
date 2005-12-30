@@ -313,7 +313,7 @@ public:
       _self (_class, "*", "_self"),
       _isconst (c),
       _closure (mk_closure ()), 
-      _cceoc_sentinel ("int", NULL, "_cceoc_not_called_if_unitialized"),
+      _cceoc_sentinel ("int", NULL, "CCEOC_STACK_SENTINEL"),
       _args (d->params ()), 
       _opts (o),
       _lineno (l),
@@ -325,8 +325,6 @@ public:
   vartab_t *args () { return _args; }
   vartab_t *class_vars_tmp () { return &_class_vars_tmp; }
   var_t cceoc_sentinel () const { return _cceoc_sentinel; }
-  str static_sentinel_check () const;
-  str static_sentinel_set () const;
 
   bool do_cceoc () const;
 
@@ -413,7 +411,6 @@ public:
   tame_ret_t (u_int l, tame_fn_t *f) : _line_number (l), _fn (f) {}
   void add_params (const lstr &l) { _params = l; }
   virtual void output (int fd);
-  void return_checks (my_strbuf_t &b);
 protected:
   u_int _line_number;
   tame_fn_t *_fn;
@@ -430,15 +427,15 @@ class tame_unblock_t : public tame_ret_t {
 public:
   tame_unblock_t (u_int l, tame_fn_t *f) : tame_ret_t (l, f) {}
   virtual ~tame_unblock_t () {}
-  virtual void output (int fd);
-  virtual void resume_output (int fd) {}
+  void output (int fd);
+  virtual str macro_name () const { return "UNBLOCK"; }
 };
 
 class tame_resume_t : public tame_unblock_t {
 public:
   tame_resume_t (u_int l, tame_fn_t *f) : tame_unblock_t (l, f) {}
   ~tame_resume_t () {}
-  void resume_output (int fd);
+  str macro_name () const { return "RESUME"; }
 };
 
 class parse_state_t : public element_list_t {
@@ -481,6 +478,7 @@ public:
   tame_join_t *join () { return _join; }
 
   void output (int fd);
+  void output_cceoc_argname (int fd);
 
   void clear_sym_bit () { _sym_bit = false; }
   void set_sym_bit () { _sym_bit = true; }
@@ -593,7 +591,6 @@ do {                                                      \
 /*
  * constants, etc.
  */
-extern const char *cceoc_label;
-#define TAME_GLOBAL_INT                   "tame_global_int"
+extern const char *cceoc_argname;
 
 #endif /* _TAME_TAME_H */

@@ -61,7 +61,7 @@ closure_t::enforce_cceoc (const str &l)
   }
 }
 
-void
+static void
 check_closure_destroyed (str loc, ptr<bool> flag)
 {
   if (!*flag) 

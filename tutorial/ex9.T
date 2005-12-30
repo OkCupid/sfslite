@@ -19,11 +19,11 @@ struct state_t {
   int n_tot, window_sz;
   int i;
 
-  void launch (cbb ceocc, CLOSURE);
-  void relaunch (cbb ceocc, CLOSURE);
+  void launch (ceo_callback_bool_t ceocc, CLOSURE);
+  void relaunch (ceo_callback_bool_t ceocc, CLOSURE);
 };
 
-TAME(void state_t::launch (cbb cceoc))
+TAME(void state_t::launch (ceo_callback_bool_t cceoc))
 {
   // declare all of your "stack" variables here
   VARS {
@@ -56,7 +56,7 @@ TAME(void state_t::launch (cbb cceoc))
   RESUME (true);
 }
 
-TAME(void state_t::relaunch (cbb cceoc))
+TAME(void state_t::relaunch (ceo_callback_bool_t cceoc))
 {
   VARS {
     bool err_occurred (false);
@@ -93,14 +93,14 @@ TAME(void state_t::relaunch (cbb cceoc))
 TAME (static void go (str h, int p))
 {
   VARS {
-    ptr<state_t> s (New refcounted<state_t> (h, p));
+    state_t s (h, p);
     bool rc;
   }
-  BLOCK { s->launch (@(rc)); }
+  BLOCK { s.launch (@(rc)); }
   if (rc) {
-    BLOCK { s->relaunch (@(rc)); }
+    BLOCK { s.relaunch (@(rc)); }
   }
-  exit (rc ? 0 : -1);
+  delaycb (0, 0, wrap (exit, rc ? 0 : -1));
 }
 
 int

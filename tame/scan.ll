@@ -56,6 +56,7 @@ XNUM 	[+-]?0x[0-9a-fA-F]
 %x ID_OR_NUM NUM_ONLY EXPECT_CB_BASE HALF_PARSE PP PP_BASE
 %x NONBLOCK_ENTER JOIN_ENTER JOIN_LIST JOIN_LIST_BASE
 %x EXPR_LIST EXPR_LIST_BASE ID_LIST RETURN_PARAMS
+%x RESUME_PARAMS RESUME_PARAMS_BASE RESUME_BASE
 
 %%
 
@@ -230,14 +231,14 @@ return/[ \t\n(;] { return yyerror ("cannot return from withing a BLOCK or "
 [{]		{ yylval.str = yytext; yy_push_state (TAME); 
 		  return T_PASSTHROUGH; }
 
-VARS/[ \t\n{/]		{ return tame_ret (VARS_ENTER, T_VARS); }
-BLOCK/[ \t\n{/]		{ return tame_ret (BLOCK_ENTER, T_BLOCK); }
-NONBLOCK/[ \t\n(/] 	{ return tame_ret (NONBLOCK_ENTER, T_NONBLOCK); }
-JOIN/[ \t\n(/]		{ return tame_ret (JOIN_ENTER, T_JOIN); }
+VARS/[ \t\n{/]	    { return tame_ret (VARS_ENTER, T_VARS); }
+BLOCK/[ \t\n{/]	    { return tame_ret (BLOCK_ENTER, T_BLOCK); }
+NONBLOCK/[ \t\n(/]  { return tame_ret (NONBLOCK_ENTER, T_NONBLOCK); }
+JOIN/[ \t\n(/]	    { return tame_ret (JOIN_ENTER, T_JOIN); }
 
-return/[ \t\n(/;]	{ yy_push_state (RETURN_PARAMS); return T_RETURN; }
-RESUME/[ \t\n(/;]	{ yy_push_state (RETURN_PARAMS); return T_RESUME; }
-UNBLOCK/[ \t\n(/;]	{ yy_push_state (RETURN_PARAMS); return T_UNBLOCK; }
+return/[ \t\n(/;]   { yy_push_state (RETURN_PARAMS); return T_RETURN; }
+RESUME/[ \t\n(/;]   { yy_push_state (RESUME_BASE); return T_RESUME; }
+UNBLOCK/[ \t\n(/;]  { yy_push_state (RESUME_BASE); return T_UNBLOCK; }
 }
 
 <TAME>{
@@ -277,7 +278,30 @@ TAME_ON		{ tame_on = 1; GOBBLE_RET; }
 <RETURN_PARAMS>{
 \n			{ ++lineno; return std_ret (T_PASSTHROUGH); }
 ;			{ yy_pop_state (); return yytext[0]; }
-[^\n;]+			{ return std_ret (T_PASSTHROUGH); }
+[^\n;/]+|[/]		{ return std_ret (T_PASSTHROUGH); }
+}
+
+<RESUME_PARAMS_BASE,RESUME_PARAMS>{
+\n		{ ++lineno; return std_ret (T_PASSTHROUGH); }
+[^()\n/]+|[/]	{ return std_ret (T_PASSTHROUGH); }
+}
+
+<RESUME_BASE>{
+\n		{ ++lineno; }
+[ \t]+		{ /* ignore */ }
+[(]		{ yy_push_state (RESUME_PARAMS_BASE); return yytext[0]; }
+;		{ yy_pop_state (); return yytext[0]; }
+.		{ yyerror ("unexpected token after RESUME/UNBLOCK"); }
+}
+
+<RESUME_PARAMS_BASE>{
+[)]		{ yy_pop_state (); return yytext[0]; }
+[(]		{ yy_push_state (RESUME_PARAMS_BASE); return yytext[0]; }
+}
+
+<RESUME_PARAMS>{
+[(]	{ yy_push_state (RESUME_PARAMS); return std_ret (T_PASSTHROUGH); }
+[)]	{ yy_pop_state (); return std_ret (T_PASSTHROUGH); }
 }
 
 
@@ -290,7 +314,7 @@ TAME_ON		{ tame_on = 1; GOBBLE_RET; }
 }
 
 
-<CB_ENTER,FULL_PARSE,FN_ENTER,VARS_ENTER,HALF_PARSE,PP,PP_BASE,EXPR_LIST,EXPR_LIST_BASE,ID_LIST,BLOCK_ENTER,NONBLOCK_ENTER,JOIN_ENTER,RETURN_PARAMS>{
+<CB_ENTER,FULL_PARSE,FN_ENTER,VARS_ENTER,HALF_PARSE,PP,PP_BASE,EXPR_LIST,EXPR_LIST_BASE,ID_LIST,BLOCK_ENTER,NONBLOCK_ENTER,JOIN_ENTER,RETURN_PARAMS,RESUME_PARAMS,RESUME_PARAMS_BASE,RESUME_BASE>{
 
 "//"		{ gobble_flag = 1; yy_push_state (CXX_COMMENT); }
 "/*"		{ gobble_flag = 1; yy_push_state (C_COMMENT); }

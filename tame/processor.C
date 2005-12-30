@@ -42,7 +42,10 @@ tame_block_callback_t::tame_block_callback_t (u_int ln, tame_fn_t *f,
 static void output_el (int fd, tame_el_t *e) { e->output (fd); }
 void element_list_t::output (int fd) { _lst.traverse (wrap (output_el, fd)); }
 
-#define CLOSURE               "__cls"
+// Must match "__CLS" in tame_const.h
+#define TAME_CLOSURE_NAME     "__cls"
+
+
 #define CLOSURE_RFCNT         "__cls_r"
 #define CLOSURE_GENERIC       "__cls_g"
 #define TAME_PREFIX           "__tame_"
@@ -217,7 +220,7 @@ tame_fn_t::add_env (tame_env_t *e)
 bool
 tame_fn_t::do_cceoc () const
 {
-  return _args && _args->lookup (cceoc_label);
+  return _args && _args->lookup (cceoc_argname);
 }
 
 //-----------------------------------------------------------------------
@@ -242,7 +245,7 @@ tame_fn_t::mk_closure () const
   strbuf b;
   b << _name_mangled << "__closure_t";
 
-  return var_t (b, "*", CLOSURE);
+  return var_t (b, "*", TAME_CLOSURE_NAME);
 }
 
 str
@@ -673,7 +676,7 @@ tame_fn_t::output_arg_references (strbuf &b)
 void
 tame_fn_t::output_jump_tab (strbuf &b)
 {
-  b << "  switch (" << CLOSURE << "->jumpto ()) {\n"
+  b << "  switch (" << TAME_CLOSURE_NAME << "->jumpto ()) {\n"
     ;
   for (u_int i = 0; i < _envs.size (); i++) {
     if (_envs[i]->is_jumpto ()) {
@@ -754,18 +757,19 @@ tame_fn_t::output_fn (int fd)
     _args->paramlist (b, NAMES, TAME_PREFIX);
 
   b << ");\n"
-    << "    " << CLOSURE << " = " << CLOSURE_RFCNT << ";\n"
+    << "    " << TAME_CLOSURE_NAME << " = " << CLOSURE_RFCNT << ";\n"
     << "    " << CLOSURE_GENERIC << " = " << CLOSURE_RFCNT << ";\n";
 
   if (_class) {
-    b << "    " << CLOSURE << "->set_method_pointer (&" << _name << ");\n";
+    b << "    " << TAME_CLOSURE_NAME
+      << "->set_method_pointer (&" << _name << ");\n";
   }
 
 
   b << "  } else {\n"
     << "    " << _closure.name () << " = " << decl_casted_closure (false)
     << "\n"
-    << "    " << CLOSURE_RFCNT << " = mkref (" << CLOSURE << ");\n"
+    << "    " << CLOSURE_RFCNT << " = mkref (" << TAME_CLOSURE_NAME << ");\n"
     << "  }\n\n"
     ;
 
@@ -807,7 +811,7 @@ tame_fn_t::output_generic (int fd)
 void
 tame_fn_t::jump_out (strbuf &b, int id)
 {
-  b << "    " << CLOSURE << "->set_jumpto (" << id 
+  b << "    " << TAME_CLOSURE_NAME << "->set_jumpto (" << id 
     << ");\n"
     << "\n";
 }
@@ -819,7 +823,7 @@ tame_block_t::output (int fd)
   str tmp;
 
   b << "  {\n"
-    << "    " << CLOSURE << "->_block" << _id << " = 1;\n"
+    << "    " << TAME_CLOSURE_NAME << "->_block" << _id << " = 1;\n"
     ;
 
   _fn->jump_out (b, _id);
@@ -836,7 +840,7 @@ tame_block_t::output (int fd)
   }
 
   b << "\n"
-    << "    if (--" << CLOSURE << "->_block" << _id << ")\n"
+    << "    if (--" << TAME_CLOSURE_NAME << "->_block" << _id << ")\n"
     << "      return;\n"
     << "  }\n"
     << " " << _fn->label (_id) << ":\n"
@@ -848,9 +852,19 @@ tame_block_t::output (int fd)
 }
 
 void
+parse_state_t::output_cceoc_argname (int fd)
+{
+  strbuf b;
+  b << "\n#define CCEOC_ARGNAME  " << cceoc_argname << "\n";
+  b.tosuio ()->output (fd);
+  need_line_xlate ();
+}
+
+void
 parse_state_t::output (int fd)
 {
   output_line_xlate (fd, 1);
+  output_cceoc_argname (fd);
   element_list_t::output (fd);
 }
 
@@ -887,8 +901,8 @@ tame_block_callback_t::output (int fd)
 {
   int bid = _block->id ();
   my_strbuf_t b;
-  b << "(++" << CLOSURE << "->_block" << bid << ", "
-    << "++" << CLOSURE << "->_cb_num_calls" << _cb_ind << ", "
+  b << "(++" << TAME_CLOSURE_NAME << "->_block" << bid << ", "
+    << "++" << TAME_CLOSURE_NAME << "->_cb_num_calls" << _cb_ind << ", "
     << "wrap (" << CLOSURE_RFCNT << ", &" 
     << _parent_fn->closure ().type ().base_type () << "::cb" << _cb_ind
     ;
@@ -1021,10 +1035,10 @@ void
 tame_ret_t::output (int fd)
 {
   my_strbuf_t b;
+  str loc = state.loc (_line_number);
 
   if (_fn->do_cceoc ()) {
-    b << "  do {\n";
-    return_checks (b);
+    b << "  END_OF_SCOPE (\"" << loc << "\");\n";
     state.need_line_xlate ();
   }
   
@@ -1033,96 +1047,33 @@ tame_ret_t::output (int fd)
     b << _params;
   b.tosuio ()->output (fd);
   tame_env_t::output (fd);
-  b.tosuio ()->clear ();
-  if (_fn->do_cceoc ()) {
-    b << "  } while (0);\n";
-    b.tosuio ()->output (fd);
-  }
 }
 
 void
 tame_unblock_t::output (int fd)
 {
   my_strbuf_t b;
-  b << "\n"
-    << "  do {\n"
-    << "    " << CLOSURE << "->inc_cceoc_count ();\n"
-    ;
-
-  b << "    ";
-  b.mycat (_fn->static_sentinel_set ());
-
-  b.tosuio ()->output (fd);
-  b.tosuio ()->clear ();
-
-  state.need_line_xlate ();
-  state.output_line_xlate (fd, _line_number);
-
-
-  b << "    (*" << cceoc_label << ") ";
-  if (_params)
-    b << _params;
-  else
-    b << "()";
-
-  b.tosuio ()->output (fd);
-  b.tosuio ()->clear ();
-  tame_env_t::output (fd);
-  b << "\n";
-  b.tosuio ()->output (fd);
-  b.tosuio ()->clear ();
-
-  resume_output (fd);
-
-  b  << "  } while (0);\n";
-  b.tosuio ()->output (fd);
-  state.need_line_xlate ();
-}
-
-void
-tame_resume_t::resume_output (int fd)
-{
-  my_strbuf_t b;
-  return_checks (b);
-  b << "  return;\n";
-  b.tosuio ()->output (fd);
-}
-
-void 
-tame_ret_t::return_checks (my_strbuf_t &b)
-{
   str loc = state.loc (_line_number);
-  if (_fn->do_cceoc ()) {
-    b.mycat (_fn->static_sentinel_check ());
+  str n = macro_name ();
+  b << "  " << n << " (\"" << loc << "\""; 
+  if (_params) {
+    b << ", " << _params;
   }
-  b << "  " << CLOSURE << "->end_of_scope_checks (\"" << loc << "\");\n";
+  b << ");\n";
+  b.tosuio ()->output (fd);
 }
 
 void
 tame_fn_return_t::output (int fd)
 {
   my_strbuf_t b;
-  return_checks (b);
+  if (_fn->do_cceoc ()) {
+    str loc = state.loc (_line_number);
+    b << "  END_OF_SCOPE(\"" << loc << "\");\n";
   
-  b.tosuio ()->output (fd);
-  state.need_line_xlate ();
-}
-
-str
-tame_fn_t::static_sentinel_set () const
-{
-  strbuf b;
-  b << "  " << cceoc_sentinel ().name () << " = 0;\n";
-  return b;
-
-}
-
-str
-tame_fn_t::static_sentinel_check () const
-{
-  strbuf b;
-  b << "  " << TAME_GLOBAL_INT << " = " << cceoc_sentinel ().name () << ";\n";
-  return b;
+    b.tosuio ()->output (fd);
+    state.need_line_xlate ();
+  }
 }
 
 str

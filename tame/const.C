@@ -1,4 +1,4 @@
 
 #include "tame.h"
 
-const char *cceoc_label = "cceoc";
+const char *cceoc_argname = "cceoc";

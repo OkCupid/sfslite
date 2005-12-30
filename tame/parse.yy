@@ -83,8 +83,11 @@
 
 %type <var>  parameter_declaration
 
-%type <el>   fn_tame vars block nonblock callback join return_statement
-%type <ret>  return_keyword
+%type <el>   fn_tame vars block nonblock callback join return_statement 
+%type <el>   resume_statement
+%type <ret>  resume_keyword
+
+%type<str>   resume_arg_list resume_arg_list_opt
 
 %type <opts> static_opt
 
@@ -158,6 +161,7 @@ fn_tame: vars
 	| nonblock
 	| join
 	| return_statement
+	| resume_statement
 	;
 
 vars:	T_VARS '{' declaration_list_opt '}'
@@ -166,23 +170,41 @@ vars:	T_VARS '{' declaration_list_opt '}'
 	}
 	;
 
-return_keyword:	
-	  T_RETURN  { $$ = New tame_ret_t (get_yy_lineno (), 
-	                                   state.function ()); }
-
-	| T_UNBLOCK { $$ = New tame_unblock_t (get_yy_lineno (), 
-	                                       state.function ()); }
+resume_keyword:	
+	 T_UNBLOCK { $$ = New tame_unblock_t (get_yy_lineno (), 
+	                                      state.function ()); }
 
 	| T_RESUME  { $$ = New tame_resume_t (get_yy_lineno (), 
 	                                      state.function ()); }
 	;
 
-return_statement: return_keyword passthrough ';'
+resume_arg_list: '(' passthrough ')' 
 	{
+	  $$ = $2;
+	}
+	;
+
+resume_arg_list_opt: /* empty */  { $$ = lstr (get_yy_lineno ());  }
+	| resume_arg_list
+	;
+
+resume_statement: resume_keyword resume_arg_list_opt ';'
+	{
+	  if ($2)
+	    $1->add_params ($2);
+	  $1->passthrough (lstr (get_yy_lineno (), ";"));
+	  $$ = $1;
+	}
+	;
+
+return_statement: T_RETURN passthrough ';'
+	{
+	   tame_ret_t *r = New tame_ret_t (get_yy_lineno (), 
+			  	    state.function ());	
 	   if ($2)
-	     $1->add_params ($2);
- 	   $1->passthrough (lstr (get_yy_lineno (), ";"));
-	   $$ = $1;
+	     r->add_params ($2);
+ 	   r->passthrough (lstr (get_yy_lineno (), ";"));
+	   $$ = r;
 	}
 	;
 

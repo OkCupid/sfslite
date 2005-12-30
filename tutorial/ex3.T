@@ -6,7 +6,7 @@
 #include "ex_prot.h"
 #include "arpc.h"
  
-TAME (static void try_rpc (str h, int port, cbb cceoc))
+TAME (static void try_rpc (str h, int port, ceo_callback_bool_t cceoc))
 {
   VARS {
     bool ret (false);

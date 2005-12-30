@@ -19,8 +19,8 @@ struct state_t {
   int n_tot, window_sz;
   int i;
 
-  void launch (cbb ceocc, CLOSURE);
-  void relaunch (cbb ceocc, CLOSURE);
+  void launch (ceo_callback_bool_t ceocc, CLOSURE);
+  void relaunch (ceo_callback_bool_t ceocc, CLOSURE);
 };
 
 static void foofoo (cbi cb)
@@ -29,7 +29,7 @@ static void foofoo (cbi cb)
   cb (40);
 }
 
-TAME(void state_t::launch (cbb cceoc))
+TAME(void state_t::launch (ceo_callback_bool_t cceoc))
 {
   // declare all of your "stack" variables here
   VARS {
@@ -66,7 +66,7 @@ TAME(void state_t::launch (cbb cceoc))
   RESUME (true);
 }
 
-TAME(void state_t::relaunch (cbb cceoc))
+TAME(void state_t::relaunch (ceo_callback_bool_t cceoc))
 {
   VARS {
     bool err_occurred (false);
