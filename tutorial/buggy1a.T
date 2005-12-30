@@ -6,6 +6,8 @@
 #include "ex_prot.h"
 #include "arpc.h"
 
+bool fix_bug;
+
 /*
  * buggy1a
  *
@@ -24,7 +26,7 @@ private:
  
 static void finish (bool rc)
 {
-  delaycb (1, 0, wrap (exit, rc ? 0 : -1));
+  delaycb (2, 0, wrap (exit, rc ? 0 : -1));
 }
 
 TAME(static void buggy1a (ceo_callback_bool_t cceoc))
@@ -36,11 +38,32 @@ TAME(static void buggy1a (ceo_callback_bool_t cceoc))
     delaycb (1, 0, @()); 
     hog->call_me (@());
   }
-  RESUME (true);
+  UNBLOCK (true);
+  BLOCK { delaycb (1, 0, @()); }
+
+  if (fix_bug)
+    delete hog;
+}
+
+static void usage ()
+{
+  fatal << "usage: " << progname << " [-f]\n";
 }
  
 int main (int argc, char *argv[])
 {
+  int ch;
+  fix_bug = false;
+  setprogname (argv[0]);
+  while ((ch = getopt (argc, argv, "f")) != -1) {
+    switch (ch) {
+    case 'f':
+      fix_bug = true;
+      break;
+    default:
+      usage ();
+    }
+  }
   buggy1a (wrap (finish));
   amain ();
 }
