@@ -269,13 +269,13 @@ AC_SUBST(LIBSFSRODB)
 LIBSFSRODB='$(top_builddir)/sfsrodb/libsfsrodb.la'
 AC_SUBST(LIBSFSMISC)
 LIBSFSMISC='$(top_builddir)/sfsmisc/libsfsmisc.la'
-LDADD='$(LIBSFSMISC) $(LIBSVC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC) $(LIBGMP)'
+LDADD='$(LIBSFSMISC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC) $(LIBGMP)'
 LDADD="$LDADD "'$(LIBPY)'
 
 if test "$enable_shared" = yes; then
     LDEPS=
 else
-    LDEPS='$(LIBSFSMISC) $(LIBSVC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC)'
+    LDEPS='$(LIBSFSMISC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC)'
 fi
 
 unset AUTH_HELPER_STYLE
