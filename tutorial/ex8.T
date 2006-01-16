@@ -83,7 +83,7 @@ TAME(static void get_web_page (str host, int port, strbuf *resp, cbb done))
       // this join group.
       //
       if (req.tosuio ()->resid ()) {
-	write_jg.rejoin ();
+	write_jg.add_join ();
       }
 
       // 
@@ -116,7 +116,7 @@ TAME(static void get_web_page (str host, int port, strbuf *resp, cbb done))
 	return;
       }
       if (rc != 0) {
-	read_jg.rejoin ();
+	read_jg.add_join ();
       } else {
 	fdcb (fd, selread, NULL);
 	break;

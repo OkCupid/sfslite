@@ -114,11 +114,11 @@ TAME(static void get_fastest_web_page (vec<str> hosts, int port, cbb done))
       // suio::resid() returns the # of bytes left to write.  If there
       // are any bytes left to write, we'll need to be called back from
       // fdcb again, and we'll therefore need to join again.  Use the
-      // join_group_t::rejoin call to schedule an additional join for
+      // join_group_t::add_join call to schedule an additional join for
       // this join group.
       //
       if (req.tosuio ()->resid ()) {
-	write_jg.rejoin ();
+	write_jg.add_join ();
       }
 
       // 
@@ -150,7 +150,7 @@ TAME(static void get_fastest_web_page (vec<str> hosts, int port, cbb done))
 	return;
       }
       if (rc != 0) {
-	read_jg.rejoin ();
+	read_jg.add_join ();
       } else {
 	fdcb (fd, selread, NULL);
 	break;

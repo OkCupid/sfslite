@@ -15,6 +15,7 @@ TAME (static void try_rpc (str h, int port, ceo_callback_bool_t cceoc))
     ptr<aclnt> cli;
     vec<int> rv;
     vec<clnt_stat> ev;
+    int i;
   }
 
   BLOCK { tcpconnect (h, port, @(fd)); }
@@ -28,8 +29,8 @@ TAME (static void try_rpc (str h, int port, ceo_callback_bool_t cceoc))
     ev.setsize (n);
     rv.setsize (n);
  
-    BLOCK {
-      for (int i = 0; i < n; i++) {
+    for (i = 0; i < n; i++) {
+      BLOCK {
         cli->call (EX_RANDOM, NULL, &rv[i], @(ev[i]) );
       }
     }

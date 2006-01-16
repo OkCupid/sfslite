@@ -166,6 +166,7 @@ public:
    */
   T * pointer () { return (*_destroyed_flag ? NULL : _pointer); }
   void weak_decref () { if (pointer ()) pointer ()->weak_decref (); }
+  void weak_incref () { if (pointer ()) pointer ()->weak_incref (); }
   
 private:
   T                            *_pointer;
@@ -280,9 +281,10 @@ public:
     // make sure that each closure is registered only once!
     u_int64_t p = c->id ();
     if (!_closure_bhash[p]) {
-      c->weak_incref ();
       _closure_bhash.insert (p);
-      _closures.push_back (weak_ref_t<closure_t> (c));
+      weak_ref_t<closure_t> wr = c->make_weak_ref ();
+      wr.weak_incref ();
+      _closures.push_back (wr);
     }
   }
 
@@ -292,9 +294,11 @@ public:
   { 
     if (c)
       register_closure (c);
-    rejoin ();
+    add_join ();
   }
-  void rejoin () { _n_out ++; }
+
+  void add_join () { _n_out ++; }
+  void remove_join () { assert (_n_out-- > 0);}
 
   void join (value_set_t<T1, T2, T3, T4> v) 
   {
@@ -307,7 +311,10 @@ public:
     }
   }
 
-  bool need_join () const { return _n_out > 0 || _pending.size () > 0; }
+  u_int n_pending () const { return _pending.size (); }
+  u_int n_out () const { return _n_out; }
+  u_int n_joins_left () const { return _n_out + _pending.size (); }
+  bool need_join () const { return n_joins_left () > 0; }
 
   static value_set_t<T1,T2,T3,T4> to_vs ()
   { return value_set_t<T1,T2,T3,T4> (); }
@@ -392,19 +399,80 @@ public:
     : _pointer (New refcounted<join_group_pointer_t<T1,T2,T3,T4> > (f, l)) {}
   join_group_t (ptr<join_group_pointer_t<T1,T2,T3,T4> > p) : _pointer (p) {}
 
-  void set_join_cb (cbv::ptr c) { _pointer->set_join_cb (c); }
-  void launch_one (ptr<closure_t> c = NULL) { _pointer->launch_one (c); }
-  void rejoin () { _pointer->rejoin (); }
+  //-----------------------------------------------------------------------
+  //
+  // The following functions are used by the rewriter, but can also
+  // be accessed by the programmer when manipulating join groups
+  //
+
+  /**
+   * Register another outstanding callback to join; useful in the case
+   * of "sticky" callbacks the fire more than once.  If you expect a 
+   * callback generated with '@' to call more than once, call 'add_join'
+   * for all but the first callback fire.
+   */
+  void add_join () { _pointer->add_join (); }
+
+  /**
+   * Unregister a callback, in case a callback was canceled before it
+   * fired.
+   */
+  void remove_join () { _pointer->remove_join (); }
+
+  /**
+   * Determine the number of callbacks that have fired, but are waiting
+   * for a join.
+   */
+  u_int n_pending () const { return _pointer->n_pending (); }
+
+  /**
+   * Determine the number of callbacks still out, that have yet to fire.
+   */
+  u_int n_out () const { return _pointer->n_out (); }
+
+  /**
+   * Determine the total number of joins left to do before the join group
+   * has been drained.  Number of joins left to do is determined by adding
+   * the number of callbacks left to fire to the number of callbacks 
+   * already fired, and waiting for a join.
+   */
+  u_int n_joins_left () const { return _pointer->n_joins_left (); }
+
+  /**
+   * On if an additional join is needed.
+   */
   bool need_join () const { return _pointer->need_join (); }
-  ptr<join_group_pointer_t<T1,T2,T3,T4> > pointer () { return _pointer; }
+
+  /**
+   * Get the next pending event; returns true and gives the values of that
+   * event if there is, in fact, a callback that has fired, but hasn't
+   * been joined on yet.  Returns false if there are no pending events
+   * to join on.
+   */
   bool pending (value_set_t<T1, T2, T3, T4> *p)
   { return _pointer->pending (p); }
 
+  //
+  // end of public functions that the programmer should call
+  //-----------------------------------------------------------------------
+
+  //-----------------------------------------------------------------------
+  //  
+  // The following functions are public because the need to be accessed
+  // by the tame rewriter; they should not be called directly by 
+  // programmers.
+  void set_join_cb (cbv::ptr c) { _pointer->set_join_cb (c); }
+  void launch_one (ptr<closure_t> c = NULL) { _pointer->launch_one (c); }
+
+  ptr<join_group_pointer_t<T1,T2,T3,T4> > pointer () { return _pointer; }
   static value_set_t<T1,T2,T3,T4> to_vs () 
   { return value_set_t<T1,T2,T3,T4> (); }
 
   ptr<joiner_t<T1,T2,T3,T4> > make_joiner (const str &loc) 
   { return New refcounted<joiner_t<T1,T2,T3,T4> > (_pointer, loc); }
+
+  //
+  //-----------------------------------------------------------------------
 
 private:
   ptr<join_group_pointer_t<T1,T2,T3,T4> > _pointer;

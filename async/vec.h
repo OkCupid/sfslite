@@ -122,6 +122,7 @@ do {								\
 #endif /* !CHECK_BOUNDS */
 
 public:
+  vec (size_t s) { init (); reserve (s); }
   vec () { init (); }
   vec (const vec &v) { init (); append (v); }
   template<size_t NN> vec (const vec<T, NN> &v) { init (); append (v); }
