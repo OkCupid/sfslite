@@ -9,6 +9,7 @@
 
 int tame_options;
 int tame_global_int;
+u_int64_t closure_serial_number;
 
 int tame_init::count;
 
@@ -21,6 +22,7 @@ tame_init::start ()
   initialized = true;
 
   tame_options = 0;
+  closure_serial_number = 0;
   char *e = safegetenv (TAME_OPTIONS);
   for (char *cp = e; cp && *cp; cp++) {
     switch (*cp) {

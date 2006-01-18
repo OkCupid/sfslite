@@ -181,7 +181,7 @@ weak_refcounted_t<T>::make_weak_ref ()
 
 // All closures are numbered serially so that our accounting does not
 // get confused.
-u_int64_t closure_serial_number = 0;
+extern u_int64_t closure_serial_number;
 
 class closure_t : public virtual refcount , 
 		  public weak_refcounted_t<closure_t>
