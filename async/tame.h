@@ -510,6 +510,8 @@ struct pointer_set4_t {
   T4 *p4;
 };
 
+template<class T> void use_reference (T &i) {}
+
 // make shortcuts to the most common callbacks, but while using
 // ptr's, and not ref's.
 typedef callback<void>::ptr ceo_callback_void_t;

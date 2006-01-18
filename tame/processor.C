@@ -671,6 +671,13 @@ tame_fn_t::output_arg_references (strbuf &b)
     b << "  " << v.ref_decl () << " = "
       << closure_nm () << "->_args." << v.name () << ";\n";
   }
+
+  // compiler might complain that the variable references aren't
+  // being used.  In this case, we need to use them!
+  for (u_int i = 0; _args && i < _args->size (); i++) {
+    const var_t &v = _args->_vars[i];
+    b << "   use_reference (" << v.name () << "); \n";
+  }
 }
 
 void
