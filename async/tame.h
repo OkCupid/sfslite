@@ -527,6 +527,11 @@ typedef callback<void, bool>::ptr ceo_callback_bool_t;
 
 extern int TAME_GLOBAL_INT;
 
+/**
+ * Set the cceoc variable to be unitialized
+ */
+#define SET_CCEOC_STACK_SENTINEL()  do { CCEOC_STACK_SENTINEL = 0; } while(0)
+
 
 /**
  * At the end of scope, perform both static and dynamic checks on
@@ -546,7 +551,7 @@ do {                                                              \
 #define UNBLOCK(x, ...)                                           \
 do {                                                              \
   __CLS->inc_cceoc_count ();                                      \
-  CCEOC_STACK_SENTINEL = 0;                                       \
+  SET_CCEOC_STACK_SENTINEL();                                      \
   const typeof (CCEOC_ARGNAME) cb_tmp (CCEOC_ARGNAME);            \
   CCEOC_ARGNAME = NULL;                                           \
   (*cb_tmp) (__VA_ARGS__);                                        \
