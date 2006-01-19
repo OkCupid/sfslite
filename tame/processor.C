@@ -854,6 +854,12 @@ tame_block_t::output (int fd)
     << "    ;\n"
     ;
 
+  // XXX: Workaround to bug, in which static checking that cceoc called once,
+  // and Duff's device don't interact well. Eventually we should have
+  // a real solution or maybe deactivate 
+  if (_fn->did_cceoc_call ()) 
+    b << "  SET_CCEOC_STACK_SENTINEL();\n";
+
   state.need_line_xlate ();
   b.tosuio ()->output (fd);
 }
@@ -1067,6 +1073,7 @@ tame_unblock_t::output (int fd)
     b << ", " << _params;
   }
   b << ");\n";
+  _fn->do_cceoc_call ();
   b.tosuio ()->output (fd);
 }
 

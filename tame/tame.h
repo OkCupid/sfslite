@@ -318,7 +318,8 @@ public:
       _opts (o),
       _lineno (l),
       _n_labels (0),
-      _n_blocks (0)
+      _n_blocks (0),
+      _hit_cceoc_call (false)
   { }
 
   vartab_t *stack_vars () { return &_stack_vars; }
@@ -326,7 +327,15 @@ public:
   vartab_t *class_vars_tmp () { return &_class_vars_tmp; }
   var_t cceoc_sentinel () const { return _cceoc_sentinel; }
 
+  // return true if this function is using CCEOC checking, and
+  // false otherwise
   bool do_cceoc () const;
+
+  // set a flag saying whether or not we've hit a CCEOC call in
+  // this function or not
+  bool did_cceoc_call () const { return _hit_cceoc_call; }
+  void do_cceoc_call () { _hit_cceoc_call = true; }
+
 
   str classname () const { return _class; }
   str name () const { return _name; }
@@ -402,6 +411,7 @@ private:
   u_int _lineno;
   u_int _n_labels;
   u_int _n_blocks;
+  bool _hit_cceoc_call;
 };
 
 
