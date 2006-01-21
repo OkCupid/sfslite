@@ -1,7 +1,10 @@
+SFSLITE README
+=======
 $Id$
 
 SFSLITE HOWTO
 -------------
+- Based on David Mazieres's SFS (see www.fs.net)
 
 - Build requires GMP version 4 or higher
 
@@ -31,3 +34,7 @@ etc, where the modes are:
 	shopt:	shared build, -O2
 	debug:  static build, with dmalloc support, no compiler optimization
 	deflt:	static build, -O2, no dmalloc
+
+This library is also available as a port for FreeBSD. See:
+
+	http://www.okws.org for more details
