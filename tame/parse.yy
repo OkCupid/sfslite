@@ -177,7 +177,6 @@ fn_tame: vars
 
 floating_callback: callback
 	{
-	  tame_fn_t *fn = state.function ();
 	  tame_nonblock_t *c = New tame_nonblock_t (NULL);
 	  $1->set_nonblock (c);
 	  c->push ($1);
