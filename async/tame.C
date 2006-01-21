@@ -79,5 +79,34 @@ closure_t::end_of_scope_checks (str loc)
 
   set_weak_finalize_cb (wrap (check_closure_destroyed, loc, 
 			      destroyed_flag ()));
+
+  // potentially decref us if we have join groups that should
+  // be going out of scope now.
+  kill_join_groups ();
+
+  // decref us for ourselves, since WE should be going out of scope
   weak_decref ();
+}
+
+void
+closure_t::associate_join_group (mortal_ref_t mr, const void *jgwp)
+{
+  if (is_onstack (jgwp)) {
+    _join_groups.push_back (mr);
+  }
+}
+
+void
+closure_t::kill_join_groups ()
+{
+  for (size_t i = 0; i < _join_groups.size (); i++) {
+    _join_groups[i].mark_dead ();
+  }
+}
+
+void 
+mortal_ref_t::mark_dead ()
+{
+  if (!*_destroyed_flag)
+    _mortal->mark_dead ();
 }

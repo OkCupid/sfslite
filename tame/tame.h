@@ -65,8 +65,11 @@ extern int yyparse ();
 extern int yydebug;
 extern FILE *yyin;
 extern int get_yy_lineno ();
+extern str get_yy_loc ();
 
 typedef enum { NONE = 0, ARG = 1, STACK = 2, CLASS = 3, EXPR = 4 } vartyp_t ;
+
+str ws_strip (str s);
 
 class my_strbuf_t : public strbuf {
 public:
@@ -114,8 +117,10 @@ public:
 
 class tame_vars_t : public tame_el_t {
 public:
-  tame_vars_t () {}
+  tame_vars_t (int lineno) {}
   void output (int fd) {}
+private:
+  int lineno;
 };
 
 class tame_passthrough_t : public tame_el_t {
@@ -141,6 +146,8 @@ public:
   void set_base_type (const str &t) { _base_type = t; }
   void set_pointer (const str &p) { _pointer = p; }
   bool is_complete () const { return _base_type; }
+  bool is_void () const 
+  { return (_base_type == "void" && (!_pointer || _pointer.len () == 0)); } 
 private:
   str _base_type, _pointer;
 };
@@ -223,6 +230,7 @@ public:
   virtual void output (int fd) { tame_env_t::output (fd); }
   virtual void output_in_class (strbuf &b) = 0;
   virtual void output_generic (strbuf &b) = 0;
+  virtual void set_nonblock (tame_nonblock_t *n) {}
   
   ptr<expr_list_t> call_with () { return _call_with; }
 protected:
@@ -247,14 +255,26 @@ private:
 
 class tame_nonblock_callback_t : public tame_callback_t {
 public:
-  tame_nonblock_callback_t (u_int ln, tame_nonblock_t *n, ptr<expr_list_t> l)
-    : tame_callback_t (ln, l), _nonblock (n) {}
+  tame_nonblock_callback_t (u_int ln, tame_nonblock_t *n, ptr<expr_list_t> l,
+			    ptr<expr_list_t> wi)
+    : tame_callback_t (ln, l), _nonblock (n), _wrap_in (wi) {}
   void output (int fd);
   void output_in_class (strbuf &b) {}
   void output_generic (strbuf &b);
+  void set_wrap_in (ptr<expr_list_t> l) { _wrap_in = l; }
+  void set_nonblock (tame_nonblock_t *n) { _nonblock = n; }
   str cb_name () const;
-private:
+
+  var_t join_group () const;
+  bool output_vars (strbuf &b, bool first,
+		    const str &prfx, const str &sffx) const ;
+  u_int n_args () const;
+  var_t arg (u_int i) const;
+protected:
+  void combine_lists () const;
   tame_nonblock_t *_nonblock;
+  ptr<expr_list_t> _wrap_in;
+  mutable ptr<expr_list_t> _wrap_in_combined;
 };
 
 /*
@@ -304,8 +324,10 @@ class tame_block_t;
 //
 class tame_fn_t : public element_list_t {
 public:
-  tame_fn_t (u_int o, const str &r, ptr<declarator_t> d, bool c, u_int l)
-    : _ret_type (r, d->pointer ()), 
+  tame_fn_t (u_int o, const str &r, ptr<declarator_t> d, bool c, u_int l,
+	     str loc)
+    : _ret_type (ws_strip (r), 
+		 d->pointer () ? ws_strip (d->pointer ()) : NULL), 
       _name (d->name ()),
       _name_mangled (mangle (_name)), 
       _method_name (strip_to_method (_name)),
@@ -319,7 +341,8 @@ public:
       _lineno (l),
       _n_labels (0),
       _n_blocks (0),
-      _hit_cceoc_call (false)
+      _hit_cceoc_call (false),
+      _loc (loc)
   { }
 
   vartab_t *stack_vars () { return &_stack_vars; }
@@ -336,6 +359,18 @@ public:
   bool did_cceoc_call () const { return _hit_cceoc_call; }
   void do_cceoc_call () { _hit_cceoc_call = true; }
 
+  // default return statement is "return;"; can be overidden,
+  // but only once.
+  bool set_default_return (str s) 
+  { 
+    bool ret = _default_return ? false : true;
+    _default_return = s; 
+    return ret;
+  }
+
+  // if non-void return, then there must be a default return
+  bool check_return_type () const 
+  { return (_ret_type.is_void () || _default_return); }
 
   str classname () const { return _class; }
   str name () const { return _name; }
@@ -375,6 +410,9 @@ public:
 
   str label (str s) const;
   str label (u_int id) const ;
+  str loc () const { return _loc; }
+
+  str return_expr () const;
 
 private:
   const type_t _ret_type;
@@ -412,6 +450,8 @@ private:
   u_int _n_labels;
   u_int _n_blocks;
   bool _hit_cceoc_call;
+  str _default_return;
+  str _loc; // filename:linenumber where this function was declared
 };
 
 
@@ -545,10 +585,7 @@ public:
   tame_nonblock_t (ptr<expr_list_t> l) : _args (l) {}
   ~tame_nonblock_t () {}
   void output (int fd) { element_list_t::output (fd); }
-  u_int n_args () const { return _args->size () - 1; }
-  var_t join_group () const { return (*_args)[0]; }
-  var_t arg (u_int i) const { return (*_args)[i+1]; }
-  bool output_vars (strbuf &b, bool first, const str &prfx, const str &sffx);
+  ptr<expr_list_t> args () const { return _args; }
 private:
   ptr<expr_list_t> _args;
 };
@@ -579,8 +616,9 @@ struct YYSTYPE {
   var_t             var;
   bool              opt;
   char              ch;
-  tame_fn_t *     fn;
-  tame_el_t *     el;
+  tame_fn_t *       fn;
+  tame_el_t *       el;
+  tame_callback_t * cb;
   ptr<expr_list_t>  exprs;
   type_t            typ;
   vec<ptr<declarator_t> > decls;

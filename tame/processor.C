@@ -39,6 +39,13 @@ tame_block_callback_t::tame_block_callback_t (u_int ln, tame_fn_t *f,
     _cb_ind (_parent_fn->add_callback (this))
 {}
 
+str ws_strip (str s)
+{
+  static rxx wss ("\\s*(.*)\\s*");
+  assert (wss.match (s));
+  return wss[1];
+}
+
 static void output_el (int fd, tame_el_t *e) { e->output (fd); }
 void element_list_t::output (int fd) { _lst.traverse (wrap (output_el, fd)); }
 
@@ -366,7 +373,7 @@ str
 tame_nonblock_callback_t::cb_name () const
 {
   strbuf b;
-  u_int N_w = _nonblock->n_args ();
+  u_int N_w = n_args ();
   u_int N_p = _call_with->size ();
   b << "__nonblock_cb_" << N_w << "_" << N_p;
   return b;
@@ -375,7 +382,7 @@ tame_nonblock_callback_t::cb_name () const
 void
 tame_nonblock_callback_t::output_generic (strbuf &b)
 {
-  u_int N_w = _nonblock->n_args ();
+  u_int N_w = n_args ();
   u_int N_p = _call_with->size ();
 
   if (generic_cb_exists (N_w, N_p))
@@ -534,6 +541,16 @@ tame_fn_t::output_set_method_pointer (my_strbuf_t &b)
     
 }
 
+static void
+output_is_onstack (strbuf &b)
+{
+  b << "  bool is_onstack (const void *p) const\n"
+    << "  {\n"
+    << "    return (static_cast<const void *> (&_stack) <= p &&\n"
+    << "            static_cast<const void *> (&_stack + 1) > p);\n"
+    << "  }\n";
+}
+
 void
 tame_fn_t::output_closure (int fd)
 {
@@ -584,6 +601,7 @@ tame_fn_t::output_closure (int fd)
 
   b << " {}\n\n";
 
+
   if (_class) {
     output_set_method_pointer (b);
   }
@@ -593,7 +611,6 @@ tame_fn_t::output_closure (int fd)
   }
 
   output_reenter (b);
-
 
   // output the stack structure
   b << "  struct stack_t {\n"
@@ -637,6 +654,7 @@ tame_fn_t::output_closure (int fd)
   }
   b << "  stack_t _stack;\n"
     << "  args_t _args;\n" ;
+
   if (_class)
     b << "  method_type_t _method;\n";
 
@@ -647,6 +665,8 @@ tame_fn_t::output_closure (int fd)
   for (u_int i = 1; i <= _cbs.size () ; i++) {
     b << "  int _cb_num_calls" << i << ";\n";
   }
+
+  output_is_onstack (b);
 
   b << "};\n\n";
 
@@ -848,7 +868,11 @@ tame_block_t::output (int fd)
 
   b << "\n"
     << "    if (--" << TAME_CLOSURE_NAME << "->_block" << _id << ")\n"
-    << "      return;\n"
+    << "      ";
+
+  b.mycat (_fn->return_expr ());
+
+  b << ";\n"
     << "  }\n"
     << " " << _fn->label (_id) << ":\n"
     << "    ;\n"
@@ -862,6 +886,18 @@ tame_block_t::output (int fd)
 
   state.need_line_xlate ();
   b.tosuio ()->output (fd);
+}
+
+str
+tame_fn_t::return_expr () const
+{
+  if (_default_return) {
+    strbuf b;
+    b << "do { " << _default_return << "} while (0)";
+    return b;
+  } else {
+    return "return";
+  }
 }
 
 void
@@ -895,10 +931,55 @@ expr_list_t::output_vars (strbuf &b, bool first, const str &prfx,
   return first;
 }
 
-bool
-tame_nonblock_t::output_vars (strbuf &b, bool first, const str &prfx,
-				const str &sffx)
+size_t 
+tame_nonblock_callback_t::n_args () const 
 {
+  combine_lists ();
+  return _wrap_in_combined->size () - 1;
+}
+
+var_t
+tame_nonblock_callback_t::arg (u_int i) const
+{
+  combine_lists ();
+  return (*_wrap_in_combined)[i+1];
+}
+
+var_t
+tame_nonblock_callback_t::join_group () const
+{
+  combine_lists ();
+  return (*_wrap_in_combined)[0];
+}
+
+void
+tame_nonblock_callback_t::combine_lists () const
+{
+#define N_LISTS 2
+  if (_wrap_in_combined)
+    return;
+
+  _wrap_in_combined = New refcounted<expr_list_t> ();
+  ptr<expr_list_t> l[N_LISTS];
+
+  if (_nonblock) l[0] = _nonblock->args ();
+  l[1] = _wrap_in;
+
+  for (u_int i = 0; i < N_LISTS; i++) 
+    for (size_t j = 0; l[i] && j < l[i]->size (); j++) 
+      _wrap_in_combined->push_back ( (*l[i])[j] );
+
+  assert (_wrap_in_combined->size () > 0);
+
+#undef N_LISTS
+}
+
+bool
+tame_nonblock_callback_t::output_vars (strbuf &b, bool first, 
+				       const str &prfx,
+				       const str &sffx) const
+{
+  combine_lists ();
   for (u_int i = 0; i < n_args (); i++) {
     if (!first)  b << ", ";
     else first = false;
@@ -940,7 +1021,7 @@ tame_nonblock_callback_t::output (int fd)
   my_strbuf_t b;
 
   strbuf tmp;
-  tmp << "(" << _nonblock->join_group ().name () << ")";
+  tmp << "(" << join_group ().name () << ")";
   str jgn = tmp;
   str loc = state.loc (_line_number);
   
@@ -948,13 +1029,13 @@ tame_nonblock_callback_t::output (int fd)
     << "wrap (";
   b.mycat (cb_name ());
 
-  if (_call_with->size () || _nonblock->n_args ()) {
+  if (_call_with->size () || n_args ()) {
     b << " <";
 
     bool first = true;
 
     first = _call_with->output_vars (b, first, "typeof (", ")");
-    first = _nonblock->output_vars (b, first, "typeof (", ")");
+    first = output_vars (b, first, "typeof (", ")");
     
     b << ">";
   }
@@ -972,11 +1053,11 @@ tame_nonblock_callback_t::output (int fd)
   // note we ouput an empty value set if there are no values
   // to wrap in.
   b << ", value_set_t<";
-  if (_nonblock->n_args ()) 
-    _nonblock->output_vars (b, true, "typeof (", ")");
+  if (n_args ()) 
+    output_vars (b, true, "typeof (", ")");
   b << "> (";
-  if (_nonblock->n_args ()) 
-    _nonblock->output_vars (b, true, NULL, NULL);
+  if (n_args ()) 
+    output_vars (b, true, NULL, NULL);
 
   b << ")))";
 
@@ -1019,7 +1100,9 @@ tame_join_t::output (int fd)
   b << "      " << jgn
     << ".set_join_cb (wrap (" << CLOSURE_RFCNT
     << ", &" << _fn->reenter_fn () << "));\n"
-    << "      return;\n"
+    << "      ";
+  b.mycat (_fn->return_expr ());
+  b << ";\n"
     << "  }\n\n";
 
   b.tosuio ()->output (fd);
@@ -1086,8 +1169,12 @@ tame_fn_return_t::output (int fd)
     b << "  END_OF_SCOPE(\"" << loc << "\");\n";
   
     b.tosuio ()->output (fd);
-    state.need_line_xlate ();
   }
+  b << "  ";
+  b.mycat (_fn->return_expr ());
+  b << ";\n";
+  b.tosuio ()->output (fd);
+  state.need_line_xlate ();
 }
 
 str
@@ -1098,7 +1185,6 @@ parse_state_t::loc (u_int l) const
     << function_const ().name ();
   return b;
 }
-
 
 //
 //-----------------------------------------------------------------------

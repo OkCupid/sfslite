@@ -91,25 +91,60 @@ private:
 
 template<class T> class weak_ref_t;
 
+class mortal_t;
+class mortal_ref_t {
+public:
+  mortal_ref_t (mortal_t *m, ptr<bool> d1, ptr<bool> d2)
+    : _mortal (m),
+      _destroyed_flag (d1),
+      _dead_flag (d2) {}
+
+  void mark_dead ();
+private:
+  mortal_t *_mortal;
+  ptr<bool> _destroyed_flag, _dead_flag;
+};
+
+/**
+ * things can be separately marked dead and destroyed.
+ */
+class mortal_t {
+public:
+  mortal_t () : 
+    _destroyed_flag (New refcounted<bool> (false)),
+    _dead_flag (New refcounted<bool> (false))
+  {}
+
+  virtual ~mortal_t () { *_destroyed_flag = true; }
+  virtual void mark_dead () {}
+  ptr<bool> destroyed_flag () { return _destroyed_flag; }
+  ptr<bool> dead_flag () { return _dead_flag; }
+
+  mortal_ref_t make_mortal_ref () 
+  { return mortal_ref_t (this, _destroyed_flag, _dead_flag); }
+
+protected:
+  ptr<bool> _destroyed_flag, _dead_flag;
+};
+
+
 /**
  * A class XX that wants to be weak_refcounted should inherit from
  * weak_refcounted_t<XX>.
  */
 template<class T>
-class weak_refcounted_t {
+class weak_refcounted_t : public mortal_t {
 public:
   weak_refcounted_t (T *p) :
     _pointer (p),
-    _destroyed_flag (New refcounted<bool> (false)),
     _refcnt (1) {}
 
-  virtual ~weak_refcounted_t () { *_destroyed_flag = true; }
+  virtual ~weak_refcounted_t () {}
 
   /**
    * eschew fancy C++ cast operator overloading for ease or readability, etc..
    */
   T * pointer () { return _pointer; }
-  ptr<bool> destroyed_flag () { return _destroyed_flag; }
 
   /**
    * Make a weak reference to this class, copying over the base pointer,
@@ -117,7 +152,6 @@ public:
    * class is in scope.
    */
   weak_ref_t<T> make_weak_ref ();
-
   
   /**
    * One can manually manage the reference count of weak references.
@@ -141,7 +175,6 @@ public:
   
 private:
   T        *_pointer;
-  ptr<bool> _destroyed_flag;
   int _refcnt;
   cbv::ptr _weak_finalize_cb;
 };
@@ -165,9 +198,10 @@ public:
    * that object it points to is still in scope.
    */
   T * pointer () { return (*_destroyed_flag ? NULL : _pointer); }
+
   void weak_decref () { if (pointer ()) pointer ()->weak_decref (); }
   void weak_incref () { if (pointer ()) pointer ()->weak_incref (); }
-  
+
 private:
   T                            *_pointer;
   ptr<bool>                    _destroyed_flag;
@@ -199,6 +233,7 @@ public:
   // this class is deleted.
   ~closure_t () {}
 
+  virtual bool is_onstack (const void *p) const = 0;
 
   // manage function reentry
   void set_jumpto (int i) { _jumpto = i; }
@@ -215,11 +250,21 @@ public:
   // checks on scoping, etc.
   void end_of_scope_checks (str loc);
 
+  // Associate a join group with this closure
+  void associate_join_group (mortal_ref_t mref, const void *jgwp);
+
+  // Account for join groups that **should** be going out of
+  // scope as we are weakly going out of scope
+  void kill_join_groups ();
+
 protected:
   u_int _jumpto;
   int _cceoc_count;
   bool _has_cceoc;
   u_int64_t _id;
+
+  // All of the join groups that are within our bounds
+  vec<mortal_ref_t> _join_groups;
 };
 
 template<class T1 = int, class T2 = int, class T3 = int, class T4 = int>
@@ -254,14 +299,21 @@ INIT(tame_init);
 template<class T1 = int, class T2 = int, class T3 = int, class T4 = int>
 class join_group_pointer_t 
   : public virtual refcount ,
-    public weak_refcounted_t<join_group_pointer_t<T1,T2,T3,T4> > {
+    public weak_refcounted_t<join_group_pointer_t<T1,T2,T3,T4> >
+{
 public:
   join_group_pointer_t (const char *f, int l) : 
     weak_refcounted_t<join_group_pointer_t<T1,T2,T3,T4> > (this),
     _n_out (0), _file (f), _lineno (l)  {}
 
-  ~join_group_pointer_t () 
+  virtual ~join_group_pointer_t () { mark_dead (); }
+
+  void mark_dead ()
   { 
+    if (*mortal_t::dead_flag ())
+      return;
+    (*mortal_t::dead_flag ()) = true;
+
     // XXX - find some way to identify this join, either by filename
     // and line number, or other ways.
     if (need_join ()) {
@@ -276,7 +328,7 @@ public:
       _closures[i].weak_decref ();
   }
 
-  void register_closure (ptr<closure_t> c) 
+  void associate_closure (ptr<closure_t> c, void *jgwp) 
   {
     // make sure that each closure is registered only once!
     u_int64_t p = c->id ();
@@ -285,15 +337,25 @@ public:
       weak_ref_t<closure_t> wr = c->make_weak_ref ();
       wr.weak_incref ();
       _closures.push_back (wr);
+
+      // make a two-way association
+      //
+      // jgwp = join group wrapper pointer; since the join group
+      // and not the associated join_group_pointer is going to be
+      // allocated in VARS{}, we need to track its memory location,
+      // to see if it was allocated inside of the closure.  If so,
+      // we need to force it out of scope when we force the closure
+      // out of scope.
+      c->associate_join_group (mortal_t::make_mortal_ref (), jgwp);
     }
   }
 
   void set_join_cb (cbv::ptr c) { _join_cb = c; }
 
-  void launch_one (ptr<closure_t> c = NULL) 
+  void launch_one (ptr<closure_t> c = NULL, void *jgwp = NULL) 
   { 
     if (c)
-      register_closure (c);
+      associate_closure (c, jgwp);
     add_join ();
   }
 
@@ -462,7 +524,8 @@ public:
   // by the tame rewriter; they should not be called directly by 
   // programmers.
   void set_join_cb (cbv::ptr c) { _pointer->set_join_cb (c); }
-  void launch_one (ptr<closure_t> c = NULL) { _pointer->launch_one (c); }
+  void launch_one (ptr<closure_t> c = NULL) 
+  { _pointer->launch_one (c, static_cast<void *> (this)); }
 
   ptr<join_group_pointer_t<T1,T2,T3,T4> > pointer () { return _pointer; }
   static value_set_t<T1,T2,T3,T4> to_vs () 

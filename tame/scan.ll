@@ -37,8 +37,12 @@ static void switch_to_state (int i);
 static int std_ret (int i);
 static int tame_ret (int s, int t);
 int get_yy_lineno () { return lineno ;}
+str get_yy_loc ();
 int tame_on = 1;
 int gobble_flag =0;
+int lineno_return ();
+int loc_return ();
+int filename_return ();
 
 #define GOBBLE_RET if (!gobble_flag) return std_ret (T_PASSTHROUGH)
 %}
@@ -57,10 +61,12 @@ XNUM 	[+-]?0x[0-9a-fA-F]
 %x NONBLOCK_ENTER JOIN_ENTER JOIN_LIST JOIN_LIST_BASE
 %x EXPR_LIST EXPR_LIST_BASE ID_LIST RETURN_PARAMS
 %x RESUME_PARAMS RESUME_PARAMS_BASE RESUME_BASE
+%x EXPR_LIST_BR EXPR_LIST_BR_BASE
+%x DEFRET_ENTER DEFRET_BASE DEFRET
 
 %%
 
-<FN_ENTER,FULL_PARSE,CB_ENTER,VARS_ENTER,ID_LIST,ID_OR_NUM,NUM_ONLY,HALF_PARSE,BLOCK_ENTER,NONBLOCK_ENTER,JOIN_ENTER,JOIN_LIST,JOIN_LIST_BASE,EXPR_LIST,EXPR_LIST_BASE>{
+<FN_ENTER,FULL_PARSE,CB_ENTER,VARS_ENTER,ID_LIST,ID_OR_NUM,NUM_ONLY,HALF_PARSE,BLOCK_ENTER,NONBLOCK_ENTER,JOIN_ENTER,JOIN_LIST,JOIN_LIST_BASE,EXPR_LIST,EXPR_LIST_BASE,DEFRET_ENTER>{
 \n		++lineno;
 {WSPACE}+	/*discard*/;
 }
@@ -129,8 +135,14 @@ long\s+long	return T_LONG_LONG;
 
 <PP,PP_BASE>{
 \n		{ ++lineno; }
-[^()\n/]+|"/"	{ return std_ret (T_PASSTHROUGH); }
+[^()\n/_]+|[/_]	{ return std_ret (T_PASSTHROUGH); }
 [(]		{ yy_push_state (PP); return std_ret (T_PASSTHROUGH); }
+}
+
+<PP,PP_BASE,TAME,TAME_BASE,EXPECT_CB_BASE,EXPECT_CB>{
+__LINE__	{ return lineno_return (); }
+__FILE__        { return filename_return (); }
+__LOC__         { return loc_return (); }
 }
 
 <PP>{
@@ -181,7 +193,45 @@ long\s+long	return T_LONG_LONG;
 
 <CB_ENTER>{
 [(]		{ switch_to_state (EXPR_LIST_BASE); return yytext[0]; }
+[\[]		{ yy_push_state (EXPR_LIST_BR_BASE); return yytext[0]; }
 .		{ return yyerror ("illegal token found between '@' and '('"); }
+}
+
+<DEFRET_ENTER>{
+\{		{ switch_to_state (DEFRET_BASE); return yytext[0]; }
+.		{ return yyerror ("Expected '{' after DEFAULT_RETURN"); }
+}
+
+<DEFRET_BASE>{
+\}		{ yy_pop_state (); return yytext[0]; }
+\{		{ yy_push_state (DEFRET); return std_ret (T_PASSTHROUGH); }
+}
+
+<DEFRET>{
+\{		{ yy_push_state (DEFRET); return std_ret (T_PASSTHROUGH); }
+\}		{ yy_pop_state (); return std_ret (T_PASSTHROUGH); }
+}
+
+<DEFRET_BASE,DEFRET>{
+\n		{ ++lineno; return std_ret (T_PASSTHROUGH); }
+[^{}\n]+	{ return std_ret (T_PASSTHROUGH); }
+}
+
+<EXPR_LIST_BR_BASE>{
+\]		{ yy_pop_state (); return yytext[0]; }
+[,]		{ return yytext[0]; }
+}
+
+<EXPR_LIST_BR>{
+\]		{ yy_pop_state (); return std_ret (T_PASSTHROUGH); }
+[,]		{ return std_ret (T_PASSTHROUGH); }
+}
+
+<EXPR_LIST_BR_BASE,EXPR_LIST_BR>{
+\[		   { yy_push_state (EXPR_LIST_BR); 
+	             return std_ret (T_PASSTHROUGH); }
+[^,\[\]/\n]+|"/"   { return std_ret (T_PASSTHROUGH); }
+\n		   { ++lineno; return std_ret (T_PASSTHROUGH); }
 }
 
 <ID_LIST>{
@@ -212,7 +262,7 @@ long\s+long	return T_LONG_LONG;
 [{]		{ yy_push_state (EXPECT_CB); return std_ret (T_PASSTHROUGH); }
 goto/[ \t\n]	{ return yyerror ("cannot goto from within a BLOCK or "
 				  "NONBLOCK environment"); }
-return/[ \t\n(;] { return yyerror ("cannot return from withing a BLOCK or "
+return/[ \t\n(;] { return yyerror ("cannot return from within a BLOCK or "
 				   "NONBLOCK environment."); }
 }
 
@@ -227,8 +277,9 @@ return/[ \t\n(;] { return yyerror ("cannot return from withing a BLOCK or "
 
 <TAME,TAME_BASE>{
 \n		{ yylval.str = yytext; ++lineno; return T_PASSTHROUGH; }
+@	        { return tame_ret (CB_ENTER, '@'); }
 
-[^ \t{}\n/BNJRUVr]+|[ \t/BNJRUVr] { yylval.str = yytext; 
+[^ \t{}\n/BNJRUVr@_]+|[ \t/BNJRUVr@_] { yylval.str = yytext; 
 	 			    return T_PASSTHROUGH; }
 
 [{]		{ yylval.str = yytext; yy_push_state (TAME); 
@@ -238,6 +289,7 @@ VARS/[ \t\n{/]	    { return tame_ret (VARS_ENTER, T_VARS); }
 BLOCK/[ \t\n{/]	    { return tame_ret (BLOCK_ENTER, T_BLOCK); }
 NONBLOCK/[ \t\n(/]  { return tame_ret (NONBLOCK_ENTER, T_NONBLOCK); }
 JOIN/[ \t\n(/]	    { return tame_ret (JOIN_ENTER, T_JOIN); }
+DEFAULT_RETURN	    { return tame_ret (DEFRET_ENTER, T_DEFAULT_RETURN); }
 
 return/[ \t\n(/;]   { yy_push_state (RETURN_PARAMS); return T_RETURN; }
 RESUME/[ \t\n(/;]   { yy_push_state (RESUME_BASE); return T_RESUME; }
@@ -317,7 +369,7 @@ TAME_ON		{ tame_on = 1; GOBBLE_RET; }
 }
 
 
-<CB_ENTER,FULL_PARSE,FN_ENTER,VARS_ENTER,HALF_PARSE,PP,PP_BASE,EXPR_LIST,EXPR_LIST_BASE,ID_LIST,BLOCK_ENTER,NONBLOCK_ENTER,JOIN_ENTER,RETURN_PARAMS,RESUME_PARAMS,RESUME_PARAMS_BASE,RESUME_BASE>{
+<CB_ENTER,FULL_PARSE,FN_ENTER,VARS_ENTER,HALF_PARSE,PP,PP_BASE,EXPR_LIST,EXPR_LIST_BASE,ID_LIST,BLOCK_ENTER,NONBLOCK_ENTER,JOIN_ENTER,RETURN_PARAMS,RESUME_PARAMS,RESUME_PARAMS_BASE,RESUME_BASE,EXPR_LIST_BR,EXPR_LIST_BR_BASE,DEFRET_ENTER>{
 
 "//"		{ gobble_flag = 1; yy_push_state (CXX_COMMENT); }
 "/*"		{ gobble_flag = 1; yy_push_state (C_COMMENT); }
@@ -370,4 +422,38 @@ tame_ret (int s, int t)
   } else {
     return std_ret (T_PASSTHROUGH);
   }
+}
+
+str
+get_yy_loc ()
+{
+   strbuf b (filename);
+   b << ":" << lineno;
+   return b;
+}
+
+int
+lineno_return ()
+{
+   strbuf b; 
+   b << lineno; 
+   yylval.str = lstr (lineno, str (b));
+   return T_PASSTHROUGH;
+}
+
+int
+filename_return ()
+{
+  strbuf b; 
+  b << "\"" << filename << "\"";
+  yylval.str = lstr (lineno, str (b));
+  return T_PASSTHROUGH; 
+}
+
+int
+loc_return ()
+{
+   strbuf b ("\"%s:%d\"", filename.cstr (), lineno);
+  yylval.str = lstr (lineno, str (b));
+  return T_PASSTHROUGH; 
 }

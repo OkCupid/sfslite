@@ -6,7 +6,7 @@
 #include "parseopt.h"
 #include "ex_prot.h"
 
-TAME(static void dostuff (str h, int port, cbb cb))
+TAME(static bool dostuff (str h, int port, cbb cb))
 {
   // declare all of your "stack" variables here
   VARS {
@@ -18,7 +18,10 @@ TAME(static void dostuff (str h, int port, cbb cb))
     int n_tot (40), window_sz (5), i;
     bool err_occurred (false);
     join_group_t<int> window;
+    bool ret (true);
   }
+
+  DEFAULT_RETURN { return ret; } 
 
   // Call tcpconnect, and block until it returns; when it does return,
   // assign the local variable 'fd' to the result.
@@ -38,8 +41,8 @@ TAME(static void dostuff (str h, int port, cbb cb))
       // launch an asychronous function call, but don't
       // block on its return. Associate the call with the 
       // join group 'window' and the index value 'i'
-      NONBLOCK (window, i) {
-	cli->call (EX_RANDOM, NULL, &res[i], @(errs[i]));
+      NONBLOCK (window) {
+	cli->call (EX_RANDOM, NULL, &res[i], @[i](errs[i]));
       }
     }
 
@@ -71,6 +74,7 @@ TAME(static void dostuff (str h, int port, cbb cb))
     warn << "All done...\n";
   }
   (*cb) (!err_occurred);
+  return true;
 }
 
 static void finish (bool rc)

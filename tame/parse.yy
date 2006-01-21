@@ -26,6 +26,7 @@
 #include "tame.h"
 #include "parseopt.h"
 #define YYSTYPE YYSTYPE
+int vars_lineno;
 %}
 
 %token <str> T_ID
@@ -59,6 +60,7 @@
 %token T_BLOCK
 %token T_NONBLOCK
 %token T_JOIN
+%token T_DEFAULT_RETURN
 
 %token T_2DOLLAR
 
@@ -77,15 +79,17 @@
 
 %type <vars> parameter_type_list_opt parameter_type_list parameter_list
 %type <exprs> expr_list join_list id_list_opt id_list expr_list_opt
+%type <exprs> bracket_list bracket_list_opt
 
 %type <opt>  const_opt
 %type <fn>   fn_declaration
 
 %type <var>  parameter_declaration
 
-%type <el>   fn_tame vars block nonblock callback join return_statement 
-%type <el>   resume_statement
+%type <el>   fn_tame vars block nonblock join return_statement 
+%type <el>   resume_statement default_return floating_callback
 %type <ret>  resume_keyword
+%type <cb>   callback
 
 %type<str>   resume_arg_list resume_arg_list_opt
 
@@ -123,6 +127,10 @@ fn:	T_TAME '(' fn_declaration ')' '{'
 	}
 	fn_statements '}'
 	{
+	  if (!state.function ()->check_return_type ()) {
+	    yyerror ("Function has non-void return type but no "
+	    	     "DEFAULT_RETURN specified");
+ 	  }
 	  state.push (New tame_fn_return_t (get_yy_lineno (), 
 				            state.function ()));
 	  state.passthrough (lstr (get_yy_lineno (), "}"));
@@ -137,7 +145,8 @@ static_opt: T_STATIC 	{ $$ = STATIC_DECL; }
 /* declaration_specifiers is no longer optional ?! */
 fn_declaration: static_opt declaration_specifiers declarator const_opt
 	{
-	   $$ = New tame_fn_t ($1, $2, $3, $4, get_yy_lineno ());
+	   $$ = New tame_fn_t ($1, $2, $3, $4, get_yy_lineno (), 
+	                       get_yy_loc ());
 	}
 	;
 
@@ -151,7 +160,7 @@ fn_statements: passthrough
 	}
 	| fn_statements fn_tame passthrough
 	{
-	  state.push ($2);
+   	  if ($2) state.push ($2);
 	  state.passthrough ($3);
 	}
 	;
@@ -162,11 +171,39 @@ fn_tame: vars
 	| join
 	| return_statement
 	| resume_statement
+	| default_return
+	| floating_callback
 	;
 
-vars:	T_VARS '{' declaration_list_opt '}'
+floating_callback: callback
 	{
-	  $$ = New tame_vars_t ();
+	  tame_fn_t *fn = state.function ();
+	  tame_nonblock_t *c = New tame_nonblock_t (NULL);
+	  $1->set_nonblock (c);
+	  c->push ($1);
+	  $$ = c;
+	}
+	;
+
+default_return: T_DEFAULT_RETURN '{' passthrough '}'
+	{
+	  // this thing will not be output anywhere near where
+	  // it's being input, so don't associate it in the 
+	  // element list as usual.
+	  if (!state.function ()->set_default_return ($3)) {
+	    yyerror ("DEFAULT_RETURN specified more than once");
+	  }
+	  $$ = NULL;
+	}
+	;
+
+vars:	T_VARS 
+	{
+	  vars_lineno = get_yy_lineno ();
+	} 
+	'{' declaration_list_opt '}'
+	{
+	  $$ = New tame_vars_t (vars_lineno);
 	}
 	;
 
@@ -316,19 +353,35 @@ callbacks_and_passthrough: passthrough
 	}
 	;
 
-callback: '@' '(' expr_list_opt ')'
+bracket_list: '[' expr_list ']'
+	{
+	  $$ = $2;
+	}
+	;
+
+bracket_list_opt: /* empty */ 		{ $$ = NULL; }
+	| bracket_list 			{ $$ = $1; }
+	;
+
+callback: '@' bracket_list_opt '(' expr_list_opt ')'
 	{
   	  tame_fn_t *fn = state.function ();
 	  if (state.block ()) {
  	    // Callbacks are labeled serially within a function; the 
 	    // constructor sets this ID.
+	    if ($2) {
+	      yyerror ("Cannot give '[..]' args to callback within BLOCK");
+	    }
 	    $$ = New tame_block_callback_t (get_yy_lineno (), 
-				            fn, state.block (), $3);
+				            fn, state.block (), $4);
 	  } else {
-	    assert ( state.nonblock ());
+	    if (!state.nonblock () && ! $2) {
+	      yyerror ("Nonblocking callbacks must be associated with a "
+	 	       "join_group_t");
+	    }
 	    tame_nonblock_callback_t *cb = 
               New tame_nonblock_callback_t (get_yy_lineno (), 
-				            state.nonblock (), $3);
+				            state.nonblock (), $4, $2);
 	    fn->add_nonblock_callback (cb);
 	    $$ = cb;
 	  }
@@ -343,7 +396,7 @@ identifier: T_ID
  *
 cast: '(' declaration_specifiers pointer_opt ')'
 	{
-	  $$ = type_t ($2, $3);
+	  $$ = type_t (ws_strip ($2), ws_strip ($3));
 	}
 	;
  */

@@ -63,10 +63,19 @@ public:
       delaycb (0, 0, wrap (mkref (this), &dostuff__closure_t::reenter));
   }
 
+  int _bottom_fencepost;
   stack_t _stack;
+  int _top_fencepost;
+
   args_t _args;
 
   int _block1;
+
+  bool is_onstack (const void *p) const
+  {
+    return (static_cast<const void *> (&_bottom_fencepost) < p &&
+            static_cast<const void *> (&_top_fencepost) > p);
+  }
 
 };
 
