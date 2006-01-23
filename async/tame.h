@@ -47,6 +47,7 @@
 
 #include "async.h"
 #include "qhash.h"
+#include "keyfunc.h"
 
 /**
  * not in use, but perhaps useful for "zero"ing out callback::ref's,
@@ -548,6 +549,7 @@ struct pointer_set1_t {
   T1 *p1;
 };
 
+
 template<class T1, class T2>
 struct pointer_set2_t {
   pointer_set2_t (T1 *p1, T2 *p2) : p1 (p1), p2 (p2) {}
@@ -611,11 +613,11 @@ do {                                                              \
  * return to the caller.  Note that CCEOCs are destroyed after they
  * are used, so clean up wrapped-in closures from caller stack frames.
  */
-#define UNBLOCK(x, ...)                                           \
+#define UNBLOCK(x, T, ...)                                        \
 do {                                                              \
   __CLS->inc_cceoc_count ();                                      \
-  SET_CCEOC_STACK_SENTINEL();                                      \
-  const typeof (CCEOC_ARGNAME) cb_tmp (CCEOC_ARGNAME);            \
+  SET_CCEOC_STACK_SENTINEL();                                     \
+  const T cb_tmp (CCEOC_ARGNAME);                                 \
   CCEOC_ARGNAME = NULL;                                           \
   (*cb_tmp) (__VA_ARGS__);                                        \
 } while (0)
@@ -623,13 +625,50 @@ do {                                                              \
 /**
  * Like unblock, but return from the function.
  */
-#define RESUME(x, ...)                                            \
+#define RESUME(x, T, ...)                                         \
 do {                                                              \
-  UNBLOCK(x, __VA_ARGS__);                                        \
+  UNBLOCK(x, T, __VA_ARGS__);                                     \
   END_OF_SCOPE(x);                                                \
   return;                                                         \
 } while (0)
+
+// Tame template type
+#define TTT(x) typeof(UNREF(typeof(x)))
+
+template<class T1>
+void __block_cb1 (pointer_set1_t<T1> p, cbv cb, T1 v1)
+{
+  *p.p1 = v1;
+  (*cb) ();
+}
+
+template<class T1, class T2>
+void __block_cb2 (pointer_set2_t<T1,T2> p, cbv cb, T1 v1, T2 v2)
+{
+  *p.p1 = v1;
+  *p.p2 = v2;
+  (*cb) ();
+}
   
+template<class T1, class T2, class T3>
+void __block_cb3 (pointer_set3_t<T1,T2,T3> p, cbv cb, T1 v1, T2 v2, T3 v3)
+{
+  *p.p1 = v1;
+  *p.p2 = v2;
+  *p.p3 = v3;
+  (*cb) ();
+}
+
+template<class T1, class T2, class T3, class T4>
+void __block_cb4 (pointer_set4_t<T1,T2,T3,T4> p, cbv cb,
+		  T1 v1, T2 v2, T3 v3, T4 v4)
+{
+  *p.p1 = v1;
+  *p.p2 = v2;
+  *p.p3 = v3;
+  *p.p4 = v4;
+  (*cb) ();
+}
 
 
 #endif /* _ASYNC_TAME_H */

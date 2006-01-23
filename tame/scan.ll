@@ -63,6 +63,7 @@ XNUM 	[+-]?0x[0-9a-fA-F]
 %x RESUME_PARAMS RESUME_PARAMS_BASE RESUME_BASE
 %x EXPR_LIST_BR EXPR_LIST_BR_BASE
 %x DEFRET_ENTER DEFRET_BASE DEFRET
+%x TEMPLATE_ENTER TEMPLATE TEMPLATE_BASE
 
 %%
 
@@ -99,6 +100,7 @@ signed		return T_SIGNED;
 unsigned	return T_UNSIGNED;
 static		return T_STATIC;
 long\s+long	return T_LONG_LONG;
+template	{ yy_push_state (TEMPLATE_ENTER); return T_TEMPLATE; }
 
 {ID} 		{ return std_ret (T_ID); }
 {DNUM}|{XNUM}	{ return std_ret (T_NUM); }
@@ -107,6 +109,27 @@ long\s+long	return T_LONG_LONG;
 
 [<>;,:*]	{ return yytext[0]; }
 "::"		{ return T_2COLON; }
+}
+
+<TEMPLATE_ENTER>{
+\n		++lineno;
+{WSPACE}+	/* discard */ ;
+"<"		{ switch_to_state (TEMPLATE_BASE); return yytext[0]; }
+.		{ return yyerror ("unexpected token after 'template'"); }
+}
+
+<TEMPLATE_BASE>{
+[>]		{ yy_pop_state (); return yytext[0]; }
+}
+
+<TEMPLATE_BASE,TEMPLATE>{
+\n		{ ++lineno; return std_ret (T_PASSTHROUGH); }
+[<]		{ yy_push_state (TEMPLATE); return std_ret (T_PASSTHROUGH); }
+[^<>\n]+	{ return std_ret (T_PASSTHROUGH); }
+}
+
+<TEMPLATE>{
+[>]		{ yy_pop_state (); return std_ret (T_PASSTHROUGH); }
 }
 
 <HALF_PARSE>{

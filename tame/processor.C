@@ -1,6 +1,7 @@
 
 #include "tame.h"
 #include "rxx.h"
+#include <ctype.h>
 
 //-----------------------------------------------------------------------
 // output only the generic callbacks that we need, to speed up compile
@@ -46,6 +47,14 @@ str ws_strip (str s)
   return wss[1];
 }
 
+str template_args (str s)
+{
+  if (!s) return s;
+  static rxx txx (".*(<.*>).*");
+  if (txx.search (s)) return txx[1];
+  else return NULL;
+}
+
 static void output_el (int fd, tame_el_t *e) { e->output (fd); }
 void element_list_t::output (int fd) { _lst.traverse (wrap (output_el, fd)); }
 
@@ -58,10 +67,21 @@ void element_list_t::output (int fd) { _lst.traverse (wrap (output_el, fd)); }
 #define TAME_PREFIX           "__tame_"
 
 str
-type_t::mk_ptr () const
+type_t::type_without_pointer () const
 {
   strbuf b;
-  b << "ptr<" << _base_type << " >";
+  b << _base_type;
+  if (_template_args)
+    b << _template_args << " ";
+  return b;
+}
+
+str
+type_t::mk_ptr () const
+{
+  my_strbuf_t b;
+  b << "ptr<";
+  b.mycat (type_without_pointer()) << " >";
   return b;
 }
 
@@ -69,8 +89,8 @@ str
 type_t::alloc_ptr (const str &n, const str &args) const
 {
   my_strbuf_t b;
-  b.mycat (mk_ptr ()) << " " << n << " = New refcounted<"
-		      << _base_type << " > (" << args << ")";
+  b.mycat (mk_ptr ()) << " " << n << " = New refcounted<";
+  b.mycat (type_without_pointer ()) << " > (" << args << ")";
   return b;
 }
 
@@ -93,10 +113,25 @@ type_t::to_str () const
 }
 
 str
+type_t::to_str_w_template_args () const
+{
+  strbuf b;
+  b << _base_type;
+  if (_template_args)
+    b << _template_args;
+  b << " ";
+
+  if (_pointer)
+    b << _pointer;
+
+  return b;
+}
+
+str
 var_t::decl () const
 {
   strbuf b;
-  b << _type.to_str () << _name;
+  b << _type.to_str_w_template_args () << _name;
   return b;
 }
 
@@ -133,9 +168,13 @@ mangle (const str &in)
   const char *i;
   char *o;
   mstr m (in.len ());
-  for (i = in.cstr (), o = m.cstr (); *i; i++, o++) {
-    *o = (*i == ':' || *i == '<' || *i == '>' || *i == ',') ? '_' : *i;
+  for (i = in.cstr (), o = m.cstr (); *i; i++) {
+    if (!isspace (*i)) {
+      *o = (*i == ':' || *i == '<' || *i == '>' || *i == ',') ? '_' : *i;
+      o++;
+    }
   }
+  m.setlen (o - m.cstr ());
   return m;
 }
 
@@ -230,6 +269,13 @@ tame_fn_t::do_cceoc () const
   return _args && _args->lookup (cceoc_argname);
 }
 
+str
+tame_fn_t::cceoc_typename () const 
+{
+  const var_t *v = _args->lookup (cceoc_argname);
+  return (v ? v->type ().to_str () : NULL);
+}
+
 //-----------------------------------------------------------------------
 // Output utility routines
 //
@@ -252,7 +298,7 @@ tame_fn_t::mk_closure () const
   strbuf b;
   b << _name_mangled << "__closure_t";
 
-  return var_t (b, "*", TAME_CLOSURE_NAME);
+  return var_t (b, "*", TAME_CLOSURE_NAME, NONE, _template_args);
 }
 
 str
@@ -262,7 +308,7 @@ tame_fn_t::decl_casted_closure (bool do_lhs) const
   if (do_lhs) {
     b << "  " << _closure.decl ()  << " =\n";
   }
-  b << "    reinterpret_cast<" << _closure.type ().to_str () 
+  b << "    reinterpret_cast<" << _closure.type ().to_str_w_template_args () 
     << "> (static_cast<closure_t *> (" << closure_generic ().name () << "));";
   return b;
 }
@@ -453,33 +499,7 @@ tame_nonblock_callback_t::output_generic (strbuf &b)
 void 
 tame_block_callback_t::output_in_class (strbuf &b)
 {
-  u_int N_p = _call_with->size ();
-  
-  if (N_p) {
-    b << "  template<";
-    for (u_int i = 1; i <= N_p; i++) {
-      if (i != 1) b << ", ";
-      b << "class T" << i;
-    }
-    b << ">\n";
-  }
-  b << "  void cb" << _cb_ind  << " (";
-
-  if (N_p) {
-    b << "pointer_set" << N_p << "_t<";
-    for (u_int i = 1; i <= N_p; i++) {
-      if (i != 1) b << ", ";
-      b << "T" << i;
-    }
-    b << "> p" ;
-    for (u_int i = 1; i <= N_p; i++) {
-      b << ", T" << i << " v" << i;
-    }
-  }
-  b << ")\n  {\n";
-  for (u_int i = 1; i <= N_p; i++) {
-    b << "    *p.p" << i << " = v" << i << ";\n";
-  }
+  b << "  void cb" << _cb_ind  << " () {\n";
 
   str loc = state.loc (_line_number);
   b << "    if (-- _cb_num_calls" << _cb_ind << " < 0 ) {\n"
@@ -555,6 +575,10 @@ void
 tame_fn_t::output_closure (int fd)
 {
   my_strbuf_t b;
+
+  if (_template) {
+    b.mycat (template_str ()) << "\n";
+  }
 
   b << "class " << _closure.type ().base_type () 
     << " : public closure_t "
@@ -720,9 +744,14 @@ tame_fn_t::output_jump_tab (strbuf &b)
 }
 
 str
-tame_fn_t::signature (bool d, str prfx) const
+tame_fn_t::signature (bool d, str prfx, bool static_flag) const
 {
-  strbuf b;
+  my_strbuf_t b;
+  if (_template)
+    b.mycat (template_str ()) << "\n";
+  if (static_flag)
+    b << "static ";
+
   b << _ret_type.to_str () << "\n"
     << _name << "(";
   if (_args) {
@@ -740,8 +769,8 @@ tame_fn_t::signature (bool d, str prfx) const
 void
 tame_fn_t::output_static_decl (int fd)
 {
-  strbuf b;
-  b << "static " << signature (true) << ";\n\n";
+  my_strbuf_t b;
+  b.mycat (signature (true, NULL, true)) << ";\n\n";
   
   b.tosuio ()->output (fd);
 }
@@ -772,7 +801,7 @@ tame_fn_t::output_fn (int fd)
     ;
 
   b << "    " << CLOSURE_RFCNT << " = New refcounted<"
-    << _closure.type().base_type () << "> (";
+    << _closure.type().type_without_pointer() << "> (";
 
   if (need_self ()) {
     b << "this";
@@ -997,20 +1026,25 @@ tame_block_callback_t::output (int fd)
   my_strbuf_t b;
   b << "(++" << TAME_CLOSURE_NAME << "->_block" << bid << ", "
     << "++" << TAME_CLOSURE_NAME << "->_cb_num_calls" << _cb_ind << ", "
-    << "wrap (" << CLOSURE_RFCNT << ", &" 
-    << _parent_fn->closure ().type ().base_type () << "::cb" << _cb_ind
     ;
-
   if (_call_with->size ()) {
-    b << "<";
-    _call_with->output_vars (b, true, "typeof (", ")");
+    b << "wrap (__block_cb" << _call_with->size () << "<";
+
+    _call_with->output_vars (b, true, "TTT(", ")");
     b << ">, pointer_set" << _call_with->size () << "_t<";
-    _call_with->output_vars (b, true, "typeof (", ")");
+    _call_with->output_vars (b, true, "TTT(", ")");
     b << "> (";
     _call_with->output_vars (b, true, "&(", ")");
-    b << ")";
+    b << "), ";
   }
-  b << "))";
+  b << "wrap (" << CLOSURE_RFCNT << ", &";
+  b.mycat (_parent_fn->closure ().type ().type_without_pointer ())
+    << "::cb" << _cb_ind
+    << "))";
+
+  // if there are parameters to set, then there is 1 extra callback
+  if (_call_with->size ()) 
+    b << ")";
 
   b.tosuio ()->output (fd);
 }
@@ -1151,7 +1185,8 @@ tame_unblock_t::output (int fd)
   my_strbuf_t b;
   str loc = state.loc (_line_number);
   str n = macro_name ();
-  b << "  " << n << " (\"" << loc << "\""; 
+  b << "  " << n << " (\"" << loc << "\", ";
+  b.mycat (_fn->cceoc_typename ());
   if (_params) {
     b << ", " << _params;
   }

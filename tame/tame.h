@@ -70,6 +70,7 @@ extern str get_yy_loc ();
 typedef enum { NONE = 0, ARG = 1, STACK = 2, CLASS = 3, EXPR = 4 } vartyp_t ;
 
 str ws_strip (str s);
+str template_args (str s);
 
 class my_strbuf_t : public strbuf {
 public:
@@ -138,18 +139,22 @@ public:
   type_t () {}
   type_t (const str &t, const str &p)
     : _base_type (t), _pointer (p) {}
+  type_t (const str &t, const str &p, const str &ta)
+    : _base_type (t), _pointer (p), _template_args (ta) {}
   str base_type () const { return _base_type; }
   str pointer () const { return _pointer; }
   str to_str () const;
+  str to_str_w_template_args () const;
   str mk_ptr () const;
   str alloc_ptr (const str &nm, const str &args) const;
+  str type_without_pointer () const;
   void set_base_type (const str &t) { _base_type = t; }
   void set_pointer (const str &p) { _pointer = p; }
   bool is_complete () const { return _base_type; }
   bool is_void () const 
   { return (_base_type == "void" && (!_pointer || _pointer.len () == 0)); } 
 private:
-  str _base_type, _pointer;
+  str _base_type, _pointer, _template_args;
 };
 
 class declarator_t;
@@ -162,6 +167,8 @@ public:
     _type (t, p), _name (n), _asc (a) {}
   var_t (const type_t &t, const str &n, vartyp_t a = NONE)
     : _type (t), _name (n), _asc (a) {}
+  var_t (const str &t, const str &p, const str &n, vartyp_t a, const str &ta)
+    : _type (t, p, ta), _name (n), _asc (a) {}
 protected:
   type_t _type;
 
@@ -319,13 +326,22 @@ class tame_block_t;
 
 #define STATIC_DECL           (1 << 0)
 
+// function specifier embodies static and template keywords and options
+// at present, and perhaps more in the future.
+struct fn_specifier_t {
+  fn_specifier_t (u_int o = 0, str t = NULL)
+    : _opts (o), _template (t) {}
+  u_int _opts;
+  str _template;
+};
+
 //
 // Unwrap Function Type
 //
 class tame_fn_t : public element_list_t {
 public:
-  tame_fn_t (u_int o, const str &r, ptr<declarator_t> d, bool c, u_int l,
-	     str loc)
+  tame_fn_t (const fn_specifier_t &fn, const str &r, ptr<declarator_t> d, 
+	     bool c, u_int l, str loc)
     : _ret_type (ws_strip (r), 
 		 d->pointer () ? ws_strip (d->pointer ()) : NULL), 
       _name (d->name ()),
@@ -334,10 +350,12 @@ public:
       _class (strip_off_method (_name)), 
       _self (_class, "*", "_self"),
       _isconst (c),
+      _template (fn._template),
+      _template_args (_class ? template_args (_class) : NULL),
       _closure (mk_closure ()), 
       _cceoc_sentinel ("int", NULL, "CCEOC_STACK_SENTINEL"),
       _args (d->params ()), 
-      _opts (o),
+      _opts (fn._opts),
       _lineno (l),
       _n_labels (0),
       _n_blocks (0),
@@ -353,6 +371,7 @@ public:
   // return true if this function is using CCEOC checking, and
   // false otherwise
   bool do_cceoc () const;
+  str cceoc_typename () const;
 
   // set a flag saying whether or not we've hit a CCEOC call in
   // this function or not
@@ -374,7 +393,7 @@ public:
 
   str classname () const { return _class; }
   str name () const { return _name; }
-  str signature (bool decl, str prfx = NULL) const;
+  str signature (bool decl, str prfx = NULL, bool sttc = false) const;
 
   void set_opts (int i) { _opts = i; }
   int opts () const { return _opts; }
@@ -414,6 +433,10 @@ public:
 
   str return_expr () const;
 
+  str template_str () const
+  { return (_template ? str (strbuf ("template< " ) << _template << " >") 
+	    : NULL); }
+
 private:
   const type_t _ret_type;
   const str _name;
@@ -423,6 +446,8 @@ private:
   const var_t _self;
 
   const bool _isconst;
+  str _template;
+  str _template_args;
   const var_t _closure;
   const var_t _cceoc_sentinel;
 
@@ -624,6 +649,7 @@ struct YYSTYPE {
   vec<ptr<declarator_t> > decls;
   u_int             opts;
   tame_ret_t *       ret;
+  fn_specifier_t     fn_spc;
 };
 extern YYSTYPE yylval;
 extern str filename;

@@ -48,6 +48,7 @@ int vars_lineno;
 %token T_SIGNED
 %token T_UNSIGNED
 %token T_STATIC
+%token T_TEMPLATE
 
 %token T_2COLON
 %token T_RETURN
@@ -94,6 +95,7 @@ int vars_lineno;
 %type<str>   resume_arg_list resume_arg_list_opt
 
 %type <opts> static_opt
+%type <fn_spc> fn_specifiers template_decl
 
 %%
 
@@ -138,12 +140,23 @@ fn:	T_TAME '(' fn_declaration ')' '{'
 	}
 	;
 
+fn_specifiers:	template_decl { $$ = $1; }
+	| T_STATIC	      { $$ = fn_specifier_t (STATIC_DECL); }
+	| /* empty */	      { $$ = fn_specifier_t (0); }
+	;
+
+template_decl: T_TEMPLATE '<' passthrough '>' static_opt
+	{
+	   $$ = fn_specifier_t ($5, $3);
+	}
+	;
+
 static_opt: T_STATIC 	{ $$ = STATIC_DECL; }
 	| /* empty */	{ $$ = 0; }
 	;
 
 /* declaration_specifiers is no longer optional ?! */
-fn_declaration: static_opt declaration_specifiers declarator const_opt
+fn_declaration: fn_specifiers declaration_specifiers declarator const_opt
 	{
 	   $$ = New tame_fn_t ($1, $2, $3, $4, get_yy_lineno (), 
 	                       get_yy_loc ());
@@ -226,6 +239,10 @@ resume_arg_list_opt: /* empty */  { $$ = lstr (get_yy_lineno ());  }
 
 resume_statement: resume_keyword resume_arg_list_opt ';'
 	{
+	  if (!state.function ()->do_cceoc()) {
+	    yyerror ("Can't unblock/resume without 'cceoc' parameter "
+	             "to function");
+	  }
 	  if ($2)
 	    $1->add_params ($2);
 	  $1->passthrough (lstr (get_yy_lineno (), ";"));
