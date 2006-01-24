@@ -1197,9 +1197,9 @@ tame_unblock_t::output (int fd)
 }
 
 void
-tame_fn_resume_t::do_return_statement (my_strbuf_t &b) const
+tame_resume_t::do_return_statement (my_strbuf_t &b) const
 {
-  b.mycat (_fn->return_expr ());
+  b.mycat (_fn->return_expr ()) << ";\n";
 }
 
 void

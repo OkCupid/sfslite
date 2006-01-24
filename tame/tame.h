@@ -504,7 +504,7 @@ public:
   virtual ~tame_unblock_t () {}
   void output (int fd);
   virtual str macro_name () const { return "UNBLOCK"; }
-  virtual void do_return_statement () const {}
+  virtual void do_return_statement (my_strbuf_t &b) const {}
 };
 
 class tame_resume_t : public tame_unblock_t {
@@ -512,7 +512,7 @@ public:
   tame_resume_t (u_int l, tame_fn_t *f) : tame_unblock_t (l, f) {}
   ~tame_resume_t () {}
   str macro_name () const { return "RESUME"; }
-  void do_return_statement () const;
+  void do_return_statement (my_strbuf_t &b) const;
 };
 
 class parse_state_t : public element_list_t {
