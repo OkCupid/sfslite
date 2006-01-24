@@ -181,23 +181,32 @@ mangle (const str &in)
 str 
 strip_to_method (const str &in)
 {
-  static rxx mthd_rxx ("([^:]+::)+");
-
-  if (mthd_rxx.search (in)) {
-    return str (in.cstr () + mthd_rxx[1].len ());
+  static rxx double_colon ("::");
+  vec<str> pieces;
+  int n = split (&pieces, double_colon, in);
+  if (n > 0) {
+    return pieces.back ();
+  } else {
+    return in;
   }
-  return in;
 }
 
 str 
 strip_off_method (const str &in)
 {
-  static rxx mthd_rxx ("([^:]+::)+");
-
-  if (mthd_rxx.search (in)) 
-    return str (in.cstr (), mthd_rxx[1].len () - 2);
-
-  return NULL;
+  static rxx double_colon ("::");
+  vec<str> pieces;
+  int n = split (&pieces, double_colon, in);
+  if (n > 0) {
+    strbuf b;
+    for (size_t i = 0; i < pieces.size () - 1; i++) {
+      if (i != 0) b << "::";
+      b << pieces[i];
+    }
+    return b;
+  } else {
+    return NULL;
+  }
 }
 
 
@@ -555,7 +564,10 @@ tame_fn_t::output_set_method_pointer (my_strbuf_t &b)
     _args->paramlist (b, TYPES);
     b << ", ";
   }
-  b << "ptr<closure_t>);\n";
+  b << "ptr<closure_t>)";
+  if (_isconst)
+    b << " const";
+  b << ";\n";
 
   b << "  void set_method_pointer (method_type_t m) { _method = m; }\n\n";
     
@@ -762,6 +774,8 @@ tame_fn_t::signature (bool d, str prfx, bool static_flag) const
   if (d)
     b << " = NULL";
   b << ")";
+  if (_isconst) 
+    b << " const";
 
   return b;
 }

@@ -325,6 +325,7 @@ str strip_off_method (const str &in);
 class tame_block_t;
 
 #define STATIC_DECL           (1 << 0)
+#define CONST_DECL            (2 << 0)
 
 // function specifier embodies static and template keywords and options
 // at present, and perhaps more in the future.
@@ -348,7 +349,7 @@ public:
       _name_mangled (mangle (_name)), 
       _method_name (strip_to_method (_name)),
       _class (strip_off_method (_name)), 
-      _self (_class, "*", "_self"),
+      _self (c ? str (strbuf ("const ") << _class) : _class, "*", "_self"),
       _isconst (c),
       _template (fn._template),
       _template_args (_class ? template_args (_class) : NULL),
