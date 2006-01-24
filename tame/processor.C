@@ -892,7 +892,7 @@ tame_block_t::output (int fd)
   my_strbuf_t b;
   str tmp;
 
-  b << "  {\n"
+  b << "  do {\n"
     << "    " << TAME_CLOSURE_NAME << "->_block" << _id << " = 1;\n"
     ;
 
@@ -916,7 +916,7 @@ tame_block_t::output (int fd)
   b.mycat (_fn->return_expr ());
 
   b << ";\n"
-    << "  }\n"
+    << "  } while (0);\n"
     << " " << _fn->label (_id) << ":\n"
     << "    ;\n"
     ;
