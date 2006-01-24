@@ -28,6 +28,12 @@ reply_rand (svccb *sbp)
 }
 
 void
+reply_rand2 (svccb *sbp)
+{
+  sbp->replyref (*(sbp->Xtmpl getarg<unsigned> ()) * 3);
+}
+
+void
 exsrv_t::dispatch (svccb *sbp)
 {
   if (!sbp) {
@@ -44,6 +50,15 @@ exsrv_t::dispatch (svccb *sbp)
   case EX_RANDOM:
     {
       delaycb (rand () % 5, 0, wrap (reply_rand, sbp));
+      break;
+    }
+  case EX_RANDOM2:
+    {
+      if (*(sbp->Xtmpl getarg<unsigned>()) % 11 == 0) {
+	sbp->reject (PROC_UNAVAIL);
+      } else {
+	delaycb (rand () % 5, 0, wrap (reply_rand2, sbp));
+      }
       break;
     }
   case EX_REVERSE:

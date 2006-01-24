@@ -19,5 +19,8 @@ program EX_PROG {
 
 		ex_struct_t
 		EX_STRUCT(void) = 3;
+
+		unsigned
+		EX_RANDOM2 (unsigned) = 4;
 	} = 1;
 } = 31313;

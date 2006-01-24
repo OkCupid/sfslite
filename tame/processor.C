@@ -1192,7 +1192,14 @@ tame_unblock_t::output (int fd)
   }
   b << ");\n";
   _fn->do_cceoc_call ();
+  do_return_statement (b);
   b.tosuio ()->output (fd);
+}
+
+void
+tame_fn_resume_t::do_return_statement (my_strbuf_t &b) const
+{
+  b.mycat (_fn->return_expr ());
 }
 
 void

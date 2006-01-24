@@ -623,13 +623,13 @@ do {                                                              \
 } while (0)
 
 /**
- * Like unblock, but return from the function.
+ * Like unblock, but return from the function. Need to paste in
+ * return statement from tame(1) since it may have a type.
  */
 #define RESUME(x, T, ...)                                         \
 do {                                                              \
   UNBLOCK(x, T, __VA_ARGS__);                                     \
   END_OF_SCOPE(x);                                                \
-  return;                                                         \
 } while (0)
 
 // Tame template type
