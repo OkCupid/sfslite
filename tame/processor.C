@@ -184,7 +184,7 @@ strip_to_method (const str &in)
   static rxx double_colon ("::");
   vec<str> pieces;
   int n = split (&pieces, double_colon, in);
-  if (n > 0) {
+  if (n > 1) {
     return pieces.back ();
   } else {
     return in;
@@ -197,7 +197,7 @@ strip_off_method (const str &in)
   static rxx double_colon ("::");
   vec<str> pieces;
   int n = split (&pieces, double_colon, in);
-  if (n > 0) {
+  if (n > 1) {
     strbuf b;
     for (size_t i = 0; i < pieces.size () - 1; i++) {
       if (i != 0) b << "::";
