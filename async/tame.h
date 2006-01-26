@@ -638,7 +638,7 @@ do {                                                              \
 // Tame template type
 #define TTT(x) typeof(UNREF(typeof(x)))
 
-void __block_cb0 (ptr<closure_t> c, int i)
+inline void __block_cb0 (ptr<closure_t> c, int i)
 {
   c->block_cb_switch (i);
 }
