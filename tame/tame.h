@@ -470,6 +470,7 @@ private:
   void output_jump_tab (strbuf &b);
   void output_generic (int fd);
   void output_set_method_pointer (my_strbuf_t &b);
+  void output_block_cb_switch (strbuf &b);
   
   int _opts;
   u_int _lineno;

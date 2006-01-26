@@ -584,6 +584,20 @@ output_is_onstack (strbuf &b)
 }
 
 void
+tame_fn_t::output_block_cb_switch (strbuf &b)
+{
+  b << "  void block_cb_switch (int i) {\n"
+    << "    switch (i) {\n";
+  for (u_int i = 1; i <= _cbs.size (); i++) {
+    b << "    case " << i << ": cb" << i << "(); break;\n"; 
+  }
+  b << "    default: panic (\"unexpected case\");\n"
+    << "    }\n"
+    << "  }\n";
+}
+
+
+void
 tame_fn_t::output_closure (int fd)
 {
   my_strbuf_t b;
@@ -641,6 +655,8 @@ tame_fn_t::output_closure (int fd)
   if (_class) {
     output_set_method_pointer (b);
   }
+
+  output_block_cb_switch (b);
 
   for (u_int i = 0; i < _cbs.size (); i++) {
     _cbs[i]->output_in_class (b);
@@ -1041,24 +1057,22 @@ tame_block_callback_t::output (int fd)
   b << "(++" << TAME_CLOSURE_NAME << "->_block" << bid << ", "
     << "++" << TAME_CLOSURE_NAME << "->_cb_num_calls" << _cb_ind << ", "
     ;
-  if (_call_with->size ()) {
-    b << "wrap (__block_cb" << _call_with->size () << "<";
 
+  b << "wrap (__block_cb" << _call_with->size ();
+  if (_call_with->size ()) {
+    b << "<";
     _call_with->output_vars (b, true, "TTT(", ")");
-    b << ">, pointer_set" << _call_with->size () << "_t<";
+    b << ">";
+  }
+  b << ", " << CLOSURE_RFCNT << ", " << _cb_ind;
+  if (_call_with->size ()) {
+    b << ", pointer_set" << _call_with->size () << "_t<";
     _call_with->output_vars (b, true, "TTT(", ")");
     b << "> (";
     _call_with->output_vars (b, true, "&(", ")");
-    b << "), ";
-  }
-  b << "wrap (" << CLOSURE_RFCNT << ", &";
-  b.mycat (_parent_fn->closure ().type ().type_without_pointer ())
-    << "::cb" << _cb_ind
-    << "))";
-
-  // if there are parameters to set, then there is 1 extra callback
-  if (_call_with->size ()) 
     b << ")";
+  }
+  b << "))";
 
   b.tosuio ()->output (fd);
 }

@@ -245,6 +245,9 @@ public:
   void set_has_cceoc (bool f) { _has_cceoc = f; }
   void enforce_cceoc (const str &loc);
 
+  // call a block cb return into closure
+  virtual void block_cb_switch (int i) = 0;
+
   u_int64_t id () { return _id; }
 
   // given a file/line number of the end of scope, perform sanity
@@ -635,32 +638,41 @@ do {                                                              \
 // Tame template type
 #define TTT(x) typeof(UNREF(typeof(x)))
 
+void __block_cb0 (ptr<closure_t> c, int i)
+{
+  c->block_cb_switch (i);
+}
+
 template<class T1>
-void __block_cb1 (pointer_set1_t<T1> p, cbv cb, T1 v1)
+void __block_cb1 (ptr<closure_t> c, int i, pointer_set1_t<T1> p, T1 v1)
 {
   *p.p1 = v1;
-  (*cb) ();
+  c->block_cb_switch (i);
 }
 
 template<class T1, class T2>
-void __block_cb2 (pointer_set2_t<T1,T2> p, cbv cb, T1 v1, T2 v2)
+void __block_cb2 (ptr<closure_t> c, int i,
+		  pointer_set2_t<T1,T2> p, T1 v1, T2 v2)
 {
   *p.p1 = v1;
   *p.p2 = v2;
-  (*cb) ();
+  c->block_cb_switch (i);
 }
   
 template<class T1, class T2, class T3>
-void __block_cb3 (pointer_set3_t<T1,T2,T3> p, cbv cb, T1 v1, T2 v2, T3 v3)
+void __block_cb3 (ptr<closure_t> c, int i,
+		  pointer_set3_t<T1,T2,T3> p, cbv cb, T1 v1, T2 v2, T3 v3)
 {
   *p.p1 = v1;
   *p.p2 = v2;
   *p.p3 = v3;
   (*cb) ();
+  c->block_cb_switch (i);
 }
 
 template<class T1, class T2, class T3, class T4>
-void __block_cb4 (pointer_set4_t<T1,T2,T3,T4> p, cbv cb,
+void __block_cb4 (ptr<closure_t> c, int i,
+		  pointer_set4_t<T1,T2,T3,T4> p, cbv cb,
 		  T1 v1, T2 v2, T3 v3, T4 v4)
 {
   *p.p1 = v1;
@@ -668,6 +680,7 @@ void __block_cb4 (pointer_set4_t<T1,T2,T3,T4> p, cbv cb,
   *p.p3 = v3;
   *p.p4 = v4;
   (*cb) ();
+  c->block_cb_switch (i);
 }
 
 

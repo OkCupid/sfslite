@@ -31,6 +31,8 @@ public:
   void reenter () {
     dostuff (_args.h, _args.port, _args.cb, mkref (this));
   }
+
+  void block_cb_switch (int i) {}
   
   struct stack_t {
     stack_t ( str h,  int port,  cbb cb) : n_tot (40), window_sz (5), n_out (0), i (0), err (false)  {}
