@@ -126,6 +126,7 @@ fn:	T_TAME '(' fn_declaration ')' '{'
 	{
 	  state.new_fn ($3);
 	  state.push_list ($3);
+	  $3->set_lbrace_lineno (get_yy_lineno ());
 	}
 	fn_statements '}'
 	{

@@ -55,8 +55,9 @@ str template_args (str s)
   else return NULL;
 }
 
-static void output_el (int fd, tame_el_t *e) { e->output (fd); }
-void element_list_t::output (int fd) { _lst.traverse (wrap (output_el, fd)); }
+static void output_el (outputter_t *o, tame_el_t *e) { e->output (o); }
+void element_list_t::output (outputter_t *o) 
+{ _lst.traverse (wrap (output_el, o)); }
 
 // Must match "__CLS" in tame_const.h
 #define TAME_CLOSURE_NAME     "__cls"
@@ -417,11 +418,14 @@ tame_fn_t::label (u_int id) const
 // Output Routines
 
 void 
-tame_passthrough_t::output (int fd)
+tame_passthrough_t::output (outputter_t *o)
 {
-  if (_strs.size ()) 
-    state.output_line_xlate (fd, _strs[0].lineno ());
-  _buf.tosuio ()->output (fd);
+  if (_strs.size ()) {
+    output_mode_t old = o->switch_to_mode (OUTPUT_PASSTHROUGH);
+    o->set_lineno (_strs[0].lineno ());
+    o->output_str (_buf);
+    o->switch_to_mode (old);
+  }
 }
 
 str
@@ -598,9 +602,10 @@ tame_fn_t::output_block_cb_switch (strbuf &b)
 
 
 void
-tame_fn_t::output_closure (int fd)
+tame_fn_t::output_closure (outputter_t *o)
 {
   my_strbuf_t b;
+  output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL);
 
   if (_template) {
     b.mycat (template_str ()) << "\n";
@@ -722,7 +727,8 @@ tame_fn_t::output_closure (int fd)
 
   b << "};\n\n";
 
-  b.tosuio ()->output (fd);
+  o->output_str (b);
+  o->switch_to_mode (om);
 }
 
 void
@@ -797,30 +803,36 @@ tame_fn_t::signature (bool d, str prfx, bool static_flag) const
 }
 
 void
-tame_fn_t::output_static_decl (int fd)
+tame_fn_t::output_static_decl (outputter_t *o)
 {
   my_strbuf_t b;
+  output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL);
   b.mycat (signature (true, NULL, true)) << ";\n\n";
-  
-  b.tosuio ()->output (fd);
+  o->output_str (b);
+  o->switch_to_mode (om);
 }
 
 void
-tame_fn_t::output_fn (int fd)
+tame_fn_t::output_fn (outputter_t *o)
 {
   my_strbuf_t b;
   
   state.set_fn (this);
-  state.need_line_xlate ();
-  state.output_line_xlate (fd, _lineno);
+
+  o->set_lineno (_lineno);
+  output_mode_t om = o->switch_to_mode (OUTPUT_PASSTHROUGH);
 
   b << signature (false, TAME_PREFIX)  << "\n"
     << "{\n";
+
+  o->output_str (b);
+  b.tosuio ()->clear ();
+  o->set_lineno (_lbrace_lineno);
+  o->switch_to_mode (OUTPUT_TREADMILL);
   
   if (do_cceoc ()) {
     b << "  " << _cceoc_sentinel.decl () << ";\n";
   }
-
 
   b << "  " << _closure.decl () << ";\n"
     << "  "
@@ -866,32 +878,33 @@ tame_fn_t::output_fn (int fd)
 
   output_jump_tab (b);
 
-  b.tosuio ()->output (fd);
+  o->output_str (b);
+  o->switch_to_mode (om);
 
-  state.need_line_xlate ();
-
-  element_list_t::output (fd);
+  element_list_t::output (o);
 
 }
 
 void 
-tame_fn_t::output (int fd)
+tame_fn_t::output (outputter_t *o)
 {
   if ((_opts & STATIC_DECL) && !_class)
-    output_static_decl (fd);
-  output_generic (fd);
-  output_closure (fd);
-  output_fn (fd);
+    output_static_decl (o);
+  output_generic (o);
+  output_closure (o);
+  output_fn (o);
 }
 
 void
-tame_fn_t::output_generic (int fd)
+tame_fn_t::output_generic (outputter_t *o)
 {
   strbuf b;
+  output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL);
   for (u_int i = 0; i < _nbcbs.size (); i++) {
     _nbcbs[i]->output_generic (b);
   }
-  b.tosuio ()->output (fd);
+  o->output_str (b);
+  o->switch_to_mode (om);
 }
 
 void
@@ -903,28 +916,31 @@ tame_fn_t::jump_out (strbuf &b, int id)
 }
 
 void 
-tame_block_t::output (int fd)
+tame_block_t::output (outputter_t *o)
 {
   my_strbuf_t b;
   str tmp;
+
+  output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL);
 
   b << "  do {\n"
     << "    " << TAME_CLOSURE_NAME << "->_block" << _id << " = 1;\n"
     ;
 
   _fn->jump_out (b, _id);
-
-  b.tosuio ()->output (fd);
+  
+  o->output_str (b);
   b.tosuio ()->clear ();
+  o->switch_to_mode (om);
 
   // now we are returning to mainly pass-through code, but with some
   // callbacks thrown in (which won't change the line-spacing)
-  state.need_line_xlate ();
 
   for (tame_el_t *el = _lst.first; el; el = _lst.next (el)) {
-    el->output (fd);
+    el->output (o);
   }
 
+  om = o->switch_to_mode (OUTPUT_TREADMILL);
   b << "\n"
     << "    if (--" << TAME_CLOSURE_NAME << "->_block" << _id << ")\n"
     << "      ";
@@ -943,8 +959,8 @@ tame_block_t::output (int fd)
   if (_fn->did_cceoc_call ()) 
     b << "  SET_CCEOC_STACK_SENTINEL();\n";
 
-  state.need_line_xlate ();
-  b.tosuio ()->output (fd);
+  o->output_str (b);
+  o->switch_to_mode (om);
 }
 
 str
@@ -960,20 +976,21 @@ tame_fn_t::return_expr () const
 }
 
 void
-parse_state_t::output_cceoc_argname (int fd)
+parse_state_t::output_cceoc_argname (outputter_t *o)
 {
+  output_mode_t m = o->switch_to_mode (OUTPUT_TREADMILL);
   strbuf b;
   b << "\n#define CCEOC_ARGNAME  " << cceoc_argname << "\n";
-  b.tosuio ()->output (fd);
-  need_line_xlate ();
+  o->output_str (b);
+  o->switch_to_mode (m);
 }
 
 void
-parse_state_t::output (int fd)
+parse_state_t::output (outputter_t *o)
 {
-  output_line_xlate (fd, 1);
-  output_cceoc_argname (fd);
-  element_list_t::output (fd);
+  o->start_output ();
+  output_cceoc_argname (o);
+  element_list_t::output (o);
 }
 
 bool
@@ -1050,7 +1067,7 @@ tame_nonblock_callback_t::output_vars (strbuf &b, bool first,
 }
 
 void
-tame_block_callback_t::output (int fd)
+tame_block_callback_t::output (outputter_t *o)
 {
   int bid = _block->id ();
   my_strbuf_t b;
@@ -1073,12 +1090,11 @@ tame_block_callback_t::output (int fd)
     b << ")";
   }
   b << "))";
-
-  b.tosuio ()->output (fd);
+  o->output_str (b);
 }
 
 void
-tame_nonblock_callback_t::output (int fd)
+tame_nonblock_callback_t::output (outputter_t *o)
 {
   my_strbuf_t b;
 
@@ -1123,14 +1139,15 @@ tame_nonblock_callback_t::output (int fd)
 
   b << ")))";
 
-  b.tosuio ()->output (fd);
-
+  o->output_str (b);
 }
 
 #define JOIN_VALUE "__v"
 void
-tame_join_t::output (int fd)
+tame_join_t::output (outputter_t *o)
 {
+  output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL);
+
   strbuf tmp;
   tmp << "(" << join_group ().name () << ")";
   str jgn = tmp;
@@ -1148,12 +1165,13 @@ tame_join_t::output (int fd)
       << arg (i).name ()  << " = " JOIN_VALUE << ".v" << i+1 << ";\n";
   }
   b << "\n";
-  b.tosuio ()->output (fd);
-
+  o->output_str (b);
   b.tosuio ()->clear ();
-  state.need_line_xlate ();
-  element_list_t::output (fd);
+  o->switch_to_mode (om);
 
+  element_list_t::output (o);
+
+  om = o->switch_to_mode (OUTPUT_TREADMILL);
   b << "    } else {\n"
     ;
   
@@ -1167,19 +1185,8 @@ tame_join_t::output (int fd)
   b << ";\n"
     << "  }\n\n";
 
-  b.tosuio ()->output (fd);
-  state.need_line_xlate ();
-}
-
-void
-parse_state_t::output_line_xlate (int fd, int ln)
-{
-  if (_xlate_line_numbers && _need_line_xlate) {
-    strbuf b;
-    b << "# " << ln << " \"" << _infile_name << "\"\n";
-    b.tosuio ()->output (fd);
-    _need_line_xlate = false;
-  }
+  o->output_str (b);
+  o->switch_to_mode (om);
 }
 
 //
@@ -1190,27 +1197,36 @@ parse_state_t::output_line_xlate (int fd, int ln)
 //
 
 void
-tame_ret_t::output (int fd)
+tame_ret_t::output (outputter_t *o)
 {
+  output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL);
   my_strbuf_t b;
   str loc = state.loc (_line_number);
 
   if (_fn->do_cceoc ()) {
     b << "  END_OF_SCOPE (\"" << loc << "\");\n";
-    state.need_line_xlate ();
   }
+  o->output_str (b);
+  b.tosuio ()->clear ();
+
+  o->switch_to_mode (OUTPUT_PASSTHROUGH);
+  o->set_lineno (_line_number);
   
   b << "return ";
   if (_params)
     b << _params;
-  b.tosuio ()->output (fd);
-  tame_env_t::output (fd);
+
+  o->output_str (b);
+  tame_env_t::output (o);
+  o->switch_to_mode (om);
+
 }
 
 void
-tame_unblock_t::output (int fd)
+tame_unblock_t::output (outputter_t *o)
 {
   my_strbuf_t b;
+  output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL);
   str loc = state.loc (_line_number);
   str n = macro_name ();
   b << "  " << n << " (\"" << loc << "\", ";
@@ -1221,7 +1237,9 @@ tame_unblock_t::output (int fd)
   b << ");\n";
   _fn->do_cceoc_call ();
   do_return_statement (b);
-  b.tosuio ()->output (fd);
+
+  o->output_str (b);
+  o->switch_to_mode (om);
 }
 
 void
@@ -1231,20 +1249,20 @@ tame_resume_t::do_return_statement (my_strbuf_t &b) const
 }
 
 void
-tame_fn_return_t::output (int fd)
+tame_fn_return_t::output (outputter_t *o)
 {
   my_strbuf_t b;
+  output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL);
+  str loc = state.loc (_line_number);
   if (_fn->do_cceoc ()) {
     str loc = state.loc (_line_number);
     b << "  END_OF_SCOPE(\"" << loc << "\");\n";
-  
-    b.tosuio ()->output (fd);
   }
   b << "  ";
   b.mycat (_fn->return_expr ());
   b << ";\n";
-  b.tosuio ()->output (fd);
-  state.need_line_xlate ();
+  o->output_str (b);
+  o->switch_to_mode (om);
 }
 
 str

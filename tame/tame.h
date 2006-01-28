@@ -90,18 +90,54 @@ private:
   u_int _lineno;
 };
 
+typedef enum { OUTPUT_NONE = 0,
+	       OUTPUT_PASSTHROUGH = 1,
+	       OUTPUT_TREADMILL = 2,
+	       OUTPUT_BIG_NEW_CHUNK = 3 } output_mode_t;
+
+class outputter_t {
+public:
+  outputter_t (const str &in, const str &out, int ox) 
+    : _infn (in), _outfn (out), _fd (-1), _lineno (1), _output_xlate (ox),
+      _need_xlate (false), _mode (OUTPUT_NONE), _last_char_was_nl (false) {}
+  ~outputter_t ();
+  bool init ();
+
+  void start_output ();
+  void flush ();
+
+  output_mode_t switch_to_mode (output_mode_t m);
+  output_mode_t mode () const { return _mode; }
+  void set_lineno (int i) { _lineno = i; }
+  void output_str (str s);
+protected:
+  void output_line_number ();
+private:
+  void _output_str (str s, bool output_nl);
+  const str _infn, _outfn;
+  int _fd;
+  int _lineno;
+  bool _output_xlate;
+
+  strbuf _buf;
+  vec<str> _strs;
+  bool _need_xlate;
+  output_mode_t _mode;
+  bool _last_char_was_nl;
+};
+
 class tame_el_t {
 public:
   tame_el_t () {}
   virtual ~tame_el_t () {}
   virtual bool append (const str &s) { return false; }
-  virtual void output (int fd) = 0;
+  virtual void output (outputter_t *o) = 0;
   tailq_entry<tame_el_t> _lnk;
 };
 
 class element_list_t : public tame_el_t {
 public:
-  virtual void output (int fd);
+  virtual void output (outputter_t *o);
   void passthrough (const lstr &l) ;
   void push (tame_el_t *e) { _lst.insert_tail (e); }
 protected:
@@ -110,7 +146,7 @@ protected:
 
 class tame_env_t : public element_list_t {
 public:
-  virtual void output (int fd) { element_list_t::output (fd); }
+  virtual void output (outputter_t *o) { element_list_t::output (o); }
   virtual bool is_jumpto () const { return false; }
   virtual void set_id (int id) {}
   virtual int id () const { return 0; }
@@ -119,7 +155,7 @@ public:
 class tame_vars_t : public tame_el_t {
 public:
   tame_vars_t (int lineno) {}
-  void output (int fd) {}
+  void output (outputter_t *o) {}
 private:
   int lineno;
 };
@@ -128,7 +164,7 @@ class tame_passthrough_t : public tame_el_t {
 public:
   tame_passthrough_t (const lstr &s) { append (s); }
   bool append (const lstr &s) { _strs.push_back (s); _buf << s; return true; }
-  void output (int fd);
+  void output (outputter_t *o);
 private:
   strbuf _buf;
   vec<lstr> _strs;
@@ -234,7 +270,7 @@ public:
   tame_callback_t (u_int ln, ptr<expr_list_t> l) 
     : _line_number (ln), _call_with (l) {}
 
-  virtual void output (int fd) { tame_env_t::output (fd); }
+  virtual void output (outputter_t *o) { tame_env_t::output (o); }
   virtual void output_in_class (strbuf &b) = 0;
   virtual void output_generic (strbuf &b) = 0;
   virtual void set_nonblock (tame_nonblock_t *n) {}
@@ -250,7 +286,7 @@ public:
   tame_block_callback_t (u_int ln, tame_fn_t *fn, tame_block_t *b, 
 			   ptr<expr_list_t> l);
   ~tame_block_callback_t () {}
-  void output (int fd);
+  void output (outputter_t *o);
   void output_in_class (strbuf &b);
   void output_generic (strbuf &b) {}
   int global_cb_ind () const { return _cb_ind; }
@@ -265,7 +301,7 @@ public:
   tame_nonblock_callback_t (u_int ln, tame_nonblock_t *n, ptr<expr_list_t> l,
 			    ptr<expr_list_t> wi)
     : tame_callback_t (ln, l), _nonblock (n), _wrap_in (wi) {}
-  void output (int fd);
+  void output (outputter_t *o);
   void output_in_class (strbuf &b) {}
   void output_generic (strbuf &b);
   void set_wrap_in (ptr<expr_list_t> l) { _wrap_in = l; }
@@ -361,7 +397,8 @@ public:
       _n_labels (0),
       _n_blocks (0),
       _hit_cceoc_call (false),
-      _loc (loc)
+      _loc (loc),
+      _lbrace_lineno (0)
   { }
 
   vartab_t *stack_vars () { return &_stack_vars; }
@@ -403,7 +440,7 @@ public:
 
   void jump_out (strbuf &b, int i);
 
-  void output (int fd);
+  void output (outputter_t *o);
 
   int add_callback (tame_block_callback_t *c) 
   { _cbs.push_back (c); return _cbs.size (); }
@@ -438,6 +475,8 @@ public:
   { return (_template ? str (strbuf ("template< " ) << _template << " >") 
 	    : NULL); }
 
+  void set_lbrace_lineno (u_int i) { _lbrace_lineno = i ; }
+
 private:
   const type_t _ret_type;
   const str _name;
@@ -462,13 +501,13 @@ private:
   vec<tame_env_t *> _envs;
 
   void output_reenter (strbuf &b);
-  void output_closure (int fd);
-  void output_fn (int fd);
-  void output_static_decl (int fd);
+  void output_closure (outputter_t *o);
+  void output_fn (outputter_t *o);
+  void output_static_decl (outputter_t *o);
   void output_stack_vars (strbuf &b);
   void output_arg_references (strbuf &b);
   void output_jump_tab (strbuf &b);
-  void output_generic (int fd);
+  void output_generic (outputter_t *o);
   void output_set_method_pointer (my_strbuf_t &b);
   void output_block_cb_switch (strbuf &b);
   
@@ -479,6 +518,7 @@ private:
   bool _hit_cceoc_call;
   str _default_return;
   str _loc; // filename:linenumber where this function was declared
+  u_int _lbrace_lineno;  // void foo () { ... where the '{' was
 };
 
 
@@ -487,7 +527,7 @@ class tame_ret_t : public tame_env_t
 public:
   tame_ret_t (u_int l, tame_fn_t *f) : _line_number (l), _fn (f) {}
   void add_params (const lstr &l) { _params = l; }
-  virtual void output (int fd);
+  virtual void output (outputter_t *o);
 protected:
   u_int _line_number;
   tame_fn_t *_fn;
@@ -497,14 +537,14 @@ protected:
 class tame_fn_return_t : public tame_ret_t {
 public:
   tame_fn_return_t (u_int l, tame_fn_t *f) : tame_ret_t (l, f) {}
-  void output (int fd);
+  void output (outputter_t *o);
 };
 
 class tame_unblock_t : public tame_ret_t {
 public:
   tame_unblock_t (u_int l, tame_fn_t *f) : tame_ret_t (l, f) {}
   virtual ~tame_unblock_t () {}
-  void output (int fd);
+  void output (outputter_t *o);
   virtual str macro_name () const { return "UNBLOCK"; }
   virtual void do_return_statement (my_strbuf_t &b) const {}
 };
@@ -556,17 +596,14 @@ public:
   void new_join (tame_join_t *j);
   tame_join_t *join () { return _join; }
 
-  void output (int fd);
-  void output_cceoc_argname (int fd);
+  void output (outputter_t *o);
+  void output_cceoc_argname (outputter_t *o);
 
   void clear_sym_bit () { _sym_bit = false; }
   void set_sym_bit () { _sym_bit = true; }
   bool get_sym_bit () const { return _sym_bit; }
 
-  void set_xlate_line_numbers (bool f) { _xlate_line_numbers = f; }
   void set_infile_name (const str &i) { _infile_name = i; }
-  void output_line_xlate (int fd, int ln) ;
-  void need_line_xlate () { _need_line_xlate = true; }
   str loc (u_int l) const ;
 
 protected:
@@ -590,7 +627,7 @@ public:
   tame_block_t (tame_fn_t *f) : _fn (f), _id (0) {}
   ~tame_block_t () {}
   
-  void output (int fd);
+  void output (outputter_t *o);
   bool is_jumpto () const { return true; }
   void set_id (int i) { _id = i; }
   int id () const { return _id; }
@@ -613,7 +650,7 @@ class tame_nonblock_t : public tame_env_t {
 public:
   tame_nonblock_t (ptr<expr_list_t> l) : _args (l) {}
   ~tame_nonblock_t () {}
-  void output (int fd) { element_list_t::output (fd); }
+  void output (outputter_t *o) { element_list_t::output (o); }
   ptr<expr_list_t> args () const { return _args; }
 private:
   ptr<expr_list_t> _args;
@@ -625,7 +662,7 @@ public:
   bool is_jumpto () const { return true; }
   void set_id (int i) { _id = i; }
   int id () const { return _id; }
-  void output (int fd);
+  void output (outputter_t *o);
   var_t join_group () const { return (*_args)[0]; }
   var_t arg (u_int i) const { return (*_args)[i+1]; }
   u_int n_args () const { return _args->size () - 1; }

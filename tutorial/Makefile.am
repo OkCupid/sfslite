@@ -30,7 +30,7 @@ SUFFIXES = .T .C .x .h
 ## compile with the -L flag to suppress line # translation
 ##
 .T.C:
-	-$(TAME) -L -o $@ $< || rm -f $@
+	-$(TAME) -o $@ $< || rm -f $@
 .x.h:
 	-$(RPCC) -h $< || rm -f $@
 .x.C:

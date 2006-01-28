@@ -40,6 +40,7 @@ main (int argc, char *argv[])
   bool no_line_numbers = false;
   const char *c;
   str ifn;
+  outputter_t *o;
   
   make_sync (0);
   make_sync (1);
@@ -98,17 +99,9 @@ main (int argc, char *argv[])
   }
 
   state.set_infile_name (ifn);
-  state.set_xlate_line_numbers ((ifn && ifn != "-" && !no_line_numbers) 
-				? true : false);
-
-  int outfd;
-  if (outfile && outfile != "-") {
-    if ((outfd = open (outfile.cstr (), O_CREAT|O_WRONLY|O_TRUNC, 0644)) < 0) {
-      warn << "cannot open file for writing: " << outfile << "\n";
-    }
-  } else {
-    outfd = 1;
-  }
+  o = New outputter_t (ifn, outfile, (ifn && ifn != "-" && !no_line_numbers));
+  if (!o->init ())
+    exit (1);
 
   // only on if YYDEBUG is on :(
   //yydebug = 1;
@@ -119,7 +112,8 @@ main (int argc, char *argv[])
     fclose (ifh);
   }
 
-  state.output (outfd);
-  close (outfd);
+  state.output (o);
 
+  // calls close on the outputter fd
+  delete o;
 }
