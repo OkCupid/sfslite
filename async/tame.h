@@ -261,6 +261,10 @@ public:
   // scope as we are weakly going out of scope
   void kill_join_groups ();
 
+  // Once we're done allocating, we then associate all join groups
+  // with this closure, based on the is_onstack test.
+  void collect_join_groups ();
+
 protected:
   u_int _jumpto;
   int _cceoc_count;
@@ -293,6 +297,8 @@ struct value_set_t {
  */
 void tame_error (const str &loc, const str &msg);
 INIT(tame_init);
+
+void collect_join_group (mortal_ref_t r, void *p);
 
 /**
  * Holds the important information associated with a join group,
@@ -332,7 +338,7 @@ public:
       _closures[i].weak_decref ();
   }
 
-  void associate_closure (ptr<closure_t> c, void *jgwp) 
+  void associate_closure (ptr<closure_t> c)
   {
     // make sure that each closure is registered only once!
     u_int64_t p = c->id ();
@@ -350,16 +356,26 @@ public:
       // to see if it was allocated inside of the closure.  If so,
       // we need to force it out of scope when we force the closure
       // out of scope.
-      c->associate_join_group (mortal_t::make_mortal_ref (), jgwp);
+      // 
+      // However, we have changed where this association happens!
+      // No longer associate a join group to a closure when callbacks
+      // are generated, since that doesn't get the right scoping rules,
+      // if join groups are passed from one function to another. 
+      // Now, we "collect" join groups during closure allocation.
+      //
+      //c->associate_join_group (mortal_t::make_mortal_ref (), jgwp);
     }
   }
 
   void set_join_cb (cbv::ptr c) { _join_cb = c; }
 
-  void launch_one (ptr<closure_t> c = NULL, void *jgwp = NULL) 
+  void collect_myself (void *jgwp) 
+  { collect_join_group (mortal_t::make_mortal_ref (), jgwp); }
+
+  void launch_one (ptr<closure_t> c = NULL)
   { 
     if (c)
-      associate_closure (c, jgwp);
+      associate_closure (c);
     add_join ();
   }
 
@@ -462,7 +478,9 @@ template<class T1 = int, class T2 = int, class T3 = int, class T4 = int>
 class join_group_t {
 public:
   join_group_t (const char *f = NULL, int l = 0) 
-    : _pointer (New refcounted<join_group_pointer_t<T1,T2,T3,T4> > (f, l)) {}
+    : _pointer (New refcounted<join_group_pointer_t<T1,T2,T3,T4> > (f, l)) 
+  { _pointer->collect_myself (static_cast<void *> (this)); }
+
   join_group_t (ptr<join_group_pointer_t<T1,T2,T3,T4> > p) : _pointer (p) {}
 
   //-----------------------------------------------------------------------
@@ -529,7 +547,7 @@ public:
   // programmers.
   void set_join_cb (cbv::ptr c) { _pointer->set_join_cb (c); }
   void launch_one (ptr<closure_t> c = NULL) 
-  { _pointer->launch_one (c, static_cast<void *> (this)); }
+  { _pointer->launch_one (c); }
 
   ptr<join_group_pointer_t<T1,T2,T3,T4> > pointer () { return _pointer; }
   static value_set_t<T1,T2,T3,T4> to_vs () 
@@ -682,6 +700,8 @@ void __block_cb4 (ptr<closure_t> c, int i,
   (*cb) ();
   c->block_cb_switch (i);
 }
+
+void start_join_group_collection ();
 
 
 #endif /* _ASYNC_TAME_H */

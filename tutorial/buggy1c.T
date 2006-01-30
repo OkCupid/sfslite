@@ -42,7 +42,7 @@ TAME(static void buggy1b (ceo_callback_bool_t cceoc))
     hog->call_me (@());
   }
 
-  for (i = 0; i < 2; i++) {
+  for (i = 0; i < 1; i++) {
     JOIN (JG) {}
   }
   if (fix_bug)

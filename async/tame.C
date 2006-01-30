@@ -10,6 +10,7 @@
 int tame_options;
 int tame_global_int;
 u_int64_t closure_serial_number;
+bool tame_collect_jg_flag;
 
 int tame_init::count;
 
@@ -23,6 +24,8 @@ tame_init::start ()
 
   tame_options = 0;
   closure_serial_number = 0;
+  tame_collect_jg_flag = false;
+
   char *e = safegetenv (TAME_OPTIONS);
   for (char *cp = e; cp && *cp; cp++) {
     switch (*cp) {
@@ -110,3 +113,44 @@ mortal_ref_t::mark_dead ()
   if (!*_destroyed_flag)
     _mortal->mark_dead ();
 }
+
+//-----------------------------------------------------------------------
+// Mechanism for collecting all allocated join groups, and associating
+// them with a closure that's just being allocated
+
+struct collected_join_group_t {
+  collected_join_group_t (mortal_ref_t m, const void *p) 
+    : _mref (m), _void_p (p) {}
+  mortal_ref_t _mref;
+  const void  *_void_p;
+};
+
+vec<collected_join_group_t> tame_collect_jg_vec;
+
+void
+start_join_group_collection ()
+{
+  tame_collect_jg_flag = true;
+  tame_collect_jg_vec.clear ();
+}
+
+void
+collect_join_group (mortal_ref_t r, void *p)
+{
+  if (tame_collect_jg_flag) 
+    tame_collect_jg_vec.push_back (collected_join_group_t (r, p)); 
+}
+
+void
+closure_t::collect_join_groups ()
+{
+  for (u_int i = 0; i < tame_collect_jg_vec.size (); i++) {
+    const collected_join_group_t &jg = tame_collect_jg_vec[i];
+    associate_join_group (jg._mref, jg._void_p);
+  }
+  tame_collect_jg_flag = false;
+  tame_collect_jg_vec.clear ();
+}
+
+//
+//-----------------------------------------------------------------------
