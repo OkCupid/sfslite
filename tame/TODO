@@ -12,8 +12,8 @@ From Jan UCLA visit:
 - new, optional NONBLOCK syntax:
 
  NONBLOCK (jg, 0) { ..... @(i) ..... }
- NONBLOCK (jg) { .... @[0](i) ..... }
-	       { .... @[jg,0](i) .... }
+ NONBLOCK (jg)    { .... @[0](i) ..... }
+	          { .... @[jg,0](i) .... }
 
 
 
@@ -27,3 +27,6 @@ From Jan UCLA visit:
 	JOIN (jg, return_id) {
 	   if (fd <= 0) panic ("BARF!");
 	}
+
+Jan 27, 2005
+ - Handle const refs as function parameters . Should be possible.
