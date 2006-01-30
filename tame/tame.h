@@ -3,7 +3,7 @@
 
 /*
  *
- * Copyright (C) 2005 Max Krohn (email: my last name AT MIT dot ORG)
+ * Copyright (C) 2005 Max Krohn (email: my last name AT mit DOT edu)
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -95,25 +95,29 @@ typedef enum { OUTPUT_NONE = 0,
 	       OUTPUT_TREADMILL = 2,
 	       OUTPUT_BIG_NEW_CHUNK = 3 } output_mode_t;
 
+
 class outputter_t {
 public:
-  outputter_t (const str &in, const str &out, int ox) 
-    : _infn (in), _outfn (out), _fd (-1), _lineno (1), _output_xlate (ox),
-      _need_xlate (false), _mode (OUTPUT_NONE), _last_char_was_nl (false) {}
-  ~outputter_t ();
+  outputter_t (const str &in, const str &out, bool ox) 
+    : _mode (OUTPUT_NONE), _infn (in), _outfn (out), _fd (-1), 
+      _lineno (1), _output_xlate (ox), _need_xlate (false), 
+      _last_char_was_nl (false), _last_output_in_mode (OUTPUT_NONE),
+      _last_lineno (-1), _did_output (false), 
+      _do_output_line_number (false) {}
+  virtual ~outputter_t ();
   bool init ();
 
   void start_output ();
   void flush ();
 
-  output_mode_t switch_to_mode (output_mode_t m);
+  output_mode_t switch_to_mode (output_mode_t m, int ln = -1);
   output_mode_t mode () const { return _mode; }
-  void set_lineno (int i) { _lineno = i; }
-  void output_str (str s);
+  virtual void output_str (str s);
 protected:
   void output_line_number ();
+  void _output_str (str s, str sep_str = NULL);
+  output_mode_t _mode;
 private:
-  void _output_str (str s, bool output_nl);
   const str _infn, _outfn;
   int _fd;
   int _lineno;
@@ -122,8 +126,22 @@ private:
   strbuf _buf;
   vec<str> _strs;
   bool _need_xlate;
-  output_mode_t _mode;
   bool _last_char_was_nl;
+  output_mode_t _last_output_in_mode;
+  int _last_lineno;
+  bool _did_output;
+  bool _do_output_line_number;
+};
+
+/**
+ * Horizontal outputter -- doesn't output newlines when in treadmill mode
+ */
+class outputter_H_t : public outputter_t {
+public:
+  outputter_H_t (const str &in, const str &out, bool ox) 
+    : outputter_t (in, out, ox) {}
+protected:
+  void output_str (str s);
 };
 
 class tame_el_t {
@@ -132,6 +150,7 @@ public:
   virtual ~tame_el_t () {}
   virtual bool append (const str &s) { return false; }
   virtual void output (outputter_t *o) = 0;
+  virtual bool goes_after_vars () const { return true; }
   tailq_entry<tame_el_t> _lnk;
 };
 
@@ -139,7 +158,8 @@ class element_list_t : public tame_el_t {
 public:
   virtual void output (outputter_t *o);
   void passthrough (const lstr &l) ;
-  void push (tame_el_t *e) { _lst.insert_tail (e); }
+  void push (tame_el_t *e) { push_hook (e); _lst.insert_tail (e); }
+  virtual void push_hook (tame_el_t *e) {}
 protected:
   tailq<tame_el_t, &tame_el_t::_lnk> _lst;
 };
@@ -152,12 +172,17 @@ public:
   virtual int id () const { return 0; }
 };
 
+class tame_fn_t; 
+
 class tame_vars_t : public tame_el_t {
 public:
-  tame_vars_t (int lineno) {}
-  void output (outputter_t *o) {}
+  tame_vars_t (tame_fn_t *fn, int lineno) : _fn (fn), _lineno (lineno) {}
+  void output (outputter_t *o) ;
+  bool goes_after_vars () const { return false; }
+  int lineno () const { return _lineno; }
 private:
-  int lineno;
+  tame_fn_t *_fn;
+  int _lineno;
 };
 
 class tame_passthrough_t : public tame_el_t {
@@ -259,7 +284,6 @@ public:
   qhash<str, u_int> _tab;
 };
 
-class tame_fn_t; 
 
 class tame_block_t;
 class tame_nonblock_t;
@@ -398,7 +422,9 @@ public:
       _n_blocks (0),
       _hit_cceoc_call (false),
       _loc (loc),
-      _lbrace_lineno (0)
+      _lbrace_lineno (0),
+      _vars (NULL),
+      _after_vars_el_encountered (false)
   { }
 
   vartab_t *stack_vars () { return &_stack_vars; }
@@ -406,10 +432,19 @@ public:
   vartab_t *class_vars_tmp () { return &_class_vars_tmp; }
   var_t cceoc_sentinel () const { return _cceoc_sentinel; }
 
+  void push_hook (tame_el_t *el)
+  {
+    if (el->goes_after_vars ())
+      _after_vars_el_encountered = true;
+  }
+
   // return true if this function is using CCEOC checking, and
   // false otherwise
   bool do_cceoc () const;
   str cceoc_typename () const;
+
+  // called from tame_vars_t class
+  void output_vars (outputter_t *o, int ln);
 
   // set a flag saying whether or not we've hit a CCEOC call in
   // this function or not
@@ -477,6 +512,10 @@ public:
 
   void set_lbrace_lineno (u_int i) { _lbrace_lineno = i ; }
 
+  bool set_vars (tame_vars_t *v) 
+  { _vars = v; return (!_after_vars_el_encountered); }
+  const tame_vars_t *get_vars () const { return _vars; }
+
 private:
   const type_t _ret_type;
   const str _name;
@@ -519,6 +558,8 @@ private:
   str _default_return;
   str _loc; // filename:linenumber where this function was declared
   u_int _lbrace_lineno;  // void foo () { ... where the '{' was
+  tame_vars_t *_vars;
+  bool _after_vars_el_encountered;
 };
 
 

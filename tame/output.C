@@ -38,12 +38,32 @@ outputter_t::start_output ()
 void
 outputter_t::output_line_number ()
 {
-  if (_output_xlate) {
+  if (_output_xlate &&
+      (_did_output || _last_lineno != _lineno)) {
     strbuf b;
     if (!_last_char_was_nl)
       b << "\n";
     b << "# " << _lineno << " \"" << _infn << "\"\n";
     _output_str (b, false);
+    _last_lineno = _lineno;
+    _did_output = false;
+  }
+}
+
+void
+outputter_H_t::output_str (str s)
+{
+  if (_mode == OUTPUT_TREADMILL) {
+    static rxx x ("\n");
+    vec<str> v;
+    output_line_number ();
+    split (&v, x, s);
+    for (u_int i = 0; i < v.size (); i++) {
+      // only output a newline on the last line
+      _output_str (v[i], (i == v.size () - 1 ? "\n" : " "));
+    }
+  } else {
+    outputter_t::output_str (s);
   }
 }
 
@@ -56,9 +76,17 @@ outputter_t::output_str (str s)
     split (&v, x, s);
     for (u_int i = 0; i < v.size (); i++) {
       output_line_number ();
-      _output_str (v[i], true);
+      _output_str (v[i], "\n");
     }
   } else {
+
+    // we might have set up a defered output_line_number from
+    // within switch_to_mode; now is the time to do it.
+    if (s.len () && _do_output_line_number) {
+      output_line_number ();
+      _do_output_line_number = false;
+    }
+
     _output_str (s, false);
     if (_mode == OUTPUT_PASSTHROUGH)
       _lineno += count_newlines (s);
@@ -66,13 +94,19 @@ outputter_t::output_str (str s)
 }
 
 void
-outputter_t::_output_str (str s, bool add_nl)
+outputter_t::_output_str (str s, str sep_str)
 {
+  if (!s.len ())
+    return;
+
+  _last_output_in_mode = _mode;
+  _did_output = true;
+
   _strs.push_back (s);
   _buf << s;
-  if (add_nl) {
-    _buf << "\n";
-    _last_char_was_nl = true;
+  if (sep_str) {
+    _buf << sep_str;
+    _last_char_was_nl = (sep_str[sep_str.len () - 1] == '\n');
   } else {
     if (s && s.len () && s[s.len () - 1] == '\n') {
       _last_char_was_nl = true;
@@ -97,13 +131,25 @@ outputter_t::~outputter_t ()
 }
 
 output_mode_t 
-outputter_t::switch_to_mode (output_mode_t m)
+outputter_t::switch_to_mode (output_mode_t m, int nln)
 {
   output_mode_t old = _mode;
-  if (m == _mode)
-    return _mode;
-  if (m == OUTPUT_PASSTHROUGH && _mode != OUTPUT_NONE) 
-    output_line_number ();
+  int oln = _lineno;
+
+  if (nln >= 0)
+    _lineno = nln;
+  else
+    nln = oln;
+
+  if (m == OUTPUT_PASSTHROUGH &&
+      (oln != nln ||
+       (old != OUTPUT_NONE && 
+	_last_output_in_mode != OUTPUT_PASSTHROUGH))) {
+
+    // don't call output_line_number() directly, since
+    // maybe this will be an empty environment
+    _do_output_line_number = true;
+  }
   _mode = m;
   return old;
 }

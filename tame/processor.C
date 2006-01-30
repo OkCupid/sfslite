@@ -421,8 +421,8 @@ void
 tame_passthrough_t::output (outputter_t *o)
 {
   if (_strs.size ()) {
-    output_mode_t old = o->switch_to_mode (OUTPUT_PASSTHROUGH);
-    o->set_lineno (_strs[0].lineno ());
+    int ln = _strs[0].lineno ();
+    output_mode_t old = o->switch_to_mode (OUTPUT_PASSTHROUGH, ln);
     o->output_str (_buf);
     o->switch_to_mode (old);
   }
@@ -816,20 +816,35 @@ void
 tame_fn_t::output_fn (outputter_t *o)
 {
   my_strbuf_t b;
-  
   state.set_fn (this);
 
-  o->set_lineno (_lineno);
   output_mode_t om = o->switch_to_mode (OUTPUT_PASSTHROUGH);
-
   b << signature (false, TAME_PREFIX)  << "\n"
-    << "{\n";
+    << "{";
 
   o->output_str (b);
-  b.tosuio ()->clear ();
-  o->set_lineno (_lbrace_lineno);
-  o->switch_to_mode (OUTPUT_TREADMILL);
-  
+
+  // If no vars section was specified, do it now.
+  if (!_vars)
+    output_vars (o, _lbrace_lineno);
+
+  element_list_t::output (o);
+
+  o->switch_to_mode (om);
+}
+
+void
+tame_vars_t::output (outputter_t *o)
+{
+  _fn->output_vars (o, _lineno);
+}
+
+void
+tame_fn_t::output_vars (outputter_t *o, int ln)
+{
+  my_strbuf_t b;
+
+  output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL, ln);
   if (do_cceoc ()) {
     b << "  " << _cceoc_sentinel.decl () << ";\n";
   }
@@ -877,12 +892,10 @@ tame_fn_t::output_fn (outputter_t *o)
   b << "\n";
 
   output_jump_tab (b);
-
   o->output_str (b);
+
+  // will switch modes as appropriate (internally)
   o->switch_to_mode (om);
-
-  element_list_t::output (o);
-
 }
 
 void 
@@ -1071,6 +1084,7 @@ tame_block_callback_t::output (outputter_t *o)
 {
   int bid = _block->id ();
   my_strbuf_t b;
+  output_mode_t om = o->switch_to_mode (OUTPUT_PASSTHROUGH);
   b << "(++" << TAME_CLOSURE_NAME << "->_block" << bid << ", "
     << "++" << TAME_CLOSURE_NAME << "->_cb_num_calls" << _cb_ind << ", "
     ;
@@ -1091,12 +1105,14 @@ tame_block_callback_t::output (outputter_t *o)
   }
   b << "))";
   o->output_str (b);
+  o->switch_to_mode (om);
 }
 
 void
 tame_nonblock_callback_t::output (outputter_t *o)
 {
   my_strbuf_t b;
+  output_mode_t om = o->switch_to_mode (OUTPUT_PASSTHROUGH);
 
   strbuf tmp;
   tmp << "(" << join_group ().name () << ")";
@@ -1140,6 +1156,7 @@ tame_nonblock_callback_t::output (outputter_t *o)
   b << ")))";
 
   o->output_str (b);
+  o->switch_to_mode (om);
 }
 
 #define JOIN_VALUE "__v"
@@ -1209,8 +1226,7 @@ tame_ret_t::output (outputter_t *o)
   o->output_str (b);
   b.tosuio ()->clear ();
 
-  o->switch_to_mode (OUTPUT_PASSTHROUGH);
-  o->set_lineno (_line_number);
+  o->switch_to_mode (OUTPUT_PASSTHROUGH, _line_number);
   
   b << "return ";
   if (_params)
@@ -1226,15 +1242,15 @@ void
 tame_unblock_t::output (outputter_t *o)
 {
   my_strbuf_t b;
-  output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL);
+  output_mode_t om = o->switch_to_mode (OUTPUT_PASSTHROUGH);
   str loc = state.loc (_line_number);
   str n = macro_name ();
-  b << "  " << n << " (\"" << loc << "\", ";
+  b << n << " (\"" << loc << "\", ";
   b.mycat (_fn->cceoc_typename ());
   if (_params) {
     b << ", " << _params;
   }
-  b << ");\n";
+  b << "); ";
   _fn->do_cceoc_call ();
   do_return_statement (b);
 
@@ -1245,7 +1261,7 @@ tame_unblock_t::output (outputter_t *o)
 void
 tame_resume_t::do_return_statement (my_strbuf_t &b) const
 {
-  b.mycat (_fn->return_expr ()) << ";\n";
+  b.mycat (_fn->return_expr ()) << "; ";
 }
 
 void

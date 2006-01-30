@@ -216,7 +216,18 @@ vars:	T_VARS
 	} 
 	'{' declaration_list_opt '}'
 	{
-	  $$ = New tame_vars_t (vars_lineno);
+	  tame_vars_t *v = New tame_vars_t (state.function (), vars_lineno);
+	  if (state.function ()->get_vars ()) {
+	    strbuf b;
+	    b << "VARS{} section specified twice (before on line " 
+	      << state.function ()->get_vars ()->lineno () << ")\n";
+	    yyerror (b);
+	  }
+	  if (!state.function ()->set_vars (v)) {
+	    yyerror ("The VARS{} section must come before any BLOCK, "
+	             " JOIN, NONBLOCK, UNBLOCK or RESUME section");
+	  }
+	  $$ = v;
 	}
 	;
 
