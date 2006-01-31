@@ -484,8 +484,8 @@ init_declarator_list_opt: /* empty */
 	| init_declarator_list
 	;
 
-init_declarator_list:  init_declarator
-	| init_declarator_list ',' init_declarator
+init_declarator_list:  init_declarator			{}
+	| init_declarator_list ',' init_declarator	{}
 	;
 
 /* missing: C++-style initialization, C-style initiatlization
