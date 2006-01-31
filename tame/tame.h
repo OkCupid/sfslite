@@ -272,7 +272,7 @@ public:
   ~vartab_t () {}
   vartab_t () {}
   vartab_t (var_t v) { add (v); }
-  u_int size () const { return _vars.size (); }
+  size_t size () const { return _vars.size (); }
   bool add (var_t v) ;
   void declarations (strbuf &b, const str &padding) const;
   void paramlist (strbuf &b, list_mode_t m, str prfx = NULL) const;
@@ -706,7 +706,7 @@ public:
   void output (outputter_t *o);
   var_t join_group () const { return (*_args)[0]; }
   var_t arg (u_int i) const { return (*_args)[i+1]; }
-  u_int n_args () const { return _args->size () - 1; }
+  size_t n_args () const { return _args->size () - 1; }
 private:
   tame_fn_t *_fn;
   ptr<expr_list_t> _args;
