@@ -1174,7 +1174,8 @@ tame_join_t::output (outputter_t *o)
   my_strbuf_t b;
   b << "  ";
   b.mycat (_fn->label (_id)) << ":\n";
-  b << "    typeof (" << jgn << ".to_vs ()) "
+  b << "  do {\n"
+    << "    typeof (" << jgn << ".to_vs ()) "
     << JOIN_VALUE << ";\n";
   b << "    if (" <<  jgn << ".pending (&" 
     << JOIN_VALUE << ")) {\n";
@@ -1202,7 +1203,8 @@ tame_join_t::output (outputter_t *o)
     << "      ";
   b.mycat (_fn->return_expr ());
   b << ";\n"
-    << "  }\n\n";
+    << "   }\n"
+    << " } while (0);\n";
 
   o->output_str (b);
   o->switch_to_mode (om);
