@@ -4,7 +4,7 @@
 LDADD =  $(LIBARPC) $(LIBASYNC)  
 
 noinst_PROGRAMS = ex1 ex2 ex3 ex3b ex4m ex4 ex5 ex6 ex7 ex8 ex9 exsrv null \
-		buggy1a buggy1b buggy1c ex10 ex11
+		buggy1a buggy1b buggy1c ex10 ex11 tcpconnect
 ex1_SOURCES = ex1.C 
 ex2_SOURCES = ex2.C ex_prot.C
 ex3_SOURCES = ex3.C ex_prot.C
@@ -17,6 +17,7 @@ ex8_SOURCES = ex8.C
 ex9_SOURCES = ex9.C ex_prot.C
 ex10_SOURCES = ex10.C ex_prot.C
 ex11_SOURCES = ex11.C ex_prot.C
+tcpconnect_SOURCES = tcpconnect.C
 buggy1a_SOURCES = buggy1a.C
 buggy1b_SOURCES = buggy1b.C
 buggy1c_SOURCES = buggy1c.C
@@ -67,6 +68,7 @@ buggy1a.C: $(srcdir)/buggy1a.T
 buggy1b.C: $(srcdir)/buggy1b.T
 buggy1c.C: $(srcdir)/buggy1c.T
 null.C: $(srcdir)/null.T
+tcpconnect.C: $(srcdir)/tcpconnect.T
 
 dist-hook:
 	cd $(distdir) && rm -f $(CLEANFILES)
@@ -76,8 +78,9 @@ bldclean:
 	rm -f $(CLEANFILES)
 
 EXTRA_DIST = ex1.T ex2.T ex3.T ex3b.T ex4.T ex5.T ex_prot.x null.T ex6.T \
-	ex7.T ex8.T ex9.T buggy1a.T buggy1b.T buggy1c.T ex10.T ex11.T
+	ex7.T ex8.T ex9.T buggy1a.T buggy1b.T buggy1c.T ex10.T ex11.T \
+	tcpconnect.T
 
 CLEANFILES = core *.core ex1.C ex2.C ex3.C ex3b.C ex4.C ex5.C ex_prot.C \
 	ex_prot.h null.C ex6.C ex7.C ex8.C ex9.C buggy1a.C buggy1b.C \
-	buggy1c.C ex10.C ex11.C
+	buggy1c.C ex10.C ex11.C tcpconnect.C
