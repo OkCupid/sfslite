@@ -27,6 +27,10 @@
 #include "tame.h"
 #include "parseopt.h"
 
+/**
+ * Given a UNIX in_addr structure and a port, make a new TCP connect
+ * and test that it succeeded by selecting for write on the new socket.
+ */
 TAME(static void connect_to_in_addr (in_addr a, int port, cbi::ptr cceoc))
 {
   VARS {
@@ -58,15 +62,25 @@ TAME(static void connect_to_in_addr (in_addr a, int port, cbi::ptr cceoc))
 	if (err)
 	  fd = -ECONNREFUSED;
       }
+    } else {
+      fd = -errno;
     }
   }
   RESUME (fd);
 }
 
-class canceler_t {
+/**
+ * A helper class that I'll eventually move into the tame.h library,
+ * useful for canceling an TAME'd function mistream.
+ */
+class canceller_t {
 public:
-  canceler_t () {}
+  canceller_t () {}
+
+  // the cancelable function calls this 
   void wait (cbv b) { cb = b; }
+
+  // the canceller calls this to cancel the cancelable function
   void cancel ()
   {
     if (cb) {
@@ -75,12 +89,23 @@ public:
       (*t) ();
     }
   }
+
+  // the cancelable function can call this if it deems that it is too
+  // late to cancel.
+  void toolate () { cb = NULL; }
 private:
   cbv::ptr cb;
 };
 
 
-TAME(static ptr<canceler_t> 
+/**
+ * Given a hostname and port, make a TCP connection to the remote host,
+ * returning the result as an opened file descriptor, or negative for
+ * error.
+ *
+ * @return an object that can be used to cancel this computation mistream.
+ */
+TAME(static ptr<canceller_t> 
      my_tcpconnect (str hostname, u_int16_t port, cbi::ptr cceoc, 
 		    bool dnssearch, str *namep))
 {
@@ -89,12 +114,14 @@ TAME(static ptr<canceler_t>
     ptr<hostent> h;
     int err;
     int fd (-1);
-    ptr<canceler_t> canceler (New refcounted<canceler_t> ());
+    ptr<canceller_t> canceller (New refcounted<canceller_t> ());
     join_group_t<bool> jg;
   }
-  DEFAULT_RETURN { return canceler; }
+  DEFAULT_RETURN { return canceller; }
 
-  canceler->wait (@[jg,false]());
+  // launch 2 parallel calls that will race: the DNS requester
+  // and the canceller.
+  canceller->wait (@[jg,false]());
   dnsp = dns_hostbyname (hostname, @[jg,true](h, err), dnssearch); 
 
   JOIN (jg, completed) {
@@ -106,22 +133,33 @@ TAME(static ptr<canceler_t>
     } 
   }
 
+  // if we keep going, note that the canceller is still outstanding,
+  // and might still cancel us.
   dnsp = NULL;
   if (!h) {
+    canceller->toolate ();
+    jg.remove_join ();
     if (dns_tmperr (err))
       UNBLOCK (-EAGAIN);
     else
       UNBLOCK (-ENOENT);
-    JOIN (jg, dummy) {}
   } else {
     if (namep)
       *namep = h->h_name;
     
     connect_to_in_addr (*(in_addr *) h->h_addr, port, @[jg,true](fd)); 
     
-    JOIN (jg, dummy) {}
+    JOIN (jg, completed) {
+      if (completed) {
+	canceller->toolate ();
+	jg.remove_join ();
+      }
+    }
     UNBLOCK (fd); 
-    JOIN (jg, dummy) {}
+
+    // wait on the call to connect_to_inaddr if we've timed out.
+    if (jg.n_pending ()) 
+      JOIN (jg, dummy) {}
   }
 }
 
@@ -133,7 +171,7 @@ static void usage ()
 TAME (static void run (str s, int p))
 {
   VARS {
-    ptr<canceler_t> c;
+    ptr<canceller_t> c;
     join_group_t<bool> jg;
     int fd;
   }
