@@ -139,7 +139,16 @@ TAME (static void run (str s, int p))
   }
   c = my_tcpconnect (s, p, @[jg, true](fd), false, NULL);
   delaycb (4, 0, @[jg, false]());
-  JOIN (jg, succeeded) {}
+  JOIN (jg, succeeded) {
+    if (succeeded) {
+      warn << "Succeeded; fd=" << fd << "\n";
+    } else {
+      warn << "Had to cancel!\n";
+      c->cancel ();
+    }
+  }
+  JOIN (jg, dummy) {}
+  exit (0);
 }
 
 
