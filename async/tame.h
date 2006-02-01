@@ -704,4 +704,32 @@ void __block_cb4 (ptr<closure_t> c, int i,
 void start_join_group_collection ();
 
 
+/**
+ * A helper class useful for canceling an TAME'd function midstream.
+ */
+class canceller_t {
+public:
+  canceller_t () {}
+
+  // the cancelable function calls this 
+  void wait (cbv b) { cb = b; }
+
+  // the canceller calls this to cancel the cancelable function
+  void cancel ()
+  {
+    if (cb) {
+      cbv::ptr t = cb;
+      cb = NULL;
+      (*t) ();
+    }
+  }
+
+  // the cancelable function can call this if it deems that it is too
+  // late to cancel.
+  void toolate () { cb = NULL; }
+private:
+  cbv::ptr cb;
+};
+
+
 #endif /* _ASYNC_TAME_H */

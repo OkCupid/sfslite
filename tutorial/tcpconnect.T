@@ -70,35 +70,6 @@ TAME(static void connect_to_in_addr (in_addr a, int port, cbi::ptr cceoc))
 }
 
 /**
- * A helper class that I'll eventually move into the tame.h library,
- * useful for canceling an TAME'd function mistream.
- */
-class canceller_t {
-public:
-  canceller_t () {}
-
-  // the cancelable function calls this 
-  void wait (cbv b) { cb = b; }
-
-  // the canceller calls this to cancel the cancelable function
-  void cancel ()
-  {
-    if (cb) {
-      cbv::ptr t = cb;
-      cb = NULL;
-      (*t) ();
-    }
-  }
-
-  // the cancelable function can call this if it deems that it is too
-  // late to cancel.
-  void toolate () { cb = NULL; }
-private:
-  cbv::ptr cb;
-};
-
-
-/**
  * Given a hostname and port, make a TCP connection to the remote host,
  * returning the result as an opened file descriptor, or negative for
  * error.
