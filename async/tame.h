@@ -471,6 +471,7 @@ private:
   str _loc;
 };
 
+
 /**
  * @brief A wrapper class around a join group pointer for tighter code
  */
@@ -561,6 +562,48 @@ public:
 
 private:
   ptr<join_group_pointer_t<T1,T2,T3,T4> > _pointer;
+};
+
+/**
+ * An event_t is a synonym for join_group_t, for use with WAIT
+ * as opposed to join.
+ */
+template<class T1 = int, class T2 = int, class T3 = int, class T4 = int>
+class event_t : public join_group_t<T1,T2,T3,T4>
+{
+public:
+  event_t (const char *f = NULL, int l = 0) : 
+    join_group_t<T1,T2,T3,T4> (f, l) {}
+  event_t (ptr<join_group_pointer_t<T1,T2,T3,T4> > p) : 
+    join_group_t<T1,T2,T3,T4> (p) {}
+
+  /**
+   * The number of events left to happen; a sum of those
+   * pending and those that have yet to fire.
+   */
+  u_int n_events_left () const 
+  { return join_group_t<T1,T2,T3,T4>::n_joins_left (); }
+  
+  /**
+   * Get the next event, and put the results into the given
+   * slots. Return true if there is an event pending, and false
+   * otherwise.
+   */
+  bool next_event (T1 *p1 = NULL, T2 *p2 = NULL, T3 *p3 = NULL, T4 *p4 = NULL) 
+  {
+    bool ret = true;
+    value_set_t<T1,T2,T3,T4> v;
+
+    if (pending (&v)) {
+      if (p1) *p1 = v.v1;
+      if (p2) *p2 = v.v2;
+      if (p3) *p3 = v.v3;
+      if (p4) *p4 = v.v4;
+    } else
+      ret = false;
+
+    return ret;
+  }
 };
 
 

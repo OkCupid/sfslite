@@ -194,6 +194,7 @@ __LOC__         { return loc_return (); }
 <JOIN_ENTER>{
 [(]		{ yy_push_state (JOIN_LIST_BASE); return yytext[0]; }
 [{]		{ switch_to_state (TAME_BASE); return yytext[0]; }
+[;]		{ yy_pop_state (); return yytext[0]; }
 .		{ return yyerror ("illegal token found between NONBLOCK "
 				  "and '{'");}
 }
@@ -302,8 +303,8 @@ return/[ \t\n(;] { return yyerror ("cannot return from within a BLOCK or "
 \n		{ yylval.str = yytext; ++lineno; return T_PASSTHROUGH; }
 @	        { return tame_ret (CB_ENTER, '@'); }
 
-[^ \t{}\n/BNJRUVr@_]+|[ \t/BNJRUVr@_] { yylval.str = yytext; 
-	 			    return T_PASSTHROUGH; }
+[^ \t{}\n/BNJRUWVr@_]+|[ \t/BNJRUWVr@_] { yylval.str = yytext; 
+	 			          return T_PASSTHROUGH; }
 
 [{]		{ yylval.str = yytext; yy_push_state (TAME); 
 		  return T_PASSTHROUGH; }
@@ -312,6 +313,7 @@ VARS/[ \t\n{/]	    { return tame_ret (VARS_ENTER, T_VARS); }
 BLOCK/[ \t\n{/]	    { return tame_ret (BLOCK_ENTER, T_BLOCK); }
 NONBLOCK/[ \t\n(/]  { return tame_ret (NONBLOCK_ENTER, T_NONBLOCK); }
 JOIN/[ \t\n(/]	    { return tame_ret (JOIN_ENTER, T_JOIN); }
+WAIT/[ \t\n(/]	    { return tame_ret (JOIN_ENTER, T_WAIT); }
 DEFAULT_RETURN	    { return tame_ret (DEFRET_ENTER, T_DEFAULT_RETURN); }
 
 return/[ \t\n(/;]   { yy_push_state (RETURN_PARAMS); return T_RETURN; }

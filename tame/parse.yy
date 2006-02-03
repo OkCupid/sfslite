@@ -61,6 +61,7 @@ int vars_lineno;
 %token T_BLOCK
 %token T_NONBLOCK
 %token T_JOIN
+%token T_WAIT
 %token T_DEFAULT_RETURN
 
 %token T_2DOLLAR
@@ -87,7 +88,7 @@ int vars_lineno;
 
 %type <var>  parameter_declaration
 
-%type <el>   fn_tame vars block nonblock join return_statement 
+%type <el>   fn_tame vars block nonblock join return_statement wait
 %type <el>   resume_statement default_return floating_callback
 %type <ret>  resume_keyword
 %type <cb>   callback
@@ -183,6 +184,7 @@ fn_tame: vars
 	| block
 	| nonblock
 	| join
+	| wait
 	| return_statement
 	| resume_statement
 	| default_return
@@ -225,7 +227,7 @@ vars:	T_VARS
 	  }
 	  if (!state.function ()->set_vars (v)) {
 	    yyerror ("The VARS{} section must come before any BLOCK, "
-	             " JOIN, NONBLOCK, UNBLOCK or RESUME section");
+	             " JOIN, WAIT, NONBLOCK, UNBLOCK or RESUME section");
 	  }
 	  $$ = v;
 	}
@@ -350,6 +352,15 @@ nonblock: T_NONBLOCK '(' expr_list ')' '{'
 	  state.passthrough (lstr (get_yy_lineno (), "}"));
 	  state.pop_list ();
 	  $$ = state.nonblock ();
+	}
+	;
+
+wait: T_WAIT '(' join_list ')' ';'
+	{
+	  tame_fn_t *fn = state.function ();
+	  tame_wait_t *w = New tame_wait_t (fn, $3, get_yy_lineno ());
+	  fn->add_env (w);
+	  $$ = w;
 	}
 	;
 

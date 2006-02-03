@@ -703,14 +703,24 @@ public:
   bool is_jumpto () const { return true; }
   void set_id (int i) { _id = i; }
   int id () const { return _id; }
-  void output (outputter_t *o);
+  virtual void output (outputter_t *o);
   var_t join_group () const { return (*_args)[0]; }
   var_t arg (u_int i) const { return (*_args)[i+1]; }
   size_t n_args () const { return _args->size () - 1; }
-private:
+protected:
+  void output_blocked (my_strbuf_t &b, const str &jgn);
   tame_fn_t *_fn;
   ptr<expr_list_t> _args;
   int _id;
+};
+
+class tame_wait_t : public tame_join_t {
+public:
+  tame_wait_t (tame_fn_t *f, ptr<expr_list_t> l, int ln) 
+    : tame_join_t (f, l), _lineno (ln) {}
+  void output (outputter_t *o);
+private:
+  int _lineno;
 };
 
 extern parse_state_t state;

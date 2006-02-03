@@ -1194,7 +1194,19 @@ tame_join_t::output (outputter_t *o)
   om = o->switch_to_mode (OUTPUT_TREADMILL);
   b << "    } else {\n"
     ;
+
+  output_blocked (b, jgn);
   
+  b << "   }\n"
+    << " } while (0);\n";
+
+  o->output_str (b);
+  o->switch_to_mode (om);
+}
+
+void
+tame_join_t::output_blocked (my_strbuf_t &b, const str &jgn)
+{
   _fn->jump_out (b, _id);
   
   b << "      " << jgn
@@ -1202,9 +1214,30 @@ tame_join_t::output (outputter_t *o)
     << ", &" << _fn->reenter_fn () << "));\n"
     << "      ";
   b.mycat (_fn->return_expr ());
-  b << ";\n"
-    << "   }\n"
-    << " } while (0);\n";
+  b << ";\n";
+
+}
+
+void
+tame_wait_t::output (outputter_t *o)
+{
+  strbuf tmp;
+  tmp << "(" << join_group ().name () << ")";
+  str jgn = tmp;
+
+  output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL);
+  my_strbuf_t b;
+  b.mycat (_fn->label (_id)) << ":\n";
+  b << "do {\n"
+    << "   if (!" << jgn << ".next_event (";
+  for (u_int i = 0; i < n_args (); i++) {
+    if (i > 0) b << ", ";
+    b << "&(" << arg (i).name () << ")";
+  }
+  b << ")) {\n";
+  output_blocked (b, jgn);
+  b << "  }\n"
+    << "} while (0);\n";
 
   o->output_str (b);
   o->switch_to_mode (om);
