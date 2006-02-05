@@ -404,12 +404,15 @@ public:
   void *get () const { return p; }
 };
 
+template<class T> class mkcref;
+
 template<class T>
 class ref : public refpriv, public refops<T> {
   friend class refpriv;
   using refops<T>::p;
 
   friend ref<T> mkref<T> (T *);
+  friend class mkcref<T>;
   ref (T *pp, refcount *cc) : refpriv (cc) { p = pp; inc (); }
 
   void inc () const { rinc (c); }
@@ -528,5 +531,20 @@ mkref (T *p)
 {
   return ref<T> (p, p);
 }
+
+template<class T>
+struct mkcref {
+  static ref<T> mkref (T *p)
+  {
+    return ref<T> (p, const_cast<refcount *> (static_cast<const refcount *> (p)));
+  }
+};
+
+template<class T> ref<const T>
+mkref (const T *p)
+{
+  return mkcref<const T>::mkref (p);
+}
+
 
 #endif /* !_REFCNT_H_INCLUDED_ */
