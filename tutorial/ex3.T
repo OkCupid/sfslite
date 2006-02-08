@@ -29,8 +29,8 @@ TAME (static void try_rpc (str h, int port, coordvar_t<bool>::t coordvar))
     ev.setsize (n);
     rv.setsize (n);
  
-    for (i = 0; i < n; i++) {
-      BLOCK {
+    BLOCK {
+      for (i = 0; i < n; i++) {
         cli->call (EX_RANDOM, NULL, &rv[i], @(ev[i]) );
       }
     }
