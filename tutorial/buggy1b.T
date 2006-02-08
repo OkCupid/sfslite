@@ -29,8 +29,8 @@ static void finish (bool rc)
   delaycb (2, 0, wrap (exit, rc ? 0 : -1));
 }
 
-TAME(static void part1 (cb_hog_t *hog, join_group_t<> *JG, 
-			ceo_callback_void_t cceoc))
+TAME(static void part1 (cb_hog_t *hog, coordgroup_t<> *JG, 
+			coordvar_void_t coordvar))
 {
   NONBLOCK (*JG) {
     delaycb (1, 0, @());
@@ -39,20 +39,20 @@ TAME(static void part1 (cb_hog_t *hog, join_group_t<> *JG,
   RESUME;
 }
 
-TAME(static void part2 (join_group_t<> *JG, ceo_callback_void_t cceoc))
+TAME(static void part2 (coordgroup_t<> *JG, coordvar_void_t coordvar))
 {
   VARS { int i; }
   for (i = 0; i < 2; i++) {
-    JOIN (*JG) {}
+    WAIT (*JG);
   }
   RESUME;
 }
 
 
-TAME(static void buggy1b (ceo_callback_bool_t cceoc))
+TAME(static void buggy1b (coordvar_bool_t coordvar))
 {
   VARS { 
-    join_group_t<> JG; 
+    coordgroup_t<> JG; 
     cb_hog_t *hog (New cb_hog_t ());
   }
 

@@ -15,9 +15,10 @@
 class remote_host_t {
 public:
   remote_host_t (const str &n) : _name (n) {}
-  void dostuff (int port, cbb cb) { dostuff_private (port, cb); }
+  void dostuff (int port, coordvar_t<bool>::t cb) 
+  { dostuff_private (port, cb); }
 private:
-  void dostuff_private (int port, cbb cb, CLOSURE);
+  void dostuff_private (int port, coordvar_t<bool>::t coordvar, CLOSURE);
   str _name;
 };
 
@@ -47,7 +48,8 @@ static void foo_func (my_enum_t e)
 }
 
 
-TAME(void remote_host_t::dostuff_private (int port, cbb cb))
+TAME(void remote_host_t::dostuff_private (int port, 
+					  coordvar_t<bool>::t coordvar))
 {
   // declare all of your "stack" variables here
   VARS {
@@ -58,7 +60,8 @@ TAME(void remote_host_t::dostuff_private (int port, cbb cb))
     vec<clnt_stat> errs;
     int n_tot (40), window_sz (5), i;
     bool err_occurred (false);
-    join_group_t<int> window;
+    coordgroup_t<int> window;
+    int return_id;
   }
 
   // Call tcpconnect, and block until it returns; when it does return,
@@ -85,33 +88,32 @@ TAME(void remote_host_t::dostuff_private (int port, cbb cb))
     }
 
     // a join is needed for every call that returns
-    while (window.need_join ()) {
+    while (window.n_signals_left ()) {
 
       // Block until a call has returned; when it has, get
       // the index variable associated with the call, and assign
       // it to 'return_id' for the scope of the JOIN block.
-      JOIN (window, return_id) {
-	if (errs[return_id]) {
-	  err_occurred = true;
-	  warn << "RPC error: " << errs[return_id] << "\n";
-	} else {
-	  warn << "Success " << return_id << ": " << res[return_id] << "\n";
-
-	  // in the common case, for every call that returns,
-	  // another should be launched. but don't bother launching
-	  // more if an error occurred.
-	  if (i < n_tot && !err_occurred) {
-	    NONBLOCK (window, i) {
-	      cli->call (EX_RANDOM, NULL, &res[i], @(errs[i]));
-	    }
-	    i++;
+      WAIT (window, return_id);
+      if (errs[return_id]) {
+	err_occurred = true;
+	warn << "RPC error: " << errs[return_id] << "\n";
+      } else {
+	warn << "Success " << return_id << ": " << res[return_id] << "\n";
+	
+	// in the common case, for every call that returns,
+	// another should be launched. but don't bother launching
+	// more if an error occurred.
+	if (i < n_tot && !err_occurred) {
+	  NONBLOCK (window, i) {
+	    cli->call (EX_RANDOM, NULL, &res[i], @(errs[i]));
 	  }
+	  i++;
 	}
       }
     }
-    warn << "All done...\n";
   }
-  (*cb) (!err_occurred);
+  warn << "All done...\n";
+  SIGNAL (!err_occurred);
 }
 
 static void finish (bool rc)

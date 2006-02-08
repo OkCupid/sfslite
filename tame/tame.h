@@ -586,7 +586,7 @@ public:
   tame_unblock_t (u_int l, tame_fn_t *f) : tame_ret_t (l, f) {}
   virtual ~tame_unblock_t () {}
   void output (outputter_t *o);
-  virtual str macro_name () const { return "UNBLOCK"; }
+  virtual str macro_name () const { return "SIGNAL"; }
   virtual void do_return_statement (my_strbuf_t &b) const {}
 };
 

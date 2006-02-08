@@ -11,7 +11,7 @@ class my_host_t {
 public:
   my_host_t (str h, int p) : h (h), port (p), XX (X) {}
   
-  void try_it (ceo_callback_bool_t cceoc, CLOSURE);
+  void try_it (coordvar_bool_t cceoc, CLOSURE);
   
   T foo;
   str h;
@@ -20,7 +20,7 @@ public:
 };
  
 TAME (template<class T, size_t X> void
-      my_host_t<T,X>::try_it (ceo_callback_bool_t cceoc))
+      my_host_t<T,X>::try_it (coordvar_bool_t coordvar))
 {
   VARS {
     bool ret (false);
@@ -30,8 +30,13 @@ TAME (template<class T, size_t X> void
     vec<int> rv;
     vec<clnt_stat> ev;
     int i;
-    T foo;
-    size_t XXX (X);
+
+    /*
+     * these work but are not used so therefore generate compiler warnings
+     *
+     T foo;
+     size_t XXX (X);
+    */
   }
 
   BLOCK { tcpconnect (h, port, @(fd)); }
@@ -61,7 +66,7 @@ TAME (template<class T, size_t X> void
       }
     }
   }
-  UNBLOCK (ret);
+  SIGNAL (ret);
   fd ++;
 }
  

@@ -12,21 +12,20 @@ TAME(static void dostuff (vec<str> hosts, int port, cbi done))
   VARS {
     int fd (-1);
     u_int i;
-    join_group_t<u_int> JG (__FILE__, __LINE__);
+    coordgroup_t<u_int> CG (__FILE__, __LINE__);
   }
 
   for (i = 0; i < hosts.size (); i++) {
-    NONBLOCK (JG, i) { tcpconnect (hosts[i], port, @(fd)); }
+    NONBLOCK (CG, i) { tcpconnect (hosts[i], port, @(fd)); }
   }
   
-  while (JG.need_join () && fd < 0) {
-    JOIN (JG, i) {
-      warn << hosts[i]  << ":" << port << ": ";
-      if (fd > 0) {
-	warnx << "connection succeeded\n";
-      } else {
-	warnx << "connection failed\n";
-      }
+  while (CG.need_join () && fd < 0) {
+    WAIT (CG, i);
+    warn << hosts[i]  << ":" << port << ": ";
+    if (fd > 0) {
+      warnx << "connection succeeded\n";
+    } else {
+      warnx << "connection failed\n";
     }
   }
   (*done) (fd);

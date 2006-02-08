@@ -29,7 +29,7 @@ static void finish (bool rc)
   delaycb (2, 0, wrap (exit, rc ? 0 : -1));
 }
 
-TAME(static void buggy1a (ceo_callback_bool_t cceoc))
+TAME(static void buggy1a (coordvar_bool_t coordvar))
 {
   VARS {
     cb_hog_t *hog (New cb_hog_t ());
@@ -38,7 +38,7 @@ TAME(static void buggy1a (ceo_callback_bool_t cceoc))
     delaycb (1, 0, @()); 
     hog->call_me (@());
   }
-  UNBLOCK (true);
+  SIGNAL (true);
   BLOCK { delaycb (1, 0, @()); }
 
   if (fix_bug)

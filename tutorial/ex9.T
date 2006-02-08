@@ -11,7 +11,7 @@ struct state_t {
 
   str host;
   int port;
-  join_group_t<int> window;
+  coordgroup_t<int> window;
   vec<int> res;
   vec<clnt_stat> errs;
   ptr<axprt_stream> x;
@@ -19,11 +19,11 @@ struct state_t {
   int n_tot, window_sz;
   int i;
 
-  void launch (ceo_callback_bool_t ceocc, CLOSURE);
-  void relaunch (ceo_callback_bool_t ceocc, CLOSURE);
+  void launch (coordvar_t<bool>::t coordvar, CLOSURE);
+  void relaunch (coordvar_t<bool>::t coordvar, CLOSURE);
 };
 
-TAME(void state_t::launch (ceo_callback_bool_t cceoc))
+TAME(void state_t::launch (coordvar_t<bool>::t coordvar))
 {
   // declare all of your "stack" variables here
   VARS {
@@ -53,13 +53,14 @@ TAME(void state_t::launch (ceo_callback_bool_t cceoc))
       }
     }
   }
-  RESUME (true);
+  SIGNAL (true);
 }
 
-TAME(void state_t::relaunch (ceo_callback_bool_t cceoc))
+TAME(void state_t::relaunch (coordvar_t<bool>::t coordvar))
 {
   VARS {
     bool err_occurred (false);
+    int return_id;
   }
   // a join is needed for every call that returns
   while (window.need_join ()) {
@@ -67,27 +68,26 @@ TAME(void state_t::relaunch (ceo_callback_bool_t cceoc))
     // Block until a call has returned; when it has, get
     // the index variable associated with the call, and assign
     // it to 'return_id' for the scope of the JOIN block.
-    JOIN (window, return_id) {
-      if (errs[return_id]) {
-	err_occurred = true;
-	warn << "RPC error: " << errs[return_id] << "\n";
-      } else {
-	warn << "Success " << return_id << ": " << res[return_id] << "\n";
-	
-	// in the common case, for every call that returns,
-	// another should be launched. but don't bother launching
-	// more if an error occurred.
-	if (i < n_tot && !err_occurred) {
-	  NONBLOCK (window, i) {
-	    cli->call (EX_RANDOM, NULL, &res[i], @(errs[i]));
-	  }
-	  i++;
+    WAIT (window, return_id);
+    if (errs[return_id]) {
+      err_occurred = true;
+      warn << "RPC error: " << errs[return_id] << "\n";
+    } else {
+      warn << "Success " << return_id << ": " << res[return_id] << "\n";
+      
+      // in the common case, for every call that returns,
+      // another should be launched. but don't bother launching
+      // more if an error occurred.
+      if (i < n_tot && !err_occurred) {
+	NONBLOCK (window, i) {
+	  cli->call (EX_RANDOM, NULL, &res[i], @(errs[i]));
 	}
+	i++;
       }
     }
   }
   warn << "All done...\n";
-  RESUME (!err_occurred);
+  SIGNAL (!err_occurred);
 }
 
 TAME (static void go (str h, int p))

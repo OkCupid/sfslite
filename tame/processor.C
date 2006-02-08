@@ -1229,7 +1229,7 @@ tame_wait_t::output (outputter_t *o)
   my_strbuf_t b;
   b.mycat (_fn->label (_id)) << ":\n";
   b << "do {\n"
-    << "   if (!" << jgn << ".next_event (";
+    << "   if (!" << jgn << ".next_signal (";
   for (u_int i = 0; i < n_args (); i++) {
     if (i > 0) b << ", ";
     b << "&(" << arg (i).name () << ")";

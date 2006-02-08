@@ -17,7 +17,7 @@ TAME(static bool dostuff (str h, int port, cbb cb))
     vec<clnt_stat> errs;
     int n_tot (40), window_sz (5), i;
     bool err_occurred (false);
-    event_t<int> rpcback;
+    coordgroup_t<int> rpcback;
     bool ret (true);
     int return_id;
   }
@@ -48,7 +48,7 @@ TAME(static bool dostuff (str h, int port, cbb cb))
     }
 
     // a join is needed for every call that returns
-    while (rpcback.n_events_left ()) {
+    while (rpcback.n_joins_left ()) {
 
       // Block until a call has returned; when it has, get
       // the index variable associated with the call, and assign

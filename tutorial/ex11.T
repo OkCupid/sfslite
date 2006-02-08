@@ -13,14 +13,14 @@ struct rpc_t {
   clnt_stat err;
 };
 
-TAME (static void launch_call (join_group_t<ptr<rpc_t> > *jg, u_int i, 
+TAME (static void launch_call (coordgroup_t<ptr<rpc_t> > *jg, u_int i, 
 			       ptr<aclnt> cli))
 {
   ptr<rpc_t> r = New refcounted<rpc_t> (i);
   cli->call (EX_RANDOM2, &r->input, &r->output, @[*jg, r](r->err));
 }
 
-TAME(static bool dostuff (str h, int port, ceo_callback_bool_t cceoc))
+TAME(static bool dostuff (str h, int port, coordvar_bool_t coordvar))
 {
   // declare all of your "stack" variables here
   VARS {
@@ -29,9 +29,10 @@ TAME(static bool dostuff (str h, int port, ceo_callback_bool_t cceoc))
     ptr<aclnt> cli;
     int n_tot (100), window_sz (20), i;
     bool err_occurred (false);
-    join_group_t<ptr<rpc_t> > window;
+    coordgroup_t<ptr<rpc_t> > window;
     bool ret (true);
     vec<ptr<rpc_t> > bad_rpcs;
+    ptr<rpc_t> return_rpc;
   }
 
   DEFAULT_RETURN { return ret; } 
@@ -57,23 +58,22 @@ TAME(static bool dostuff (str h, int port, ceo_callback_bool_t cceoc))
       // Block until a call has returned; when it has, get
       // the index variable associated with the call, and assign
       // it to 'return_id' for the scope of the JOIN block.
-      JOIN (window, return_rpc) {
-	if (return_rpc->err) {
-	  warn << "RPC error " << return_rpc->err 
-	       << " occurred on input " << return_rpc->input << "\n";
-	  bad_rpcs.push_back (return_rpc);
-	} else {
-	  warn << "Success: " << return_rpc->input << " -> "
-	       << return_rpc->output << "\n";
-	}
-	if (i < n_tot) 
-	  launch_call (&window, i++, cli);
+      WAIT (window, return_rpc);
+      if (return_rpc->err) {
+	warn << "RPC error " << return_rpc->err 
+	     << " occurred on input " << return_rpc->input << "\n";
+	bad_rpcs.push_back (return_rpc);
+      } else {
+	warn << "Success: " << return_rpc->input << " -> "
+	     << return_rpc->output << "\n";
       }
+      if (i < n_tot) 
+	launch_call (&window, i++, cli);
     }
     warn << "All done...\n";
     warn << bad_rpcs.size () << " bad RPCs, total\n";
   }
-  RESUME (!err_occurred);
+  SIGNAL (!err_occurred);
 }
 
 static void finish (bool rc)

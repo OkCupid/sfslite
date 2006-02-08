@@ -29,10 +29,10 @@ static void finish (bool rc)
   delaycb (2, 0, wrap (exit, rc ? 0 : -1));
 }
 
-TAME(static void buggy1b (ceo_callback_bool_t cceoc))
+TAME(static void buggy1b (coordvar_bool_t coordvar))
 {
   VARS { 
-    join_group_t<> JG (__FILE__, __LINE__); 
+    coordgroup_t<> JG (__FILE__, __LINE__); 
     cb_hog_t *hog (New cb_hog_t ());
     int i;
   }
@@ -43,7 +43,7 @@ TAME(static void buggy1b (ceo_callback_bool_t cceoc))
   }
 
   for (i = 0; i < 1; i++) {
-    JOIN (JG) {}
+    WAIT (JG);
   }
   if (fix_bug)
     delete hog;

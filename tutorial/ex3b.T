@@ -15,7 +15,7 @@ TAME (static void try_rpc (str h, int port, cbb cb))
     ptr<aclnt> cli;
     vec<int> rv;
     vec<clnt_stat> ev;
-    join_group_t<> JG;
+    coordgroup_t<> CG;
   }
   
   BLOCK { tcpconnect (h, port, @(fd)); }
@@ -30,12 +30,12 @@ TAME (static void try_rpc (str h, int port, cbb cb))
     rv.setsize (n);
  
     for (i = 0; i < n; i++) {
-      NONBLOCK (JG) {
+      NONBLOCK (CG) {
 	cli->call (EX_RANDOM, NULL, &rv[i], @(ev[i]) );
       }
     }
-    while (JG.need_join ()) {
-      JOIN (JG) {}
+    while (CG.n_signals_left ()) {
+      WAIT(CG);
     }
 
     ret = true;

@@ -6,7 +6,7 @@
 #include "ex_prot.h"
 #include "arpc.h"
  
-TAME (static void try_rpc (str h, int port, ceo_callback_bool_t cceoc))
+TAME (static void try_rpc (str h, int port, coordvar_t<bool>::t coordvar))
 {
   VARS {
     bool ret (false);
@@ -45,7 +45,7 @@ TAME (static void try_rpc (str h, int port, ceo_callback_bool_t cceoc))
       }
     }
   }
-  UNBLOCK (ret);
+  SIGNAL (ret);
   fd ++;
 }
  

@@ -31,7 +31,8 @@
  * Given a UNIX in_addr structure and a port, make a new TCP connect
  * and test that it succeeded by selecting for write on the new socket.
  */
-TAME(static void connect_to_in_addr (in_addr a, int port, cbi::ptr cceoc))
+TAME(static void connect_to_in_addr (in_addr a, int port, 
+				     coordvar_int_t coordvar))
 {
   VARS {
     sockaddr_in sin;
@@ -77,7 +78,7 @@ TAME(static void connect_to_in_addr (in_addr a, int port, cbi::ptr cceoc))
  * @return an object that can be used to cancel this computation mistream.
  */
 TAME(static ptr<canceller_t> 
-     my_tcpconnect (str hostname, u_int16_t port, cbi::ptr cceoc, 
+     my_tcpconnect (str hostname, u_int16_t port, coordvar_int_t coordvar,
 		    bool dnssearch, str *namep))
 {
   VARS {
@@ -86,51 +87,50 @@ TAME(static ptr<canceller_t>
     int err;
     int fd (-1);
     ptr<canceller_t> canceller (New refcounted<canceller_t> ());
-    join_group_t<bool> jg;
+    coordgroup_t<bool> cg;
+    bool completed, dummy;
   }
   DEFAULT_RETURN { return canceller; }
 
   // launch 2 parallel calls that will race: the DNS requester
   // and the canceller.
-  canceller->wait (@[jg,false]());
-  dnsp = dns_hostbyname (hostname, @[jg,true](h, err), dnssearch); 
+  canceller->wait (@[cg,false]());
+  dnsp = dns_hostbyname (hostname, @[cg,true](h, err), dnssearch); 
 
-  JOIN (jg, completed) {
-    if (!completed) {
-      warn << "DNS lookup cancelled!\n";
-      dnsreq_cancel (dnsp);
-      jg.remove_join ();
-      RESUME (fd);
-    } 
-  }
+  WAIT (cg, completed);
+  if (!completed) {
+    warn << "DNS lookup cancelled!\n";
+    dnsreq_cancel (dnsp);
+    cg.remove_join ();
+    RESUME (fd);
+  } 
 
   // if we keep going, note that the canceller is still outstanding,
   // and might still cancel us.
   dnsp = NULL;
   if (!h) {
     canceller->toolate ();
-    jg.remove_join ();
+    cg.remove_join ();
     if (dns_tmperr (err))
-      UNBLOCK (-EAGAIN);
+      SIGNAL (-EAGAIN);
     else
-      UNBLOCK (-ENOENT);
+      SIGNAL (-ENOENT);
   } else {
     if (namep)
       *namep = h->h_name;
     
-    connect_to_in_addr (*(in_addr *) h->h_addr, port, @[jg,true](fd)); 
+    connect_to_in_addr (*(in_addr *) h->h_addr, port, @[cg,true](fd)); 
     
-    JOIN (jg, completed) {
-      if (completed) {
-	canceller->toolate ();
-	jg.remove_join ();
-      }
+    WAIT (cg, completed);
+    if (completed) {
+      canceller->toolate ();
+      cg.remove_join ();
     }
-    UNBLOCK (fd); 
-
+    SIGNAL (fd); 
+    
     // wait on the call to connect_to_inaddr if we've timed out.
-    if (jg.n_pending ()) 
-      JOIN (jg, dummy) {}
+    if (cg.n_pending ()) 
+      WAIT (cg, dummy);
   }
 }
 
@@ -143,20 +143,20 @@ TAME (static void run (str s, int p))
 {
   VARS {
     ptr<canceller_t> c;
-    join_group_t<bool> jg;
+    coordgroup_t<bool> cg;
     int fd;
+    bool succeeded, dummy;
   }
-  c = my_tcpconnect (s, p, @[jg, true](fd), false, NULL);
-  delaycb (4, 0, @[jg, false]());
-  JOIN (jg, succeeded) {
-    if (succeeded) {
-      warn << "Succeeded; fd=" << fd << "\n";
-    } else {
-      warn << "Had to cancel!\n";
-      c->cancel ();
-    }
+  c = my_tcpconnect (s, p, @[cg, true](fd), false, NULL);
+  delaycb (4, 0, @[cg, false]());
+  WAIT (cg, succeeded);
+  if (succeeded) {
+    warn << "Succeeded; fd=" << fd << "\n";
+  } else {
+    warn << "Had to cancel!\n";
+    c->cancel ();
   }
-  JOIN (jg, dummy) {}
+  WAIT (cg, dummy);
   exit (0);
 }
 

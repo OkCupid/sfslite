@@ -20,32 +20,33 @@ TAME(static void connect (vec<str> hosts, int port, cbi done))
   VARS {
     int fd (-1);
     u_int i;
-    join_group_t<u_int> JG;
+    coordgroup_t<u_int> CG;
     bool got_one (false);
   }
 
   for (i = 0; i < hosts.size (); i++) {
-    NONBLOCK (JG, i) { tcpconnect (hosts[i], port, @(fd)); }
+    NONBLOCK (CG, i) { tcpconnect (hosts[i], port, @(fd)); }
   }
   
-  while (JG.need_join ()) {
-    JOIN (JG, i) {
-      warn << hosts[i]  << ":" << port << ": ";
-      if (fd > 0) {
-	warnx << "connection succeeded";
-	if (!got_one) {
-	  (*done) (fd);
-	  got_one = true;
-	} else {
-	  warnx << "... but too late!";
-	  close (fd);
-	}
-	warnx << "\n";
+  while (CG.need_join ()) {
+    WAIT (CG, i);
+    warn << hosts[i]  << ":" << port << ": ";
+    if (fd > 0) {
+      warnx << "connection succeeded";
+      if (!got_one) {
+	(*done) (fd);
+	got_one = true;
       } else {
-	warnx << "connection failed\n";
+	warnx << "... but too late!";
+	close (fd);
       }
+      warnx << "\n";
+    } else {
+      warnx << "connection failed\n";
     }
   }
+  if (!got_one)
+    (*done) (fd);
 }
 
 /**
@@ -62,7 +63,7 @@ TAME(static void get_fastest_web_page (vec<str> hosts, int port, cbb done))
   VARS {
     int fd, rc;
     strbuf req, resp;
-    join_group_t<> read_jg, write_jg;
+    coordgroup_t<> read_cg, write_cg;
   }
 
   //
@@ -88,73 +89,71 @@ TAME(static void get_fastest_web_page (vec<str> hosts, int port, cbb done))
   // times.  That is, fdcb will call us back every time the socket
   // 'fd' is available for writing.
   //
-  NONBLOCK (write_jg) { fdcb (fd, selwrite, @()); }
+  NONBLOCK (write_cg) { fdcb (fd, selwrite, @()); }
   
   while (true) {
-    JOIN (write_jg) {
+    WAIT (write_cg);
 
-      //
-      // Use this syntax to output the results of the string buffer
-      // 'req' to the socket 'fd'. At this point, fdcb has returned,
-      // signalling that the socket 'fd' is writable.  If for some
-      // reason we were lied to, write() will return <0 inside of
-      // suio::output() below, but with errno set to EAGAIN; then 
-      // suio::output() will return 0, and we'll try the write again the 
-      // next time through the loop.  A return from suio::output() that
-      // is negative signals a non-retryable error, and we'll bail out.
-      //
-      if (req.tosuio ()->output (fd) < 0) {
-	warn << "write failed...\n";
-	fdcb (fd, selwrite, NULL);
-	(*done) (false);
-	return;
-      }
-
-      //
-      // suio::resid() returns the # of bytes left to write.  If there
-      // are any bytes left to write, we'll need to be called back from
-      // fdcb again, and we'll therefore need to join again.  Use the
-      // join_group_t::add_join call to schedule an additional join for
-      // this join group.
-      //
-      if (req.tosuio ()->resid ()) {
-	write_jg.add_join ();
-      }
-
-      // 
-      // otherwise, no more writing left to do, and we are no longer
-      // interested in writing to 'fd'
-      //
-      else {
-	fdcb (fd, selwrite, NULL);
-	break;
-      }
+    //
+    // Use this syntax to output the results of the string buffer
+    // 'req' to the socket 'fd'. At this point, fdcb has returned,
+    // signalling that the socket 'fd' is writable.  If for some
+    // reason we were lied to, write() will return <0 inside of
+    // suio::output() below, but with errno set to EAGAIN; then 
+    // suio::output() will return 0, and we'll try the write again the 
+    // next time through the loop.  A return from suio::output() that
+    // is negative signals a non-retryable error, and we'll bail out.
+    //
+    if (req.tosuio ()->output (fd) < 0) {
+      warn << "write failed...\n";
+      fdcb (fd, selwrite, NULL);
+      (*done) (false);
+      return;
+    }
+    
+    //
+    // suio::resid() returns the # of bytes left to write.  If there
+    // are any bytes left to write, we'll need to be called back from
+    // fdcb again, and we'll therefore need to join again.  Use the
+    // join_group_t::add_join call to schedule an additional join for
+    // this join group.
+    //
+    if (req.tosuio ()->resid ()) {
+      write_cg.add_join ();
+    }
+    
+    // 
+    // otherwise, no more writing left to do, and we are no longer
+    // interested in writing to 'fd'
+    //
+    else {
+      fdcb (fd, selwrite, NULL);
+      break;
     }
   }
 
   // 
   // As before, but now we need to schedule a callback for reading
   //
-  NONBLOCK (read_jg) { fdcb (fd, selread, @()); }
+  NONBLOCK (read_cg) { fdcb (fd, selread, @()); }
 
   //
   // The details of the reading loop are almost identical to the
   // writing loop above.
   //
   while (true) {
-    JOIN (read_jg) {
-      if ((rc = resp.tosuio ()->input (fd)) < 0 && errno != EAGAIN) {
-	warn << "read failed...\n";
-	fdcb (fd, selread, NULL);
-	(*done) (false);
-	return;
-      }
-      if (rc != 0) {
-	read_jg.add_join ();
-      } else {
-	fdcb (fd, selread, NULL);
-	break;
-      }
+    WAIT (read_cg);
+    if ((rc = resp.tosuio ()->input (fd)) < 0 && errno != EAGAIN) {
+      warn << "read failed...\n";
+      fdcb (fd, selread, NULL);
+      (*done) (false);
+      return;
+    }
+    if (rc != 0) {
+      read_cg.add_join ();
+    } else {
+      fdcb (fd, selread, NULL);
+      break;
     }
   }
 

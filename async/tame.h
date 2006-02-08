@@ -565,31 +565,32 @@ private:
 };
 
 /**
- * An event_t is a synonym for join_group_t, for use with WAIT
- * as opposed to join.
+ * A coordgroup_t (short for coordination variable) is a synonym for 
+ * join_group_t, for use with WAIT as opposed to join.
  */
 template<class T1 = int, class T2 = int, class T3 = int, class T4 = int>
-class event_t : public join_group_t<T1,T2,T3,T4>
+class coordgroup_t : public join_group_t<T1,T2,T3,T4>
 {
 public:
-  event_t (const char *f = NULL, int l = 0) : 
+  coordgroup_t (const char *f = NULL, int l = 0) : 
     join_group_t<T1,T2,T3,T4> (f, l) {}
-  event_t (ptr<join_group_pointer_t<T1,T2,T3,T4> > p) : 
+  coordgroup_t (ptr<join_group_pointer_t<T1,T2,T3,T4> > p) : 
     join_group_t<T1,T2,T3,T4> (p) {}
-
+  
   /**
-   * The number of events left to happen; a sum of those
+   * The number of signals left to happen; a sum of those
    * pending and those that have yet to fire.
    */
-  u_int n_events_left () const 
+  u_int n_signals_left () const 
   { return join_group_t<T1,T2,T3,T4>::n_joins_left (); }
   
   /**
-   * Get the next event, and put the results into the given
-   * slots. Return true if there is an event pending, and false
+   * Get the next signal, and put the results into the given
+   * slots. Return true if there is an signal pending, and false
    * otherwise.
    */
-  bool next_event (T1 *p1 = NULL, T2 *p2 = NULL, T3 *p3 = NULL, T4 *p4 = NULL) 
+  bool next_signal (T1 *p1 = NULL, T2 *p2 = NULL, T3 *p3 = NULL, 
+		    T4 *p4 = NULL) 
   {
     bool ret = true;
     value_set_t<T1,T2,T3,T4> v;
@@ -643,16 +644,24 @@ template<class T> void use_reference (T &i) {}
 
 // make shortcuts to the most common callbacks, but while using
 // ptr's, and not ref's.
-typedef callback<void>::ptr ceo_callback_void_t;
-typedef callback<void, int>::ptr ceo_callback_int_t;
-typedef callback<void, str>::ptr ceo_callback_str_t;
-typedef callback<void, bool>::ptr ceo_callback_bool_t;
+
+typedef callback<void, int>::ptr coordvar_int_t;
+typedef callback<void, bool>::ptr coordvar_bool_t;
+typedef callback<void, str>::ptr coordvar_str_t;
+typedef callback<void>::ptr coordvar_void_t;
+
+template<class T1 = void, class T2 = void, class T3 = void> 
+struct coordvar_t {
+  typedef ptr<callback<void,T1,T2,T3> > t;
+};
+
+
 
 #define TAME_GLOBAL_INT      tame_global_int
 #define CLOSURE              ptr<closure_t> __frame = NULL
 #define TAME_OPTIONS         "TAME_OPTIONS"
 #define __CLS                 __cls     
-#define CCEOC_STACK_SENTINEL  _cceoc_not_called_if_uninitialzed
+#define CCEOC_STACK_SENTINEL  _coordvar_not_signaled_if_uninitialzed
 
 extern int TAME_GLOBAL_INT;
 
@@ -668,7 +677,7 @@ extern int TAME_GLOBAL_INT;
  */
 #define END_OF_SCOPE(x)                                           \
 do {                                                              \
-  TAME_GLOBAL_INT = CCEOC_STACK_SENTINEL;                         \
+  /* TAME_GLOBAL_INT = CCEOC_STACK_SENTINEL; */                   \
   __CLS->end_of_scope_checks (x);                                 \
 } while (0)
 
@@ -677,7 +686,7 @@ do {                                                              \
  * return to the caller.  Note that CCEOCs are destroyed after they
  * are used, so clean up wrapped-in closures from caller stack frames.
  */
-#define UNBLOCK(x, T, ...)                                        \
+#define SIGNAL(x, T, ...)                                         \
 do {                                                              \
   __CLS->inc_cceoc_count ();                                      \
   SET_CCEOC_STACK_SENTINEL();                                     \
@@ -692,7 +701,7 @@ do {                                                              \
  */
 #define RESUME(x, T, ...)                                         \
 do {                                                              \
-  UNBLOCK(x, T, __VA_ARGS__);                                     \
+  SIGNAL(x, T, __VA_ARGS__);                                      \
   END_OF_SCOPE(x);                                                \
 } while (0)
 

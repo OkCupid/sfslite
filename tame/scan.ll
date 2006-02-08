@@ -303,7 +303,7 @@ return/[ \t\n(;] { return yyerror ("cannot return from within a BLOCK or "
 \n		{ yylval.str = yytext; ++lineno; return T_PASSTHROUGH; }
 @	        { return tame_ret (CB_ENTER, '@'); }
 
-[^ \t{}\n/BNJRUWVr@_]+|[ \t/BNJRUWVr@_] { yylval.str = yytext; 
+[^ \t{}\n/SBNJRUWVr@_]+|[ \t/SBNJRUWVr@_] { yylval.str = yytext; 
 	 			          return T_PASSTHROUGH; }
 
 [{]		{ yylval.str = yytext; yy_push_state (TAME); 
@@ -319,6 +319,7 @@ DEFAULT_RETURN	    { return tame_ret (DEFRET_ENTER, T_DEFAULT_RETURN); }
 return/[ \t\n(/;]   { yy_push_state (RETURN_PARAMS); return T_RETURN; }
 RESUME/[ \t\n(/;]   { yy_push_state (RESUME_BASE); return T_RESUME; }
 UNBLOCK/[ \t\n(/;]  { yy_push_state (RESUME_BASE); return T_UNBLOCK; }
+SIGNAL/[ \t\n(/;]  { yy_push_state (RESUME_BASE); return T_UNBLOCK; }
 }
 
 <TAME>{

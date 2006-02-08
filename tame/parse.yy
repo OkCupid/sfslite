@@ -53,6 +53,7 @@ int vars_lineno;
 %token T_2COLON
 %token T_RETURN
 %token T_UNBLOCK
+%token T_SIGNAL
 %token T_RESUME
 
 /* Keywords for our new filter */
@@ -227,7 +228,7 @@ vars:	T_VARS
 	  }
 	  if (!state.function ()->set_vars (v)) {
 	    yyerror ("The VARS{} section must come before any BLOCK, "
-	             " JOIN, WAIT, NONBLOCK, UNBLOCK or RESUME section");
+	             " JOIN, WAIT, NONBLOCK, SIGNAL or RESUME section");
 	  }
 	  $$ = v;
 	}
@@ -236,7 +237,8 @@ vars:	T_VARS
 resume_keyword:	
 	 T_UNBLOCK { $$ = New tame_unblock_t (get_yy_lineno (), 
 	                                      state.function ()); }
-
+	| T_SIGNAL { $$ = New tame_unblock_t (get_yy_lineno (), 
+	                                      state.function ()); }
 	| T_RESUME  { $$ = New tame_resume_t (get_yy_lineno (), 
 	                                      state.function ()); }
 	;
@@ -254,8 +256,10 @@ resume_arg_list_opt: /* empty */  { $$ = lstr (get_yy_lineno ());  }
 resume_statement: resume_keyword resume_arg_list_opt ';'
 	{
 	  if (!state.function ()->do_cceoc()) {
-	    yyerror ("Can't unblock/resume without 'cceoc' parameter "
-	             "to function");
+	    strbuf b;
+  	    b << "Can't unblock/resume without '" << cceoc_argname
+              << "' argname to function";
+	    yyerror (b);
 	  }
 	  if ($2)
 	    $1->add_params ($2);
