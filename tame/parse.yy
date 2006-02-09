@@ -85,7 +85,7 @@ int vars_lineno;
 %type <exprs> bracket_list bracket_list_opt
 
 %type <opt>  const_opt
-%type <fn>   fn_declaration
+%type <fn>   fn_declaration tame_decl
 
 %type <var>  parameter_declaration
 
@@ -124,11 +124,15 @@ expr:	T_PASSTHROUGH		   { $$ = lstr (get_yy_lineno (), $1); }
 	}
 	;
 
-fn:	T_TAME '(' fn_declaration ')' '{'
+tame_decl: '(' fn_declaration ')' { $$ = $2; }
+	| fn_declaration 	   { $$ = $1; }
+	;
+
+fn:	T_TAME tame_decl '{'
 	{
-	  state.new_fn ($3);
-	  state.push_list ($3);
-	  $3->set_lbrace_lineno (get_yy_lineno ());
+	  state.new_fn ($2);
+	  state.push_list ($2);
+	  $2->set_lbrace_lineno (get_yy_lineno ());
 	}
 	fn_statements '}'
 	{

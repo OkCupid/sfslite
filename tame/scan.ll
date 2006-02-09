@@ -64,10 +64,11 @@ XNUM 	[+-]?0x[0-9a-fA-F]
 %x EXPR_LIST_BR EXPR_LIST_BR_BASE
 %x DEFRET_ENTER DEFRET_BASE DEFRET
 %x TEMPLATE_ENTER TEMPLATE TEMPLATE_BASE
+%x SIG_PARSE
 
 %%
 
-<FN_ENTER,FULL_PARSE,CB_ENTER,VARS_ENTER,ID_LIST,ID_OR_NUM,NUM_ONLY,HALF_PARSE,BLOCK_ENTER,NONBLOCK_ENTER,JOIN_ENTER,JOIN_LIST,JOIN_LIST_BASE,EXPR_LIST,EXPR_LIST_BASE,DEFRET_ENTER>{
+<FN_ENTER,FULL_PARSE,SIG_PARSE,CB_ENTER,VARS_ENTER,ID_LIST,ID_OR_NUM,NUM_ONLY,HALF_PARSE,BLOCK_ENTER,NONBLOCK_ENTER,JOIN_ENTER,JOIN_LIST,JOIN_LIST_BASE,EXPR_LIST,EXPR_LIST_BASE,DEFRET_ENTER>{
 \n		++lineno;
 {WSPACE}+	/*discard*/;
 }
@@ -84,7 +85,7 @@ XNUM 	[+-]?0x[0-9a-fA-F]
 .		{ return yyerror ("expected a number"); }
 }
 
-<FULL_PARSE,HALF_PARSE>{
+<FULL_PARSE,HALF_PARSE,SIG_PARSE>{
 
 const		return T_CONST;
 struct		return T_STRUCT;
@@ -105,10 +106,19 @@ template	{ yy_push_state (TEMPLATE_ENTER); return T_TEMPLATE; }
 {ID} 		{ return std_ret (T_ID); }
 {DNUM}|{XNUM}	{ return std_ret (T_NUM); }
 
-[})]		{ yy_pop_state (); return yytext[0]; }
+[}]		{ yy_pop_state (); return yytext[0]; }
 
 [<>;,:*]	{ return yytext[0]; }
 "::"		{ return T_2COLON; }
+}
+
+<FULL_PARSE,HALF_PARSE>{
+[)]		{ yy_pop_state (); return yytext[0]; }
+}
+
+<SIG_PARSE>{
+[)]		{ return yytext[0]; }
+[{]		{ switch_to_state (TAME_BASE); return yytext[0]; }
 }
 
 <TEMPLATE_ENTER>{
@@ -140,7 +150,7 @@ template	{ yy_push_state (TEMPLATE_ENTER); return T_TEMPLATE; }
 [({]		{ yy_push_state (FULL_PARSE); return yytext[0]; }
 }
 
-<FULL_PARSE,HALF_PARSE>{
+<FULL_PARSE,HALF_PARSE,SIG_PARSE>{
 .		{ return yyerror ("illegal token found in parsed "
 				  "environment"); }
 }
@@ -341,7 +351,8 @@ SIGNAL/[ \t\n(/;]  { yy_push_state (RESUME_BASE); return T_UNBLOCK; }
 
 <INITIAL>{
 TAME/[ \t\n(/] 	{ return tame_ret (FN_ENTER, T_TAME); }
-[^T\n/]+|[T/]	{ yylval.str = yytext; return T_PASSTHROUGH ; }
+tamed/[ \t\n/]  { return tame_ret (SIG_PARSE, T_TAMED); }
+[^Tt\n/]+|[Tt/]	{ yylval.str = yytext; return T_PASSTHROUGH ; }
 \n		{ ++lineno; yylval.str = yytext; return T_PASSTHROUGH; }
 }
 
@@ -395,7 +406,7 @@ TAME_ON		{ tame_on = 1; GOBBLE_RET; }
 }
 
 
-<CB_ENTER,FULL_PARSE,FN_ENTER,VARS_ENTER,HALF_PARSE,PP,PP_BASE,EXPR_LIST,EXPR_LIST_BASE,ID_LIST,BLOCK_ENTER,NONBLOCK_ENTER,JOIN_ENTER,RETURN_PARAMS,RESUME_PARAMS,RESUME_PARAMS_BASE,RESUME_BASE,EXPR_LIST_BR,EXPR_LIST_BR_BASE,DEFRET_ENTER>{
+<CB_ENTER,FULL_PARSE,SIG_PARSE,FN_ENTER,VARS_ENTER,HALF_PARSE,PP,PP_BASE,EXPR_LIST,EXPR_LIST_BASE,ID_LIST,BLOCK_ENTER,NONBLOCK_ENTER,JOIN_ENTER,RETURN_PARAMS,RESUME_PARAMS,RESUME_PARAMS_BASE,RESUME_BASE,EXPR_LIST_BR,EXPR_LIST_BR_BASE,DEFRET_ENTER>{
 
 "//"		{ gobble_flag = 1; yy_push_state (CXX_COMMENT); }
 "/*"		{ gobble_flag = 1; yy_push_state (C_COMMENT); }

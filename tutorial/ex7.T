@@ -15,7 +15,7 @@
  * @param port the port to try on
  * @param done the callback to call when the first has returned.
  */
-TAME(static void connect (vec<str> hosts, int port, cbi done))
+TAME static void connect (vec<str> hosts, int port, cbi done)
 {
   VARS {
     int fd (-1);
