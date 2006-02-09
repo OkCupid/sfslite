@@ -29,8 +29,8 @@ static void finish (bool rc)
   delaycb (2, 0, wrap (exit, rc ? 0 : -1));
 }
 
-TAME(static void part1 (cb_hog_t *hog, coordgroup_t<> *JG, 
-			coordvar_void_t coordvar))
+TAMED static void 
+part1 (cb_hog_t *hog, coordgroup_t<> *JG, coordvar_void_t coordvar)
 {
   NONBLOCK (*JG) {
     delaycb (1, 0, @());
@@ -39,7 +39,7 @@ TAME(static void part1 (cb_hog_t *hog, coordgroup_t<> *JG,
   RESUME;
 }
 
-TAME(static void part2 (coordgroup_t<> *JG, coordvar_void_t coordvar))
+TAMED static void part2 (coordgroup_t<> *JG, coordvar_void_t coordvar)
 {
   VARS { int i; }
   for (i = 0; i < 2; i++) {
@@ -49,7 +49,7 @@ TAME(static void part2 (coordgroup_t<> *JG, coordvar_void_t coordvar))
 }
 
 
-TAME(static void buggy1b (coordvar_bool_t coordvar))
+TAMED static void buggy1b (coordvar_bool_t coordvar)
 {
   VARS { 
     coordgroup_t<> JG; 

@@ -29,7 +29,8 @@ static void finish (bool rc)
   delaycb (2, 0, wrap (exit, rc ? 0 : -1));
 }
 
-TAME(static void buggy1b (coordvar_bool_t coordvar))
+TAMED static void 
+buggy1c (coordvar_bool_t coordvar)
 {
   VARS { 
     coordgroup_t<> JG (__FILE__, __LINE__); 
@@ -70,6 +71,6 @@ int main (int argc, char *argv[])
       usage ();
     }
   }
-  buggy1b (wrap (finish));
+  buggy1c (wrap (finish));
   amain ();
 }

@@ -29,7 +29,8 @@ static void finish (bool rc)
   delaycb (2, 0, wrap (exit, rc ? 0 : -1));
 }
 
-TAME(static void buggy1a (coordvar_bool_t coordvar))
+TAMED static 
+void buggy1a (coordvar_bool_t coordvar)
 {
   VARS {
     cb_hog_t *hog (New cb_hog_t ());
