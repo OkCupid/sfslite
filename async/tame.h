@@ -566,7 +566,11 @@ private:
 
 /**
  * A coordgroup_t (short for coordination variable) is a synonym for 
- * join_group_t, for use with WAIT as opposed to join.
+ * join_group_t, for use with WAIT as opposed to join. Coordination variable
+ * join a particular coordination group when they are dispatched.  When
+ * a signal is made on a coordination variable, the coordination groups
+ * gets the message, and processes it accordingly. 
+ * 
  */
 template<class T1 = int, class T2 = int, class T3 = int, class T4 = int>
 class coordgroup_t : public join_group_t<T1,T2,T3,T4>
@@ -592,8 +596,8 @@ public:
    * slots. Return true if there is an signal pending, and false
    * otherwise.
    */
-  bool next_signal (T1 *p1 = NULL, T2 *p2 = NULL, T3 *p3 = NULL, 
-		    T4 *p4 = NULL) 
+  bool next_var (T1 *p1 = NULL, T2 *p2 = NULL, T3 *p3 = NULL, 
+		 T4 *p4 = NULL) 
   {
     bool ret = true;
     value_set_t<T1,T2,T3,T4> v;
