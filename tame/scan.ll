@@ -117,7 +117,7 @@ template	{ yy_push_state (TEMPLATE_ENTER); return T_TEMPLATE; }
 }
 
 <SIG_PARSE>{
-[)]		{ return yytext[0]; }
+[()]		{ return yytext[0]; }
 [{]		{ switch_to_state (TAME_BASE); return yytext[0]; }
 }
 
