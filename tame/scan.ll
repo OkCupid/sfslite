@@ -64,7 +64,7 @@ XNUM 	[+-]?0x[0-9a-fA-F]
 %x EXPR_LIST_BR EXPR_LIST_BR_BASE
 %x DEFRET_ENTER DEFRET_BASE DEFRET
 %x TEMPLATE_ENTER TEMPLATE TEMPLATE_BASE
-%x SIG_PARSE
+%x SIG_PARSE QUOTE
 
 %%
 
@@ -313,7 +313,7 @@ return/[ \t\n(;] { return yyerror ("cannot return from within a BLOCK or "
 \n		{ yylval.str = yytext; ++lineno; return T_PASSTHROUGH; }
 @	        { return tame_ret (CB_ENTER, '@'); }
 
-[^ \t{}\n/SBNJRUWVr@_]+|[ \t/SBNJRUWVr@_] { yylval.str = yytext; 
+[^ \t{}"\n/SBNJRUWVr@_]+|[ \t/SBNJRUWVr@_] { yylval.str = yytext; 
 	 			          return T_PASSTHROUGH; }
 
 [{]		{ yylval.str = yytext; yy_push_state (TAME); 
@@ -329,7 +329,15 @@ DEFAULT_RETURN	    { return tame_ret (DEFRET_ENTER, T_DEFAULT_RETURN); }
 return/[ \t\n(/;]   { yy_push_state (RETURN_PARAMS); return T_RETURN; }
 RESUME/[ \t\n(/;]   { yy_push_state (RESUME_BASE); return T_RESUME; }
 UNBLOCK/[ \t\n(/;]  { yy_push_state (RESUME_BASE); return T_UNBLOCK; }
-SIGNAL/[ \t\n(/;]  { yy_push_state (RESUME_BASE); return T_UNBLOCK; }
+SIGNAL/[ \t\n(/;]   { yy_push_state (RESUME_BASE); return T_UNBLOCK; }
+
+\"		    { yy_push_state (QUOTE); return std_ret (T_PASSTHROUGH); }
+}
+
+<QUOTE>{
+[^\\"]+|\\\"	    { return std_ret (T_PASSTHROUGH); }
+\\		    { return std_ret (T_PASSTHROUGH); }
+\"		    { yy_pop_state (); return std_ret (T_PASSTHROUGH); }
 }
 
 <TAME>{
@@ -352,8 +360,9 @@ SIGNAL/[ \t\n(/;]  { yy_push_state (RESUME_BASE); return T_UNBLOCK; }
 <INITIAL>{
 TAME/[ \t\n(/] 	{ return tame_ret (FN_ENTER, T_TAME); }
 tamed/[ \t\n/]  { return tame_ret (SIG_PARSE, T_TAMED); }
-[^Tt\n/]+|[Tt/]	{ yylval.str = yytext; return T_PASSTHROUGH ; }
+[^Tt\n"/]+|[Tt/]	{ yylval.str = yytext; return T_PASSTHROUGH ; }
 \n		{ ++lineno; yylval.str = yytext; return T_PASSTHROUGH; }
+\"		{ yy_push_state (QUOTE); return std_ret (T_PASSTHROUGH); }
 }
 
 <CXX_COMMENT>{

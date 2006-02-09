@@ -576,12 +576,15 @@ public:
     join_group_t<T1,T2,T3,T4> (f, l) {}
   coordgroup_t (ptr<join_group_pointer_t<T1,T2,T3,T4> > p) : 
     join_group_t<T1,T2,T3,T4> (p) {}
+
+  void remove_var () { join_group_t<T1,T2,T3,T4>::remove_join (); }
+  void add_var () { join_group_t<T1,T2,T3,T4>::add_join (); }
   
   /**
    * The number of signals left to happen; a sum of those
    * pending and those that have yet to fire.
    */
-  u_int n_signals_left () const 
+  u_int n_vars_left () const 
   { return join_group_t<T1,T2,T3,T4>::n_joins_left (); }
   
   /**

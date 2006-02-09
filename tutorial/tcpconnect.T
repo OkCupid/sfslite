@@ -31,7 +31,7 @@
  * Given a UNIX in_addr structure and a port, make a new TCP connect
  * and test that it succeeded by selecting for write on the new socket.
  */
-tamed static void 
+tamed static ptr<canceller_t>
 connect_to_in_addr (in_addr a, int port, coordvar_int_t coordvar)
 {
   VARS {
@@ -39,7 +39,12 @@ connect_to_in_addr (in_addr a, int port, coordvar_int_t coordvar)
     socklen_t sn;
     int err;
     int fd (-1);
+    coordgroup_t<bool> cg;
+    bool completed;
+    ptr<canceller_t> ret (New refcounted<canceller_t> ());
   }
+  DEFAULT_RETURN { return ret; }
+
   bzero (&sin, sizeof (sin));
   sin.sin_family = AF_INET;
   sin.sin_port = htons (port);
@@ -52,18 +57,25 @@ connect_to_in_addr (in_addr a, int port, coordvar_int_t coordvar)
     if (connect (fd, (sockaddr *) &sin, sizeof (sin)) >= 0 || 
 	errno == EINPROGRESS) {
 
-      BLOCK { fdcb (fd, selwrite, @()); }
+      ret->wait (@[cg, false]());
+      fdcb (fd, selwrite, @[cg,true] ());
       fdcb (fd, selwrite, NULL);
-
       
-      sn = sizeof (sin);
-      if (getpeername (fd, (sockaddr *) &sin, &sn)) {
-	err = 0;
-	sn = sizeof (err);
-	getsockopt (fd, SOL_SOCKET, SO_ERROR, (char *) &err, &sn);
-	if (err)
-	  fd = -ECONNREFUSED;
+      WAIT (cg, completed);
+      warn << "return from function\n";
+
+      if (completed) {
+	sn = sizeof (sin);
+	if (getpeername (fd, (sockaddr *) &sin, &sn)) {
+	  err = 0;
+	  sn = sizeof (err);
+	  getsockopt (fd, SOL_SOCKET, SO_ERROR, (char *) &err, &sn);
+	  if (err)
+	    fd = -ECONNREFUSED;
+	}
+	ret->toolate ();
       }
+      cg.remove_var ();
     } else {
       fd = -errno;
     }
@@ -96,6 +108,7 @@ my_tcpconnect (str hostname, u_int16_t port, coordvar_int_t coordvar,
     int err;
     int fd (-1);
     ptr<canceller_t> canceller (New refcounted<canceller_t> ());
+    ptr<canceller_t> cancel_connect;
     coordgroup_t<bool> cg (__FILE__, __LINE__);
     bool completed, dummy;
   }
@@ -128,17 +141,20 @@ my_tcpconnect (str hostname, u_int16_t port, coordvar_int_t coordvar,
     if (namep)
       *namep = h->h_name;
     
-    connect_to_in_addr (*(in_addr *) h->h_addr, port, @[cg,true](fd)); 
-    
+    cancel_connect = connect_to_in_addr (*(in_addr *) h->h_addr, 
+					 port, @[cg,true](fd)); 
+
     WAIT (cg, completed);
     if (completed) {
       canceller->toolate ();
       cg.remove_join ();
+    } else {
+      cancel_connect->cancel ();
     }
     SIGNAL (fd); 
     
     // wait on the call to connect_to_inaddr if we've timed out.
-    if (cg.n_signals_left ()) 
+    if (cg.n_vars_left ()) 
       WAIT (cg, dummy);
   }
 }

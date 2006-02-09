@@ -34,7 +34,7 @@ TAME (static void try_rpc (str h, int port, cbb cb))
 	cli->call (EX_RANDOM, NULL, &rv[i], @(ev[i]) );
       }
     }
-    while (CG.n_signals_left ()) {
+    while (CG.n_vars_left ()) {
       WAIT(CG);
     }
 

@@ -88,7 +88,7 @@ TAME(void remote_host_t::dostuff_private (int port,
     }
 
     // a join is needed for every call that returns
-    while (window.n_signals_left ()) {
+    while (window.n_vars_left ()) {
 
       // Block until a call has returned; when it has, get
       // the index variable associated with the call, and assign
