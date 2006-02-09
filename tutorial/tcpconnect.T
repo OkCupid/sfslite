@@ -31,7 +31,7 @@
  * Given a UNIX in_addr structure and a port, make a new TCP connect
  * and test that it succeeded by selecting for write on the new socket.
  */
-tamed static ptr<canceller_t>
+TAMED static ptr<canceller_t>
 connect_to_in_addr (in_addr a, int port, coordvar_int_t coordvar)
 {
   VARS {
@@ -98,7 +98,7 @@ connect_to_in_addr (in_addr a, int port, coordvar_int_t coordvar)
  * @param namep the name of this host as gotten from DNS
  * @return an object that can be used to cancel this computation midstream.
  */
-tamed static ptr<canceller_t> 
+TAMED static ptr<canceller_t> 
 my_tcpconnect (str hostname, u_int16_t port, coordvar_int_t coordvar,
 	       bool dnssearch, str *namep)
 {
@@ -164,7 +164,8 @@ static void usage ()
   fatal << "usage: " << progname << " <hostname> <port>\n";
 }
 
-TAME (static void run (str s, int p))
+TAMED static void 
+run (str s, int p)
 {
   VARS {
     ptr<canceller_t> c;

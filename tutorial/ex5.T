@@ -48,8 +48,8 @@ static void foo_func (my_enum_t e)
 }
 
 
-TAME(void remote_host_t::dostuff_private (int port, 
-					  coordvar_t<bool>::t coordvar))
+TAMED void 
+remote_host_t::dostuff_private (int port, coordvar_t<bool>::t coordvar)
 {
   // declare all of your "stack" variables here
   VARS {

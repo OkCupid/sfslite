@@ -23,7 +23,8 @@ struct state_t {
   void relaunch (coordvar_t<bool>::t coordvar, CLOSURE);
 };
 
-TAME(void state_t::launch (coordvar_t<bool>::t coordvar))
+TAMED void 
+state_t::launch (coordvar_t<bool>::t coordvar)
 {
   // declare all of your "stack" variables here
   VARS {
@@ -56,7 +57,8 @@ TAME(void state_t::launch (coordvar_t<bool>::t coordvar))
   SIGNAL (true);
 }
 
-TAME(void state_t::relaunch (coordvar_t<bool>::t coordvar))
+TAMED void 
+state_t::relaunch (coordvar_t<bool>::t coordvar)
 {
   VARS {
     bool err_occurred (false);
@@ -90,7 +92,8 @@ TAME(void state_t::relaunch (coordvar_t<bool>::t coordvar))
   SIGNAL (!err_occurred);
 }
 
-TAME (static void go (str h, int p))
+TAMED static 
+void go (str h, int p)
 {
   VARS {
     state_t s (h, p);

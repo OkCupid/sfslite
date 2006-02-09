@@ -15,7 +15,8 @@
  * @param port the port to try on
  * @param done the callback to call when done
  */
-TAME(static void get_web_page (str host, int port, strbuf *resp, cbb done))
+TAMED static 
+void get_web_page (str host, int port, strbuf *resp, cbb done)
 {
   VARS {
     int fd, rc;
@@ -139,7 +140,8 @@ TAME(static void get_web_page (str host, int port, strbuf *resp, cbb done))
  * @param port the port to try on
  * @param done the callback to call when the first has returned.
  */
-TAME(static void get_fastest_web_page (vec<str> hosts, int port, cbb done))
+TAMED static 
+void get_fastest_web_page (vec<str> hosts, int port, cbb done)
 {
   VARS {
     int fd (-1);

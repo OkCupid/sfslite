@@ -13,14 +13,15 @@ struct rpc_t {
   clnt_stat err;
 };
 
-TAME (static void launch_call (coordgroup_t<ptr<rpc_t> > *jg, u_int i, 
-			       ptr<aclnt> cli))
+TAMED static void 
+launch_call (coordgroup_t<ptr<rpc_t> > *jg, u_int i, ptr<aclnt> cli)
 {
   ptr<rpc_t> r = New refcounted<rpc_t> (i);
   cli->call (EX_RANDOM2, &r->input, &r->output, @[*jg, r](r->err));
 }
 
-TAME(static bool dostuff (str h, int port, coordvar_bool_t coordvar))
+TAMED static 
+bool dostuff (str h, int port, coordvar_bool_t coordvar)
 {
   // declare all of your "stack" variables here
   VARS {

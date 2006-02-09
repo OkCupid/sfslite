@@ -4,7 +4,8 @@
 #include "tame.h"
 #include "parseopt.h"
  
-TAME (static void try_connect (str h, int port))
+TAMED static 
+void try_connect (str h, int port)
 {
   VARS { int fd; }
   BLOCK { tcpconnect (h, port, @(fd)); }

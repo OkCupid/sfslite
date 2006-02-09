@@ -6,7 +6,8 @@
 #include "ex_prot.h"
 #include "arpc.h"
  
-TAME (static void try_rpc (str h, int port, cbb cb))
+TAMED static 
+void try_rpc (str h, int port, cbb cb)
 {
   VARS {
     bool ret (false);

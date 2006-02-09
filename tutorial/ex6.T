@@ -6,7 +6,8 @@
 #include "parseopt.h"
 #include "ex_prot.h"
 
-TAME(static void dostuff (vec<str> hosts, int port, cbi done))
+TAMED static 
+void dostuff (vec<str> hosts, int port, cbi done)
 {
   // declare all of your "stack" variables here
   VARS {

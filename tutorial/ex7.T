@@ -15,7 +15,8 @@
  * @param port the port to try on
  * @param done the callback to call when the first has returned.
  */
-tamed static void connect (vec<str> hosts, int port, cbi done)
+TAMED static void 
+connect (vec<str> hosts, int port, cbi done)
 {
   VARS {
     int fd (-1);
@@ -58,7 +59,8 @@ tamed static void connect (vec<str> hosts, int port, cbi done)
  * @param port the port to try on
  * @param done the callback to call when done
  */
-TAME(static void get_fastest_web_page (vec<str> hosts, int port, cbb done))
+TAMED static 
+void get_fastest_web_page (vec<str> hosts, int port, cbb done)
 {
   VARS {
     int fd, rc;

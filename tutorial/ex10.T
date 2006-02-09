@@ -19,7 +19,7 @@ public:
   size_t XX;
 };
  
-tamed template<class T, size_t X> void
+TAMED template<class T, size_t X> void
 my_host_t<T,X>::try_it (coordvar_bool_t coordvar)
 {
   VARS {

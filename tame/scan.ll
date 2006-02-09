@@ -358,8 +358,8 @@ SIGNAL/[ \t\n(/;]   { yy_push_state (RESUME_BASE); return T_UNBLOCK; }
 }
 
 <INITIAL>{
+TAMED/[ \t\n/]  { return tame_ret (SIG_PARSE, T_TAMED); }
 TAME/[ \t\n(/] 	{ return tame_ret (FN_ENTER, T_TAME); }
-tamed/[ \t\n/]  { return tame_ret (SIG_PARSE, T_TAMED); }
 [^Tt\n"/]+|[Tt/]	{ yylval.str = yytext; return T_PASSTHROUGH ; }
 \n		{ ++lineno; yylval.str = yytext; return T_PASSTHROUGH; }
 \"		{ yy_push_state (QUOTE); return std_ret (T_PASSTHROUGH); }
