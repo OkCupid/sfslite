@@ -58,6 +58,7 @@ int vars_lineno;
 
 /* Keywords for our new filter */
 %token T_TAME
+%token T_TAMED
 %token T_VARS
 %token T_BLOCK
 %token T_NONBLOCK
@@ -124,15 +125,15 @@ expr:	T_PASSTHROUGH		   { $$ = lstr (get_yy_lineno (), $1); }
 	}
 	;
 
-tame_decl: '(' fn_declaration ')' { $$ = $2; }
-	| fn_declaration 	   { $$ = $1; }
+tame_decl: T_TAME '(' fn_declaration ')'   { $$ = $3; }
+	| T_TAMED fn_declaration 	   { $$ = $2; }
 	;
 
-fn:	T_TAME tame_decl '{'
+fn:	tame_decl '{'
 	{
-	  state.new_fn ($2);
-	  state.push_list ($2);
-	  $2->set_lbrace_lineno (get_yy_lineno ());
+	  state.new_fn ($1);
+	  state.push_list ($1);
+	  $1->set_lbrace_lineno (get_yy_lineno ());
 	}
 	fn_statements '}'
 	{
