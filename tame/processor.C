@@ -646,8 +646,9 @@ tame_fn_t::output_closure (outputter_t *o)
   if (_args) _args->paramlist (b, NAMES);
   b << ")";
 
-  for ( u_int i = 1; i <= _n_blocks ; i++) {
-    b << ", _block" << i << " (0)";
+  for ( size_t i = 0; i < _envs.size () ; i++) {
+    if (_envs[i]->needs_counter ()) 
+      b << ", _block" << _envs[i]->id () << " (0)";
   }
 
   for ( u_int i = 1; i <= _cbs.size (); i++) {
@@ -715,8 +716,9 @@ tame_fn_t::output_closure (outputter_t *o)
   if (_class)
     b << "  method_type_t _method;\n";
 
-  for (u_int i = 1; i <= _n_blocks; i++) {
-    b << "  int _block" << i << ";\n";
+  for (size_t i = 0; i < _envs.size (); i++) {
+    if (_envs[i]->needs_counter ()) 
+      b << "  int _block" << _envs[i]->id () << ";\n";
   }
 
   for (u_int i = 1; i <= _cbs.size () ; i++) {

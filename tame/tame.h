@@ -170,6 +170,7 @@ public:
   virtual bool is_jumpto () const { return false; }
   virtual void set_id (int id) {}
   virtual int id () const { return 0; }
+  virtual bool needs_counter () const { return false; }
 };
 
 class tame_fn_t; 
@@ -673,6 +674,7 @@ public:
   void set_id (int i) { _id = i; }
   int id () const { return _id; }
   void add_class_var (const var_t &v) { _class_vars.add (v); }
+  bool needs_counter () const { return true; }
   
   int add_callback (tame_callback_t *cb) 
   { 

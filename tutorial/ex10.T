@@ -19,8 +19,8 @@ public:
   size_t XX;
 };
  
-TAME (template<class T, size_t X> void
-      my_host_t<T,X>::try_it (coordvar_bool_t coordvar))
+tamed template<class T, size_t X> void
+my_host_t<T,X>::try_it (coordvar_bool_t coordvar)
 {
   VARS {
     bool ret (false);

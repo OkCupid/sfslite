@@ -31,8 +31,8 @@
  * Given a UNIX in_addr structure and a port, make a new TCP connect
  * and test that it succeeded by selecting for write on the new socket.
  */
-TAME(static void connect_to_in_addr (in_addr a, int port, 
-				     coordvar_int_t coordvar))
+tamed static void 
+connect_to_in_addr (in_addr a, int port, coordvar_int_t coordvar)
 {
   VARS {
     sockaddr_in sin;
@@ -55,6 +55,7 @@ TAME(static void connect_to_in_addr (in_addr a, int port,
       BLOCK { fdcb (fd, selwrite, @()); }
       fdcb (fd, selwrite, NULL);
 
+      
       sn = sizeof (sin);
       if (getpeername (fd, (sockaddr *) &sin, &sn)) {
 	err = 0;
@@ -67,7 +68,10 @@ TAME(static void connect_to_in_addr (in_addr a, int port,
       fd = -errno;
     }
   }
-  RESUME (fd);
+
+  // calls (*coordvar)(fd); also enforces that this
+  // callback is called exactly once.
+  SIGNAL (fd);
 }
 
 /**
@@ -75,11 +79,16 @@ TAME(static void connect_to_in_addr (in_addr a, int port,
  * returning the result as an opened file descriptor, or negative for
  * error.
  *
- * @return an object that can be used to cancel this computation mistream.
+ * @param hostname
+ * @param port
+ * @param coordvar The callback implicitly used in SIGNAL and RESUME statements
+ * @param dnssearch whether to search DNS domains
+ * @param namep the name of this host as gotten from DNS
+ * @return an object that can be used to cancel this computation midstream.
  */
-TAME(static ptr<canceller_t> 
-     my_tcpconnect (str hostname, u_int16_t port, coordvar_int_t coordvar,
-		    bool dnssearch, str *namep))
+tamed static ptr<canceller_t> 
+my_tcpconnect (str hostname, u_int16_t port, coordvar_int_t coordvar,
+	       bool dnssearch, str *namep)
 {
   VARS {
     dnsreq_t *dnsp (NULL);
@@ -87,7 +96,7 @@ TAME(static ptr<canceller_t>
     int err;
     int fd (-1);
     ptr<canceller_t> canceller (New refcounted<canceller_t> ());
-    coordgroup_t<bool> cg;
+    coordgroup_t<bool> cg (__FILE__, __LINE__);
     bool completed, dummy;
   }
   DEFAULT_RETURN { return canceller; }
@@ -129,7 +138,7 @@ TAME(static ptr<canceller_t>
     SIGNAL (fd); 
     
     // wait on the call to connect_to_inaddr if we've timed out.
-    if (cg.n_pending ()) 
+    if (cg.n_signals_left ()) 
       WAIT (cg, dummy);
   }
 }
@@ -143,7 +152,7 @@ TAME (static void run (str s, int p))
 {
   VARS {
     ptr<canceller_t> c;
-    coordgroup_t<bool> cg;
+    coordgroup_t<bool> cg (__FILE__, __LINE__);
     int fd;
     bool succeeded, dummy;
   }
@@ -157,6 +166,7 @@ TAME (static void run (str s, int p))
     c->cancel ();
   }
   WAIT (cg, dummy);
+  BLOCK { delaycb (20, 0, @()); }
   exit (0);
 }
 
