@@ -9,6 +9,10 @@ $Id$
  - Turn compile on tutorial on by configure-time switch '--enable-tutorial'
  - tame -v now shows a version number.
  - Compile fixes for GCC 4.0 in rpctypes.h
+ - Now, no need to do TAME(void myfn()) { .. } ; rather
+   TAME void myfn () { ... } works just as well.
+ - Instead of JOIN/join_group use WAIT/coordgroup
+ - No more need for nonblock; use  @[]() instead
 	
 0.8.4 
  - Fix warn() statements in paillier.C so that they compile on ia64

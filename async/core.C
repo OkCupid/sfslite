@@ -38,7 +38,7 @@ bool amain_panic;
 static int nselfd;
 
 // initialize this in case we access tsnow before calling amain()
-timespec tsnow = { 0, 0 };
+timespec tsnow ;
 
 const time_t &timenow = tsnow.tv_sec;
 
