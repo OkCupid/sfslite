@@ -1,6 +1,8 @@
 
 $Id$
 
+0.8.7
+
 0.8.6
  - Changed "unwrap" to "tame"
  - Simplified "tame" syntax; now have NONBLOCK .. JOIN instead of CRCC*
