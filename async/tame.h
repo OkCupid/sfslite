@@ -738,25 +738,23 @@ void __block_cb2 (ptr<closure_t> c, int i,
   
 template<class T1, class T2, class T3>
 void __block_cb3 (ptr<closure_t> c, int i,
-		  pointer_set3_t<T1,T2,T3> p, cbv cb, T1 v1, T2 v2, T3 v3)
+		  pointer_set3_t<T1,T2,T3> p, T1 v1, T2 v2, T3 v3)
 {
   *p.p1 = v1;
   *p.p2 = v2;
   *p.p3 = v3;
-  (*cb) ();
   c->block_cb_switch (i);
 }
 
 template<class T1, class T2, class T3, class T4>
 void __block_cb4 (ptr<closure_t> c, int i,
-		  pointer_set4_t<T1,T2,T3,T4> p, cbv cb,
+		  pointer_set4_t<T1,T2,T3,T4> p, 
 		  T1 v1, T2 v2, T3 v3, T4 v4)
 {
   *p.p1 = v1;
   *p.p2 = v2;
   *p.p3 = v3;
   *p.p4 = v4;
-  (*cb) ();
   c->block_cb_switch (i);
 }
 
