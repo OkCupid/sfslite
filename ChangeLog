@@ -2,6 +2,7 @@
 $Id$
 
 0.8.7
+ - Fixed bug _block_cb3
 
 0.8.6
  - Changed "unwrap" to "tame"

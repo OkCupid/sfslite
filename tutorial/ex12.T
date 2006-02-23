@@ -5,29 +5,29 @@
 #include "arpc.h"
 #include "parseopt.h"
 #include "ex_prot.h"
+#include "async.h"
 
 //
 // A test case to make sure that biggest callbacks work.
 //
 
-void callee3 (callback<void, int, bool, str>::ptr coordvar)
+typedef ptr<callback<void,int,bool,str> > cb3_t ;
+
+TAMED static void callee3 (cb3_t coordvar)
 {
-  SIGNAL (10, true, str ("hello"));
+  str s = "hello";
+  SIGNAL (10, true, s);
 }
 
-void callee4 (callback<void, int, bool, str, int>::ptr coordvar)
-{
-  SIGNAL (20, false, str ("goodbye"), 9);
-}
 
-
-int main_T (int argc, char *argv[])
+TAMED static void main_T (int argc, char **argv)
 {
-  int i, j;
-  bool b;
-  str s;
+  VARS {
+    int i;
+    bool b;
+    str s;
+  }
   BLOCK { callee3 (@(i,b,s)); }
-  BLOCK { callee4 (@(i,b,s,j)); }
   exit (0);
 }
 
@@ -35,5 +35,5 @@ int
 main (int argc, char *argv[])
 {
   main_T (argc, argv);
-  amin ();
+  amain ();
 }
