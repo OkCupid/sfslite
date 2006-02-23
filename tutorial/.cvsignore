@@ -4,3 +4,6 @@
 .libs
 Makefile
 Makefile.in
+ex10.C
+ex3b.C
+ex12.C
