@@ -263,6 +263,8 @@ TYPE2STRUCT(, int);
 TYPE2STRUCT(, unsigned int);
 TYPE2STRUCT(, long);
 TYPE2STRUCT(, unsigned long);
+TYPE2STRUCT(, long long);
+TYPE2STRUCT(, unsigned long long);
 TYPE2STRUCT(class U, U *);
 
 template<class T>

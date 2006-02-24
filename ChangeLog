@@ -3,6 +3,7 @@ $Id$
 
 0.8.7
  - Fixed bug _block_cb3
+ - Type2Struct for long long and unsigned long long
 
 0.8.6
  - Changed "unwrap" to "tame"
