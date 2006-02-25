@@ -2,8 +2,10 @@
 $Id$
 
 0.8.7
- - Fixed bug _block_cb3
+ - Fixed bug in _block_cb3
  - Type2Struct for long long and unsigned long long
+ - Fixed u_int/size_t mismatches in tame/tame.h
+	
 
 0.8.6
  - Changed "unwrap" to "tame"
