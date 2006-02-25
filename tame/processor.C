@@ -432,7 +432,7 @@ str
 tame_nonblock_callback_t::cb_name () const
 {
   strbuf b;
-  u_int N_w = n_args ();
+  size_t N_w = n_args ();
   u_int N_p = _call_with->size ();
   b << "__nonblock_cb_" << N_w << "_" << N_p;
   return b;
@@ -441,7 +441,7 @@ tame_nonblock_callback_t::cb_name () const
 void
 tame_nonblock_callback_t::output_generic (strbuf &b)
 {
-  u_int N_w = n_args ();
+  size_t N_w = n_args ();
   u_int N_p = _call_with->size ();
 
   if (generic_cb_exists (N_w, N_p))
@@ -1073,7 +1073,7 @@ tame_nonblock_callback_t::output_vars (strbuf &b, bool first,
 				       const str &sffx) const
 {
   combine_lists ();
-  for (u_int i = 0; i < n_args (); i++) {
+  for (size_t i = 0; i < n_args (); i++) {
     if (!first)  b << ", ";
     else first = false;
     if (prfx) b << prfx;
@@ -1182,7 +1182,7 @@ tame_join_t::output (outputter_t *o)
   b << "    if (" <<  jgn << ".pending (&" 
     << JOIN_VALUE << ")) {\n";
   
-  for (u_int i = 0; i < n_args (); i++) {
+  for (size_t i = 0; i < n_args (); i++) {
     b << "      typeof (" << JOIN_VALUE << ".v" << i+1 << ") &"
       << arg (i).name ()  << " = " JOIN_VALUE << ".v" << i+1 << ";\n";
   }
@@ -1232,7 +1232,7 @@ tame_wait_t::output (outputter_t *o)
   b.mycat (_fn->label (_id)) << ":\n";
   b << "do {\n"
     << "   if (!" << jgn << ".next_var (";
-  for (u_int i = 0; i < n_args (); i++) {
+  for (size_t i = 0; i < n_args (); i++) {
     if (i > 0) b << ", ";
     b << "&(" << arg (i).name () << ")";
   }

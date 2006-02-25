@@ -708,7 +708,8 @@ public:
   virtual void output (outputter_t *o);
   var_t join_group () const { return (*_args)[0]; }
   var_t arg (u_int i) const { return (*_args)[i+1]; }
-  size_t n_args () const { return _args->size () - 1; }
+  size_t n_args () const 
+  { assert (_args->size () > 0); return _args->size () - 1; }
 protected:
   void output_blocked (my_strbuf_t &b, const str &jgn);
   tame_fn_t *_fn;
