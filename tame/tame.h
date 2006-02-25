@@ -336,7 +336,7 @@ public:
   var_t join_group () const;
   bool output_vars (strbuf &b, bool first,
 		    const str &prfx, const str &sffx) const ;
-  u_int n_args () const;
+  size_t n_args () const;
   var_t arg (u_int i) const;
 protected:
   void combine_lists () const;
