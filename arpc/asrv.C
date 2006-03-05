@@ -364,6 +364,7 @@ asrv::seteof (ref<xhinfo> xi, const sockaddr *src, bool force)
 void
 asrv::sendreply (svccb *sbp, xdrsuio *x, bool)
 {
+  dec_svccb_count ();
   if (!xi->ateof () && x)
     xi->xh->sendv (x->iov (), x->iovcnt (), sbp->addr);
   /* If x contains a marshaled version of sbp->template getres<...> (),
@@ -449,6 +450,7 @@ asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
 	    rtp->name, xidswap (m->rm_xid))
 	      << sock2str (src) << "\n";
     asrv_accepterr (xi, src, GARBAGE_ARGS, m);
+    s->inc_svccb_count ();
     s->sendreply (sbp.release (), NULL, true);
     return;
   }
@@ -471,6 +473,7 @@ asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
   if (asrvtrace >= 5 && rtp->print_arg)
     rtp->print_arg (sbp->arg, NULL, asrvtrace - 4, "ARGS", "");
 
+  s->inc_svccb_count ();
   (*s->cb) (sbp.release ());
 }
 
@@ -504,6 +507,7 @@ asrv_replay::~asrv_replay ()
 void
 asrv_replay::sendreply (svccb *sbp, xdrsuio *x, bool nocache)
 {
+  
   if (!x) {
     rtab.remove (sbp);
     delete sbp;
@@ -674,3 +678,60 @@ asrv_alloc (ref<axprt> x, const rpc_program &pr,
     return asrv::alloc (x, pr, cb);
 }
 
+asrv_delayed_eof::asrv_delayed_eof (ref<xhinfo> xi, const rpc_program &pr, 
+				  asrv_cb scb, cbv::ptr eofcb)
+  : asrv (xi, pr, wrap (this, &asrv_delayed_eof::dispatch)),
+    _count (0), 
+    _eof (false), 
+    _asrv_cb (scb),
+    _eofcb (eofcb) 
+{}
+
+ptr<asrv_delayed_eof>
+asrv_delayed_eof::alloc (ref<axprt> x, const rpc_program &pr, 
+			asrv_cb cb, cbv::ptr eofcb)
+{
+  ptr<xhinfo> xi = xhinfo::lookup (x);
+  if (!xi && !x->reliable)
+    return NULL;
+  return New refcounted<asrv_delayed_eof> (xi, pr, cb, eofcb);
+}
+
+void
+asrv_delayed_eof::dispatch (svccb *sbp)
+{
+  if (sbp == NULL) {
+    _eof = true;
+    cbv::ptr c(_eofcb);
+    _eofcb = NULL;
+    if (_count == 0) {
+      (*_asrv_cb) (NULL);
+    } else if (c) {
+      (*c) ();
+    }
+  } else {
+    (*_asrv_cb) (sbp);
+  }
+}
+
+void
+asrv_delayed_eof::dec_svccb_count ()
+{
+  assert (--_count >= 0);
+  if (_count == 0 && _eof) {
+    (*_asrv_cb) (NULL);
+  }
+}
+
+void 
+asrv_delayed_eof::sendreply (svccb *s, xdrsuio *x, bool nocache)
+{
+  if (_eof) {
+    warn << "Swallowing RPC reply due to EOF on TCP socket.\n";
+    dec_svccb_count ();
+  } else {
+    // decref alreay happens in sendreply(), so no need to do it a 
+    // second time
+    asrv::sendreply (s, x, nocache);
+  }
+}

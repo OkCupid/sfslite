@@ -97,10 +97,10 @@ public:
   const sockaddr *getsa () const { return addr; }
   bool fromresvport () const;
 
-  void reply (const void *, xdrproc_t = NULL, bool nocache = false);
+  virtual void reply (const void *, xdrproc_t = NULL, bool nocache = false);
   template<class T> void replyref (const T &res, bool nocache = false)
     { reply (&res, NULL, nocache); }
-  void replyref (const int &res, bool nocache = false)
+  void virtual replyref (const int &res, bool nocache = false)
     { u_int32_t val = res; reply (&val, NULL, nocache); }
 
   void reject (auth_stat);
@@ -132,6 +132,8 @@ protected:
   virtual ~asrv ();
   virtual bool isreplay (svccb *) { return false; }
   virtual void sendreply (svccb *, xdrsuio *, bool nocache);
+  virtual void inc_svccb_count () {}
+  virtual void dec_svccb_count () {}
 
 public:
   const progvers pv;
@@ -165,6 +167,40 @@ protected:
   asrv_replay (ref<xhinfo> x, const rpc_program &rp, asrv_cb::ptr cb)
     : asrv (x, rp, cb), rsize (0) {}
   ~asrv_replay ();
+};
+
+//
+// An asrv class that masks an EOF until all outstanding svccb's
+// have been acted on. Semantics are:
+//   - On an EOF, if no svccb's outstanding, then callback the asrv_cb
+//     with NULL.
+//   - On an EOF, if svccb's are outstanding, then callback the eofcb.
+//      - Once all svccb's have been replied to (and replies are swallowed
+//        after EOFs), then call the asrv_cb with NULL.
+//
+// Thus, the callback possibilities are either an eofcb, and later a 
+// asrv_cb (NULL), or just an asrv_cb (NULL).
+//  
+// 
+class asrv_delayed_eof : public asrv {
+private:
+  int _count;
+  bool _eof;
+  asrv_cb _asrv_cb;
+  cbv::ptr _eofcb;
+
+protected:
+  asrv_delayed_eof (ref<xhinfo>, const rpc_program &, asrv_cb, cbv::ptr eofcb);
+  void dispatch (svccb *sbp);
+  void inc_svccb_count () { _count ++; }
+  void dec_svccb_count ();
+  void sendreply (svccb *, xdrsuio *, bool nocache) ;
+  
+public:
+  static ptr<asrv_delayed_eof> 
+  alloc (ref<axprt>, const rpc_program &, asrv_cb,
+	 cbv::ptr eofcb = NULL);
+  bool is_eof () const { return _eof; }
 };
 
 class asrv_unreliable : public asrv_replay {

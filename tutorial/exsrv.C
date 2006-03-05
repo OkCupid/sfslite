@@ -17,7 +17,7 @@ exsrv_t::exsrv_t (int fd)
 {
   tcp_nodelay (fd);
   x = axprt_stream::alloc (fd);
-  s = asrv::alloc (x, ex_prog_1, wrap (this, &exsrv_t::dispatch));
+  s = asrv_delayed_eof::alloc (x, ex_prog_1, wrap (this, &exsrv_t::dispatch));
 }
 
 void
