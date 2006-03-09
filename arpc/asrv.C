@@ -730,7 +730,7 @@ asrv_delayed_eof::sendreply (svccb *s, xdrsuio *x, bool nocache)
     warn << "Swallowing RPC reply due to EOF on TCP socket.\n";
     dec_svccb_count ();
   } else {
-    // decref alreay happens in sendreply(), so no need to do it a 
+    // decref already happens in sendreply(), so no need to do it a 
     // second time
     asrv::sendreply (s, x, nocache);
   }
