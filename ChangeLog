@@ -5,6 +5,7 @@ $Id$
  - Fixed bug in _block_cb3
  - Type2Struct for long long and unsigned long long
  - Fixed u_int/size_t mismatches in tame/tame.h
+ - Added asrv_delayed_eof
 	
 
 0.8.6

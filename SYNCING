@@ -30,6 +30,8 @@ When Syncing from SFS to SFSlite: A Checklist
     - s/clock_gettime (a,b)/my_clock_gettime ($b)/g
  - async/sysconf.h
     - Alfred's patch for dmalloc + STL. see SFSLITE comments
+ - async/refcnt.h
+    - TYPE2STRUCT() for unsigned long long and long long
  - async/
     - add mmcd.c, litetime.[Ch]
  - async/async.h
