@@ -693,11 +693,10 @@ do {                                                              \
  * return to the caller.  Note that CCEOCs are destroyed after they
  * are used, so clean up wrapped-in closures from caller stack frames.
  */
-#define SIGNAL(x, T, ...)                                         \
+#define SIGNAL(x, cb_tmp, ...)                                    \
 do {                                                              \
   __CLS->inc_cceoc_count ();                                      \
   SET_CCEOC_STACK_SENTINEL();                                     \
-  const T cb_tmp (CCEOC_ARGNAME);                                 \
   CCEOC_ARGNAME = NULL;                                           \
   (*cb_tmp) (__VA_ARGS__);                                        \
 } while (0)
@@ -706,9 +705,9 @@ do {                                                              \
  * Like unblock, but return from the function. Need to paste in
  * return statement from tame(1) since it may have a type.
  */
-#define RESUME(x, T, ...)                                         \
+#define RESUME(x, cb_tmp, ...)                                    \
 do {                                                              \
-  SIGNAL(x, T, __VA_ARGS__);                                      \
+  SIGNAL(x, cb_tmp, __VA_ARGS__);                                 \
   END_OF_SCOPE(x);                                                \
 } while (0)
 

@@ -59,9 +59,9 @@ connect_to_in_addr (in_addr a, int port, coordvar_int_t coordvar)
 
       ret->wait (@[cg, false]());
       fdcb (fd, selwrite, @[cg,true] ());
-      fdcb (fd, selwrite, NULL);
       
       WAIT (cg, completed);
+      fdcb (fd, selwrite, NULL);
       warn << "return from function\n";
 
       if (completed) {
@@ -173,6 +173,7 @@ run (str s, int p)
     int fd;
     bool succeeded, dummy;
   }
+  warn << "connect on " << s << ":" << p << "\n";
   c = my_tcpconnect (s, p, @[cg, true](fd), false, NULL);
   delaycb (4, 0, @[cg, false]());
   WAIT (cg, succeeded);
@@ -183,7 +184,7 @@ run (str s, int p)
     c->cancel ();
   }
   WAIT (cg, dummy);
-  BLOCK { delaycb (20, 0, @()); }
+  BLOCK { delaycb (10, 0, @()); }
   exit (0);
 }
 

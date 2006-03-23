@@ -1280,18 +1280,25 @@ tame_ret_t::output (outputter_t *o)
 void
 tame_unblock_t::output (outputter_t *o)
 {
+  const str tmp ("__cb_tmp");
   my_strbuf_t b;
-  output_mode_t om = o->switch_to_mode (OUTPUT_PASSTHROUGH);
+  output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL);
   str loc = state.loc (_line_number);
+  b << "  do {\n"
+    << "    const ";
+  b.mycat (_fn->cceoc_typename ()) << " ";
+  b.mycat (tmp) << " (CCEOC_ARGNAME);\n";
+  
   str n = macro_name ();
   b << n << " (\"" << loc << "\", ";
-  b.mycat (_fn->cceoc_typename ());
+  b.mycat (tmp);
   if (_params) {
     b << ", " << _params;
   }
   b << "); ";
   _fn->do_cceoc_call ();
   do_return_statement (b);
+  b << "  } while (0);\n";
 
   o->output_str (b);
   o->switch_to_mode (om);
