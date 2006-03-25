@@ -6,11 +6,14 @@
 #include "corebench.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/time.h>
 
 typedef enum { SFS_MODE = 0, BLOCK_MODE = 1, NONBLOCK_MODE = 2,
 	       CHECK_CPUSPEED_MODE = 3,
 	       BENCHMARK_WRAP_MODE = 4,
-	       BENCHMARK_FUNCTOR_MODE = 5} bmode_t;
+	       BENCHMARK_FUNCTOR_MODE = 5,
+	       SFS_NULL =6 ,TAME_NULL =7,
+	       BENCHMARK_SYSCALL = 8 } bmode_t;
 
 int niter = 10000;
 int ntimes = 100;
@@ -71,6 +74,18 @@ static void benchmark_wrap (bool dealloc)
   report (end - start);
 }
 
+static void benchmark_syscall ()
+{
+  struct timeval tv;
+  u_int64_t start, end;
+  start = corebench_get_time ();
+  for (int i = 0; i < niter; i++) {
+    gettimeofday (&tv, NULL);
+  }
+  end = corebench_get_time ();
+  report (end - start);
+}
+
 static void benchmark_functor ()
 {
   callback<void, int, int>::ptr cb = wrap (wrap_me, 10, 20);
@@ -103,6 +118,37 @@ bench1_block (int niter, cbv done)
     BLOCK { delaycb (0, 0, @()); }
   }
   (*done) ();
+}
+
+TAMED static void
+bench1_nulltame ()
+{
+  VARS { int i (0); }
+  i++;
+}
+
+static void
+bench1_nullsfs ()
+{
+  int i;
+  i++;
+}
+
+
+static void bench1_null (int niter)
+{
+  for (int i = 0; i < niter; i++) {
+    switch (mode) {
+    case SFS_NULL:
+      bench1_nullsfs ();
+      break;
+    case TAME_NULL:
+      bench1_nulltame ();
+      break;
+    default:
+      panic ("whoops!");
+    }
+  }
 }
 
 TAMED static void
@@ -152,6 +198,10 @@ harness ()
 	case SFS_MODE:
 	  bench1_sfs (niter, @());
 	  break;
+	case SFS_NULL:
+	case TAME_NULL:
+	  bench1_null (niter);
+	  break;
 	case BLOCK_MODE:
 	  bench1_block (niter, @());
 	  break;
@@ -176,11 +226,19 @@ int main (int argc, char *argv[])
   int ch;
   setprogname (argv[0]);
   bool dealloc (false);
+  bool null_test (false);
 
   toggle_corebench (true);
 
-  while ((ch = getopt (argc, argv, "fwdcnbi:t:")) != -1) {
+  while ((ch = getopt (argc, argv, "Nfwdcnbi:t:s")) != -1) {
     switch (ch) {
+    case 'N':
+      null_test = true;
+      break;
+    case 's':
+      if (mode != SFS_MODE) usage ();
+      mode = BENCHMARK_SYSCALL;
+      break;
     case 'w':
       if (mode != SFS_MODE)
 	usage ();
@@ -221,6 +279,11 @@ int main (int argc, char *argv[])
     }
   }
   switch (mode) {
+  case BENCHMARK_SYSCALL:
+    ntimes = 1;
+    benchmark_syscall ();
+    exit (0);
+    break;
   case BENCHMARK_FUNCTOR_MODE:
     warn << "Checking time to call a callback...\n";
     ntimes = 1;
@@ -244,13 +307,23 @@ int main (int argc, char *argv[])
     exit (0);
     break;
   case SFS_MODE:
-    warn << "using SFS code for full test...\n";
+    if (null_test) {
+      mode = SFS_NULL;
+      warn << "doing SFS NULL call test....\n";
+    } else {
+      warn << "using SFS code for full test...\n";
+    }
     break;
   case NONBLOCK_MODE:
     warn << "using NONBLOCK mode for full test...\n";
     break;
   case BLOCK_MODE:
-    warn << "using BLOCK mode for full test...\n";
+    if (null_test) {
+      mode = TAME_NULL;
+      warn << "doing a TAME NULL call test...\n";
+    } else {
+      warn << "using BLOCK mode for full test...\n";
+    }
     break;
   default:
     break;

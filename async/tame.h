@@ -761,6 +761,13 @@ void __block_cb4 (ptr<closure_t> c, int i,
 
 void start_join_group_collection ();
 
+#define   TAME_ERROR_SILENT      (1 << 0)
+#define   TAME_ERROR_FATAL       (1 << 1)
+#define   TAME_CHECK_LEAKS       (1 << 2)
+
+extern int tame_options;
+inline bool tame_check_leaks () { return tame_options & TAME_CHECK_LEAKS ; }
+
 
 /**
  * A helper class useful for canceling an TAME'd function midstream.

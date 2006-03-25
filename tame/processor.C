@@ -856,7 +856,7 @@ tame_fn_t::output_vars (outputter_t *o, int ln)
     << "  if (!" << closure_generic ().name() << ") {\n"
     ;
 
-  b << "    start_join_group_collection ();\n"
+  b << "    if (tame_check_leaks ()) start_join_group_collection ();\n"
     << "    " << CLOSURE_RFCNT << " = New refcounted<"
     << _closure.type().type_without_pointer() << "> (";
 
@@ -870,7 +870,8 @@ tame_fn_t::output_vars (outputter_t *o, int ln)
     _args->paramlist (b, NAMES, TAME_PREFIX);
 
   b << ");\n"
-    << "    " << CLOSURE_RFCNT << "->collect_join_groups ();\n"
+    << "    if (tame_check_leaks ()) " 
+    << CLOSURE_RFCNT << "->collect_join_groups ();\n"
     << "    " << TAME_CLOSURE_NAME << " = " << CLOSURE_RFCNT << ";\n"
     << "    " << CLOSURE_GENERIC << " = " << CLOSURE_RFCNT << ";\n";
 

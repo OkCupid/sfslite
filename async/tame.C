@@ -4,10 +4,8 @@
 
 #include "tame.h"
 
-#define   TAME_ERROR_SILENT      (1 << 0)
-#define   TAME_ERROR_FATAL       (1 << 1)
-
 int tame_options;
+
 int tame_global_int;
 u_int64_t closure_serial_number;
 bool tame_collect_jg_flag;
@@ -34,6 +32,9 @@ tame_init::start ()
       break;
     case 'A':
       tame_options |= TAME_ERROR_FATAL;
+      break;
+    case 'L':
+      tame_options |= TAME_CHECK_LEAKS;
       break;
     }
   }
@@ -80,18 +81,23 @@ closure_t::end_of_scope_checks (str loc)
   if (_has_cceoc)
     enforce_cceoc (loc);
 
-  set_weak_finalize_cb (wrap (check_closure_destroyed, loc, 
-			      destroyed_flag ()));
+  // If we're really concerned about performance, we'll want to disable
+  // leak-checking, since checking for leaks does demand registering
+  // an extra callback.
+  if (tame_check_leaks ()) {
+    set_weak_finalize_cb (wrap (check_closure_destroyed, loc, 
+				destroyed_flag ()));
   
-  // potentially decref us if we have join groups that should
-  // be going out of scope now.
-  kill_join_groups ();
-  
-  // decref us for ourselves, since WE should be going out of scope
-  // Still need to run this check even for a function that only
-  // uses BLOCK { .. }, since it may leak a reference by assigning one
-  // of our CVs to a global variable
-  weak_decref ();
+    // potentially decref us if we have join groups that should
+    // be going out of scope now.
+    kill_join_groups ();
+
+    // decref us for ourselves, since WE should be going out of scope
+    // Still need to run this check even for a function that only
+    // uses BLOCK { .. }, since it may leak a reference by assigning one
+    // of our CVs to a global variable
+    weak_decref ();
+  }
 }
 
 void
