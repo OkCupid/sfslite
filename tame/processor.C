@@ -519,15 +519,6 @@ tame_block_callback_t::output_in_class (strbuf &b)
     << "      tame_error (\"" << loc << "\", \"callback overcalled!\");\n"
     << "    }\n";
 
-  /* be less conservative to take away a wrap/unwrap on the critical path
-   *
-   b << "    if (!--_block" << _block->id () << ")\n"
-   << "      delaycb (0, 0, wrap (mkref (this), &"
-   ;
-   b.cat (_parent_fn->reenter_fn ().cstr (), true);
-   b << "));\n";
-  */
-
   b << "    if (!--_block" << _block->id () << ")\n"
     << "      reenter ();\n"
     << "  }\n\n";
