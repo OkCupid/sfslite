@@ -345,6 +345,7 @@ template<$tmpparam>
 static inline $rtype *
 wrap (wrap_line_param $fargs)
 {
+    n_wrap_calls ++;
   return wNew ($rtype) (wrap_line_arg $falist);
 }
 EOF
@@ -367,6 +368,7 @@ template<$tmpparam>
 static inline $rtype *
 wrap (wrap_line_param $fargs)
 {
+    n_wrap_calls ++;
   return wNew ($rtype) (wrap_c_line_arg $falist);
 }
 EOF
@@ -387,18 +389,21 @@ template<$tmpparam>
 static inline $rtype *
 wrap (wrap_line_param $fargs)
 {
+    n_wrap_calls ++;
   return wNew ($rtype) (wrap_c_line_arg $falist);
 }
 template<$tmpparam>
 static inline $rtype *
 wrap (wrap_line_param $f2args)
 {
+    n_wrap_calls ++;
   return wNew ($rtype) (wrap_c_line_arg $falist);
 }
 template<$tmpparam>
 static inline $rtype *
 wrap (wrap_line_param $f3args)
 {
+    n_wrap_calls ++;
   return wNew ($rtype) (wrap_c_line_arg $falist);
 }
 EOF
@@ -496,6 +501,8 @@ print <<'EOF';
 
 #include "refcnt.h"
 
+extern unsigned long long n_wrap_calls;
+
 #ifndef WRAP_DEBUG
 # if defined (DMALLOC) && __GNUC__ >= 2
 #  define WRAP_DEBUG 1
@@ -568,6 +575,8 @@ __END__
 
 #include "refcnt.h"
 
+extern unsigned long long n_wrap_calls;
+
 #ifndef WRAP_DEBUG
 # if defined (DMALLOC) && __GNUC__ >= 2
 #  define WRAP_DEBUG 1
@@ -631,6 +640,7 @@ template<class R>
 static inline refcounted<callback_0_0<R> > *
 wrap (wrap_line_param R (*f) ())
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_0_0<R> >) (wrap_line_arg f);
 }
 
@@ -664,6 +674,7 @@ template<class C, class R>
 static inline refcounted<callback_c_0_0< C *,  C, R> > *
 wrap (wrap_line_param  C *p, R (C::*f) () )
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_0< C *,  C, R> >) (wrap_c_line_arg p, f);
 }
 
@@ -671,18 +682,21 @@ template<class C, class R>
 static inline refcounted<callback_c_0_0<ref< C>,  C, R> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) () )
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_0<ref< C>,  C, R> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R>
 static inline refcounted<callback_c_0_0<ref< C>,  C, R> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) () )
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_0<ref< C>,  C, R> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R>
 static inline refcounted<callback_c_0_0<ref< C>,  C, R> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) () )
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_0<ref< C>,  C, R> >) (wrap_c_line_arg p, f);
 }
 
@@ -690,6 +704,7 @@ template<class C, class R>
 static inline refcounted<callback_c_0_0_const<const C *, const C, R> > *
 wrap (wrap_line_param const C *p, R (C::*f) () const)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_0_const<const C *, const C, R> >) (wrap_c_line_arg p, f);
 }
 
@@ -697,18 +712,21 @@ template<class C, class R>
 static inline refcounted<callback_c_0_0_const<ref<const C>, const C, R> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) () const)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_0_const<ref<const C>, const C, R> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R>
 static inline refcounted<callback_c_0_0_const<ref<const C>, const C, R> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) () const)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_0_const<ref<const C>, const C, R> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R>
 static inline refcounted<callback_c_0_0_const<ref<const C>, const C, R> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) () const)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_0_const<ref<const C>, const C, R> >) (wrap_c_line_arg p, f);
 }
 
@@ -729,6 +747,7 @@ template<class R, class A1, class AA1>
 static inline refcounted<callback_0_1<R, A1> > *
 wrap (wrap_line_param R (*f) (A1), const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_0_1<R, A1> >) (wrap_line_arg f, a1);
 }
 
@@ -764,6 +783,7 @@ template<class C, class R, class A1, class AA1>
 static inline refcounted<callback_c_0_1< C *,  C, R, A1> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1) , const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_1< C *,  C, R, A1> >) (wrap_c_line_arg p, f, a1);
 }
 
@@ -771,18 +791,21 @@ template<class C, class R, class A1, class AA1>
 static inline refcounted<callback_c_0_1<ref< C>,  C, R, A1> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1) , const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_1<ref< C>,  C, R, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class A1, class AA1>
 static inline refcounted<callback_c_0_1<ref< C>,  C, R, A1> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1) , const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_1<ref< C>,  C, R, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class A1, class AA1>
 static inline refcounted<callback_c_0_1<ref< C>,  C, R, A1> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1) , const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_1<ref< C>,  C, R, A1> >) (wrap_c_line_arg p, f, a1);
 }
 
@@ -790,6 +813,7 @@ template<class C, class R, class A1, class AA1>
 static inline refcounted<callback_c_0_1_const<const C *, const C, R, A1> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1) const, const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_1_const<const C *, const C, R, A1> >) (wrap_c_line_arg p, f, a1);
 }
 
@@ -797,18 +821,21 @@ template<class C, class R, class A1, class AA1>
 static inline refcounted<callback_c_0_1_const<ref<const C>, const C, R, A1> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1) const, const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_1_const<ref<const C>, const C, R, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class A1, class AA1>
 static inline refcounted<callback_c_0_1_const<ref<const C>, const C, R, A1> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1) const, const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_1_const<ref<const C>, const C, R, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class A1, class AA1>
 static inline refcounted<callback_c_0_1_const<ref<const C>, const C, R, A1> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1) const, const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_1_const<ref<const C>, const C, R, A1> >) (wrap_c_line_arg p, f, a1);
 }
 
@@ -830,6 +857,7 @@ template<class R, class A1, class AA1, class A2, class AA2>
 static inline refcounted<callback_0_2<R, A1, A2> > *
 wrap (wrap_line_param R (*f) (A1, A2), const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_0_2<R, A1, A2> >) (wrap_line_arg f, a1, a2);
 }
 
@@ -867,6 +895,7 @@ template<class C, class R, class A1, class AA1, class A2, class AA2>
 static inline refcounted<callback_c_0_2< C *,  C, R, A1, A2> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2) , const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_2< C *,  C, R, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 
@@ -874,18 +903,21 @@ template<class C, class R, class A1, class AA1, class A2, class AA2>
 static inline refcounted<callback_c_0_2<ref< C>,  C, R, A1, A2> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2) , const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_2<ref< C>,  C, R, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2>
 static inline refcounted<callback_c_0_2<ref< C>,  C, R, A1, A2> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2) , const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_2<ref< C>,  C, R, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2>
 static inline refcounted<callback_c_0_2<ref< C>,  C, R, A1, A2> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2) , const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_2<ref< C>,  C, R, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 
@@ -893,6 +925,7 @@ template<class C, class R, class A1, class AA1, class A2, class AA2>
 static inline refcounted<callback_c_0_2_const<const C *, const C, R, A1, A2> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2) const, const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_2_const<const C *, const C, R, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 
@@ -900,18 +933,21 @@ template<class C, class R, class A1, class AA1, class A2, class AA2>
 static inline refcounted<callback_c_0_2_const<ref<const C>, const C, R, A1, A2> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2) const, const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_2_const<ref<const C>, const C, R, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2>
 static inline refcounted<callback_c_0_2_const<ref<const C>, const C, R, A1, A2> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2) const, const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_2_const<ref<const C>, const C, R, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2>
 static inline refcounted<callback_c_0_2_const<ref<const C>, const C, R, A1, A2> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2) const, const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_2_const<ref<const C>, const C, R, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 
@@ -934,6 +970,7 @@ template<class R, class A1, class AA1, class A2, class AA2, class A3, class AA3>
 static inline refcounted<callback_0_3<R, A1, A2, A3> > *
 wrap (wrap_line_param R (*f) (A1, A2, A3), const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_0_3<R, A1, A2, A3> >) (wrap_line_arg f, a1, a2, a3);
 }
 
@@ -973,6 +1010,7 @@ template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, c
 static inline refcounted<callback_c_0_3< C *,  C, R, A1, A2, A3> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, A3) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_3< C *,  C, R, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 
@@ -980,18 +1018,21 @@ template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, c
 static inline refcounted<callback_c_0_3<ref< C>,  C, R, A1, A2, A3> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, A3) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_3<ref< C>,  C, R, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3>
 static inline refcounted<callback_c_0_3<ref< C>,  C, R, A1, A2, A3> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, A3) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_3<ref< C>,  C, R, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3>
 static inline refcounted<callback_c_0_3<ref< C>,  C, R, A1, A2, A3> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, A3) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_3<ref< C>,  C, R, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 
@@ -999,6 +1040,7 @@ template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, c
 static inline refcounted<callback_c_0_3_const<const C *, const C, R, A1, A2, A3> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, A3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_3_const<const C *, const C, R, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 
@@ -1006,18 +1048,21 @@ template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, c
 static inline refcounted<callback_c_0_3_const<ref<const C>, const C, R, A1, A2, A3> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, A3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_3_const<ref<const C>, const C, R, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3>
 static inline refcounted<callback_c_0_3_const<ref<const C>, const C, R, A1, A2, A3> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, A3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_3_const<ref<const C>, const C, R, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3>
 static inline refcounted<callback_c_0_3_const<ref<const C>, const C, R, A1, A2, A3> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_3_const<ref<const C>, const C, R, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 
@@ -1041,6 +1086,7 @@ template<class R, class A1, class AA1, class A2, class AA2, class A3, class AA3,
 static inline refcounted<callback_0_4<R, A1, A2, A3, A4> > *
 wrap (wrap_line_param R (*f) (A1, A2, A3, A4), const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_0_4<R, A1, A2, A3, A4> >) (wrap_line_arg f, a1, a2, a3, a4);
 }
 
@@ -1082,6 +1128,7 @@ template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, c
 static inline refcounted<callback_c_0_4< C *,  C, R, A1, A2, A3, A4> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, A3, A4) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_4< C *,  C, R, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 
@@ -1089,18 +1136,21 @@ template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, c
 static inline refcounted<callback_c_0_4<ref< C>,  C, R, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, A3, A4) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_4<ref< C>,  C, R, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
 static inline refcounted<callback_c_0_4<ref< C>,  C, R, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, A3, A4) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_4<ref< C>,  C, R, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
 static inline refcounted<callback_c_0_4<ref< C>,  C, R, A1, A2, A3, A4> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, A3, A4) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_4<ref< C>,  C, R, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 
@@ -1108,6 +1158,7 @@ template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, c
 static inline refcounted<callback_c_0_4_const<const C *, const C, R, A1, A2, A3, A4> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, A3, A4) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_4_const<const C *, const C, R, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 
@@ -1115,18 +1166,21 @@ template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, c
 static inline refcounted<callback_c_0_4_const<ref<const C>, const C, R, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, A3, A4) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_4_const<ref<const C>, const C, R, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
 static inline refcounted<callback_c_0_4_const<ref<const C>, const C, R, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, A3, A4) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_4_const<ref<const C>, const C, R, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
 static inline refcounted<callback_c_0_4_const<ref<const C>, const C, R, A1, A2, A3, A4> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, A4) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_4_const<ref<const C>, const C, R, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 
@@ -1151,6 +1205,7 @@ template<class R, class A1, class AA1, class A2, class AA2, class A3, class AA3,
 static inline refcounted<callback_0_5<R, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param R (*f) (A1, A2, A3, A4, A5), const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_0_5<R, A1, A2, A3, A4, A5> >) (wrap_line_arg f, a1, a2, a3, a4, a5);
 }
 
@@ -1194,6 +1249,7 @@ template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, c
 static inline refcounted<callback_c_0_5< C *,  C, R, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, A3, A4, A5) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_5< C *,  C, R, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 
@@ -1201,18 +1257,21 @@ template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, c
 static inline refcounted<callback_c_0_5<ref< C>,  C, R, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, A3, A4, A5) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_5<ref< C>,  C, R, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
 static inline refcounted<callback_c_0_5<ref< C>,  C, R, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, A3, A4, A5) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_5<ref< C>,  C, R, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
 static inline refcounted<callback_c_0_5<ref< C>,  C, R, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, A3, A4, A5) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_5<ref< C>,  C, R, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 
@@ -1220,6 +1279,7 @@ template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, c
 static inline refcounted<callback_c_0_5_const<const C *, const C, R, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, A3, A4, A5) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_5_const<const C *, const C, R, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 
@@ -1227,18 +1287,21 @@ template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, c
 static inline refcounted<callback_c_0_5_const<ref<const C>, const C, R, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, A3, A4, A5) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_5_const<ref<const C>, const C, R, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
 static inline refcounted<callback_c_0_5_const<ref<const C>, const C, R, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, A3, A4, A5) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_5_const<ref<const C>, const C, R, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
 static inline refcounted<callback_c_0_5_const<ref<const C>, const C, R, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, A4, A5) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_0_5_const<ref<const C>, const C, R, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 
@@ -1276,6 +1339,7 @@ template<class R, class B1>
 static inline refcounted<callback_1_0<R, B1> > *
 wrap (wrap_line_param R (*f) (B1))
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_1_0<R, B1> >) (wrap_line_arg f);
 }
 
@@ -1309,6 +1373,7 @@ template<class C, class R, class B1>
 static inline refcounted<callback_c_1_0< C *,  C, R, B1> > *
 wrap (wrap_line_param  C *p, R (C::*f) (B1) )
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_0< C *,  C, R, B1> >) (wrap_c_line_arg p, f);
 }
 
@@ -1316,18 +1381,21 @@ template<class C, class R, class B1>
 static inline refcounted<callback_c_1_0<ref< C>,  C, R, B1> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (B1) )
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_0<ref< C>,  C, R, B1> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R, class B1>
 static inline refcounted<callback_c_1_0<ref< C>,  C, R, B1> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (B1) )
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_0<ref< C>,  C, R, B1> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R, class B1>
 static inline refcounted<callback_c_1_0<ref< C>,  C, R, B1> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (B1) )
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_0<ref< C>,  C, R, B1> >) (wrap_c_line_arg p, f);
 }
 
@@ -1335,6 +1403,7 @@ template<class C, class R, class B1>
 static inline refcounted<callback_c_1_0_const<const C *, const C, R, B1> > *
 wrap (wrap_line_param const C *p, R (C::*f) (B1) const)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_0_const<const C *, const C, R, B1> >) (wrap_c_line_arg p, f);
 }
 
@@ -1342,18 +1411,21 @@ template<class C, class R, class B1>
 static inline refcounted<callback_c_1_0_const<ref<const C>, const C, R, B1> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (B1) const)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_0_const<ref<const C>, const C, R, B1> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R, class B1>
 static inline refcounted<callback_c_1_0_const<ref<const C>, const C, R, B1> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (B1) const)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_0_const<ref<const C>, const C, R, B1> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R, class B1>
 static inline refcounted<callback_c_1_0_const<ref<const C>, const C, R, B1> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (B1) const)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_0_const<ref<const C>, const C, R, B1> >) (wrap_c_line_arg p, f);
 }
 
@@ -1374,6 +1446,7 @@ template<class R, class B1, class A1, class AA1>
 static inline refcounted<callback_1_1<R, B1, A1> > *
 wrap (wrap_line_param R (*f) (A1, B1), const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_1_1<R, B1, A1> >) (wrap_line_arg f, a1);
 }
 
@@ -1409,6 +1482,7 @@ template<class C, class R, class B1, class A1, class AA1>
 static inline refcounted<callback_c_1_1< C *,  C, R, B1, A1> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, B1) , const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_1< C *,  C, R, B1, A1> >) (wrap_c_line_arg p, f, a1);
 }
 
@@ -1416,18 +1490,21 @@ template<class C, class R, class B1, class A1, class AA1>
 static inline refcounted<callback_c_1_1<ref< C>,  C, R, B1, A1> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, B1) , const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_1<ref< C>,  C, R, B1, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class B1, class A1, class AA1>
 static inline refcounted<callback_c_1_1<ref< C>,  C, R, B1, A1> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, B1) , const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_1<ref< C>,  C, R, B1, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class B1, class A1, class AA1>
 static inline refcounted<callback_c_1_1<ref< C>,  C, R, B1, A1> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, B1) , const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_1<ref< C>,  C, R, B1, A1> >) (wrap_c_line_arg p, f, a1);
 }
 
@@ -1435,6 +1512,7 @@ template<class C, class R, class B1, class A1, class AA1>
 static inline refcounted<callback_c_1_1_const<const C *, const C, R, B1, A1> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, B1) const, const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_1_const<const C *, const C, R, B1, A1> >) (wrap_c_line_arg p, f, a1);
 }
 
@@ -1442,18 +1520,21 @@ template<class C, class R, class B1, class A1, class AA1>
 static inline refcounted<callback_c_1_1_const<ref<const C>, const C, R, B1, A1> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, B1) const, const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_1_const<ref<const C>, const C, R, B1, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class B1, class A1, class AA1>
 static inline refcounted<callback_c_1_1_const<ref<const C>, const C, R, B1, A1> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, B1) const, const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_1_const<ref<const C>, const C, R, B1, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class B1, class A1, class AA1>
 static inline refcounted<callback_c_1_1_const<ref<const C>, const C, R, B1, A1> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, B1) const, const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_1_const<ref<const C>, const C, R, B1, A1> >) (wrap_c_line_arg p, f, a1);
 }
 
@@ -1475,6 +1556,7 @@ template<class R, class B1, class A1, class AA1, class A2, class AA2>
 static inline refcounted<callback_1_2<R, B1, A1, A2> > *
 wrap (wrap_line_param R (*f) (A1, A2, B1), const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_1_2<R, B1, A1, A2> >) (wrap_line_arg f, a1, a2);
 }
 
@@ -1512,6 +1594,7 @@ template<class C, class R, class B1, class A1, class AA1, class A2, class AA2>
 static inline refcounted<callback_c_1_2< C *,  C, R, B1, A1, A2> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, B1) , const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_2< C *,  C, R, B1, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 
@@ -1519,18 +1602,21 @@ template<class C, class R, class B1, class A1, class AA1, class A2, class AA2>
 static inline refcounted<callback_c_1_2<ref< C>,  C, R, B1, A1, A2> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, B1) , const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_2<ref< C>,  C, R, B1, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2>
 static inline refcounted<callback_c_1_2<ref< C>,  C, R, B1, A1, A2> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, B1) , const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_2<ref< C>,  C, R, B1, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2>
 static inline refcounted<callback_c_1_2<ref< C>,  C, R, B1, A1, A2> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, B1) , const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_2<ref< C>,  C, R, B1, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 
@@ -1538,6 +1624,7 @@ template<class C, class R, class B1, class A1, class AA1, class A2, class AA2>
 static inline refcounted<callback_c_1_2_const<const C *, const C, R, B1, A1, A2> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, B1) const, const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_2_const<const C *, const C, R, B1, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 
@@ -1545,18 +1632,21 @@ template<class C, class R, class B1, class A1, class AA1, class A2, class AA2>
 static inline refcounted<callback_c_1_2_const<ref<const C>, const C, R, B1, A1, A2> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, B1) const, const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_2_const<ref<const C>, const C, R, B1, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2>
 static inline refcounted<callback_c_1_2_const<ref<const C>, const C, R, B1, A1, A2> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, B1) const, const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_2_const<ref<const C>, const C, R, B1, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2>
 static inline refcounted<callback_c_1_2_const<ref<const C>, const C, R, B1, A1, A2> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, B1) const, const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_2_const<ref<const C>, const C, R, B1, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 
@@ -1579,6 +1669,7 @@ template<class R, class B1, class A1, class AA1, class A2, class AA2, class A3, 
 static inline refcounted<callback_1_3<R, B1, A1, A2, A3> > *
 wrap (wrap_line_param R (*f) (A1, A2, A3, B1), const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_1_3<R, B1, A1, A2, A3> >) (wrap_line_arg f, a1, a2, a3);
 }
 
@@ -1618,6 +1709,7 @@ template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, c
 static inline refcounted<callback_c_1_3< C *,  C, R, B1, A1, A2, A3> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, A3, B1) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_3< C *,  C, R, B1, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 
@@ -1625,18 +1717,21 @@ template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, c
 static inline refcounted<callback_c_1_3<ref< C>,  C, R, B1, A1, A2, A3> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, A3, B1) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_3<ref< C>,  C, R, B1, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3>
 static inline refcounted<callback_c_1_3<ref< C>,  C, R, B1, A1, A2, A3> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, A3, B1) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_3<ref< C>,  C, R, B1, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3>
 static inline refcounted<callback_c_1_3<ref< C>,  C, R, B1, A1, A2, A3> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, A3, B1) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_3<ref< C>,  C, R, B1, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 
@@ -1644,6 +1739,7 @@ template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, c
 static inline refcounted<callback_c_1_3_const<const C *, const C, R, B1, A1, A2, A3> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, A3, B1) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_3_const<const C *, const C, R, B1, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 
@@ -1651,18 +1747,21 @@ template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, c
 static inline refcounted<callback_c_1_3_const<ref<const C>, const C, R, B1, A1, A2, A3> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, A3, B1) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_3_const<ref<const C>, const C, R, B1, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3>
 static inline refcounted<callback_c_1_3_const<ref<const C>, const C, R, B1, A1, A2, A3> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, A3, B1) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_3_const<ref<const C>, const C, R, B1, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3>
 static inline refcounted<callback_c_1_3_const<ref<const C>, const C, R, B1, A1, A2, A3> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, B1) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_3_const<ref<const C>, const C, R, B1, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 
@@ -1686,6 +1785,7 @@ template<class R, class B1, class A1, class AA1, class A2, class AA2, class A3, 
 static inline refcounted<callback_1_4<R, B1, A1, A2, A3, A4> > *
 wrap (wrap_line_param R (*f) (A1, A2, A3, A4, B1), const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_1_4<R, B1, A1, A2, A3, A4> >) (wrap_line_arg f, a1, a2, a3, a4);
 }
 
@@ -1727,6 +1827,7 @@ template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, c
 static inline refcounted<callback_c_1_4< C *,  C, R, B1, A1, A2, A3, A4> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, A3, A4, B1) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_4< C *,  C, R, B1, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 
@@ -1734,18 +1835,21 @@ template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, c
 static inline refcounted<callback_c_1_4<ref< C>,  C, R, B1, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, A3, A4, B1) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_4<ref< C>,  C, R, B1, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
 static inline refcounted<callback_c_1_4<ref< C>,  C, R, B1, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, A3, A4, B1) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_4<ref< C>,  C, R, B1, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
 static inline refcounted<callback_c_1_4<ref< C>,  C, R, B1, A1, A2, A3, A4> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, A3, A4, B1) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_4<ref< C>,  C, R, B1, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 
@@ -1753,6 +1857,7 @@ template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, c
 static inline refcounted<callback_c_1_4_const<const C *, const C, R, B1, A1, A2, A3, A4> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, A3, A4, B1) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_4_const<const C *, const C, R, B1, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 
@@ -1760,18 +1865,21 @@ template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, c
 static inline refcounted<callback_c_1_4_const<ref<const C>, const C, R, B1, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, A3, A4, B1) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_4_const<ref<const C>, const C, R, B1, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
 static inline refcounted<callback_c_1_4_const<ref<const C>, const C, R, B1, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, A3, A4, B1) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_4_const<ref<const C>, const C, R, B1, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
 static inline refcounted<callback_c_1_4_const<ref<const C>, const C, R, B1, A1, A2, A3, A4> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, A4, B1) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_4_const<ref<const C>, const C, R, B1, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 
@@ -1796,6 +1904,7 @@ template<class R, class B1, class A1, class AA1, class A2, class AA2, class A3, 
 static inline refcounted<callback_1_5<R, B1, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param R (*f) (A1, A2, A3, A4, A5, B1), const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_1_5<R, B1, A1, A2, A3, A4, A5> >) (wrap_line_arg f, a1, a2, a3, a4, a5);
 }
 
@@ -1839,6 +1948,7 @@ template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, c
 static inline refcounted<callback_c_1_5< C *,  C, R, B1, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, A3, A4, A5, B1) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_5< C *,  C, R, B1, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 
@@ -1846,18 +1956,21 @@ template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, c
 static inline refcounted<callback_c_1_5<ref< C>,  C, R, B1, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, A3, A4, A5, B1) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_5<ref< C>,  C, R, B1, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
 static inline refcounted<callback_c_1_5<ref< C>,  C, R, B1, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, A3, A4, A5, B1) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_5<ref< C>,  C, R, B1, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
 static inline refcounted<callback_c_1_5<ref< C>,  C, R, B1, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, A3, A4, A5, B1) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_5<ref< C>,  C, R, B1, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 
@@ -1865,6 +1978,7 @@ template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, c
 static inline refcounted<callback_c_1_5_const<const C *, const C, R, B1, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, A3, A4, A5, B1) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_5_const<const C *, const C, R, B1, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 
@@ -1872,18 +1986,21 @@ template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, c
 static inline refcounted<callback_c_1_5_const<ref<const C>, const C, R, B1, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, A3, A4, A5, B1) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_5_const<ref<const C>, const C, R, B1, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
 static inline refcounted<callback_c_1_5_const<ref<const C>, const C, R, B1, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, A3, A4, A5, B1) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_5_const<ref<const C>, const C, R, B1, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
 static inline refcounted<callback_c_1_5_const<ref<const C>, const C, R, B1, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, A4, A5, B1) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_1_5_const<ref<const C>, const C, R, B1, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 
@@ -1921,6 +2038,7 @@ template<class R, class B1, class B2>
 static inline refcounted<callback_2_0<R, B1, B2> > *
 wrap (wrap_line_param R (*f) (B1, B2))
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_2_0<R, B1, B2> >) (wrap_line_arg f);
 }
 
@@ -1954,6 +2072,7 @@ template<class C, class R, class B1, class B2>
 static inline refcounted<callback_c_2_0< C *,  C, R, B1, B2> > *
 wrap (wrap_line_param  C *p, R (C::*f) (B1, B2) )
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_0< C *,  C, R, B1, B2> >) (wrap_c_line_arg p, f);
 }
 
@@ -1961,18 +2080,21 @@ template<class C, class R, class B1, class B2>
 static inline refcounted<callback_c_2_0<ref< C>,  C, R, B1, B2> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (B1, B2) )
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_0<ref< C>,  C, R, B1, B2> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R, class B1, class B2>
 static inline refcounted<callback_c_2_0<ref< C>,  C, R, B1, B2> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (B1, B2) )
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_0<ref< C>,  C, R, B1, B2> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R, class B1, class B2>
 static inline refcounted<callback_c_2_0<ref< C>,  C, R, B1, B2> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (B1, B2) )
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_0<ref< C>,  C, R, B1, B2> >) (wrap_c_line_arg p, f);
 }
 
@@ -1980,6 +2102,7 @@ template<class C, class R, class B1, class B2>
 static inline refcounted<callback_c_2_0_const<const C *, const C, R, B1, B2> > *
 wrap (wrap_line_param const C *p, R (C::*f) (B1, B2) const)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_0_const<const C *, const C, R, B1, B2> >) (wrap_c_line_arg p, f);
 }
 
@@ -1987,18 +2110,21 @@ template<class C, class R, class B1, class B2>
 static inline refcounted<callback_c_2_0_const<ref<const C>, const C, R, B1, B2> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (B1, B2) const)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_0_const<ref<const C>, const C, R, B1, B2> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R, class B1, class B2>
 static inline refcounted<callback_c_2_0_const<ref<const C>, const C, R, B1, B2> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (B1, B2) const)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_0_const<ref<const C>, const C, R, B1, B2> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R, class B1, class B2>
 static inline refcounted<callback_c_2_0_const<ref<const C>, const C, R, B1, B2> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (B1, B2) const)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_0_const<ref<const C>, const C, R, B1, B2> >) (wrap_c_line_arg p, f);
 }
 
@@ -2019,6 +2145,7 @@ template<class R, class B1, class B2, class A1, class AA1>
 static inline refcounted<callback_2_1<R, B1, B2, A1> > *
 wrap (wrap_line_param R (*f) (A1, B1, B2), const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_2_1<R, B1, B2, A1> >) (wrap_line_arg f, a1);
 }
 
@@ -2054,6 +2181,7 @@ template<class C, class R, class B1, class B2, class A1, class AA1>
 static inline refcounted<callback_c_2_1< C *,  C, R, B1, B2, A1> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, B1, B2) , const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_1< C *,  C, R, B1, B2, A1> >) (wrap_c_line_arg p, f, a1);
 }
 
@@ -2061,18 +2189,21 @@ template<class C, class R, class B1, class B2, class A1, class AA1>
 static inline refcounted<callback_c_2_1<ref< C>,  C, R, B1, B2, A1> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, B1, B2) , const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_1<ref< C>,  C, R, B1, B2, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1>
 static inline refcounted<callback_c_2_1<ref< C>,  C, R, B1, B2, A1> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, B1, B2) , const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_1<ref< C>,  C, R, B1, B2, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1>
 static inline refcounted<callback_c_2_1<ref< C>,  C, R, B1, B2, A1> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, B1, B2) , const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_1<ref< C>,  C, R, B1, B2, A1> >) (wrap_c_line_arg p, f, a1);
 }
 
@@ -2080,6 +2211,7 @@ template<class C, class R, class B1, class B2, class A1, class AA1>
 static inline refcounted<callback_c_2_1_const<const C *, const C, R, B1, B2, A1> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, B1, B2) const, const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_1_const<const C *, const C, R, B1, B2, A1> >) (wrap_c_line_arg p, f, a1);
 }
 
@@ -2087,18 +2219,21 @@ template<class C, class R, class B1, class B2, class A1, class AA1>
 static inline refcounted<callback_c_2_1_const<ref<const C>, const C, R, B1, B2, A1> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, B1, B2) const, const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_1_const<ref<const C>, const C, R, B1, B2, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1>
 static inline refcounted<callback_c_2_1_const<ref<const C>, const C, R, B1, B2, A1> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, B1, B2) const, const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_1_const<ref<const C>, const C, R, B1, B2, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1>
 static inline refcounted<callback_c_2_1_const<ref<const C>, const C, R, B1, B2, A1> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, B1, B2) const, const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_1_const<ref<const C>, const C, R, B1, B2, A1> >) (wrap_c_line_arg p, f, a1);
 }
 
@@ -2120,6 +2255,7 @@ template<class R, class B1, class B2, class A1, class AA1, class A2, class AA2>
 static inline refcounted<callback_2_2<R, B1, B2, A1, A2> > *
 wrap (wrap_line_param R (*f) (A1, A2, B1, B2), const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_2_2<R, B1, B2, A1, A2> >) (wrap_line_arg f, a1, a2);
 }
 
@@ -2157,6 +2293,7 @@ template<class C, class R, class B1, class B2, class A1, class AA1, class A2, cl
 static inline refcounted<callback_c_2_2< C *,  C, R, B1, B2, A1, A2> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, B1, B2) , const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_2< C *,  C, R, B1, B2, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 
@@ -2164,18 +2301,21 @@ template<class C, class R, class B1, class B2, class A1, class AA1, class A2, cl
 static inline refcounted<callback_c_2_2<ref< C>,  C, R, B1, B2, A1, A2> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, B1, B2) , const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_2<ref< C>,  C, R, B1, B2, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2>
 static inline refcounted<callback_c_2_2<ref< C>,  C, R, B1, B2, A1, A2> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, B1, B2) , const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_2<ref< C>,  C, R, B1, B2, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2>
 static inline refcounted<callback_c_2_2<ref< C>,  C, R, B1, B2, A1, A2> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, B1, B2) , const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_2<ref< C>,  C, R, B1, B2, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 
@@ -2183,6 +2323,7 @@ template<class C, class R, class B1, class B2, class A1, class AA1, class A2, cl
 static inline refcounted<callback_c_2_2_const<const C *, const C, R, B1, B2, A1, A2> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, B1, B2) const, const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_2_const<const C *, const C, R, B1, B2, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 
@@ -2190,18 +2331,21 @@ template<class C, class R, class B1, class B2, class A1, class AA1, class A2, cl
 static inline refcounted<callback_c_2_2_const<ref<const C>, const C, R, B1, B2, A1, A2> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, B1, B2) const, const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_2_const<ref<const C>, const C, R, B1, B2, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2>
 static inline refcounted<callback_c_2_2_const<ref<const C>, const C, R, B1, B2, A1, A2> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, B1, B2) const, const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_2_const<ref<const C>, const C, R, B1, B2, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2>
 static inline refcounted<callback_c_2_2_const<ref<const C>, const C, R, B1, B2, A1, A2> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, B1, B2) const, const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_2_const<ref<const C>, const C, R, B1, B2, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 
@@ -2224,6 +2368,7 @@ template<class R, class B1, class B2, class A1, class AA1, class A2, class AA2, 
 static inline refcounted<callback_2_3<R, B1, B2, A1, A2, A3> > *
 wrap (wrap_line_param R (*f) (A1, A2, A3, B1, B2), const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_2_3<R, B1, B2, A1, A2, A3> >) (wrap_line_arg f, a1, a2, a3);
 }
 
@@ -2263,6 +2408,7 @@ template<class C, class R, class B1, class B2, class A1, class AA1, class A2, cl
 static inline refcounted<callback_c_2_3< C *,  C, R, B1, B2, A1, A2, A3> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, A3, B1, B2) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_3< C *,  C, R, B1, B2, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 
@@ -2270,18 +2416,21 @@ template<class C, class R, class B1, class B2, class A1, class AA1, class A2, cl
 static inline refcounted<callback_c_2_3<ref< C>,  C, R, B1, B2, A1, A2, A3> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, A3, B1, B2) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_3<ref< C>,  C, R, B1, B2, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3>
 static inline refcounted<callback_c_2_3<ref< C>,  C, R, B1, B2, A1, A2, A3> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, A3, B1, B2) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_3<ref< C>,  C, R, B1, B2, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3>
 static inline refcounted<callback_c_2_3<ref< C>,  C, R, B1, B2, A1, A2, A3> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, A3, B1, B2) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_3<ref< C>,  C, R, B1, B2, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 
@@ -2289,6 +2438,7 @@ template<class C, class R, class B1, class B2, class A1, class AA1, class A2, cl
 static inline refcounted<callback_c_2_3_const<const C *, const C, R, B1, B2, A1, A2, A3> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, A3, B1, B2) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_3_const<const C *, const C, R, B1, B2, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 
@@ -2296,18 +2446,21 @@ template<class C, class R, class B1, class B2, class A1, class AA1, class A2, cl
 static inline refcounted<callback_c_2_3_const<ref<const C>, const C, R, B1, B2, A1, A2, A3> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, A3, B1, B2) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_3_const<ref<const C>, const C, R, B1, B2, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3>
 static inline refcounted<callback_c_2_3_const<ref<const C>, const C, R, B1, B2, A1, A2, A3> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, A3, B1, B2) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_3_const<ref<const C>, const C, R, B1, B2, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3>
 static inline refcounted<callback_c_2_3_const<ref<const C>, const C, R, B1, B2, A1, A2, A3> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, B1, B2) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_3_const<ref<const C>, const C, R, B1, B2, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 
@@ -2331,6 +2484,7 @@ template<class R, class B1, class B2, class A1, class AA1, class A2, class AA2, 
 static inline refcounted<callback_2_4<R, B1, B2, A1, A2, A3, A4> > *
 wrap (wrap_line_param R (*f) (A1, A2, A3, A4, B1, B2), const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_2_4<R, B1, B2, A1, A2, A3, A4> >) (wrap_line_arg f, a1, a2, a3, a4);
 }
 
@@ -2372,6 +2526,7 @@ template<class C, class R, class B1, class B2, class A1, class AA1, class A2, cl
 static inline refcounted<callback_c_2_4< C *,  C, R, B1, B2, A1, A2, A3, A4> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, A3, A4, B1, B2) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_4< C *,  C, R, B1, B2, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 
@@ -2379,18 +2534,21 @@ template<class C, class R, class B1, class B2, class A1, class AA1, class A2, cl
 static inline refcounted<callback_c_2_4<ref< C>,  C, R, B1, B2, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, A3, A4, B1, B2) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_4<ref< C>,  C, R, B1, B2, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
 static inline refcounted<callback_c_2_4<ref< C>,  C, R, B1, B2, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, A3, A4, B1, B2) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_4<ref< C>,  C, R, B1, B2, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
 static inline refcounted<callback_c_2_4<ref< C>,  C, R, B1, B2, A1, A2, A3, A4> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, A3, A4, B1, B2) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_4<ref< C>,  C, R, B1, B2, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 
@@ -2398,6 +2556,7 @@ template<class C, class R, class B1, class B2, class A1, class AA1, class A2, cl
 static inline refcounted<callback_c_2_4_const<const C *, const C, R, B1, B2, A1, A2, A3, A4> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, A3, A4, B1, B2) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_4_const<const C *, const C, R, B1, B2, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 
@@ -2405,18 +2564,21 @@ template<class C, class R, class B1, class B2, class A1, class AA1, class A2, cl
 static inline refcounted<callback_c_2_4_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, A3, A4, B1, B2) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_4_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
 static inline refcounted<callback_c_2_4_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, A3, A4, B1, B2) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_4_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
 static inline refcounted<callback_c_2_4_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, A4, B1, B2) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_4_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 
@@ -2441,6 +2603,7 @@ template<class R, class B1, class B2, class A1, class AA1, class A2, class AA2, 
 static inline refcounted<callback_2_5<R, B1, B2, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param R (*f) (A1, A2, A3, A4, A5, B1, B2), const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_2_5<R, B1, B2, A1, A2, A3, A4, A5> >) (wrap_line_arg f, a1, a2, a3, a4, a5);
 }
 
@@ -2484,6 +2647,7 @@ template<class C, class R, class B1, class B2, class A1, class AA1, class A2, cl
 static inline refcounted<callback_c_2_5< C *,  C, R, B1, B2, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_5< C *,  C, R, B1, B2, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 
@@ -2491,18 +2655,21 @@ template<class C, class R, class B1, class B2, class A1, class AA1, class A2, cl
 static inline refcounted<callback_c_2_5<ref< C>,  C, R, B1, B2, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_5<ref< C>,  C, R, B1, B2, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
 static inline refcounted<callback_c_2_5<ref< C>,  C, R, B1, B2, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_5<ref< C>,  C, R, B1, B2, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
 static inline refcounted<callback_c_2_5<ref< C>,  C, R, B1, B2, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_5<ref< C>,  C, R, B1, B2, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 
@@ -2510,6 +2677,7 @@ template<class C, class R, class B1, class B2, class A1, class AA1, class A2, cl
 static inline refcounted<callback_c_2_5_const<const C *, const C, R, B1, B2, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_5_const<const C *, const C, R, B1, B2, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 
@@ -2517,18 +2685,21 @@ template<class C, class R, class B1, class B2, class A1, class AA1, class A2, cl
 static inline refcounted<callback_c_2_5_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_5_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
 static inline refcounted<callback_c_2_5_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_5_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
 static inline refcounted<callback_c_2_5_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_2_5_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 
@@ -2566,6 +2737,7 @@ template<class R, class B1, class B2, class B3>
 static inline refcounted<callback_3_0<R, B1, B2, B3> > *
 wrap (wrap_line_param R (*f) (B1, B2, B3))
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_3_0<R, B1, B2, B3> >) (wrap_line_arg f);
 }
 
@@ -2599,6 +2771,7 @@ template<class C, class R, class B1, class B2, class B3>
 static inline refcounted<callback_c_3_0< C *,  C, R, B1, B2, B3> > *
 wrap (wrap_line_param  C *p, R (C::*f) (B1, B2, B3) )
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_0< C *,  C, R, B1, B2, B3> >) (wrap_c_line_arg p, f);
 }
 
@@ -2606,18 +2779,21 @@ template<class C, class R, class B1, class B2, class B3>
 static inline refcounted<callback_c_3_0<ref< C>,  C, R, B1, B2, B3> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (B1, B2, B3) )
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_0<ref< C>,  C, R, B1, B2, B3> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R, class B1, class B2, class B3>
 static inline refcounted<callback_c_3_0<ref< C>,  C, R, B1, B2, B3> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (B1, B2, B3) )
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_0<ref< C>,  C, R, B1, B2, B3> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R, class B1, class B2, class B3>
 static inline refcounted<callback_c_3_0<ref< C>,  C, R, B1, B2, B3> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (B1, B2, B3) )
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_0<ref< C>,  C, R, B1, B2, B3> >) (wrap_c_line_arg p, f);
 }
 
@@ -2625,6 +2801,7 @@ template<class C, class R, class B1, class B2, class B3>
 static inline refcounted<callback_c_3_0_const<const C *, const C, R, B1, B2, B3> > *
 wrap (wrap_line_param const C *p, R (C::*f) (B1, B2, B3) const)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_0_const<const C *, const C, R, B1, B2, B3> >) (wrap_c_line_arg p, f);
 }
 
@@ -2632,18 +2809,21 @@ template<class C, class R, class B1, class B2, class B3>
 static inline refcounted<callback_c_3_0_const<ref<const C>, const C, R, B1, B2, B3> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (B1, B2, B3) const)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_0_const<ref<const C>, const C, R, B1, B2, B3> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R, class B1, class B2, class B3>
 static inline refcounted<callback_c_3_0_const<ref<const C>, const C, R, B1, B2, B3> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (B1, B2, B3) const)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_0_const<ref<const C>, const C, R, B1, B2, B3> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R, class B1, class B2, class B3>
 static inline refcounted<callback_c_3_0_const<ref<const C>, const C, R, B1, B2, B3> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (B1, B2, B3) const)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_0_const<ref<const C>, const C, R, B1, B2, B3> >) (wrap_c_line_arg p, f);
 }
 
@@ -2664,6 +2844,7 @@ template<class R, class B1, class B2, class B3, class A1, class AA1>
 static inline refcounted<callback_3_1<R, B1, B2, B3, A1> > *
 wrap (wrap_line_param R (*f) (A1, B1, B2, B3), const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_3_1<R, B1, B2, B3, A1> >) (wrap_line_arg f, a1);
 }
 
@@ -2699,6 +2880,7 @@ template<class C, class R, class B1, class B2, class B3, class A1, class AA1>
 static inline refcounted<callback_c_3_1< C *,  C, R, B1, B2, B3, A1> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, B1, B2, B3) , const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_1< C *,  C, R, B1, B2, B3, A1> >) (wrap_c_line_arg p, f, a1);
 }
 
@@ -2706,18 +2888,21 @@ template<class C, class R, class B1, class B2, class B3, class A1, class AA1>
 static inline refcounted<callback_c_3_1<ref< C>,  C, R, B1, B2, B3, A1> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, B1, B2, B3) , const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_1<ref< C>,  C, R, B1, B2, B3, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1>
 static inline refcounted<callback_c_3_1<ref< C>,  C, R, B1, B2, B3, A1> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, B1, B2, B3) , const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_1<ref< C>,  C, R, B1, B2, B3, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1>
 static inline refcounted<callback_c_3_1<ref< C>,  C, R, B1, B2, B3, A1> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, B1, B2, B3) , const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_1<ref< C>,  C, R, B1, B2, B3, A1> >) (wrap_c_line_arg p, f, a1);
 }
 
@@ -2725,6 +2910,7 @@ template<class C, class R, class B1, class B2, class B3, class A1, class AA1>
 static inline refcounted<callback_c_3_1_const<const C *, const C, R, B1, B2, B3, A1> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, B1, B2, B3) const, const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_1_const<const C *, const C, R, B1, B2, B3, A1> >) (wrap_c_line_arg p, f, a1);
 }
 
@@ -2732,18 +2918,21 @@ template<class C, class R, class B1, class B2, class B3, class A1, class AA1>
 static inline refcounted<callback_c_3_1_const<ref<const C>, const C, R, B1, B2, B3, A1> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, B1, B2, B3) const, const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_1_const<ref<const C>, const C, R, B1, B2, B3, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1>
 static inline refcounted<callback_c_3_1_const<ref<const C>, const C, R, B1, B2, B3, A1> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, B1, B2, B3) const, const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_1_const<ref<const C>, const C, R, B1, B2, B3, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1>
 static inline refcounted<callback_c_3_1_const<ref<const C>, const C, R, B1, B2, B3, A1> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, B1, B2, B3) const, const AA1 &a1)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_1_const<ref<const C>, const C, R, B1, B2, B3, A1> >) (wrap_c_line_arg p, f, a1);
 }
 
@@ -2765,6 +2954,7 @@ template<class R, class B1, class B2, class B3, class A1, class AA1, class A2, c
 static inline refcounted<callback_3_2<R, B1, B2, B3, A1, A2> > *
 wrap (wrap_line_param R (*f) (A1, A2, B1, B2, B3), const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_3_2<R, B1, B2, B3, A1, A2> >) (wrap_line_arg f, a1, a2);
 }
 
@@ -2802,6 +2992,7 @@ template<class C, class R, class B1, class B2, class B3, class A1, class AA1, cl
 static inline refcounted<callback_c_3_2< C *,  C, R, B1, B2, B3, A1, A2> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, B1, B2, B3) , const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_2< C *,  C, R, B1, B2, B3, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 
@@ -2809,18 +3000,21 @@ template<class C, class R, class B1, class B2, class B3, class A1, class AA1, cl
 static inline refcounted<callback_c_3_2<ref< C>,  C, R, B1, B2, B3, A1, A2> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, B1, B2, B3) , const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_2<ref< C>,  C, R, B1, B2, B3, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2>
 static inline refcounted<callback_c_3_2<ref< C>,  C, R, B1, B2, B3, A1, A2> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, B1, B2, B3) , const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_2<ref< C>,  C, R, B1, B2, B3, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2>
 static inline refcounted<callback_c_3_2<ref< C>,  C, R, B1, B2, B3, A1, A2> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, B1, B2, B3) , const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_2<ref< C>,  C, R, B1, B2, B3, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 
@@ -2828,6 +3022,7 @@ template<class C, class R, class B1, class B2, class B3, class A1, class AA1, cl
 static inline refcounted<callback_c_3_2_const<const C *, const C, R, B1, B2, B3, A1, A2> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, B1, B2, B3) const, const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_2_const<const C *, const C, R, B1, B2, B3, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 
@@ -2835,18 +3030,21 @@ template<class C, class R, class B1, class B2, class B3, class A1, class AA1, cl
 static inline refcounted<callback_c_3_2_const<ref<const C>, const C, R, B1, B2, B3, A1, A2> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, B1, B2, B3) const, const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_2_const<ref<const C>, const C, R, B1, B2, B3, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2>
 static inline refcounted<callback_c_3_2_const<ref<const C>, const C, R, B1, B2, B3, A1, A2> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, B1, B2, B3) const, const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_2_const<ref<const C>, const C, R, B1, B2, B3, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2>
 static inline refcounted<callback_c_3_2_const<ref<const C>, const C, R, B1, B2, B3, A1, A2> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, B1, B2, B3) const, const AA1 &a1, const AA2 &a2)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_2_const<ref<const C>, const C, R, B1, B2, B3, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 
@@ -2869,6 +3067,7 @@ template<class R, class B1, class B2, class B3, class A1, class AA1, class A2, c
 static inline refcounted<callback_3_3<R, B1, B2, B3, A1, A2, A3> > *
 wrap (wrap_line_param R (*f) (A1, A2, A3, B1, B2, B3), const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_3_3<R, B1, B2, B3, A1, A2, A3> >) (wrap_line_arg f, a1, a2, a3);
 }
 
@@ -2908,6 +3107,7 @@ template<class C, class R, class B1, class B2, class B3, class A1, class AA1, cl
 static inline refcounted<callback_c_3_3< C *,  C, R, B1, B2, B3, A1, A2, A3> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, A3, B1, B2, B3) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_3< C *,  C, R, B1, B2, B3, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 
@@ -2915,18 +3115,21 @@ template<class C, class R, class B1, class B2, class B3, class A1, class AA1, cl
 static inline refcounted<callback_c_3_3<ref< C>,  C, R, B1, B2, B3, A1, A2, A3> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, A3, B1, B2, B3) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_3<ref< C>,  C, R, B1, B2, B3, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3>
 static inline refcounted<callback_c_3_3<ref< C>,  C, R, B1, B2, B3, A1, A2, A3> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, A3, B1, B2, B3) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_3<ref< C>,  C, R, B1, B2, B3, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3>
 static inline refcounted<callback_c_3_3<ref< C>,  C, R, B1, B2, B3, A1, A2, A3> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, A3, B1, B2, B3) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_3<ref< C>,  C, R, B1, B2, B3, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 
@@ -2934,6 +3137,7 @@ template<class C, class R, class B1, class B2, class B3, class A1, class AA1, cl
 static inline refcounted<callback_c_3_3_const<const C *, const C, R, B1, B2, B3, A1, A2, A3> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, A3, B1, B2, B3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_3_const<const C *, const C, R, B1, B2, B3, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 
@@ -2941,18 +3145,21 @@ template<class C, class R, class B1, class B2, class B3, class A1, class AA1, cl
 static inline refcounted<callback_c_3_3_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, A3, B1, B2, B3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_3_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3>
 static inline refcounted<callback_c_3_3_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, A3, B1, B2, B3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_3_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3>
 static inline refcounted<callback_c_3_3_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, B1, B2, B3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_3_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 
@@ -2976,6 +3183,7 @@ template<class R, class B1, class B2, class B3, class A1, class AA1, class A2, c
 static inline refcounted<callback_3_4<R, B1, B2, B3, A1, A2, A3, A4> > *
 wrap (wrap_line_param R (*f) (A1, A2, A3, A4, B1, B2, B3), const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_3_4<R, B1, B2, B3, A1, A2, A3, A4> >) (wrap_line_arg f, a1, a2, a3, a4);
 }
 
@@ -3017,6 +3225,7 @@ template<class C, class R, class B1, class B2, class B3, class A1, class AA1, cl
 static inline refcounted<callback_c_3_4< C *,  C, R, B1, B2, B3, A1, A2, A3, A4> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, A3, A4, B1, B2, B3) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_4< C *,  C, R, B1, B2, B3, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 
@@ -3024,18 +3233,21 @@ template<class C, class R, class B1, class B2, class B3, class A1, class AA1, cl
 static inline refcounted<callback_c_3_4<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, A3, A4, B1, B2, B3) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_4<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
 static inline refcounted<callback_c_3_4<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, A3, A4, B1, B2, B3) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_4<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
 static inline refcounted<callback_c_3_4<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, A3, A4, B1, B2, B3) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_4<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 
@@ -3043,6 +3255,7 @@ template<class C, class R, class B1, class B2, class B3, class A1, class AA1, cl
 static inline refcounted<callback_c_3_4_const<const C *, const C, R, B1, B2, B3, A1, A2, A3, A4> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, A3, A4, B1, B2, B3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_4_const<const C *, const C, R, B1, B2, B3, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 
@@ -3050,18 +3263,21 @@ template<class C, class R, class B1, class B2, class B3, class A1, class AA1, cl
 static inline refcounted<callback_c_3_4_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, A3, A4, B1, B2, B3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_4_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
 static inline refcounted<callback_c_3_4_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, A3, A4, B1, B2, B3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_4_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
 static inline refcounted<callback_c_3_4_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, A4, B1, B2, B3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_4_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 
@@ -3086,6 +3302,7 @@ template<class R, class B1, class B2, class B3, class A1, class AA1, class A2, c
 static inline refcounted<callback_3_5<R, B1, B2, B3, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param R (*f) (A1, A2, A3, A4, A5, B1, B2, B3), const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_3_5<R, B1, B2, B3, A1, A2, A3, A4, A5> >) (wrap_line_arg f, a1, a2, a3, a4, a5);
 }
 
@@ -3129,6 +3346,7 @@ template<class C, class R, class B1, class B2, class B3, class A1, class AA1, cl
 static inline refcounted<callback_c_3_5< C *,  C, R, B1, B2, B3, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2, B3) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_5< C *,  C, R, B1, B2, B3, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 
@@ -3136,18 +3354,21 @@ template<class C, class R, class B1, class B2, class B3, class A1, class AA1, cl
 static inline refcounted<callback_c_3_5<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2, B3) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_5<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
 static inline refcounted<callback_c_3_5<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2, B3) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_5<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
 static inline refcounted<callback_c_3_5<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2, B3) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_5<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 
@@ -3155,6 +3376,7 @@ template<class C, class R, class B1, class B2, class B3, class A1, class AA1, cl
 static inline refcounted<callback_c_3_5_const<const C *, const C, R, B1, B2, B3, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2, B3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_5_const<const C *, const C, R, B1, B2, B3, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 
@@ -3162,18 +3384,21 @@ template<class C, class R, class B1, class B2, class B3, class A1, class AA1, cl
 static inline refcounted<callback_c_3_5_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2, B3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_5_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
 static inline refcounted<callback_c_3_5_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2, B3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_5_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
 static inline refcounted<callback_c_3_5_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2, B3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
+    n_wrap_calls ++;
   return wNew (refcounted<callback_c_3_5_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 

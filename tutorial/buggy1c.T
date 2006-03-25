@@ -23,11 +23,23 @@ public:
 private:
   cbv::ptr _cb;
 };
- 
+
 static void finish (bool rc)
 {
   delaycb (2, 0, wrap (exit, rc ? 0 : -1));
 }
+
+/*
+ * XXX ignore for now
+ *
+static void callme (coordvar_void_t cv) { (*cv) (); }
+TAMED static void
+buggy1d ()
+{
+  VARS { coordgroup_t<> G (__FILE__, __LINE__); }
+  callme (@[G]());
+}
+*/
 
 TAMED static void 
 buggy1c (coordvar_bool_t coordvar)

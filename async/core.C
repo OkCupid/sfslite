@@ -26,6 +26,7 @@
 #include "ihash.h"
 #include "itree.h"
 #include "list.h"
+#include "corebench.h"
 
 #include <typeinfo>
 
@@ -145,7 +146,9 @@ chldcb_check ()
 	warn ("CALLBACK_TRACE: %schild pid %d (status %d) %s <- %s\n",
 	      timestring (), pid, status, c->cb->dest, c->cb->line);
 #endif /* WRAP_DEBUG */
+      STOP_ACHECK_TIMER ();
       (*c->cb) (status);
+      START_ACHECK_TIMER ();
       delete c;
     }
   }
@@ -205,7 +208,9 @@ timecb_check ()
       warn ("CALLBACK_TRACE: %stimecb %s <- %s\n", timestring (),
 	    tp->cb->dest, tp->cb->line);
 #endif /* WRAP_DEBUG */
+    STOP_ACHECK_TIMER ();
     (*tp->cb) ();
+    START_ACHECK_TIMER ();
     delete tp;
   }
   selwait.tv_usec = 0;
@@ -266,7 +271,9 @@ fdcb_check (void)
 		  timestring (), fd, "rwe"[i],
 		  fdcbs[i][fd]->dest, fdcbs[i][fd]->line);
 #endif /* WRAP_DEBUG */
+	  STOP_ACHECK_TIMER ();
 	  (*fdcbs[i][fd]) ();
+	  START_ACHECK_TIMER ();
 	}
       }
 }
@@ -327,7 +334,9 @@ sigcb_check ()
 # endif /* !NEED_SYS_SIGNAME_DECL */
 	  }
 #endif /* WRAP_DEBUG */
+	  STOP_ACHECK_TIMER ();
 	  (*cb) ();
+	  START_ACHECK_TIMER ();
 	}
       }
   }
@@ -372,7 +381,9 @@ lazycb_check ()
       warn ("CALLBACK_TRACE: %slazy %s <- %s\n", timestring (),
 	    lazy->cb->dest, lazy->cb->line);
 #endif /* WRAP_DEBUG */
+    STOP_ACHECK_TIMER ();
     (*lazy->cb) ();
+    START_ACHECK_TIMER ();
     if (lazycb_removed)
       goto restart;
   }
@@ -403,9 +414,13 @@ ainit ()
   }
 }
 
+unsigned long long time_in_acheck, tia_tmp, n_wrap_calls;
+bool do_corebench = false;
+
 static inline void
 _acheck ()
 {
+  START_ACHECK_TIMER();
   if (amain_panic)
     panic ("child process returned from afork ()\n");
   lazycb_check ();
@@ -427,6 +442,7 @@ _acheck ()
 #endif
 
   timecb_check ();
+  STOP_ACHECK_TIMER ();
 }
 
 void
@@ -444,11 +460,13 @@ amain ()
   if (amain_called)
     panic ("amain called recursively\n");
   amain_called = true;
+  START_ACHECK_TIMER ();
 
   ainit ();
   err_init ();
 
   timecb_check ();
+  STOP_ACHECK_TIMER ();
   for (;;)
     _acheck ();
 }

@@ -1256,9 +1256,8 @@ tame_ret_t::output (outputter_t *o)
   my_strbuf_t b;
   str loc = state.loc (_line_number);
 
-  if (_fn->do_cceoc ()) {
-    b << "  END_OF_SCOPE (\"" << loc << "\");\n";
-  }
+  // always do end of scope checks
+  b << "  END_OF_SCOPE (\"" << loc << "\");\n";
   o->output_str (b);
   b.tosuio ()->clear ();
 
@@ -1313,10 +1312,7 @@ tame_fn_return_t::output (outputter_t *o)
   my_strbuf_t b;
   output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL);
   str loc = state.loc (_line_number);
-  if (_fn->do_cceoc ()) {
-    str loc = state.loc (_line_number);
-    b << "  END_OF_SCOPE(\"" << loc << "\");\n";
-  }
+  b << "  END_OF_SCOPE(\"" << loc << "\");\n";
   b << "  ";
   b.mycat (_fn->return_expr ());
   b << ";\n";

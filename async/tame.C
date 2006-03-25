@@ -82,12 +82,15 @@ closure_t::end_of_scope_checks (str loc)
 
   set_weak_finalize_cb (wrap (check_closure_destroyed, loc, 
 			      destroyed_flag ()));
-
+  
   // potentially decref us if we have join groups that should
   // be going out of scope now.
   kill_join_groups ();
-
+  
   // decref us for ourselves, since WE should be going out of scope
+  // Still need to run this check even for a function that only
+  // uses BLOCK { .. }, since it may leak a reference by assigning one
+  // of our CVs to a global variable
   weak_decref ();
 }
 
