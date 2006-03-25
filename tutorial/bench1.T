@@ -130,6 +130,10 @@ bench1_nulltame ()
 static void
 bench1_nullsfs ()
 {
+  /*
+  ptr<bench1_nulltame__closure_t> p = 
+  New refcounted<bench1_nulltame__closure_t> ();
+  */
   int i;
   i++;
 }
@@ -280,6 +284,7 @@ int main (int argc, char *argv[])
   }
   switch (mode) {
   case BENCHMARK_SYSCALL:
+    warn << "benchmarking syscall time...\n";
     ntimes = 1;
     benchmark_syscall ();
     exit (0);
