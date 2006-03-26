@@ -127,16 +127,33 @@ bench1_nulltame ()
   i++;
 }
 
+struct my_xx_t : public virtual refcount, public weak_refcounted_t<my_xx_t> {
+  my_xx_t () : weak_refcounted_t<my_xx_t> (this) {} 
+  virtual void foo () = 0;
+  char xy[10];
+};
+
+struct my_struct_t : public my_xx_t {
+  my_struct_t () : A (), B() {}
+  char ab[20];
+  virtual void foo () {}
+  struct a { a () {} char bytes[20]; };
+  struct b { b () {} char bytes[34]; };
+  a A;
+  b B;
+};
+
 static void
 bench1_nullsfs ()
 {
-  /*
-  ptr<bench1_nulltame__closure_t> p = 
-  New refcounted<bench1_nulltame__closure_t> ();
-  */
+  ptr<bench1_nulltame__closure_t> p = New refcounted<bench1_nulltame__closure_t> (); 
+  //my_struct_t *s = New my_struct_t ();
+  //ptr<my_struct_t> s = New refcounted<my_struct_t> ();
   int i;
   i++;
+  //delete s;
 }
+
 
 
 static void bench1_null (int niter)
@@ -282,6 +299,7 @@ int main (int argc, char *argv[])
       usage ();
     }
   }
+  warn << "sz=" << sizeof (bench1_nulltame__closure_t) << "\n";
   switch (mode) {
   case BENCHMARK_SYSCALL:
     warn << "benchmarking syscall time...\n";
