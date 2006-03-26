@@ -146,7 +146,7 @@ struct my_struct_t : public my_xx_t {
 static void
 bench1_nullsfs ()
 {
-  ptr<bench1_nulltame__closure_t> p = New refcounted<bench1_nulltame__closure_t> (); 
+  //ptr<bench1_nulltame__closure_t> p = New refcounted<bench1_nulltame__closure_t> (); 
   //my_struct_t *s = New my_struct_t ();
   //ptr<my_struct_t> s = New refcounted<my_struct_t> ();
   int i;

@@ -86,7 +86,6 @@ closure_t::end_of_scope_checks (const char *loc)
   // leak-checking, since checking for leaks does demand registering
   // an extra callback.
   if (tame_check_leaks ()) {
-	warn << "XXXX\n";
     set_weak_finalize_cb (wrap (check_closure_destroyed, loc, 
 				destroyed_flag ()));
   
