@@ -169,10 +169,14 @@ closure_t::collect_join_groups ()
 
 size_t ref_flag_recycle_limit = 128;
 vec<ptr<ref_flag_t> > ref_flag_dump;
+size_t ref_flag_cursor = 0;
 
 void ref_flag_recycle (ref_flag_t *p)
 {
-  if (ref_flag_dump.size () < ref_flag_recycle_limit) {
+  if (ref_flag_cursor < ref_flag_dump.size ()) {
+    p->set_can_recycle (false);
+    ref_flag_dump[ref_flag_cursor++] = mkref (p);
+  } else if (ref_flag_dump.size () < ref_flag_recycle_limit) {
     p->set_can_recycle (false); // don't double recycle!
     ref_flag_dump.push_back (mkref (p));
   }
@@ -182,8 +186,13 @@ ptr<ref_flag_t>
 ref_flag_alloc (const bool &b)
 {
   ptr<ref_flag_t> ret;
-  if (ref_flag_dump.size ()) {
+  if (ref_flag_cursor > 0) {
+    ret = ref_flag_dump[ref_flag_cursor];
+    ref_flag_dump[ref_flag_cursor--] = NULL;
+  } else if (ref_flag_dump.size ()) {
     ret = ref_flag_dump.pop_back ();
+  }
+  if (ret) {
     ret->set_can_recycle (true);
     ret->set (b);
   } else {
