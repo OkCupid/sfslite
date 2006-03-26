@@ -46,7 +46,7 @@ tame_init::stop ()
 }
 
 void 
-tame_error (const str &loc, const str &msg)
+tame_error (const char *loc, const char *msg)
 {
   if (!(tame_options & TAME_ERROR_SILENT)) {
     if (loc) {
@@ -59,16 +59,17 @@ tame_error (const str &loc, const str &msg)
 }
 
 void
-closure_t::enforce_cceoc (const str &l)
+closure_t::enforce_cceoc (const char *l)
 {
   if (_has_cceoc && _cceoc_count != 1) {
     strbuf e ("CEOCC called %d times; expected exactly 1 call!", _cceoc_count);
-    tame_error (l, e);
+    str m (e);
+    tame_error (l, m.cstr ());
   }
 }
 
 static void
-check_closure_destroyed (str loc, ptr<ref_flag_t> flag)
+check_closure_destroyed (const char *loc, ptr<ref_flag_t> flag)
 {
   if (!*flag) 
     tame_error (loc, "reference to closure leaked");
@@ -76,7 +77,7 @@ check_closure_destroyed (str loc, ptr<ref_flag_t> flag)
 
 
 void
-closure_t::end_of_scope_checks (str loc)
+closure_t::end_of_scope_checks (const char *loc)
 {
   if (_has_cceoc)
     enforce_cceoc (loc);
