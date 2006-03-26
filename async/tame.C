@@ -68,7 +68,7 @@ closure_t::enforce_cceoc (const str &l)
 }
 
 static void
-check_closure_destroyed (str loc, ptr<bool> flag)
+check_closure_destroyed (str loc, ptr<ref_flag_t> flag)
 {
   if (!*flag) 
     tame_error (loc, "reference to closure leaked");
@@ -160,6 +160,38 @@ closure_t::collect_join_groups ()
   tame_collect_jg_flag = false;
   tame_collect_jg_vec.clear ();
 }
+
+//
+//-----------------------------------------------------------------------
+
+//-----------------------------------------------------------------------
+// recycle ref flags
+
+size_t ref_flag_recycle_limit = 128;
+vec<ptr<ref_flag_t> > ref_flag_dump;
+
+void ref_flag_recycle (ref_flag_t *p)
+{
+  if (ref_flag_dump.size () < ref_flag_recycle_limit) {
+    p->set_can_recycle (false); // don't double recycle!
+    ref_flag_dump.push_back (mkref (p));
+  }
+}
+
+ptr<ref_flag_t>
+ref_flag_alloc (const bool &b)
+{
+  ptr<ref_flag_t> ret;
+  if (ref_flag_dump.size ()) {
+    ret = ref_flag_dump.pop_back ();
+    ret->set_can_recycle (true);
+    ret->set (b);
+  } else {
+    ret = New refcounted<ref_flag_t> (b);
+  }
+  return ret;
+}
+
 
 //
 //-----------------------------------------------------------------------

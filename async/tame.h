@@ -63,6 +63,31 @@ private:
 };
 
 /**
+ * ref_flag_t
+ *
+ * Kind of like ptr<bool>'s, but are recycled for performance.
+ */
+class ref_flag_t;
+void ref_flag_recycle (ref_flag_t *p);
+ptr<ref_flag_t> ref_flag_alloc (const bool &b);
+extern size_t ref_flag_recycle_limit;
+
+class ref_flag_t : virtual public refcount {
+public:
+  ref_flag_t (const bool &b) : _flag (b), _can_recycle (true) {}
+  ~ref_flag_t () { warn << "XXX\n"; }
+  void finalize () { if (_can_recycle) ref_flag_recycle (this); }
+  operator const bool &() const { return _flag; }
+  bool get () const { return _flag; }
+  void set (bool b) { _flag = b; }
+  void set_can_recycle (bool b) { _can_recycle = b; }
+private:
+  bool _flag;
+  bool _can_recycle;
+};
+
+
+/**
  * Weak Reference Counting
  *
  *   Here follows some rudimentary support for 'weak reference counting' 
@@ -95,7 +120,7 @@ template<class T> class weak_ref_t;
 class mortal_t;
 class mortal_ref_t {
 public:
-  mortal_ref_t (mortal_t *m, ptr<bool> d1, ptr<bool> d2)
+  mortal_ref_t (mortal_t *m, ptr<ref_flag_t> d1, ptr<ref_flag_t> d2)
     : _mortal (m),
       _destroyed_flag (d1),
       _dead_flag (d2) {}
@@ -103,7 +128,7 @@ public:
   void mark_dead ();
 private:
   mortal_t *_mortal;
-  ptr<bool> _destroyed_flag, _dead_flag;
+  ptr<ref_flag_t> _destroyed_flag, _dead_flag;
 };
 
 /**
@@ -112,20 +137,20 @@ private:
 class mortal_t {
 public:
   mortal_t () : 
-    _destroyed_flag (New refcounted<bool> (false)),
-    _dead_flag (New refcounted<bool> (false))
+    _destroyed_flag (ref_flag_alloc (false)),
+    _dead_flag (ref_flag_alloc (false))
   {}
 
-  virtual ~mortal_t () { *_destroyed_flag = true; }
+  virtual ~mortal_t () { _destroyed_flag->set (true); }
   virtual void mark_dead () {}
-  ptr<bool> destroyed_flag () { return _destroyed_flag; }
-  ptr<bool> dead_flag () { return _dead_flag; }
+  ptr<ref_flag_t> destroyed_flag () { return _destroyed_flag; }
+  ptr<ref_flag_t> dead_flag () { return _dead_flag; }
 
   mortal_ref_t make_mortal_ref () 
   { return mortal_ref_t (this, _destroyed_flag, _dead_flag); }
 
 protected:
-  ptr<bool> _destroyed_flag, _dead_flag;
+  ptr<ref_flag_t> _destroyed_flag, _dead_flag;
 };
 
 
@@ -205,7 +230,7 @@ public:
 
 private:
   T                            *_pointer;
-  ptr<bool>                    _destroyed_flag;
+  ptr<ref_flag_t>              _destroyed_flag;
 };
 
 template<class T> weak_ref_t<T>
@@ -322,7 +347,7 @@ public:
   { 
     if (*mortal_t::dead_flag ())
       return;
-    (*mortal_t::dead_flag ()) = true;
+    mortal_t::dead_flag ()->set (true);
 
     // XXX - find some way to identify this join, either by filename
     // and line number, or other ways.
