@@ -86,6 +86,7 @@ closure_t::end_of_scope_checks (const char *loc)
   // leak-checking, since checking for leaks does demand registering
   // an extra callback.
   if (tame_check_leaks ()) {
+	warn << "XXXX\n";
     set_weak_finalize_cb (wrap (check_closure_destroyed, loc, 
 				destroyed_flag ()));
   
@@ -175,12 +176,12 @@ size_t ref_flag_cursor = 0;
 void ref_flag_recycle (ref_flag_t *p)
 {
   if (ref_flag_cursor < ref_flag_dump.size ()) {
-    p->set_can_recycle (false);
-    ref_flag_dump[ref_flag_cursor++] = mkref (p);
+    ref_flag_dump[ref_flag_cursor] = mkref (p);
   } else if (ref_flag_dump.size () < ref_flag_recycle_limit) {
-    p->set_can_recycle (false); // don't double recycle!
     ref_flag_dump.push_back (mkref (p));
   }
+  ref_flag_cursor ++;
+  p->set_can_recycle (false);
 }
 
 ptr<ref_flag_t>
@@ -188,12 +189,8 @@ ref_flag_alloc (const bool &b)
 {
   ptr<ref_flag_t> ret;
   if (ref_flag_cursor > 0) {
-    ret = ref_flag_dump[ref_flag_cursor];
-    ref_flag_dump[ref_flag_cursor--] = NULL;
-  } else if (ref_flag_dump.size ()) {
-    ret = ref_flag_dump.pop_back ();
-  }
-  if (ret) {
+    ret = ref_flag_dump[--ref_flag_cursor];
+    ref_flag_dump[ref_flag_cursor] = NULL;
     ret->set_can_recycle (true);
     ret->set (b);
   } else {
