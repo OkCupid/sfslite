@@ -49,6 +49,18 @@
 #include "qhash.h"
 #include "keyfunc.h"
 
+
+/*
+ * tame runtime flags
+ */
+#define   TAME_ERROR_SILENT      (1 << 0)
+#define   TAME_ERROR_FATAL       (1 << 1)
+#define   TAME_CHECK_LEAKS       (1 << 2)
+
+extern int tame_options;
+inline bool tame_check_leaks () { return tame_options & TAME_CHECK_LEAKS ; }
+
+
 /**
  * not in use, but perhaps useful for "zero"ing out callback::ref's,
  * which might be necessary.
@@ -404,7 +416,7 @@ public:
 
   void launch_one (ptr<closure_t> c = NULL)
   { 
-    if (c)
+    if (c && tame_check_leaks ())
       associate_closure (c);
     add_join ();
   }
@@ -473,7 +485,7 @@ private:
 template<class T1 = int, class T2 = int, class T3 = int, class T4 = int>
 class joiner_t : public virtual refcount {
 public:
-  joiner_t (ptr<join_group_pointer_t<T1,T2,T3,T4> > p, const str &l) 
+  joiner_t (ptr<join_group_pointer_t<T1,T2,T3,T4> > p, const char *l) 
     : _weak_ref (p->make_weak_ref ()), _loc (l) {}
 
   void join (value_set_t<T1,T2,T3,T4> w)
@@ -500,7 +512,7 @@ private:
   }
 
   weak_ref_t<join_group_pointer_t<T1,T2,T3,T4> > _weak_ref;
-  str _loc;
+  const char *_loc;
 };
 
 
@@ -586,7 +598,7 @@ public:
   static value_set_t<T1,T2,T3,T4> to_vs () 
   { return value_set_t<T1,T2,T3,T4> (); }
 
-  ptr<joiner_t<T1,T2,T3,T4> > make_joiner (const str &loc) 
+  ptr<joiner_t<T1,T2,T3,T4> > make_joiner (const char *loc)
   { return New refcounted<joiner_t<T1,T2,T3,T4> > (_pointer, loc); }
 
   //
@@ -790,13 +802,6 @@ void __block_cb4 (ptr<closure_t> c, int i,
 }
 
 void start_join_group_collection ();
-
-#define   TAME_ERROR_SILENT      (1 << 0)
-#define   TAME_ERROR_FATAL       (1 << 1)
-#define   TAME_CHECK_LEAKS       (1 << 2)
-
-extern int tame_options;
-inline bool tame_check_leaks () { return tame_options & TAME_CHECK_LEAKS ; }
 
 
 /**

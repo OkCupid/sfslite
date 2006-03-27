@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include <math.h>
+#include "litetime.h"
 
 typedef enum { SFS_MODE = 0, BLOCK_MODE = 1, NONBLOCK_MODE = 2,
 	       CHECK_CPUSPEED_MODE = 3,
@@ -19,7 +20,6 @@ typedef enum { SFS_MODE = 0, BLOCK_MODE = 1, NONBLOCK_MODE = 2,
 int niter = 10000;
 int ntimes = 100;
 bmode_t mode;
-bool report_paper_mode;
 
 class statobj_t {
 public:
@@ -92,8 +92,8 @@ static void report (u_int64_t diff, const char *where= NULL)
   double r = (double)diff / ( (double) ntimes * niter);
   if (where == NULL) where = "total   ";
   fprintf (stderr, 
-	   "%s: ntimes=%d; niter=%d; mode=%d: %lld %s; time/call=%0.6g %s\n", 
-	   where, ntimes, niter, mode, diff, tick_name, r, tick_name);
+	   "%s: %lld %s; time/call=%0.6g %s\n", 
+	   where, diff, tick_name, r, tick_name);
 }
 
 static void report2 (u_int64_t diff)
@@ -110,7 +110,7 @@ static void check_cpu_speed ()
   u_int64_t start = corebench_get_time ();
   sleep (1);
   u_int64_t end = corebench_get_time ();
-  report (end - start);
+  warn << end - start << " cycles/second\n";
 }
 
 static void wrap_me (int i, int j, int k, int l) {}
@@ -144,29 +144,17 @@ static void benchmark_syscall ()
   u_int64_t start, end, t;
   double runtime;
 
-  if (report_paper_mode) {
-
-    REPORT({ 
-      t = 0;
-      for (int i = 0; i < niter; i++) {
-	start = corebench_get_time ();
-	gettimeofday (&tv, NULL);
-	end = corebench_get_time ();
-	so.raw_result (end - start);
-	t += (end - start);
-      }
-      runtime = t / (double)niter;
-    });
-
-  } else {
-    ntimes = 1;
-    start = corebench_get_time ();
+  REPORT({ 
+    t = 0;
     for (int i = 0; i < niter; i++) {
+      start = corebench_get_time ();
       gettimeofday (&tv, NULL);
+      end = corebench_get_time ();
+      so.raw_result (end - start);
+      t += (end - start);
     }
-    end = corebench_get_time ();
-    report (end - start);
-  }
+    runtime = t / (double)niter;
+  });
 }
 
 static void benchmark_functor ()
@@ -285,11 +273,12 @@ harness ()
 {
   VARS {
     int i (0), j (0);
-    u_int64_t start, stop;
+    u_int64_t start, stop, d, tot (0);
+    statobj_t so;
   }
   for (j = 0; j < 2; j++) {
-    start = corebench_get_time ();
     for (i = 0; i < (j == 0 ? 1 : ntimes); i++) {
+      start = corebench_get_time ();
       BLOCK { 
 	switch (mode) {
 	case SFS_MODE:
@@ -305,11 +294,17 @@ harness ()
 	  panic ("unknown mode");
 	}
       }
+      stop = corebench_get_time ();
+      d = stop - start;
+      if (j == 1) {
+	tot += d;
+	so.raw_result (d/niter);
+	so.add_result_set (d / (double)niter);
+      }
     }
-    stop = corebench_get_time ();
   }
-  u_int64_t diff = stop - start;
-  report2 (diff);
+  so.report ();
+  report2 (tot);
   exit (0);
 }
  
@@ -322,17 +317,13 @@ int main (int argc, char *argv[])
   bool null_test (false);
   bool do_alloc = false;
 
+
   toggle_corebench (true);
 
-  report_paper_mode = false;
-
-  while ((ch = getopt (argc, argv, "RNfwdcnbi:t:sa")) != -1) {
+  while ((ch = getopt (argc, argv, "Nfwdcnbi:t:sa")) != -1) {
     switch (ch) {
     case 'a':
       do_alloc = true;
-      break;
-    case 'R':
-      report_paper_mode = true;
       break;
     case 'N':
       null_test = true;
@@ -381,6 +372,16 @@ int main (int argc, char *argv[])
     }
   }
 
+  if (mode == CHECK_CPUSPEED_MODE) {
+    warn << "Checking CPU speed...\n";
+
+    // can't do this with a hardware timer running, since it will
+    // interrupt the sleep(1) call!
+    check_cpu_speed (); 
+    exit (0);
+  }
+  sfs_set_clock (SFS_CLOCK_TIMER);
+
   switch (mode) {
   case BENCHMARK_SYSCALL:
     warn << "benchmarking syscall time...\n";
@@ -394,11 +395,7 @@ int main (int argc, char *argv[])
     exit (0);
     break;
   case CHECK_CPUSPEED_MODE:
-    warn << "Checking CPU speed...\n";
-    ntimes = 1;
-    niter = 1;
-    check_cpu_speed ();
-    exit (0);
+    panic ("wtf\n");
     break;
   case BENCHMARK_WRAP_MODE:
     warn << "Benchmarking wrap";
