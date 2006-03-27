@@ -24,9 +24,12 @@ bool report_paper_mode;
 class statobj_t {
 public:
   statobj_t () : min (INT_MAX) {}
-  void add_result (u_int64_t raw) {
-    results.push_back (raw);  
+  void raw_result (u_int64_t raw) {
     if (raw < min) min = raw;
+  }
+
+  void add_result_set (double r) {
+    results.push_back (r); 
   }
 
   double mean () {
@@ -46,35 +49,32 @@ public:
       double t = (results[i] - m);
       t = t *t;
       t = t / n;
-      printf ("f: %g\n", f);
       f += t;
     }
-    printf ("f1: %g\n", f);
     f= sqrt (f);
-    printf ("f2: %g\n", f);
     return f;
   }
 
 
   void report () {
     double m = mean ();
-    fprintf (stderr, "mean: %0.6g; min: %lld\n", m, min);
+    double sd = stddev ();
+    fprintf (stderr, 
+	     "mean: %0.6g; sd: %0.6g, sd/mean: %0.6g%% min: %lld\n", 
+	     m, sd, sd / m * 100, min);
   }
-  vec<u_int64_t> results;
+  vec<double> results;
   u_int64_t min;
 };
 
 #define REPORT(code) \
 do { \
-  u_int64_t b,e; \
   statobj_t so; \
-  { code }  \
-  { code }  \
-  for (int i = 0; i < ntimes; i++) { \
-    b = corebench_get_time (); \
+  { code } \
+  { code } \
+  for (int __j = 0; __j < ntimes; __j++) { \
     { code } \
-    e = corebench_get_time ();  \
-    so.add_result (e - b); \
+    so.add_result_set (runtime); \
   } \
   so.report (); \
 } while (0) \
@@ -117,18 +117,47 @@ static void wrap_me (int i, int j, int k, int l) {}
 
 static void benchmark_wrap (bool dealloc)
 {
-  callback<void, int, int>::ptr cb;
-  REPORT( {  cb =  wrap (wrap_me, 10, 20); if (dealloc) cb = NULL; } );
+  vec<callback<void, int, int>::ptr> v;
+  v.setsize (niter);
+  u_int64_t t , e, b;
+  double runtime ;
+
+  REPORT({
+    t = 0;
+    for (int i = 0; i < niter; i++) {
+      b = corebench_get_time ();
+      v[i] = wrap (wrap_me, 10, 20);
+      if (dealloc) v[i] = NULL;
+      e = corebench_get_time ();
+      so.raw_result (e - b);
+      t += (e-b);
+    }
+    runtime = t / (double)niter;
+    for (int i = 0; i < niter; i++) { v[i] = NULL; }
+  });
 }
 
 
 static void benchmark_syscall ()
 {
   struct timeval tv;
-  u_int64_t start, end;
+  u_int64_t start, end, t;
+  double runtime;
 
   if (report_paper_mode) {
-    REPORT( gettimeofday (&tv, NULL) ; ) ;
+
+    REPORT({ 
+      t = 0;
+      for (int i = 0; i < niter; i++) {
+	start = corebench_get_time ();
+	gettimeofday (&tv, NULL);
+	end = corebench_get_time ();
+	so.raw_result (end - start);
+	t += (end - start);
+      }
+      runtime = t / (double)niter;
+    });
+
   } else {
     ntimes = 1;
     start = corebench_get_time ();
@@ -193,11 +222,30 @@ bench1_nullsfs (bool alloc)
 
 static void bench1_null (bool alloc)
 {
-  if (mode == SFS_NULL) {
-    REPORT ( bench1_nullsfs (alloc); );
-  } else if (mode = TAME_NULL) {
-    REPORT ( bench1_nulltame (); );
-  }
+  u_int64_t b,e,t;
+  double runtime;
+  REPORT({
+    t = 0;
+    for (int i = 0; i < niter; i++) {
+      switch (mode) {
+      case SFS_NULL:
+	b = corebench_get_time ();
+	bench1_nullsfs (alloc);
+	e = corebench_get_time ();
+	break;
+      case TAME_NULL:
+	b = corebench_get_time ();
+	bench1_nulltame ();
+	e = corebench_get_time ();
+	break;
+      default:
+	panic ("whoops!");
+      }
+      so.raw_result (e - b);
+      t += (e - b);
+    }
+    runtime = t / (double)niter;
+  });
 }
 
 TAMED static void
