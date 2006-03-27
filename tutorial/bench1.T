@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
+#include <math.h>
 
 typedef enum { SFS_MODE = 0, BLOCK_MODE = 1, NONBLOCK_MODE = 2,
 	       CHECK_CPUSPEED_MODE = 3,
@@ -18,6 +19,67 @@ typedef enum { SFS_MODE = 0, BLOCK_MODE = 1, NONBLOCK_MODE = 2,
 int niter = 10000;
 int ntimes = 100;
 bmode_t mode;
+bool report_paper_mode;
+
+class statobj_t {
+public:
+  statobj_t () : min (INT_MAX) {}
+  void add_result (u_int64_t raw, int n) { 
+    float x = raw / (float )n;
+    results.push_back (x);  
+    if (raw < min) min = raw;
+  }
+
+  float mean () {
+    float f = 0;
+    for (size_t i = 0; i < results.size (); i++) {
+      f += results[i];
+    }
+    f = f / results.size ();
+    return f;
+  }
+
+  float stddev () {
+    float f = 0;
+    float m = mean ();
+    for (size_t i = 0; i < results.size (); i++) {
+      float t = (results[i] - m) * (results[i] - m);
+      f += t;
+    }
+    f = f / (float)results.size ();
+    return sqrtf (f);
+  }
+
+
+  void report () {
+    float m = mean ();
+    float sd = stddev ();
+    fprintf (stderr, 
+	     "mean: %0.6f; stddev: %0.6f; sttdev/mean: %0.6f%%; min: %lld\n", 
+	     m, sd, sd/m*100, min);
+  }
+  vec<float> results;
+  u_int64_t min;
+};
+
+#define REPORT(code,clear) \
+do { \
+  u_int64_t b,e; \
+  statobj_t so; \
+  { code }      \
+  { code }      \
+  { clear}      \
+  for (int __i = 0; __i < ntimes; __i++) { \
+    b = corebench_get_time (); \
+    { code } \
+    e = corebench_get_time ();  \
+    so.add_result (e - b, niter); \
+    { clear } \
+   } \
+   so.report (); \
+} while (0) \
+
+
 
 static void usage ()
 {
@@ -59,31 +121,49 @@ static void benchmark_wrap (bool dealloc)
   vec<callback<void,int,int>::ptr> v;
   v.setsize (niter);
 
-  for (int i = 0; i < niter; i++) {
-    v[i] = wrap (wrap_me, 10, 20);
-    v[i] = NULL;
+  if (report_paper_mode) {
+    REPORT(
+	   for (int i = 0; i < niter; i++) {
+	     v[i] = wrap (wrap_me, 10, 20);
+	     if (dealloc) v[i] = NULL;
+	   },
+	   for (int i = 0; i < niter; i++) {
+	     v[i] = NULL; 
+	   });
+  } else {
+    ntimes = 1;
+    for (int i = 0; i < niter; i++) {
+      v[i] = wrap (wrap_me, 10, 20);
+      v[i] = NULL;
+    }
+    
+    start = corebench_get_time ();
+    for (int i = 0; i < niter; i++) {
+      v[i] = wrap (wrap_me, 10, 20);
+      if (dealloc) v[i] = NULL;
+    }
+    end = corebench_get_time ();
+    report (end - start);
   }
-
-  start = corebench_get_time ();
-  for (int i = 0; i < niter; i++) {
-    v[i] = wrap (wrap_me, 10, 20);
-    if (dealloc) v[i] = NULL;
-  }
-  end = corebench_get_time ();
-
-  report (end - start);
 }
+
 
 static void benchmark_syscall ()
 {
   struct timeval tv;
   u_int64_t start, end;
-  start = corebench_get_time ();
-  for (int i = 0; i < niter; i++) {
-    gettimeofday (&tv, NULL);
+
+  if (report_paper_mode) {
+    REPORT( for (int i = 0; i < niter; i++) { gettimeofday (&tv, NULL); }, ; );
+  } else {
+    ntimes = 1;
+    start = corebench_get_time ();
+    for (int i = 0; i < niter; i++) {
+      gettimeofday (&tv, NULL);
+    }
+    end = corebench_get_time ();
+    report (end - start);
   }
-  end = corebench_get_time ();
-  report (end - start);
 }
 
 static void benchmark_functor ()
@@ -127,48 +207,22 @@ bench1_nulltame ()
   i++;
 }
 
-struct my_xx_t : public virtual refcount, public weak_refcounted_t<my_xx_t> {
-  my_xx_t () : weak_refcounted_t<my_xx_t> (this) {} 
-  virtual void foo () = 0;
-  char xy[10];
-};
-
-struct my_struct_t : public my_xx_t {
-  my_struct_t () : A (), B() {}
-  char ab[20];
-  virtual void foo () {}
-  struct a { a () {} char bytes[20]; };
-  struct b { b () {} char bytes[34]; };
-  a A;
-  b B;
-};
-
 static void
-bench1_nullsfs ()
+bench1_nullsfs (bool alloc)
 {
-  //ptr<bench1_nulltame__closure_t> p = New refcounted<bench1_nulltame__closure_t> (); 
-  //my_struct_t *s = New my_struct_t ();
-  //ptr<my_struct_t> s = New refcounted<my_struct_t> ();
+  int *ip = NULL; 
+  if (alloc) New int ();
   int i;
   i++;
-  //delete s;
+  if (ip) delete ip;
 }
 
-
-
-static void bench1_null (int niter)
+static void bench1_null (bool alloc)
 {
-  for (int i = 0; i < niter; i++) {
-    switch (mode) {
-    case SFS_NULL:
-      bench1_nullsfs ();
-      break;
-    case TAME_NULL:
-      bench1_nulltame ();
-      break;
-    default:
-      panic ("whoops!");
-    }
+  if (mode == SFS_NULL) {
+    REPORT (for (int i = 0; i < niter; i++) { bench1_nullsfs (alloc); } , ;);
+  } else if (mode = TAME_NULL) {
+    REPORT (for (int i = 0; i < niter; i++) { bench1_nulltame (); }, ;);
   }
 }
 
@@ -219,10 +273,6 @@ harness ()
 	case SFS_MODE:
 	  bench1_sfs (niter, @());
 	  break;
-	case SFS_NULL:
-	case TAME_NULL:
-	  bench1_null (niter);
-	  break;
 	case BLOCK_MODE:
 	  bench1_block (niter, @());
 	  break;
@@ -248,11 +298,20 @@ int main (int argc, char *argv[])
   setprogname (argv[0]);
   bool dealloc (false);
   bool null_test (false);
+  bool do_alloc = false;
 
   toggle_corebench (true);
 
-  while ((ch = getopt (argc, argv, "Nfwdcnbi:t:s")) != -1) {
+  report_paper_mode = false;
+
+  while ((ch = getopt (argc, argv, "RNfwdcnbi:t:sa")) != -1) {
     switch (ch) {
+    case 'a':
+      do_alloc = true;
+      break;
+    case 'R':
+      report_paper_mode = true;
+      break;
     case 'N':
       null_test = true;
       break;
@@ -299,11 +358,10 @@ int main (int argc, char *argv[])
       usage ();
     }
   }
-  warn << "sz=" << sizeof (bench1_nulltame__closure_t) << "\n";
+
   switch (mode) {
   case BENCHMARK_SYSCALL:
     warn << "benchmarking syscall time...\n";
-    ntimes = 1;
     benchmark_syscall ();
     exit (0);
     break;
@@ -325,7 +383,6 @@ int main (int argc, char *argv[])
     if (dealloc)
       warnx << " (with deallocation)";
     warnx << "...\n";
-    ntimes = 1;
     benchmark_wrap (dealloc);
     exit (0);
     break;
@@ -333,6 +390,8 @@ int main (int argc, char *argv[])
     if (null_test) {
       mode = SFS_NULL;
       warn << "doing SFS NULL call test....\n";
+      bench1_null (do_alloc);
+      exit (0);
     } else {
       warn << "using SFS code for full test...\n";
     }
@@ -344,6 +403,8 @@ int main (int argc, char *argv[])
     if (null_test) {
       mode = TAME_NULL;
       warn << "doing a TAME NULL call test...\n";
+      bench1_null (do_alloc);
+      exit (0);
     } else {
       warn << "using BLOCK mode for full test...\n";
     }
