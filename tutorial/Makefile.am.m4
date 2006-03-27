@@ -22,6 +22,10 @@ SUFFIXES = .T .x .C .h
 .x.C:
 	-$(RPCC) -c $< || rm -f $@
 
+define(`tame_exes')dnl
+define(`tame_dist')dnl
+define(`tame_clean')dnl
+
 define(`tame_src',
 changequote([[, ]])dnl
 [[dnl
@@ -55,6 +59,7 @@ tame_standalone(bench1)
 tame_standalone(ex1)
 tame_rpcclient(ex2)
 tame_rpcclient(ex3)
+tame_rpcclient(ex3b)
 tame_rpcclient(ex4)
 tame_rpcclient(ex5)
 tame_standalone(ex6)
@@ -78,19 +83,23 @@ noinst_PROGRAMS = tame_exes ex4m exsrv
 exsrv_SOURCES = exsrv.C ex_prot.C
 ex4m_SOURCES = ex4m.C ex_prot.C
 
+RPC_AUTOGEN_FILES = ex_prot.C ex_prot.h
+
 ex_prot.C: ex_prot.x
 ex_prot.h: ex_prot.x
 ex_prot.o: ex_prot.h
 ex_prot.lo: ex_prot.h
 
-.PHONY: bldclean
+.PHONY: bldclean rpclean
 bldclean:
 	rm -f $(CLEANFILES)
+rpcclean:
+	rm -f $(RPC_AUTOGEN_FILES)
 
-CLEANFILES = core *.core tame_clean
+CLEANFILES = core *.core $(RPC_AUTOGEN_FILES) tame_clean 
 
 dist-hook:
-	cd $(distdir) && rm -f $(CLEANFILES)
+	cd $(distdir) && rm -f $(CLEANFILES) 
 
 EXTRA_DIST = Makefile.am.m4 .cvsignore tame_dist
 MAINTAINERCLEANFILES = Makefile.in Makefile.am

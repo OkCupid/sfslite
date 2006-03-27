@@ -18,7 +18,7 @@ typedef enum { SFS_MODE = 0, BLOCK_MODE = 1, NONBLOCK_MODE = 2,
 	       BENCHMARK_SYSCALL = 8 } bmode_t;
 
 int niter = 10000;
-int ntimes = 100;
+int ntimes = 10;
 bmode_t mode;
 
 class statobj_t {
