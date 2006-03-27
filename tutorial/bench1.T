@@ -24,14 +24,13 @@ bool report_paper_mode;
 class statobj_t {
 public:
   statobj_t () : min (INT_MAX) {}
-  void add_result (u_int64_t raw, int n) { 
-    float x = raw / (float )n;
-    results.push_back (x);  
+  void add_result (u_int64_t raw) {
+    results.push_back (raw);  
     if (raw < min) min = raw;
   }
 
-  float mean () {
-    float f = 0;
+  double mean () {
+    double f = 0;
     for (size_t i = 0; i < results.size (); i++) {
       f += results[i];
     }
@@ -39,44 +38,45 @@ public:
     return f;
   }
 
-  float stddev () {
-    float f = 0;
-    float m = mean ();
+  double stddev () {
+    double f = 0;
+    double m = mean ();
+    double n = results.size ();
     for (size_t i = 0; i < results.size (); i++) {
-      float t = (results[i] - m) * (results[i] - m);
+      double t = (results[i] - m);
+      t = t *t;
+      t = t / n;
+      printf ("f: %g\n", f);
       f += t;
     }
-    f = f / (float)results.size ();
-    return sqrtf (f);
+    printf ("f1: %g\n", f);
+    f= sqrt (f);
+    printf ("f2: %g\n", f);
+    return f;
   }
 
 
   void report () {
-    float m = mean ();
-    float sd = stddev ();
-    fprintf (stderr, 
-	     "mean: %0.6f; stddev: %0.6f; sttdev/mean: %0.6f%%; min: %lld\n", 
-	     m, sd, sd/m*100, min);
+    double m = mean ();
+    fprintf (stderr, "mean: %0.6g; min: %lld\n", m, min);
   }
-  vec<float> results;
+  vec<u_int64_t> results;
   u_int64_t min;
 };
 
-#define REPORT(code,clear) \
+#define REPORT(code) \
 do { \
   u_int64_t b,e; \
   statobj_t so; \
-  { code }      \
-  { code }      \
-  { clear}      \
-  for (int __i = 0; __i < ntimes; __i++) { \
+  { code }  \
+  { code }  \
+  for (int i = 0; i < ntimes; i++) { \
     b = corebench_get_time (); \
     { code } \
     e = corebench_get_time ();  \
-    so.add_result (e - b, niter); \
-    { clear } \
-   } \
-   so.report (); \
+    so.add_result (e - b); \
+  } \
+  so.report (); \
 } while (0) \
 
 
@@ -117,34 +117,8 @@ static void wrap_me (int i, int j, int k, int l) {}
 
 static void benchmark_wrap (bool dealloc)
 {
-  u_int64_t start, end;
-  vec<callback<void,int,int>::ptr> v;
-  v.setsize (niter);
-
-  if (report_paper_mode) {
-    REPORT(
-	   for (int i = 0; i < niter; i++) {
-	     v[i] = wrap (wrap_me, 10, 20);
-	     if (dealloc) v[i] = NULL;
-	   },
-	   for (int i = 0; i < niter; i++) {
-	     v[i] = NULL; 
-	   });
-  } else {
-    ntimes = 1;
-    for (int i = 0; i < niter; i++) {
-      v[i] = wrap (wrap_me, 10, 20);
-      v[i] = NULL;
-    }
-    
-    start = corebench_get_time ();
-    for (int i = 0; i < niter; i++) {
-      v[i] = wrap (wrap_me, 10, 20);
-      if (dealloc) v[i] = NULL;
-    }
-    end = corebench_get_time ();
-    report (end - start);
-  }
+  callback<void, int, int>::ptr cb;
+  REPORT( {  cb =  wrap (wrap_me, 10, 20); if (dealloc) cb = NULL; } );
 }
 
 
@@ -154,7 +128,7 @@ static void benchmark_syscall ()
   u_int64_t start, end;
 
   if (report_paper_mode) {
-    REPORT( for (int i = 0; i < niter; i++) { gettimeofday (&tv, NULL); }, ; );
+    REPORT( gettimeofday (&tv, NULL) ; ) ;
   } else {
     ntimes = 1;
     start = corebench_get_time ();
@@ -220,9 +194,9 @@ bench1_nullsfs (bool alloc)
 static void bench1_null (bool alloc)
 {
   if (mode == SFS_NULL) {
-    REPORT (for (int i = 0; i < niter; i++) { bench1_nullsfs (alloc); } , ;);
+    REPORT ( bench1_nullsfs (alloc); );
   } else if (mode = TAME_NULL) {
-    REPORT (for (int i = 0; i < niter; i++) { bench1_nulltame (); }, ;);
+    REPORT ( bench1_nulltame (); );
   }
 }
 
