@@ -20,7 +20,7 @@ usage ()
 	<< "\n"
 	<< "  Options:\n"
 	<< "    -C  specify argname for checked call-exactly-once "
-	<< "continuation (default=signaler)\n"
+	<< "continuation (default=parentcv)\n"
 	<< "    -o  specify output file\n"
 	<< "    -c  compile mode; infer output file name from input file "
 	<< "name\n"

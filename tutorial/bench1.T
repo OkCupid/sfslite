@@ -26,6 +26,7 @@ public:
   statobj_t () : min (INT_MAX) {}
   void raw_result (u_int64_t raw) {
     if (raw < min) min = raw;
+    raw_results.push_back (raw);
   }
 
   void add_result_set (double r) {
@@ -62,8 +63,13 @@ public:
     fprintf (stderr, 
 	     "mean: %0.6g; sd: %0.6g, sd/mean: %0.6g%% min: %lld\n", 
 	     m, sd, sd / m * 100, min);
+
+    for (size_t s = 0; s < raw_results.size (); s++) {
+      printf ("%lld\n", raw_results[s] );
+    }
   }
   vec<double> results;
+  vec<u_int64_t> raw_results;
   u_int64_t min;
 };
 
@@ -199,13 +205,18 @@ bench1_nulltame ()
 }
 
 static void
-bench1_nullsfs (bool alloc)
+bench1_nullsfs_alloc ()
 {
-  int *ip = NULL; 
-  if (alloc) New int ();
-  int i;
+  int *ip = New int ();
+  (*ip) ++;
+  delete ip;
+}
+
+static void
+bench1_nullsfs ()
+{
+  int i ;
   i++;
-  if (ip) delete ip;
 }
 
 static void bench1_null (bool alloc)
@@ -217,9 +228,15 @@ static void bench1_null (bool alloc)
     for (int i = 0; i < niter; i++) {
       switch (mode) {
       case SFS_NULL:
-	b = corebench_get_time ();
-	bench1_nullsfs (alloc);
-	e = corebench_get_time ();
+	if (alloc) {
+	  b = corebench_get_time ();
+	  bench1_nullsfs_alloc ();
+	  e = corebench_get_time ();
+	} else {
+	  b = corebench_get_time ();
+	  bench1_nullsfs ();
+	  e = corebench_get_time ();
+	}
 	break;
       case TAME_NULL:
 	b = corebench_get_time ();

@@ -20,7 +20,7 @@ public:
 };
  
 TAMED template<class T, size_t X> void
-my_host_t<T,X>::try_it (coordvar_bool_t coordvar)
+my_host_t<T,X>::try_it (coordvar_bool_t parentcv)
 {
   VARS {
     bool ret (false);

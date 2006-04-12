@@ -30,7 +30,7 @@ static void finish (bool rc)
 }
 
 TAMED static 
-void buggy1a (coordvar_bool_t coordvar)
+void buggy1a (coordvar_bool_t parentcv)
 {
   VARS {
     cb_hog_t *hog (New cb_hog_t ());

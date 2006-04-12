@@ -18,7 +18,7 @@ public:
   void dostuff (int port, coordvar_t<bool>::t cb) 
   { dostuff_private (port, cb); }
 private:
-  void dostuff_private (int port, coordvar_t<bool>::t coordvar, CLOSURE);
+  void dostuff_private (int port, coordvar_t<bool>::t parentcv, CLOSURE);
   str _name;
 };
 
@@ -49,7 +49,7 @@ static void foo_func (my_enum_t e)
 
 
 TAMED void 
-remote_host_t::dostuff_private (int port, coordvar_t<bool>::t coordvar)
+remote_host_t::dostuff_private (int port, coordvar_t<bool>::t parentcv)
 {
   // declare all of your "stack" variables here
   VARS {

@@ -32,7 +32,7 @@
  * and test that it succeeded by selecting for write on the new socket.
  */
 TAMED static ptr<canceller_t>
-connect_to_in_addr (in_addr a, int port, coordvar_int_t coordvar)
+connect_to_in_addr (in_addr a, int port, coordvar_int_t parentcv)
 {
   VARS {
     sockaddr_in sin;
@@ -81,7 +81,7 @@ connect_to_in_addr (in_addr a, int port, coordvar_int_t coordvar)
     }
   }
 
-  // calls (*coordvar)(fd); also enforces that this
+  // calls (*parentcv)(fd); also enforces that this
   // callback is called exactly once.
   SIGNAL (fd);
 }
@@ -93,13 +93,13 @@ connect_to_in_addr (in_addr a, int port, coordvar_int_t coordvar)
  *
  * @param hostname
  * @param port
- * @param coordvar The callback implicitly used in SIGNAL and RESUME statements
+ * @param parentcv The callback implicitly used in SIGNAL and RESUME statements
  * @param dnssearch whether to search DNS domains
  * @param namep the name of this host as gotten from DNS
  * @return an object that can be used to cancel this computation midstream.
  */
 TAMED static ptr<canceller_t> 
-my_tcpconnect (str hostname, u_int16_t port, coordvar_int_t coordvar,
+my_tcpconnect (str hostname, u_int16_t port, coordvar_int_t parentcv,
 	       bool dnssearch, str *namep)
 {
   VARS {

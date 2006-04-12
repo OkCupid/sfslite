@@ -1,4 +1,4 @@
 
 #include "tame.h"
 
-const char *cceoc_argname = "coordvar";
+const char *cceoc_argname = "parentcv";

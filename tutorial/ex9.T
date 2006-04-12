@@ -24,7 +24,7 @@ struct state_t {
 };
 
 TAMED void 
-state_t::launch (coordvar_t<bool>::t coordvar)
+state_t::launch (coordvar_t<bool>::t parentcv)
 {
   // declare all of your "stack" variables here
   VARS {
@@ -58,7 +58,7 @@ state_t::launch (coordvar_t<bool>::t coordvar)
 }
 
 TAMED void 
-state_t::relaunch (coordvar_t<bool>::t coordvar)
+state_t::relaunch (coordvar_t<bool>::t parentcv)
 {
   VARS {
     bool err_occurred (false);
