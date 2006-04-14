@@ -42,7 +42,7 @@ buggy1d ()
 */
 
 TAMED static void 
-buggy1c (coordvar_bool_t parentcv)
+buggy1c (coordvar_bool_t callercv)
 {
   VARS { 
     coordgroup_t<> JG (__FILE__, __LINE__); 

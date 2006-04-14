@@ -30,7 +30,7 @@ static void finish (bool rc)
 }
 
 TAMED static void 
-part1 (cb_hog_t *hog, coordgroup_t<> *JG, coordvar_void_t parentcv)
+part1 (cb_hog_t *hog, coordgroup_t<> *JG, coordvar_void_t callercv)
 {
   NONBLOCK (*JG) {
     delaycb (1, 0, @());
@@ -39,7 +39,7 @@ part1 (cb_hog_t *hog, coordgroup_t<> *JG, coordvar_void_t parentcv)
   RESUME;
 }
 
-TAMED static void part2 (coordgroup_t<> *JG, coordvar_void_t parentcv)
+TAMED static void part2 (coordgroup_t<> *JG, coordvar_void_t callercv)
 {
   VARS { int i; }
   for (i = 0; i < 2; i++) {
@@ -49,7 +49,7 @@ TAMED static void part2 (coordgroup_t<> *JG, coordvar_void_t parentcv)
 }
 
 
-TAMED static void buggy1b (coordvar_bool_t parentcv)
+TAMED static void buggy1b (coordvar_bool_t callercv)
 {
   VARS { 
     coordgroup_t<> JG; 

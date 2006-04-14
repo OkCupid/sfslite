@@ -13,7 +13,7 @@
 
 typedef ptr<callback<void,int,bool,str> > cb3_t ;
 
-TAMED static void callee3 (cb3_t parentcv)
+TAMED static void callee3 (cb3_t callercv)
 {
   str s = "hello";
   SIGNAL (10, true, s);

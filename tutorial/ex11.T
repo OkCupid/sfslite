@@ -21,7 +21,7 @@ launch_call (coordgroup_t<ptr<rpc_t> > *jg, u_int i, ptr<aclnt> cli)
 }
 
 TAMED static 
-bool dostuff (str h, int port, coordvar_bool_t parentcv)
+bool dostuff (str h, int port, coordvar_bool_t callercv)
 {
   // declare all of your "stack" variables here
   VARS {
