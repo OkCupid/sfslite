@@ -1,6 +1,17 @@
 
 $Id$
 
+0.8.8
+ - Some critical path optimizations for tame to reduce the number of 
+   calls to wrap.  Some might be unsafe; needs to be triple-checked.
+ - Internally, tame now uses **references** instead of **pointers** when
+   preparing coordination variables.
+ - Remove pointer_setX, replace with refset_t	
+ - Changed, yet again, the special coordination variable name from 'coordvar'
+   to 'callercv.'
+ - Recycle ptr<bool>'s instead of always throwing them out and reallocating
+   them.	
+
 0.8.7
  - Fixed bug in _block_cb3
  - Type2Struct for long long and unsigned long long

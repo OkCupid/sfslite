@@ -97,8 +97,13 @@ aux-all aux-mostlyclean aux-clean aux-distclean aux-maintainer-clean:
 	test -z "$(DB3_DIR)" -o "$(DB3_DIR)" = "@"DB3_DIR"@" \
 		|| (cd "$(DB3_DIR)/dist" && $(MAKE) $(AUX_TARGET))
 
-.PHONY: rpcclean
+.PHONY: rpcclean bldclean
 rpcclean:
-	for dir in arpc libsfs; do \
+	for dir in arpc tutorial ; do \
 		(cd $$dir && $(MAKE) rpcclean); \
+	done
+
+bldclean: rpcclean
+	for dir in tutorial ; do \
+		(cd $$dir && $(MAKE) bldclean) ; \
 	done

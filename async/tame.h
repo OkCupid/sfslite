@@ -87,7 +87,7 @@ extern size_t ref_flag_recycle_limit;
 class ref_flag_t : virtual public refcount {
 public:
   ref_flag_t (const bool &b) : _flag (b), _can_recycle (true) {}
-  ~ref_flag_t () { warn << "XXX\n"; }
+  ~ref_flag_t () {}
   void finalize () { if (_can_recycle) ref_flag_recycle (this); }
   operator const bool &() const { return _flag; }
   bool get () const { return _flag; }
@@ -443,11 +443,22 @@ public:
   static value_set_t<T1,T2,T3,T4> to_vs ()
   { return value_set_t<T1,T2,T3,T4> (); }
 
-  bool pending (value_set_t<T1, T2, T3, T4> *p)
+  bool pending (value_set_t<T1, T2, T3, T4> *p = NULL)
   {
     bool ret = false;
     if (_pending.size ()) {
-      *p = _pending.pop_front ();
+      if (p) *p = _pending.pop_front ();
+      else _pending.pop_front ();
+      ret = true;
+    }
+    return ret;
+  }
+
+  bool pending ()
+  {
+    bool ret = false;
+    if (_pending.size ()) {
+      _pending.pop_front ();
       ret = true;
     }
     return ret;
@@ -578,7 +589,7 @@ public:
    * been joined on yet.  Returns false if there are no pending events
    * to join on.
    */
-  bool pending (value_set_t<T1, T2, T3, T4> *p)
+  bool pending (value_set_t<T1, T2, T3, T4> *p = NULL)
   { return _pointer->pending (p); }
 
   //
@@ -640,55 +651,84 @@ public:
    * slots. Return true if there is an signal pending, and false
    * otherwise.
    */
-  bool next_var (T1 *p1 = NULL, T2 *p2 = NULL, T3 *p3 = NULL, 
-		 T4 *p4 = NULL) 
+  bool next_var (T1 &r1, T2 &r2, T3 &r3, T4 &r4)
   {
     bool ret = true;
     value_set_t<T1,T2,T3,T4> v;
-
     if (pending (&v)) {
-      if (p1) *p1 = v.v1;
-      if (p2) *p2 = v.v2;
-      if (p3) *p3 = v.v3;
-      if (p4) *p4 = v.v4;
+      r1 = v.v1;
+      r2 = v.v2;
+      r3 = v.v3;
+      r4 = v.v4;
     } else
       ret = false;
-
     return ret;
   }
+  bool next_var (T1 &r1, T2 &r2, T3 &r3)
+  {
+    bool ret = true;
+    value_set_t<T1,T2,T3> v;
+    if (pending (&v)) {
+      r1 = v.v1;
+      r2 = v.v2;
+      r3 = v.v3;
+    } else
+      ret = false;
+    return ret;
+  }
+  bool next_var (T1 &r1, T2 &r2)
+  {
+    bool ret = true;
+    value_set_t<T1,T2> v;
+    if (pending (&v)) {
+      r1 = v.v1;
+      r2 = v.v2;
+    } else
+      ret = false;
+    return ret;
+  }
+  bool next_var (T1 &r1)
+  {
+    bool ret = true;
+    value_set_t<T1> v;
+    if (pending (&v)) {
+      r1 = v.v1;
+    } else
+      ret = false;
+    return ret;
+  }
+
+  bool next_var () { return join_group_t<T1,T2,T3,T4>::pending (); }
+
 };
 
+template<class T1=int, class T2=int, class T3=int, class T4=int>
+class refset_t {
+public:
+  refset_t (T1 &r1, T2 &r2, T3 &r3, T4 &r4) 
+    : _dummy (0), _r1 (r1), _r2 (r2), _r3 (r3), _r4 (r4) {}
+  refset_t (T1 &r1, T2 &r2, T3 &r3)
+    : _dummy (0), _r1 (r1), _r2 (r2), _r3 (r3), _r4 (_dummy) {}
+  refset_t (T1 &r1, T2 &r2)
+    : _dummy (0), _r1 (r1), _r2 (r2), _r3 (_dummy), _r4 (_dummy) {}
+  refset_t (T1 &r1)
+    : _dummy (0), _r1 (r1), _r2 (_dummy), _r3 (_dummy), _r4 (_dummy) {}
 
-template<class T1>
-struct pointer_set1_t {
-  pointer_set1_t (T1 *p1) : p1 (p1) {}
-  T1 *p1;
-};
+  void assign (const T1 &v1, const T2 &v2, const T3 &v3, const T4 &v4) 
+  { _r1 = v1; _r2 = v2; _r3 = v3; _r4 = v4; }
+  void assign (const T1 &v1, const T2 &v2, const T3 &v3)
+  { _r1 = v1; _r2 = v2; _r3 = v3; }
+  void assign (const T1 &v1, const T2 &v2) { _r1 = v1; _r2 = v2; }
+  void assign (const T1 &v1) { _r1 = v1; }
 
+private:
+  int _dummy;
 
-template<class T1, class T2>
-struct pointer_set2_t {
-  pointer_set2_t (T1 *p1, T2 *p2) : p1 (p1), p2 (p2) {}
-  T1 *p1;
-  T2 *p2;
-};
+  T1 &_r1;
+  T2 &_r2;
+  T3 &_r3;
+  T4 &_r4;
 
-template<class T1, class T2, class T3>
-struct pointer_set3_t {
-  pointer_set3_t (T1 *p1, T2 *p2, T3 *p3) : p1 (p1), p2 (p2), p3 (p3) {}
-  T1 *p1;
-  T2 *p2;
-  T3 *p3;
-};
-
-template<class T1, class T2, class T3, class T4>
-struct pointer_set4_t {
-  pointer_set4_t (T1 *p1, T2 *p2, T3 *p3, T4 *p4) 
-    : p1 (p1), p2 (p2), p3 (p3), p4 (p4) {}
-  T1 *p1;
-  T2 *p2;
-  T3 *p3;
-  T4 *p4;
 };
 
 template<class T> void use_reference (T &i) {}
@@ -764,40 +804,33 @@ inline void __block_cb0 (ptr<closure_t> c, int i)
 }
 
 template<class T1>
-void __block_cb1 (ptr<closure_t> c, int i, pointer_set1_t<T1> p, T1 v1)
+void __block_cb1 (ptr<closure_t> c, int i, refset_t<T1> rs, T1 v1)
 {
-  *p.p1 = v1;
+  rs.assign (v1);
   c->block_cb_switch (i);
 }
 
 template<class T1, class T2>
-void __block_cb2 (ptr<closure_t> c, int i,
-		  pointer_set2_t<T1,T2> p, T1 v1, T2 v2)
+void __block_cb2 (ptr<closure_t> c, int i, refset_t<T1,T2> rs, T1 v1, T2 v2)
 {
-  *p.p1 = v1;
-  *p.p2 = v2;
+  rs.assign (v1, v2);
   c->block_cb_switch (i);
 }
   
 template<class T1, class T2, class T3>
-void __block_cb3 (ptr<closure_t> c, int i,
-		  pointer_set3_t<T1,T2,T3> p, T1 v1, T2 v2, T3 v3)
+void __block_cb3 (ptr<closure_t> c, int i, 
+		  refset_t<T1,T2,T3> rs, T1 v1, T2 v2, T3 v3)
 {
-  *p.p1 = v1;
-  *p.p2 = v2;
-  *p.p3 = v3;
+  rs.assign (v1, v2, v3);
   c->block_cb_switch (i);
 }
 
 template<class T1, class T2, class T3, class T4>
 void __block_cb4 (ptr<closure_t> c, int i,
-		  pointer_set4_t<T1,T2,T3,T4> p, 
+		  refset_t<T1,T2,T3,T4> rs, 
 		  T1 v1, T2 v2, T3 v3, T4 v4)
 {
-  *p.p1 = v1;
-  *p.p2 = v2;
-  *p.p3 = v3;
-  *p.p4 = v4;
+  rs.assign (v1, v2, v3, v4);
   c->block_cb_switch (i);
 }
 

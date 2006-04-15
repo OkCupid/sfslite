@@ -11,7 +11,7 @@ bool dostuff (str h, int port, cbb cb)
 {
   // declare all of your "stack" variables here
   VARS {
-    int fd;
+    int fd (99999);
     ptr<axprt_stream> x;
     ptr<aclnt> cli;
     vec<int> res;

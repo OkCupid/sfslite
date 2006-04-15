@@ -9,9 +9,9 @@
 
 template<class P1, class W1> static void 
 __nonblock_cb_1_1 (ptr<closure_t> hold, ptr<joiner_t<W1> > j,
-		 pointer_set1_t<P1> p, value_set_t<W1> w, P1 v)
+		 refset_t<P1> rs, value_set_t<W1> w, P1 v)
 {
-  *p.p1 = v;
+  rs.assign (v);
 
   // always return to the main loop to avoid funny race conditions.
   j->join (w);
@@ -58,9 +58,9 @@ public:
   };
 
   template<class T>
-  void cb1 (pointer_set1_t<T> p, T v1)
+  void cb1 (refset_t<T> rs, T v1)
   {
-    *p.p1 = v1;
+    rs.assign (v1);
     if (!--_block1)
       delaycb (0, 0, wrap (mkref (this), &dostuff__closure_t::reenter));
   }
@@ -135,7 +135,7 @@ dostuff( str __tame_h,  int __tame_port,  cbb __tame_cb, ptr<closure_t> __cls_g)
 		(++__cls->_block1,
 		 wrap (__cls_r, 
 		       &dostuff__closure_t::cb1<typeof (fd)>, 
-		       pointer_set1_t<typeof (fd)> (&fd))));
+		       refset_t<typeof (fd)> (fd))));
 
     // if the reference count is 0 here, that means that all calls returned
     // immediately, and there is no need to block; therefore, only block
@@ -165,7 +165,7 @@ dostuff( str __tame_h,  int __tame_port,  cbb __tame_cb, ptr<closure_t> __cls_g)
 		  wrap (__nonblock_cb_1_1<typeof(errs[cid]), typeof (cid)>, 
 			__cls_g,
 			RPC.make_joiner ("<function location XXX>"), 
-			pointer_set1_t<typeof(errs[cid])> (&errs[cid]),
+			refset_t<typeof(errs[cid])> (errs[cid]),
 			value_set_t<typeof(cid)> (cid)
 			)));
       
@@ -193,7 +193,7 @@ dostuff( str __tame_h,  int __tame_port,  cbb __tame_cb, ptr<closure_t> __cls_g)
 			      typeof (cid)>,
 			      __cls_g,
 			      RPC.make_joiner ("<function location YYY>"), 
-			      pointer_set1_t<typeof(errs[cid])> (&errs[cid]),
+			      refset_t<typeof(errs[cid])> (errs[cid]),
 			      value_set_t<typeof(cid)> (cid)
 			      )));
 	  }

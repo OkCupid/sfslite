@@ -29,7 +29,9 @@ usage ()
 	<< "  and out are assumed, respectively.\n"
 	<< "\n"
 	<< "  Line number translation can also be suppressed by setting\n"
-	<< "  the TAME_NO_LINE_NUMBERS environment variable.\n";
+	<< "  the TAME_NO_LINE_NUMBERS environment variable.\n"
+	<< "  Similarly, turning on newlines can be accomplished by setting\n"
+	<< "  the TAME_ADD_NEWLINES envrionment variable.\n";
     
   exit (1);
 }
@@ -103,6 +105,9 @@ main (int argc, char *argv[])
 
   if (getenv ("TAME_NO_LINE_NUMBERS"))
     no_line_numbers = true;
+
+  if (getenv ("TAME_ADD_NEWLINES"))
+    horiz_mode = false;
 
   if ((c = getenv ("CCEOC_ARGNAME")))
     cceoc_argname = c;

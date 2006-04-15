@@ -475,12 +475,12 @@ tame_nonblock_callback_t::output_generic (strbuf &b)
   
   if (N_p) {
     b << ",\n";
-    b << "\t\tpointer_set" << N_p << "_t<";
+    b << "\t\trefset_t<";
     for (u_int i = 1; i <= N_p; i++) {
       if (i != 1) b << ", ";
       b << "P" << i;
     }
-    b << "> p";
+    b << "> rs";
   }
 
   // output a value set even if there are no values to wrap in;
@@ -501,10 +501,14 @@ tame_nonblock_callback_t::output_generic (strbuf &b)
     }
   }
   b << ")\n{\n";
-  for (u_int i = 1; i <= N_p; i++) {
-    b << "  *p.p" << i << " = v" << i << ";\n";
+  if (N_p) {
+    b << "  rs.assign (";
+    for (u_int i = 1; i <= N_p; i++) {
+      if (i != 1) b << ", ";
+      b << "v" << i;
+    }
+    b << ");\n";
   }
-  b << "\n";
   b << "  j->join (w);\n"
     << "}\n\n";
 }
@@ -1099,10 +1103,10 @@ tame_block_callback_t::output (outputter_t *o)
   }
   b << ", " << CLOSURE_RFCNT << ", " << _cb_ind;
   if (_call_with->size ()) {
-    b << ", pointer_set" << _call_with->size () << "_t<";
+    b << ", refset_t<";
     _call_with->output_vars (b, true, "TTT(", ")");
     b << "> (";
-    _call_with->output_vars (b, true, "&(", ")");
+    _call_with->output_vars (b, true, "", "");
     b << ")";
   }
   b << "))";
@@ -1139,10 +1143,10 @@ tame_nonblock_callback_t::output (outputter_t *o)
     << ".make_joiner (\"" << loc << "\")";
 
   if (_call_with->size ()) {
-    b << ", pointer_set" << _call_with->size () << "_t<";
-    _call_with->output_vars (b, true, "typeof (", ")");
+    b << ", refset_t<";
+    _call_with->output_vars (b, true, "TTT (", ")");
     b << "> (";
-    _call_with->output_vars (b, true, "&(", ")");
+    _call_with->output_vars (b, true, "", "");
     b << ")";
   }
 
@@ -1232,7 +1236,7 @@ tame_wait_t::output (outputter_t *o)
     << "   if (!" << jgn << ".next_var (";
   for (size_t i = 0; i < n_args (); i++) {
     if (i > 0) b << ", ";
-    b << "&(" << arg (i).name () << ")";
+    b << "" << arg (i).name () << "";
   }
   b << ")) {\n";
   output_blocked (b, jgn);
