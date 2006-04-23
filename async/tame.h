@@ -501,9 +501,9 @@ public:
 
   void join (value_set_t<T1,T2,T3,T4> w)
   {
-    // make aggressive callback, and don't bother to delaycb;
-    // still evaluating if this is OK
-    join_cb (w);
+    // Need at least one return to the bottom event loop between
+    // a call into the callback and a join.
+    delaycb (0, 0, wrap (mkref (this), &joiner_t<T1,T2,T3,T4>::join_cb, w));
   }
   
 private:
