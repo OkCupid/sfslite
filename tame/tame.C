@@ -9,7 +9,7 @@ parse_state_t state;
 static void
 usage ()
 {
-  warnx << "usage: " << progname << " [-Lhv] [-C <cceoc>] "
+  warnx << "usage: " << progname << " [-Lchnv] [-C <cceoc>] "
 	<< "[-o <outfile>] [<infile>]\n"
 	<< "\n"
 	<< "  Flags:\n"
@@ -20,7 +20,8 @@ usage ()
 	<< "\n"
 	<< "  Options:\n"
 	<< "    -C  specify argname for checked call-exactly-once "
-	<< "continuation (default=callercv)\n"
+	<< "continuation\n"
+	<< "       (default=callercv)\n"
 	<< "    -o  specify output file\n"
 	<< "    -c  compile mode; infer output file name from input file "
 	<< "name\n"
@@ -28,10 +29,11 @@ usage ()
 	<< "  If no input or output files are specified, then standard in\n"
 	<< "  and out are assumed, respectively.\n"
 	<< "\n"
-	<< "  Line number translation can also be suppressed by setting\n"
-	<< "  the TAME_NO_LINE_NUMBERS environment variable.\n"
-	<< "  Similarly, turning on newlines can be accomplished by setting\n"
-	<< "  the TAME_ADD_NEWLINES envrionment variable.\n";
+    << "  Environment Variables:\n"
+	<< "    TAME_NO_LINE_NUMBERS  equivalent to -L\n"
+	<< "    TAME_ADD_NEWLINES     equivalent to -n\n"
+	<< "    TAME_DEBUG_SOURCE     equivalent to -Ln\n"
+	  ;
     
   exit (1);
 }
@@ -66,7 +68,7 @@ main (int argc, char *argv[])
   make_sync (1);
   make_sync (2);
 
-  while ((ch = getopt (argc, argv, "nC:Lvdo:c:")) != -1)
+  while ((ch = getopt (argc, argv, "hnC:Lvdo:c:")) != -1)
     switch (ch) {
     case 'h':
       usage ();
@@ -95,13 +97,19 @@ main (int argc, char *argv[])
       break;
     case 'v':
       warnx << "tame\n"
-	    << "sfslite version " << VERSION << "\n";
+	    << "sfslite version " << VERSION << "\n"
+	    << "compiled " __DATE__ " " __TIME__ "\n" ;
       exit (0);
       break;
     default:
       usage ();
       break;
     }
+
+  if (getenv ("TAME_DEBUG_SOURCE")) {
+    no_line_numbers = true;
+	horiz_mode = false;
+  }
 
   if (getenv ("TAME_NO_LINE_NUMBERS"))
     no_line_numbers = true;

@@ -26,6 +26,7 @@ private:
  
 static void finish (bool rc)
 {
+  warn << "finish....\n";
   delaycb (2, 0, wrap (exit, rc ? 0 : -1));
 }
 

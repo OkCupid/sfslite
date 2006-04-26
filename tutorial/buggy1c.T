@@ -16,52 +16,30 @@ bool fix_bug;
  *   that uses NONBLOCK...
  */
 
-class cb_hog_t {
-public:
-  cb_hog_t () {}
-  void call_me (cbv c) { _cb = c;  (*c)();  }
-private:
-  cbv::ptr _cb;
-};
-
 static void finish (bool rc)
 {
+  warn << "called finish\n";
   delaycb (2, 0, wrap (exit, rc ? 0 : -1));
 }
-
-/*
- * XXX ignore for now
- *
-static void callme (coordvar_void_t cv) { (*cv) (); }
-TAMED static void
-buggy1d ()
-{
-  VARS { coordgroup_t<> G (__FILE__, __LINE__); }
-  callme (@[G]());
-}
-*/
 
 TAMED static void 
 buggy1c (coordvar_bool_t callercv)
 {
   VARS { 
     coordgroup_t<> JG (__FILE__, __LINE__); 
-    cb_hog_t *hog (New cb_hog_t ());
     int i;
   }
 
-  NONBLOCK (JG) {
-    delaycb (1, 0, @());
-    hog->call_me (@());
-  }
+  delaycb (1, 0, @[JG]());
+  delaycb (2, 0, @[JG]());
 
-  for (i = 0; i < 1; i++) {
+
+  for (i = 0; i < (fix_bug ? 2 : 1); i++) {
     WAIT (JG);
+    if (i == 0) 
+      SIGNAL (true);
   }
-  if (fix_bug)
-    delete hog;
-
-  RESUME (true);
+  warn << "leaving buggy1c\n";
 }
 
 static void usage ()
