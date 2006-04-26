@@ -75,20 +75,61 @@ private:
 };
 
 /**
+ * A class for collecting recycled objects, and recycling them.  Different
+ * from a regular vec in that we never give memory back (via pop_back)
+ * which should save some shuffling.
+ *
+ * Required: that T inherits from refcnt
+ */
+template<class T>
+class recycle_bin_t {
+public:
+  enum { defsz = 5 };
+  recycle_bin_t (size_t s = defsz) : _capacity (s), _cursor (0)  {}
+  void expand (size_t s) { if (_capacity < s) _capacity = s; }
+  bool add (T *obj)
+  {
+    int nobj = 1;
+    if (_cursor < _objects.size ()) {
+      _objects[_cursor] = mkref (obj);
+    } else if (_objects.size () < _capacity) {
+      _objects.push_back (mkref (obj));
+    } else {
+      nobj = 0;
+    }
+    _cursor += nobj;
+    return nobj;
+  }
+  ptr<T> get () 
+  {
+    ptr<T> ret;
+    if (_cursor > 0) {
+      ret = _objects[--_cursor];
+      _objects[_cursor] = NULL;
+    }
+    return ret;
+  }
+private:
+  vec<ptr<T> > _objects;
+  size_t       _capacity;
+  size_t       _cursor;
+};
+
+/**
  * ref_flag_t
  *
  * Kind of like ptr<bool>'s, but are recycled for performance.
  */
-class ref_flag_t;
-void ref_flag_recycle (ref_flag_t *p);
-ptr<ref_flag_t> ref_flag_alloc (const bool &b);
-extern size_t ref_flag_recycle_limit;
-
 class ref_flag_t : virtual public refcount {
 public:
   ref_flag_t (const bool &b) : _flag (b), _can_recycle (true) {}
-  ~ref_flag_t () {}
-  void finalize () { if (_can_recycle) ref_flag_recycle (this); }
+  ~ref_flag_t () { }
+
+  static void recycle (ref_flag_t *p);
+  static ptr<ref_flag_t> alloc (const bool &b);
+  static recycle_bin_t<ref_flag_t> *get_recycle_bin ();
+
+  void finalize () { if (_can_recycle) recycle (this); }
   operator const bool &() const { return _flag; }
   bool get () const { return _flag; }
   void set (bool b) { _flag = b; }
@@ -149,8 +190,8 @@ private:
 class mortal_t {
 public:
   mortal_t () : 
-    _destroyed_flag (ref_flag_alloc (false)),
-    _dead_flag (ref_flag_alloc (false))
+    _destroyed_flag (ref_flag_t::alloc (false)),
+    _dead_flag (ref_flag_t::alloc (false))
   {}
 
   virtual ~mortal_t () { _destroyed_flag->set (true); }
@@ -863,6 +904,7 @@ public:
 private:
   cbv::ptr cb;
 };
+
 
 
 #endif /* _ASYNC_TAME_H */

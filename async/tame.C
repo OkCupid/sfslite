@@ -9,6 +9,7 @@ int tame_options;
 int tame_global_int;
 u_int64_t closure_serial_number;
 bool tame_collect_jg_flag;
+static recycle_bin_t<ref_flag_t> *rfrb;
 
 int tame_init::count;
 
@@ -23,6 +24,8 @@ tame_init::start ()
   tame_options = 0;
   closure_serial_number = 0;
   tame_collect_jg_flag = false;
+
+  rfrb = New recycle_bin_t<ref_flag_t> ();
 
   char *e = safegetenv (TAME_OPTIONS);
   for (char *cp = e; cp && *cp; cp++) {
@@ -168,30 +171,23 @@ closure_t::collect_join_groups ()
 //-----------------------------------------------------------------------
 // recycle ref flags
 
-size_t ref_flag_recycle_limit = 128;
-vec<ptr<ref_flag_t> > ref_flag_dump;
-size_t ref_flag_cursor = 0;
+recycle_bin_t<ref_flag_t> * ref_flag_t::get_recycle_bin () { return rfrb; }
 
-void ref_flag_recycle (ref_flag_t *p)
+void
+ref_flag_t::recycle (ref_flag_t *p)
 {
-  if (ref_flag_cursor < ref_flag_dump.size ()) {
-    ref_flag_dump[ref_flag_cursor] = mkref (p);
-  } else if (ref_flag_dump.size () < ref_flag_recycle_limit) {
-    ref_flag_dump.push_back (mkref (p));
-  } else
-    return;
-
-  ref_flag_cursor ++;
-  p->set_can_recycle (false);
+  if (get_recycle_bin ()->add (p)) {
+    p->set_can_recycle (false);
+  } else {
+    delete p;
+  }
 }
 
 ptr<ref_flag_t>
-ref_flag_alloc (const bool &b)
+ref_flag_t::alloc (const bool &b)
 {
-  ptr<ref_flag_t> ret;
-  if (ref_flag_cursor > 0) {
-    ret = ref_flag_dump[--ref_flag_cursor];
-    ref_flag_dump[ref_flag_cursor] = NULL;
+  ptr<ref_flag_t> ret = get_recycle_bin ()->get ();
+  if (ret) {
     ret->set_can_recycle (true);
     ret->set (b);
   } else {
