@@ -89,7 +89,7 @@ closure_t::end_of_scope_checks (const char *loc)
     set_weak_finalize_cb (wrap (check_closure_destroyed, loc, 
 				destroyed_flag ()));
   
-    // potentially decref us if we have join groups that should
+    // potentially weak-decref us if we have join groups that should
     // be going out of scope now.
     kill_join_groups ();
 
@@ -178,7 +178,9 @@ void ref_flag_recycle (ref_flag_t *p)
     ref_flag_dump[ref_flag_cursor] = mkref (p);
   } else if (ref_flag_dump.size () < ref_flag_recycle_limit) {
     ref_flag_dump.push_back (mkref (p));
-  }
+  } else
+    return;
+
   ref_flag_cursor ++;
   p->set_can_recycle (false);
 }
