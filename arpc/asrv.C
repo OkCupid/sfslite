@@ -692,7 +692,7 @@ asrv_delayed_eof::alloc (ref<axprt> x, const rpc_program &pr,
 			asrv_cb cb, cbv::ptr eofcb)
 {
   ptr<xhinfo> xi = xhinfo::lookup (x);
-  if (!xi && !x->reliable)
+  if (!xi || !x->reliable)
     return NULL;
   return New refcounted<asrv_delayed_eof> (xi, pr, cb, eofcb);
 }
