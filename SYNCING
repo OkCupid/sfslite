@@ -28,8 +28,6 @@ When Syncing from SFS to SFSlite: A Checklist
  - async/core.C
     - add #include "litetime.h"
     - s/clock_gettime (a,b)/my_clock_gettime ($b)/g
- - async/sysconf.h
-    - Alfred's patch for dmalloc + STL. see SFSLITE comments
  - async/
     - add mmcd.c, litetime.[Ch]
  - async/async.h
