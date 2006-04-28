@@ -41,7 +41,7 @@ authopaque_create ()
 {
   AUTH *auth = New AUTH;
   bzero (auth, sizeof (*auth));
-  auth->ah_ops = (AUTH::auth_ops *) &auth_opaque_ops;
+  auth->ah_ops = GCC41_CAST(AUTH::auth_ops, &auth_opaque_ops);
   auth->ah_cred.oa_base = static_cast<caddr_t> (xmalloc (MAX_AUTH_BYTES));
   auth->ah_verf.oa_base = static_cast<caddr_t> (xmalloc (MAX_AUTH_BYTES));
   authopaque_set (auth, NULL, NULL);
@@ -66,7 +66,7 @@ authcopy (opaque_auth *dst, const opaque_auth *src)
 void
 authopaque_set (AUTH *auth, const opaque_auth *cred, const opaque_auth *verf)
 {
-  assert (auth->ah_ops == (AUTH::auth_ops *) &auth_opaque_ops);
+  assert (auth->ah_ops == GCC41_CAST(AUTH::auth_ops, &auth_opaque_ops));
   authcopy (&auth->ah_cred, cred);
   authcopy (&auth->ah_verf, verf);
 }
@@ -74,7 +74,7 @@ authopaque_set (AUTH *auth, const opaque_auth *cred, const opaque_auth *verf)
 void
 authopaque_set (AUTH *auth, const authunix_parms *aup)
 {
-  assert (auth->ah_ops == (AUTH::auth_ops *) &auth_opaque_ops);
+  assert (auth->ah_ops == GCC41_CAST (AUTH::auth_ops, &auth_opaque_ops));
 
   auth->ah_cred.oa_flavor = AUTH_UNIX;
   xdrmem xdr (auth->ah_cred.oa_base, MAX_AUTH_BYTES);

@@ -34,7 +34,7 @@
 # ifndef IHASH_DEBUG
 #  define IHASH_DEBUG 1
 # endif /* !IHASH_DEBUG */
-# ifdef IHASH_DEBUG
+# if IHASH_DEBUG
    /* Check hash table consistency if check-funcs token set */
 #  define ihash_do_debug() (dmalloc_debug_current () & 0x4000)
 #  include "opnew.h"
@@ -161,6 +161,7 @@ public:
     clear ();
   }
   size_t size () const { return t.entries; }
+  bool constructed () const { return t.buckets > 0; }
 
   void remove (T *elm) {
 #if IHASH_DEBUG

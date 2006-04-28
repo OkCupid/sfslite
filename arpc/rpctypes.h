@@ -272,14 +272,12 @@ template<size_t n = RPC_INFINITY> struct rpc_bytes : rpc_vec<char, n> {
   using rpc_vec<char, n>::size;
 
   void setstrmem (const str &s) { rpc_vec<char,n>::set (s.cstr (), s.len ()); }
-
   rpc_bytes &operator= (const str &s) 
-  {
+  { 
     rpc_vec<char,n>::setsize (s.len ()); 
     memcpy (base (), s.cstr (), size ()); 
     return *this; 
   }
-
   template<size_t m> rpc_bytes &operator= (const rpc_vec<char, m> &v)
     { rpc_vec<char, n>::operator= (v); return *this; }
   template<size_t m> rpc_bytes &operator= (const array<char, m> &v)

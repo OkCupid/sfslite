@@ -206,9 +206,84 @@ operator delete[] (void *ptr) delete_throw
 
 #else /* DMALLOC */
 
+#include <ihash.h>
+
+struct hashptr {
+  hashptr () {}
+  hash_t operator() (const void *obj) const
+    { return reinterpret_cast<u_long> (obj); }
+};
+struct objref {
+  const void *obj;
+  const char *refline;
+  int *const flagp;
+  ihash_entry<objref> hlink;
+  
+  objref (const void *o, const char *fl, int *fp);
+  ~objref ();
+};
+static ihash<const void *, objref, &objref::obj,
+	     &objref::hlink, hashptr> objreftab;
+
+inline
+objref::objref (const void *o, const char *fl, int *fp)
+  : obj (o), refline (fl), flagp (fp)
+{
+  objreftab.insert (this);
+}
+inline
+objref::~objref ()
+{
+  objreftab.remove (this);
+}
+
+int nodelete_ignore_count;
+
+static int do_nodelete_flag;
+inline bool
+do_nodelete ()
+{
+  return do_nodelete_flag > 0 && !nodelete_ignore_count
+    && !globaldestruction && objreftab.constructed ();
+}
+void
+nodelete_addptr (const void *obj, const char *fl, int *fp)
+{
+  if (!do_nodelete_flag) {
+    u_long dmalloc_flags = dmalloc_debug_current ();
+    do_nodelete_flag = (dmalloc_flags && 0x800) ? 1 : -1;
+  }
+  if (do_nodelete ())
+    vNew objref (obj, fl, fp);
+}
+void
+nodelete_remptr (const void *obj, const char *fl, int *fp)
+{
+  if (do_nodelete ())
+    for (objref *oref = objreftab[obj]; oref; oref = objreftab.nextkeq (oref))
+      if (oref->refline == fl && oref->flagp == fp) {
+	delete oref;
+	return;
+      }
+}
+inline void
+nodelete_check (const void *ptr)
+{
+  if (do_nodelete ())
+    for (objref *oref = objreftab[ptr]; oref;
+	 oref = objreftab.nextkeq (oref)) {
+      if (oref->flagp)
+	(*oref->flagp)++;
+      else
+	panic ("deleting ptr %p still referenced from %s\n",
+	       ptr, oref->refline);
+    }
+}
+
 void
 operator delete (void *ptr) delete_throw
 {
+  nodelete_check (ptr);
   if (stktrace_record > 0)
     dmalloc_free (__backtrace (__FILE__, 2), __LINE__, ptr, DMALLOC_FUNC_FREE);
   else

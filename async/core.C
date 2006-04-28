@@ -39,7 +39,7 @@ bool amain_panic;
 static int nselfd;
 
 // initialize this in case we access tsnow before calling amain()
-timespec tsnow ;
+timespec tsnow;
 
 const time_t &timenow = tsnow.tv_sec;
 
@@ -324,7 +324,7 @@ sigcb_check ()
 	sigcaught[i] = 0;
 	if (cbv::ptr cb = sighandler[i]) {
 #ifdef WRAP_DEBUG
-	  if (callback_trace & CBTR_SIG && i != SIGCHLD) {
+	  if ((callback_trace & CBTR_SIG) && i != SIGCHLD) {
 # ifdef NEED_SYS_SIGNAME_DECL
 	    warn ("CALLBACK_TRACE: %ssignal %d %s <- %s\n",
 		  timestring (), i, cb->dest, cb->line);

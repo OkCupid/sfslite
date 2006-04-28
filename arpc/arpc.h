@@ -134,4 +134,14 @@ void acallrpc (const sockaddr_in *sinp, const rpc_program &rp,
 void pmap_map (int fd, const rpc_program &rp,
 	       callback<void, bool>::ptr cb = NULL);
 
+template<class Y, class X>
+inline Y *gcc41_cast (X *x)
+{
+  return reinterpret_cast<Y *> (reinterpret_cast<void *> (x));
+ }
+
+// Cast pointer p to be of type Y*, in a way that doesn't
+// trigger GCC's mysterious 'type-punned pointer' warning.
+#define GCC41_CAST(Y,p) (gcc41_cast<Y, typeof(*(p))> (p))
+
 #endif /* ! _ARPC_H_ */

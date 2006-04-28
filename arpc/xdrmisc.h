@@ -374,7 +374,12 @@ RPC_PRINT_TYPE_DECL (type)
 #define RPCUNION_TRAVERSE(type, field) return rpc_traverse (t, *obj.field)
 #define RPCUNION_STOMPCAST(type, field) field.Xstompcast ()
 #define RPCUNION_REC_STOMPCAST(type, field) \
-  obj.field.Xstompcast (); return rpc_traverse (s, *obj.field);
+  obj.field.Xstompcast (); return rpc_traverse (s, *obj.field)
+#if __GNUC__ >= 4
+#define RPCUNION_XXX_GCC40 return false;
+#else /* not gcc 4 */
+#define RPCUNION_XXX_GCC40
+#endif /* not gcc 4 */
 
 class xdrbase : public XDR {
 protected:

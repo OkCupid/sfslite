@@ -108,7 +108,7 @@ static void report2 (u_int64_t diff)
   report (diff);
   report (time_in_acheck, "in acheck");
   report (diff2, "not in acheck");
-  fprintf (stderr, "n wrap calls: %lld%\n", n_wrap_calls);
+  //fprintf (stderr, "n wrap calls: %lld%\n", n_wrap_calls);
 }
 
 static void check_cpu_speed ()

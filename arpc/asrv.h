@@ -97,10 +97,10 @@ public:
   const sockaddr *getsa () const { return addr; }
   bool fromresvport () const;
 
-  virtual void reply (const void *, xdrproc_t = NULL, bool nocache = false);
+  void reply (const void *, xdrproc_t = NULL, bool nocache = false);
   template<class T> void replyref (const T &res, bool nocache = false)
     { reply (&res, NULL, nocache); }
-  void virtual replyref (const int &res, bool nocache = false)
+  void replyref (const int &res, bool nocache = false)
     { u_int32_t val = res; reply (&val, NULL, nocache); }
 
   void reject (auth_stat);

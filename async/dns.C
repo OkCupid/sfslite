@@ -267,6 +267,16 @@ resolver::sendreq (dnsreq *r)
   h->id = r->id;
   h->rd = 1;
 
+  /* FreeBSD (and possibly other OSes) have a broken dn_expand
+   * function that doesn't properly invert dn_comp.
+   */
+  {
+    dnsparse query (qb, n, false);
+    question q;
+    if (query.qparse (&q))
+      r->name = q.q_name;
+  }
+
   sock->sendpkt (qb, n);
 }
 

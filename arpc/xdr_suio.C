@@ -66,7 +66,7 @@ static cxx_xdr_ops xsops = {
 };
 static const XDR xsproto = {
   XDR_ENCODE,
-  (xdr_ops_t *) &xsops,
+  GCC41_CAST (xdr_ops_t, &xsops),
   NULL, NULL, NULL, 0
 };
 
@@ -82,7 +82,7 @@ static cxx_xdr_ops xsops_scrub = {
 };
 static const XDR xsproto_scrub = {
   XDR_ENCODE,
-  (xdr_ops_t *) &xsops_scrub,
+  GCC41_CAST (xdr_ops_t,  &xsops_scrub),
   NULL, NULL, NULL, 0
 };
 

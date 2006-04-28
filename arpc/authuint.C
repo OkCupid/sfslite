@@ -33,7 +33,7 @@ static cxx_auth_ops auth_uint_ops = {
 u_int32_t
 authuint_getval (AUTH *auth)
 {
-  assert (auth->ah_ops == (AUTH::auth_ops *) &auth_uint_ops);
+  assert (auth->ah_ops == GCC41_CAST(AUTH::auth_ops, &auth_uint_ops));
   return auth->ah_key.key.low;
 }
 
@@ -43,7 +43,7 @@ authuint_create (u_int32_t val)
   AUTH *auth = New AUTH;
   bzero (auth, sizeof (*auth));
   auth->ah_key.key.low = val;
-  auth->ah_ops = (AUTH::auth_ops *) &auth_uint_ops;
+  auth->ah_ops = GCC41_CAST(AUTH::auth_ops, &auth_uint_ops);
   return auth;
 }
 

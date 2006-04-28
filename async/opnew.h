@@ -50,6 +50,14 @@ void *operator new[] (size_t, nothrow_t, const char *, int) throw ();
 #define opnew(size) operator new (size, dmalloc, __FILE__, __LINE__)
 #if __GNUC__ >= 2
 #define DSPRINTF_DEBUG 1
+extern int nodelete_ignore_count;
+struct nodelete_ignore {
+  nodelete_ignore () { nodelete_ignore_count++; }
+  ~nodelete_ignore () { nodelete_ignore_count--; }
+  operator bool () const { return true; }
+};
+void nodelete_addptr (const void *obj, const char *fl, int *fp);
+void nodelete_remptr (const void *obj, const char *fl, int *fp);
 #endif /* GCC2 */
 #else /* !DMALLOC */
 #define ntNew new (nothrow)
