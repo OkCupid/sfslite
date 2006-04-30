@@ -686,6 +686,12 @@ public:
    */
   u_int n_vars_left () const 
   { return join_group_t<T1,T2,T3,T4>::n_joins_left (); }
+
+  /**
+   * Synonym for the above, since n_signals_left was in the
+   * paper.
+   */
+  u_int n_signals_left () const { return n_vars_left (); }
   
   /**
    * Get the next signal, and put the results into the given
@@ -705,6 +711,9 @@ public:
       ret = false;
     return ret;
   }
+  bool next_signal (T1 &r1, T2 &r2, T3 &r3, T4 &r4) 
+  { return next_var (r1, r2, r3, r4); }
+
   bool next_var (T1 &r1, T2 &r2, T3 &r3)
   {
     bool ret = true;
@@ -717,6 +726,8 @@ public:
       ret = false;
     return ret;
   }
+  bool next_signal (T1 &r1, T2 &r2, T3 &r3) { return next_var (r1, r2, r3); }
+
   bool next_var (T1 &r1, T2 &r2)
   {
     bool ret = true;
@@ -728,6 +739,8 @@ public:
       ret = false;
     return ret;
   }
+  bool next_signal (T1 &r1, T2 &r2) { return next_var (r1); }
+
   bool next_var (T1 &r1)
   {
     bool ret = true;
@@ -738,8 +751,10 @@ public:
       ret = false;
     return ret;
   }
+  bool next_signal (T1 &r1) { return next_var (r1); }
 
   bool next_var () { return join_group_t<T1,T2,T3,T4>::pending (); }
+  bool next_signal () { return next_var (); }
 
 };
 
