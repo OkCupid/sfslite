@@ -82,13 +82,11 @@ remote_host_t::dostuff_private (int port, coordvar_t<bool>::t callercv)
       // launch an asychronous function call, but don't
       // block on its return. Associate the call with the 
       // join group 'window' and the index value 'i'
-      NONBLOCK (window, i) {
-	cli->call (EX_RANDOM, NULL, &res[i], @(errs[i]));
-      }
+      cli->call (EX_RANDOM, NULL, &res[i], @[window,i](errs[i]));
     }
 
     // a join is needed for every call that returns
-    while (window.n_vars_left ()) {
+    while (window.n_signals_left ()) {
 
       // Block until a call has returned; when it has, get
       // the index variable associated with the call, and assign
@@ -104,9 +102,7 @@ remote_host_t::dostuff_private (int port, coordvar_t<bool>::t callercv)
 	// another should be launched. but don't bother launching
 	// more if an error occurred.
 	if (i < n_tot && !err_occurred) {
-	  NONBLOCK (window, i) {
-	    cli->call (EX_RANDOM, NULL, &res[i], @(errs[i]));
-	  }
+	  cli->call (EX_RANDOM, NULL, &res[i], @[window,i](errs[i]));
 	  i++;
 	}
       }

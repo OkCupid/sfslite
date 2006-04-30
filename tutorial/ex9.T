@@ -49,9 +49,7 @@ state_t::launch (coordvar_t<bool>::t callercv)
       // launch an asychronous function call, but don't
       // block on its return. Associate the call with the 
       // join group 'window' and the index value 'i'
-      NONBLOCK (window, i) {
-	cli->call (EX_RANDOM, NULL, &res[i], @(errs[i]));
-      }
+      cli->call (EX_RANDOM, NULL, &res[i], @[window,i](errs[i]));
     }
   }
   SIGNAL (true);
@@ -81,9 +79,7 @@ state_t::relaunch (coordvar_t<bool>::t callercv)
       // another should be launched. but don't bother launching
       // more if an error occurred.
       if (i < n_tot && !err_occurred) {
-	NONBLOCK (window, i) {
-	  cli->call (EX_RANDOM, NULL, &res[i], @(errs[i]));
-	}
+	cli->call (EX_RANDOM, NULL, &res[i], @[window,i](errs[i]));
 	i++;
       }
     }

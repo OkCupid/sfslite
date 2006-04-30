@@ -30,12 +30,11 @@ void try_rpc (str h, int port, cbb cb)
     ev.setsize (n);
     rv.setsize (n);
  
-    NONBLOCK (CG) {
-      for (i = 0; i < n; i++) {
-	cli->call (EX_RANDOM, NULL, &rv[i], @(ev[i]) );
-      }
+    
+    for (i = 0; i < n; i++) {
+      cli->call (EX_RANDOM, NULL, &rv[i], @[CG](ev[i]) );
     }
-    while (CG.n_vars_left ()) {
+    while (CG.n_signals_left ()) {
       WAIT(CG);
     }
 

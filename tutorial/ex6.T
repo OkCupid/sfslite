@@ -17,7 +17,7 @@ void dostuff (vec<str> hosts, int port, cbi done)
   }
 
   for (i = 0; i < hosts.size (); i++) {
-    NONBLOCK (CG, i) { tcpconnect (hosts[i], port, @(fd)); }
+    tcpconnect (hosts[i], port, @[CG,i](fd)); 
   }
   
   while (CG.need_join () && fd < 0) {

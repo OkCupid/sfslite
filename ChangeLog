@@ -14,6 +14,7 @@ $Id$
  - Support GCC 4.1 compilation
  - Include PATCHLEVEL #define, so software can specify desired sfslite
    patchlevel
+ - Nuke NONBLOCK from examples, and use n_signals_left as in the paper.
 
 0.8.7
  - Fixed bug in _block_cb3

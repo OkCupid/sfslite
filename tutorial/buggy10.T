@@ -54,14 +54,10 @@ TAME(void state_t::launch (ceo_callback_bool_t cceoc))
       // launch an asychronous function call, but don't
       // block on its return. Associate the call with the 
       // join group 'window' and the index value 'i'
-      NONBLOCK (window, i) {
-	cli->call (EX_RANDOM, NULL, &res[i], @(errs[i]));
-      }
+      cli->call (EX_RANDOM, NULL, &res[i], @[window,i](errs[i]));
     }
 
-    NONBLOCK (window) {
-      delaycb (10, 0, wrap (foofoo, @(xx)));
-    }
+    delaycb (10, 0, wrap (foofoo, @[window](xx)));
   }
   RESUME (true);
 }
@@ -89,9 +85,7 @@ TAME(void state_t::relaunch (ceo_callback_bool_t cceoc))
 	// another should be launched. but don't bother launching
 	// more if an error occurred.
 	if (i < n_tot && !err_occurred) {
-	  NONBLOCK (window, i) {
-	    cli->call (EX_RANDOM, NULL, &res[i], @(errs[i]));
-	  }
+	  cli->call (EX_RANDOM, NULL, &res[i], @[window,i](errs[i]));
 	  i++;
 	}
       }

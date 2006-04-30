@@ -13,7 +13,7 @@ bool fix_bug;
  *
  *   A test program that should complain about Bug #1b -- a closure
  *   leaked past the end of a function's control flow, from a function
- *   that uses NONBLOCK...
+ *   that uses nonblocking control...
  */
 
 class cb_hog_t {
@@ -32,10 +32,8 @@ static void finish (bool rc)
 TAMED static void 
 part1 (cb_hog_t *hog, coordgroup_t<> *JG, coordvar_void_t callercv)
 {
-  NONBLOCK (*JG) {
-    delaycb (1, 0, @());
-    hog->call_me (@());
-  }
+  delaycb (1, 0, @[*JG]());
+  hog->call_me (@[*JG]());
   RESUME;
 }
 

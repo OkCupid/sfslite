@@ -43,9 +43,7 @@ bool dostuff (str h, int port, cbb cb)
       // launch an asychronous function call, but don't
       // block on its return. Associate the call with the 
       // join group 'window' and the index value 'i'
-      NONBLOCK (rpcback) {
-	cli->call (EX_RANDOM, NULL, &res[i], @[i](errs[i]));
-      }
+      cli->call (EX_RANDOM, NULL, &res[i], @[rpcback,i](errs[i]));
     }
 
     // a join is needed for every call that returns

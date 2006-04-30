@@ -26,7 +26,7 @@ connect (vec<str> hosts, int port, cbi done)
   }
 
   for (i = 0; i < hosts.size (); i++) {
-    NONBLOCK (CG, i) { tcpconnect (hosts[i], port, @(fd)); }
+    tcpconnect (hosts[i], port, @[CG,i](fd));
   }
   
   while (CG.need_join ()) {
@@ -91,7 +91,7 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
   // times.  That is, fdcb will call us back every time the socket
   // 'fd' is available for writing.
   //
-  NONBLOCK (write_cg) { fdcb (fd, selwrite, @()); }
+  fdcb (fd, selwrite, @[write_cg]());
   
   while (true) {
     WAIT (write_cg);
@@ -137,7 +137,7 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
   // 
   // As before, but now we need to schedule a callback for reading
   //
-  NONBLOCK (read_cg) { fdcb (fd, selread, @()); }
+  fdcb (fd, selread, @[read_cg]()); 
 
   //
   // The details of the reading loop are almost identical to the

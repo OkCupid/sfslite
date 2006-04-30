@@ -661,8 +661,8 @@ private:
 };
 
 /**
- * A coordgroup_t (short for coordination variable) is a synonym for 
- * join_group_t, for use with WAIT as opposed to join. Coordination variable
+ * A coordgroup_t (short for coordination group) is a synonym for 
+ * join_group_t, for use with WAIT as opposed to join. Coordination variables
  * join a particular coordination group when they are dispatched.  When
  * a signal is made on a coordination variable, the coordination groups
  * gets the message, and processes it accordingly. 
