@@ -32,9 +32,11 @@ When Syncing from SFS to SFSlite: A Checklist
     - add mmcd.c, litetime.[Ch]
  - async/async.h
     - add #include "litetime.h"
+    - update SFS_PATCHLEVEL #defines
  - rpcc/Makefile.am
     - delete dependency of scan.o on parse.h
  - crypt/Makefile.am
     - remove if STATIC lines for different compiling tst for
       shared libraries.  was breaking builds under gcc 3.4
-    - do not build umac.c or srp.c or serial.c
+    - do not build umac.c or srp.c or serial.c or homoenc.h/pailler.c/pm.[ch]
+    
