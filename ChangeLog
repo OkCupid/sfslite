@@ -11,6 +11,9 @@ $Id$
    to 'callercv.'
  - Recycle ptr<bool>'s instead of always throwing them out and reallocating
    them. Recycle limit by default is 128, but can tune it. 
+ - Support GCC 4.1 compilation
+ - Include PATCHLEVEL #define, so software can specify desired sfslite
+   patchlevel
 
 0.8.7
  - Fixed bug in _block_cb3
