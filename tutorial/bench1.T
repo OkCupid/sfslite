@@ -215,7 +215,7 @@ bench1_nullsfs_alloc ()
 static void
 bench1_nullsfs ()
 {
-  int i ;
+  int i = 0;
   i++;
 }
 
