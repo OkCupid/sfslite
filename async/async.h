@@ -91,7 +91,7 @@ void ifchgcb_remove (ifchgcb_t *chg);
 
 extern u_int64_t time_in_acheck;
 
-#define SFSLITE_PATCHLEVEL 8008002
-#define SFSLITE_PATCHLEVEL_STR "0.8.8pre2"
+#define SFSLITE_PATCHLEVEL 8008003
+#define SFSLITE_PATCHLEVEL_STR "0.8.8pre3"
 
 #endif /* !_ASYNC_ASYNC_H_ */
