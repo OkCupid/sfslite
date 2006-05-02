@@ -19,27 +19,28 @@ TAMED static void
 connect (vec<str> hosts, int port, cbi done)
 {
   VARS {
-    int fd (-1);
     u_int i;
-    coordgroup_t<u_int> CG;
+    coordgroup_t<u_int, ptr<int> > CG;
     bool got_one (false);
+    ptr<int> fd;
   }
 
   for (i = 0; i < hosts.size (); i++) {
-    tcpconnect (hosts[i], port, @[CG,i](fd));
+    fd = New refcounted<int> (-1);
+    tcpconnect (hosts[i], port, @[CG,i,fd](*fd));
   }
   
   while (CG.need_join ()) {
-    WAIT (CG, i);
+    WAIT (CG, i, fd);
     warn << hosts[i]  << ":" << port << ": ";
-    if (fd > 0) {
+    if (*fd >= 0) {
       warnx << "connection succeeded";
       if (!got_one) {
-	(*done) (fd);
+	(*done) (*fd);
 	got_one = true;
       } else {
 	warnx << "... but too late!";
-	close (fd);
+	close (*fd);
       }
       warnx << "\n";
     } else {
@@ -47,7 +48,7 @@ connect (vec<str> hosts, int port, cbi done)
     }
   }
   if (!got_one)
-    (*done) (fd);
+    (*done) (-1);
 }
 
 /**

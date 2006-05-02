@@ -9,27 +9,27 @@
 TAMED static 
 void dostuff (vec<str> hosts, int port, cbi done)
 {
-  // declare all of your "stack" variables here
   VARS {
-    int fd (-1);
+    ptr<int> fd;
     u_int i;
-    coordgroup_t<u_int> CG (__FILE__, __LINE__);
+    coordgroup_t<u_int, ptr<int> > CG (__FILE__, __LINE__);
   }
 
   for (i = 0; i < hosts.size (); i++) {
-    tcpconnect (hosts[i], port, @[CG,i](fd)); 
+    fd = New refcounted<int> ();
+    tcpconnect (hosts[i], port, @[CG,i,fd](*fd)); 
   }
   
   while (CG.need_join () && fd < 0) {
-    WAIT (CG, i);
+    WAIT (CG, i, fd);
     warn << hosts[i]  << ":" << port << ": ";
-    if (fd > 0) {
+    if (*fd > 0) {
       warnx << "connection succeeded\n";
     } else {
       warnx << "connection failed\n";
     }
   }
-  (*done) (fd);
+  (*done) (-1);
 }
 
 static void finish (int fd)

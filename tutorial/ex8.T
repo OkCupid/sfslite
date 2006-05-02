@@ -144,26 +144,27 @@ TAMED static
 void get_fastest_web_page (vec<str> hosts, int port, cbb done)
 {
   VARS {
-    int fd (-1);
     u_int i;
-    coordgroup_t<u_int> CG;
-    bool got_one (false), res;
+    coordgroup_t<u_int, ptr<bool> > CG;
+    bool got_one (false);
     vec<strbuf> responses;
+    ptr<bool> res;
   }
   
   responses.setsize (hosts.size ());
   
   for (i = 0; i < hosts.size (); i++) {
-    get_web_page (hosts[i], port, &responses[i], @[CG,i](res));
+    res = New refcounted<bool> ();
+    get_web_page (hosts[i], port, &responses[i], @[CG,i,res](*res));
   }
   
   while (CG.need_join ()) {
-    WAIT (CG, i);
+    WAIT (CG, i, res);
     warn << hosts[i]  << ":" << port << ": ";
-    if (res) {
+    if (*res) {
       warnx << "connection succeeded";
       if (!got_one) {
-	(*done) (fd);
+	(*done) (true);
 	responses[i].tosuio ()->output (1);
 	got_one = true;
       } else {
@@ -174,6 +175,8 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
       warnx << "connection failed\n";
     }
   }
+  if (!got_one)
+    (*done) (false);
 }
 
 static void finish (bool rc)
