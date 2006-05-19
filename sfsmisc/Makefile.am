@@ -21,7 +21,7 @@ sfsinclude_HEADERS = \
 afsnode.h agentconn.h agentmisc.h getfh3.h nfs3_nonnul.h	\
 nfsserv.h nfstrans.h rex.h sfsclient.h sfsconnect.h sfskeymisc.h\
 sfsmisc.h sfsserv.h sfstty.h uvfstrans.h sfscrypt.h sfsschnorr.h\
-sfskeymgr.h sfsgroupmgr.h rexcommon.h
+sfskeymgr.h sfsgroupmgr.h rexcommon.h sfssesscrypt.h
 
 noinst_LIBRARIES = libmallock.a	# hack for automake to build mallock.o
 libmallock_a_SOURCES = mallock.C
