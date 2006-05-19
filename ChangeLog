@@ -2,7 +2,7 @@
 $Id$
 
 0.8.9
- - support for signal() within SFS
+ - support for callback::signal() within SFS
  - simplified runtime leak-checking support
 
 0.8.8
