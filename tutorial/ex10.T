@@ -11,7 +11,7 @@ class my_host_t {
 public:
   my_host_t (str h, int p) : h (h), port (p), XX (X) {}
   
-  void try_it (coordvar_bool_t cceoc, CLOSURE);
+  void try_it (cbb cceoc, CLOSURE);
   
   T foo;
   str h;
@@ -20,7 +20,7 @@ public:
 };
  
 TAMED template<class T, size_t X> void
-my_host_t<T,X>::try_it (coordvar_bool_t callercv)
+my_host_t<T,X>::try_it (cbb cv)
 {
   VARS {
     bool ret (false);
@@ -66,7 +66,7 @@ my_host_t<T,X>::try_it (coordvar_bool_t callercv)
       }
     }
   }
-  SIGNAL (ret);
+  cv->signal (ret);
   fd ++;
 }
  

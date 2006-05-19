@@ -296,7 +296,6 @@ public:
     : _line_number (ln), _call_with (l) {}
 
   virtual void output (outputter_t *o) { tame_env_t::output (o); }
-  virtual void output_in_class (strbuf &b) = 0;
   virtual void output_generic (strbuf &b) = 0;
   virtual void set_nonblock (tame_nonblock_t *n) {}
   
@@ -312,7 +311,6 @@ public:
 			   ptr<expr_list_t> l);
   ~tame_block_callback_t () {}
   void output (outputter_t *o);
-  void output_in_class (strbuf &b);
   void output_generic (strbuf &b) {}
   int global_cb_ind () const { return _cb_ind; }
 private:
@@ -327,7 +325,6 @@ public:
 			    ptr<expr_list_t> wi)
     : tame_callback_t (ln, l), _nonblock (n), _wrap_in (wi) {}
   void output (outputter_t *o);
-  void output_in_class (strbuf &b) {}
   void output_generic (strbuf &b);
   void set_wrap_in (ptr<expr_list_t> l) { _wrap_in = l; }
   void set_nonblock (tame_nonblock_t *n) { _nonblock = n; }
@@ -415,13 +412,11 @@ public:
       _template (fn._template),
       _template_args (_class ? template_args (_class) : NULL),
       _closure (mk_closure ()), 
-      _cceoc_sentinel ("int", NULL, "CCEOC_STACK_SENTINEL"),
       _args (d->params ()), 
       _opts (fn._opts),
       _lineno (l),
       _n_labels (0),
       _n_blocks (0),
-      _hit_cceoc_call (false),
       _loc (loc),
       _lbrace_lineno (0),
       _vars (NULL),
@@ -431,7 +426,6 @@ public:
   vartab_t *stack_vars () { return &_stack_vars; }
   vartab_t *args () { return _args; }
   vartab_t *class_vars_tmp () { return &_class_vars_tmp; }
-  var_t cceoc_sentinel () const { return _cceoc_sentinel; }
 
   void push_hook (tame_el_t *el)
   {
@@ -439,18 +433,8 @@ public:
       _after_vars_el_encountered = true;
   }
 
-  // return true if this function is using CCEOC checking, and
-  // false otherwise
-  bool do_cceoc () const;
-  str cceoc_typename () const;
-
   // called from tame_vars_t class
   void output_vars (outputter_t *o, int ln);
-
-  // set a flag saying whether or not we've hit a CCEOC call in
-  // this function or not
-  bool did_cceoc_call () const { return _hit_cceoc_call; }
-  void do_cceoc_call () { _hit_cceoc_call = true; }
 
   // default return statement is "return;"; can be overidden,
   // but only once.
@@ -529,7 +513,6 @@ private:
   str _template;
   str _template_args;
   const var_t _closure;
-  const var_t _cceoc_sentinel;
 
   var_t mk_closure () const ;
 
@@ -555,7 +538,6 @@ private:
   u_int _lineno;
   u_int _n_labels;
   u_int _n_blocks;
-  bool _hit_cceoc_call;
   str _default_return;
   str _loc; // filename:linenumber where this function was declared
   u_int _lbrace_lineno;  // void foo () { ... where the '{' was
@@ -639,13 +621,13 @@ public:
   tame_join_t *join () { return _join; }
 
   void output (outputter_t *o);
-  void output_cceoc_argname (outputter_t *o);
 
   void clear_sym_bit () { _sym_bit = false; }
   void set_sym_bit () { _sym_bit = true; }
   bool get_sym_bit () const { return _sym_bit; }
 
   void set_infile_name (const str &i) { _infile_name = i; }
+  str infile_name () const { return _infile_name; }
   str loc (u_int l) const ;
 
 protected:
@@ -666,7 +648,7 @@ protected:
 
 class tame_block_t : public tame_env_t {
 public:
-  tame_block_t (tame_fn_t *f) : _fn (f), _id (0) {}
+  tame_block_t (tame_fn_t *f, int l) : _fn (f), _id (0), _lineno (l) {}
   ~tame_block_t () {}
   
   void output (outputter_t *o);
@@ -687,6 +669,7 @@ protected:
   int _id;
   vartab_t _class_vars;
   vec<tame_callback_t *> _callbacks;
+  int _lineno;
 };
   
 class tame_nonblock_t : public tame_env_t {
@@ -756,10 +739,5 @@ do {                                                      \
       out = lstr (ln, b);                                 \
 } while (0)
 
-
-/*
- * constants, etc.
- */
-extern const char *cceoc_argname;
 
 #endif /* _TAME_TAME_H */

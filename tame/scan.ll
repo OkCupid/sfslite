@@ -60,7 +60,6 @@ XNUM 	[+-]?0x[0-9a-fA-F]
 %x ID_OR_NUM NUM_ONLY EXPECT_CB_BASE HALF_PARSE PP PP_BASE
 %x NONBLOCK_ENTER JOIN_ENTER JOIN_LIST JOIN_LIST_BASE
 %x EXPR_LIST EXPR_LIST_BASE ID_LIST RETURN_PARAMS
-%x RESUME_PARAMS RESUME_PARAMS_BASE RESUME_BASE
 %x EXPR_LIST_BR EXPR_LIST_BR_BASE
 %x DEFRET_ENTER DEFRET_BASE DEFRET
 %x TEMPLATE_ENTER TEMPLATE TEMPLATE_BASE
@@ -327,9 +326,6 @@ WAIT/[ \t\n(/]	    { return tame_ret (JOIN_ENTER, T_WAIT); }
 DEFAULT_RETURN	    { return tame_ret (DEFRET_ENTER, T_DEFAULT_RETURN); }
 
 return/[ \t\n(/;]   { yy_push_state (RETURN_PARAMS); return T_RETURN; }
-RESUME/[ \t\n(/;]   { yy_push_state (RESUME_BASE); return T_RESUME; }
-UNBLOCK/[ \t\n(/;]  { yy_push_state (RESUME_BASE); return T_UNBLOCK; }
-SIGNAL/[ \t\n(/;]   { yy_push_state (RESUME_BASE); return T_UNBLOCK; }
 
 \"		    { yy_push_state (QUOTE); return std_ret (T_PASSTHROUGH); }
 }
@@ -382,30 +378,6 @@ TAME_ON		{ tame_on = 1; GOBBLE_RET; }
 [^\n;/]+|[/]		{ return std_ret (T_PASSTHROUGH); }
 }
 
-<RESUME_PARAMS_BASE,RESUME_PARAMS>{
-\n		{ ++lineno; return std_ret (T_PASSTHROUGH); }
-[^()\n/]+|[/]	{ return std_ret (T_PASSTHROUGH); }
-}
-
-<RESUME_BASE>{
-\n		{ ++lineno; }
-[ \t]+		{ /* ignore */ }
-[(]		{ yy_push_state (RESUME_PARAMS_BASE); return yytext[0]; }
-;		{ yy_pop_state (); return yytext[0]; }
-.		{ yyerror ("unexpected token after RESUME/UNBLOCK"); }
-}
-
-<RESUME_PARAMS_BASE>{
-[)]		{ yy_pop_state (); return yytext[0]; }
-[(]		{ yy_push_state (RESUME_PARAMS_BASE); return yytext[0]; }
-}
-
-<RESUME_PARAMS>{
-[(]	{ yy_push_state (RESUME_PARAMS); return std_ret (T_PASSTHROUGH); }
-[)]	{ yy_pop_state (); return std_ret (T_PASSTHROUGH); }
-}
-
-
 <C_COMMENT>{
 TAME_OFF	{ tame_on = 0; GOBBLE_RET; }
 TAME_ON		{ tame_on = 1; GOBBLE_RET; }
@@ -415,7 +387,7 @@ TAME_ON		{ tame_on = 1; GOBBLE_RET; }
 }
 
 
-<CB_ENTER,FULL_PARSE,SIG_PARSE,FN_ENTER,VARS_ENTER,HALF_PARSE,PP,PP_BASE,EXPR_LIST,EXPR_LIST_BASE,ID_LIST,BLOCK_ENTER,NONBLOCK_ENTER,JOIN_ENTER,RETURN_PARAMS,RESUME_PARAMS,RESUME_PARAMS_BASE,RESUME_BASE,EXPR_LIST_BR,EXPR_LIST_BR_BASE,DEFRET_ENTER>{
+<CB_ENTER,FULL_PARSE,SIG_PARSE,FN_ENTER,VARS_ENTER,HALF_PARSE,PP,PP_BASE,EXPR_LIST,EXPR_LIST_BASE,ID_LIST,BLOCK_ENTER,NONBLOCK_ENTER,JOIN_ENTER,RETURN_PARAMS,EXPR_LIST_BR,EXPR_LIST_BR_BASE,DEFRET_ENTER>{
 
 "//"		{ gobble_flag = 1; yy_push_state (CXX_COMMENT); }
 "/*"		{ gobble_flag = 1; yy_push_state (C_COMMENT); }

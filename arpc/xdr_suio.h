@@ -26,7 +26,7 @@
 static inline suio *&
 xsuio (XDR *x)
 {
-  return * GCC41_CAST(suio *, &x->x_private);
+  return * TYPE_PUN_CAST(suio *, &x->x_private);
 }
 
 extern "C" {

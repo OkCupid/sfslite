@@ -52,9 +52,6 @@ int vars_lineno;
 
 %token T_2COLON
 %token T_RETURN
-%token T_UNBLOCK
-%token T_SIGNAL
-%token T_RESUME
 
 /* Keywords for our new filter */
 %token T_TAME
@@ -91,11 +88,8 @@ int vars_lineno;
 %type <var>  parameter_declaration
 
 %type <el>   fn_tame vars block nonblock join return_statement wait
-%type <el>   resume_statement default_return floating_callback
-%type <ret>  resume_keyword
+%type <el>   default_return floating_callback
 %type <cb>   callback
-
-%type<str>   resume_arg_list resume_arg_list_opt
 
 %type <opts> static_opt
 %type <fn_spc> fn_specifiers template_decl
@@ -192,7 +186,6 @@ fn_tame: vars
 	| join
 	| wait
 	| return_statement
-	| resume_statement
 	| default_return
 	| floating_callback
 	;
@@ -233,43 +226,9 @@ vars:	T_VARS
 	  }
 	  if (!state.function ()->set_vars (v)) {
 	    yyerror ("The VARS{} section must come before any BLOCK, "
-	             " JOIN, WAIT, NONBLOCK, SIGNAL or RESUME section");
+	             " WAIT or NONBLOCK section");
 	  }
 	  $$ = v;
-	}
-	;
-
-resume_keyword:	
-	 T_UNBLOCK { $$ = New tame_unblock_t (get_yy_lineno (), 
-	                                      state.function ()); }
-	| T_SIGNAL { $$ = New tame_unblock_t (get_yy_lineno (), 
-	                                      state.function ()); }
-	| T_RESUME  { $$ = New tame_resume_t (get_yy_lineno (), 
-	                                      state.function ()); }
-	;
-
-resume_arg_list: '(' passthrough ')' 
-	{
-	  $$ = $2;
-	}
-	;
-
-resume_arg_list_opt: /* empty */  { $$ = lstr (get_yy_lineno ());  }
-	| resume_arg_list
-	;
-
-resume_statement: resume_keyword resume_arg_list_opt ';'
-	{
-	  if (!state.function ()->do_cceoc()) {
-	    strbuf b;
-  	    b << "Can't unblock/resume without '" << cceoc_argname
-              << "' argname to function";
-	    yyerror (b);
-	  }
-	  if ($2)
-	    $1->add_params ($2);
-	  $1->passthrough (lstr (get_yy_lineno (), ";"));
-	  $$ = $1;
 	}
 	;
 
@@ -287,7 +246,7 @@ return_statement: T_RETURN passthrough ';'
 block: T_BLOCK '{' 
 	{
 	  tame_fn_t *fn = state.function ();
- 	  tame_block_t *bl = New tame_block_t (fn);
+ 	  tame_block_t *bl = New tame_block_t (fn, get_yy_lineno ());
 	  state.new_block (bl);
 	  fn->add_env (bl);
 	  fn->hit_tame_block ();

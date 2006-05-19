@@ -19,16 +19,17 @@ struct state_t {
   int n_tot, window_sz;
   int i;
 
-  void launch (coordvar_t<bool>::t coordvar, CLOSURE);
-  void relaunch (coordvar_t<bool>::t coordvar, CLOSURE);
+  void launch (cbb cv, CLOSURE);
+  void relaunch (cbb cv, CLOSURE);
 };
 
 TAMED void 
-state_t::launch (coordvar_t<bool>::t callercv)
+state_t::launch (cbb cv)
 {
   // declare all of your "stack" variables here
   VARS {
     int fd;
+    bool ret (true);
   }
 
   // Call tcpconnect, and block until it returns; when it does return,
@@ -37,7 +38,7 @@ state_t::launch (coordvar_t<bool>::t callercv)
 
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", host.cstr(), port);
-    RESUME (false);
+    ret = false;
   } else {
     res.setsize (n_tot);
     errs.setsize (n_tot);
@@ -52,11 +53,11 @@ state_t::launch (coordvar_t<bool>::t callercv)
       cli->call (EX_RANDOM, NULL, &res[i], @[window,i](errs[i]));
     }
   }
-  SIGNAL (true);
+  cv->signal (ret);
 }
 
 TAMED void 
-state_t::relaunch (coordvar_t<bool>::t callercv)
+state_t::relaunch (cbb cv)
 {
   VARS {
     bool err_occurred (false);
@@ -85,7 +86,7 @@ state_t::relaunch (coordvar_t<bool>::t callercv)
     }
   }
   warn << "All done...\n";
-  SIGNAL (!err_occurred);
+  cv->signal (!err_occurred);
 }
 
 TAMED static 

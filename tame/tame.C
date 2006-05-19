@@ -9,7 +9,7 @@ parse_state_t state;
 static void
 usage ()
 {
-  warnx << "usage: " << progname << " [-Lchnv] [-C <cceoc>] "
+  warnx << "usage: " << progname << " [-Lchnv] "
 	<< "[-o <outfile>] [<infile>]\n"
 	<< "\n"
 	<< "  Flags:\n"
@@ -19,8 +19,6 @@ usage ()
 	<< "    -v  show version number and exit\n"
 	<< "\n"
 	<< "  Options:\n"
-	<< "    -C  specify argname for checked call-exactly-once "
-	<< "continuation\n"
 	<< "       (default=callercv)\n"
 	<< "    -o  specify output file\n"
 	<< "    -c  compile mode; infer output file name from input file "
@@ -60,7 +58,6 @@ main (int argc, char *argv[])
   bool debug = false;
   bool no_line_numbers = false;
   bool horiz_mode = true;
-  const char *c;
   str ifn;
   outputter_t *o;
   
@@ -68,7 +65,7 @@ main (int argc, char *argv[])
   make_sync (1);
   make_sync (2);
 
-  while ((ch = getopt (argc, argv, "hnC:Lvdo:c:")) != -1)
+  while ((ch = getopt (argc, argv, "hnLvdo:c:")) != -1)
     switch (ch) {
     case 'h':
       usage ();
@@ -82,9 +79,6 @@ main (int argc, char *argv[])
 	warn << "-c expects an input file with the .T suffix\n";
 	usage ();
       }
-      break;
-    case 'C':
-      cceoc_argname = optarg;
       break;
     case 'L':
       no_line_numbers = true;
@@ -116,9 +110,6 @@ main (int argc, char *argv[])
 
   if (getenv ("TAME_ADD_NEWLINES"))
     horiz_mode = false;
-
-  if ((c = getenv ("CCEOC_ARGNAME")))
-    cceoc_argname = c;
 
   argc -= optind;
   argv += optind;

@@ -32,7 +32,7 @@
  * and test that it succeeded by selecting for write on the new socket.
  */
 TAMED static ptr<canceller_t>
-connect_to_in_addr (in_addr a, int port, coordvar_int_t callercv)
+connect_to_in_addr (in_addr a, int port, cbi cv)
 {
   VARS {
     sockaddr_in sin;
@@ -83,7 +83,7 @@ connect_to_in_addr (in_addr a, int port, coordvar_int_t callercv)
 
   // calls (*callercv)(fd); also enforces that this
   // callback is called exactly once.
-  SIGNAL (fd);
+  cv->signal (fd);
 }
 
 /**
@@ -93,13 +93,13 @@ connect_to_in_addr (in_addr a, int port, coordvar_int_t callercv)
  *
  * @param hostname
  * @param port
- * @param callercv The callback implicitly used in SIGNAL and RESUME statements
+ * @param cv tha caller's CV
  * @param dnssearch whether to search DNS domains
  * @param namep the name of this host as gotten from DNS
  * @return an object that can be used to cancel this computation midstream.
  */
 TAMED static ptr<canceller_t> 
-my_tcpconnect (str hostname, u_int16_t port, coordvar_int_t callercv,
+my_tcpconnect (str hostname, u_int16_t port, cbi cv,
 	       bool dnssearch, str *namep)
 {
   VARS {
@@ -124,38 +124,37 @@ my_tcpconnect (str hostname, u_int16_t port, coordvar_int_t callercv,
     warn << "DNS lookup cancelled!\n";
     dnsreq_cancel (dnsp);
     cg.remove_join ();
-    RESUME (fd);
-  } 
-
-  // if we keep going, note that the canceller is still outstanding,
-  // and might still cancel us.
-  dnsp = NULL;
-  if (!h) {
-    canceller->toolate ();
-    cg.remove_join ();
-    if (dns_tmperr (err))
-      SIGNAL (-EAGAIN);
-    else
-      SIGNAL (-ENOENT);
+    cv->signal (fd);
   } else {
-    if (namep)
-      *namep = h->h_name;
-    
-    cancel_connect = connect_to_in_addr (*(in_addr *) h->h_addr, 
-					 port, @[cg,true](fd)); 
-
-    WAIT (cg, completed);
-    if (completed) {
+    // if we keep going, note that the canceller is still outstanding,
+    // and might still cancel us.
+    dnsp = NULL;
+    if (!h) {
       canceller->toolate ();
       cg.remove_join ();
+      if (dns_tmperr (err))
+	cv->signal (-EAGAIN);
+      else
+	cv->signal (-ENOENT);
     } else {
-      cancel_connect->cancel ();
+      if (namep)
+	*namep = h->h_name;
+      
+      cancel_connect = connect_to_in_addr (*(in_addr *) h->h_addr, 
+					   port, @[cg,true](fd)); 
+      WAIT (cg, completed);
+      if (completed) {
+	canceller->toolate ();
+	cg.remove_join ();
+      } else {
+	cancel_connect->cancel ();
+      }
+      cv->signal (fd); 
+      
+      // wait on the call to connect_to_inaddr if we've timed out.
+      if (cg.n_vars_left ()) 
+	WAIT (cg, dummy);
     }
-    SIGNAL (fd); 
-    
-    // wait on the call to connect_to_inaddr if we've timed out.
-    if (cg.n_vars_left ()) 
-      WAIT (cg, dummy);
   }
 }
 

@@ -21,7 +21,7 @@ launch_call (coordgroup_t<ptr<rpc_t> > *jg, u_int i, ptr<aclnt> cli)
 }
 
 TAMED static 
-bool dostuff (str h, int port, coordvar_bool_t callercv)
+bool dostuff (str h, int port, cbb cb)
 {
   // declare all of your "stack" variables here
   VARS {
@@ -74,7 +74,7 @@ bool dostuff (str h, int port, coordvar_bool_t callercv)
     warn << "All done...\n";
     warn << bad_rpcs.size () << " bad RPCs, total\n";
   }
-  SIGNAL (!err_occurred);
+  cb->signal (!err_occurred);
 }
 
 static void finish (bool rc)

@@ -171,6 +171,8 @@ sub pcallback ($) {
     my $tmpargs = jc ('R', mklist ('B%', $b));
     my $specargs = $b == $NB ? '' : "<" . $tmpargs . ">";
     my $cbargs = mklist ('B%', $b);
+    my $cbargs2 = mklist ("B% b%", $b);
+    my $cbargs3 = mklist ("b%", $b);
 
     print <<"EOF";
 
@@ -185,10 +187,38 @@ public:
   const char *const src;
   const char *const line;
   callback (const char *df, const char *f, const char *l)
-    : dest (df[0] == '&' ? df + 1 : df), src (f), line (l) {}
-$enddebug
+    : dest (df[0] == '&' ? df + 1 : df), src (f), line (l),
+      _cleared_flag (ref_flag_t::alloc (false)) {}
+$elsenotdebug
+  callback () : _cleared_flag (ref_flag_t::alloc (false)) {}
+$endnotdebug
   virtual R operator() ($cbargs) = 0;
+  virtual void signal ($cbargs2)
+  {
+    ref_flag_ptr_t cf = _cleared_flag;
+    if (*cf) { second_signal (); }
+    else {
+      (void )(*this)($cbargs3);
+      clear (cf);
+    }
+  }
   virtual ~callback () {}
+protected:
+  void second_signal () { 
+#if WRAP_DEBUG 
+    coordvar_second_signal (line);
+#else
+    coordvar_second_signal ("(unknown)");
+$enddebug
+  }
+
+  void clear (ref_flag_ptr_t r = NULL) {
+    if (r) _clear (r);
+    else _clear (_cleared_flag);
+  }
+
+  virtual void _clear (ref_flag_ptr_t) = 0;
+  ref_flag_ptr_t _cleared_flag;
 };
 
 EOF
@@ -234,11 +264,12 @@ sub pcallback_b_a ($$) {
 		       mklist ('class A%', $a));
     my $RBlist = jc ('R', mklist ('B%', $b));
     my $ABlist = jc (mklist ('A%', $a), mklist ('B%', $b));
-    my $adecl = join ('', mklist ("  A% a%;\n", $a));
+    my $adecl = join ('', mklist ("  container_t<A%> a%;\n", $a));
     my $aargs = jc ('cb_t ff', mklist ('const A% &aa%', $a));
     my $ainit = jc ('f (ff)', mklist ('a% (aa%)', $a));
     my $bargs = mklist ('B% b%', $b);
-    my $ablist = jc (mklist ('a%', $a), mklist ('b%', $b));
+    my $ablist = jc (mklist ('a%.get ()', $a), mklist ('b%', $b));
+    my $dellist = join ('', mklist ("      a%.del ();\n", $a));
 
     print <<"EOF";
 
@@ -250,8 +281,15 @@ class $type
 ${adecl}public:
   $type (callback_line_param $aargs)
     : callback_line_init (callback<$RBlist>) $ainit {}
+  ~$type () { callback<$RBlist>::clear (); }
   R operator() ($bargs)
     { return f ($ablist); }
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+${dellist}      cf->set (true);
+    }
+  } 
 };
 EOF
 
@@ -271,8 +309,15 @@ class $type<$specargs>
 ${adecl}public:
   $type (callback_line_param $aargs)
     : callback_line_init (callback<$RBlist>) $ainit {}
+  ~$type () { callback<$RBlist>::clear (); }
   void operator() ($bargs)
     { f ($ablist); }
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+${dellist}      cf->set(true);
+    }
+  }
 };
 EOF
 }
@@ -284,11 +329,12 @@ sub pcallback_c_b_a ($$) {
 		       mklist ('class A%', $a));
     my $RBlist = jc ('R', mklist ('B%', $b));
     my $ABlist = jc (mklist ('A%', $a), mklist ('B%', $b));
-    my $adecl = join ('', mklist ("  A% a%;\n", $a));
+    my $adecl = join ('', mklist ("  container_t<A%> a%;\n", $a));
     my $aargs = jc ('const P &cc, cb_t ff', mklist ('const A% &aa%', $a));
     my $ainit = jc ('c (cc), f (ff)', mklist ('a% (aa%)', $a));
     my $bargs = mklist ('B% b%', $b);
-    my $ablist = jc (mklist ('a%', $a), mklist ('b%', $b));
+    my $ablist = jc (mklist ('a%.get ()', $a), mklist ('b%', $b));
+    my $dellist = join ('', mklist ("      a%.del ();\n", $a));
 
     print <<"EOF";
 
@@ -296,7 +342,7 @@ template<$tmpparam>
 class $type
   : public callback<$RBlist> {
   typedef R (C::*cb_t) ($ABlist);
-  P c;
+  container_t<P> c;
   cb_t f;
 #if WRAP_USE_NODELETE
 ${adecl}  int deleted;
@@ -304,23 +350,32 @@ public:
   $type (callback_line_param $aargs)
     : callback_line_init (callback<$RBlist>) $ainit,
       deleted (false)
-    { maybe_nodelete_addptr (c, callback<$RBlist>::line, &deleted); }
-  ~$type () { maybe_nodelete_remptr (c, callback<$RBlist>::line, 
-                                     &deleted); }
+    { maybe_nodelete_addptr (c.get (), callback<$RBlist>::line, &deleted); }
+  ~$type () { maybe_nodelete_remptr (c.get (), callback<$RBlist>::line, 
+                                     &deleted); 
+              callback<$RBlist>::clear (); }
   R operator() ($bargs)
     {
       if (deleted)
         panic ("callback from %s to %s on deleted object\\n", 
                callback<$RBlist>::line, callback<$RBlist>::dest);
-      return ((*c).*f) ($ablist);
+      return ((*(c.get ())).*f) ($ablist);
     }
 #else $bc !WRAP_USE_NODELETE $ec
 ${adecl}public:
   $type (callback_line_param $aargs)
     : callback_line_init (callback<$RBlist>) $ainit {}
   R operator() ($bargs)
-    { return ((*c).*f) ($ablist); }
+    { return ((*(c.get ())).*f) ($ablist); }
+  ~$type () { callback<$RBlist>::clear (); }
 #endif $bc !WRAP_USE_NODELETE $ec
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      c.del ();
+${dellist}      cf->set(true);
+    }
+  }
 };
 EOF
 
@@ -337,13 +392,21 @@ template<$specparam>
 class $type<$specargs>
   : public callback<$RBlist> {
   typedef void (C::*cb_t) ($ABlist);
-  P c;
+  container_t<P> c;
   cb_t f;
 ${adecl}public:
   $type (callback_line_param $aargs)
     : callback_line_init (callback<$RBlist>) $ainit {}
+  ~$type () { callback<$RBlist>::clear (); }
   void operator() ($bargs)
-    { ((*c).*f) ($ablist); }
+    { ((*(c.get ())).*f) ($ablist); }
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      c.del ();
+${dellist}      cf->set(true);
+    }
+  }
 };
 EOF
 }
@@ -511,6 +574,9 @@ print <<'EOF';
 #define _CALLBACK_H_INCLUDED_ 1
 
 #include "refcnt.h"
+#include "coordvar.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 #ifndef WRAP_DEBUG
 # if defined (DMALLOC) && __GNUC__ >= 2
@@ -611,6 +677,9 @@ __END__
 #define _CALLBACK_H_INCLUDED_ 1
 
 #include "refcnt.h"
+#include "coordvar.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 #ifndef WRAP_DEBUG
 # if defined (DMALLOC) && __GNUC__ >= 2
@@ -679,10 +748,38 @@ public:
   const char *const src;
   const char *const line;
   callback (const char *df, const char *f, const char *l)
-    : dest (df[0] == '&' ? df + 1 : df), src (f), line (l) {}
-#endif /* WRAP_DEBUG */
+    : dest (df[0] == '&' ? df + 1 : df), src (f), line (l),
+      _cleared_flag (ref_flag_t::alloc (false)) {}
+#else /* !WRAP_DEBUG */
+  callback () : _cleared_flag (ref_flag_t::alloc (false)) {}
+#endif /* !WRAP_DEBUG */
   virtual R operator() () = 0;
+  virtual void signal ()
+  {
+    ref_flag_ptr_t cf = _cleared_flag;
+    if (*cf) { second_signal (); }
+    else {
+      (void )(*this)();
+      clear (cf);
+    }
+  }
   virtual ~callback () {}
+protected:
+  void second_signal () { 
+#if WRAP_DEBUG 
+    coordvar_second_signal (line);
+#else
+    coordvar_second_signal ("(unknown)");
+#endif /* WRAP_DEBUG */
+  }
+
+  void clear (ref_flag_ptr_t r = NULL) {
+    if (r) _clear (r);
+    else _clear (_cleared_flag);
+  }
+
+  virtual void _clear (ref_flag_ptr_t) = 0;
+  ref_flag_ptr_t _cleared_flag;
 };
 
 
@@ -694,8 +791,15 @@ class callback_0_0
 public:
   callback_0_0 (callback_line_param cb_t ff)
     : callback_line_init (callback<R>) f (ff) {}
+  ~callback_0_0 () { callback<R>::clear (); }
   R operator() ()
     { return f (); }
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      cf->set (true);
+    }
+  } 
 };
 
 template<class R>
@@ -709,7 +813,7 @@ template<class P, class C, class R>
 class callback_c_0_0
   : public callback<R> {
   typedef R (C::*cb_t) ();
-  P c;
+  container_t<P> c;
   cb_t f;
 #if WRAP_USE_NODELETE
   int deleted;
@@ -717,23 +821,32 @@ public:
   callback_c_0_0 (callback_line_param const P &cc, cb_t ff)
     : callback_line_init (callback<R>) c (cc), f (ff),
       deleted (false)
-    { maybe_nodelete_addptr (c, callback<R>::line, &deleted); }
-  ~callback_c_0_0 () { maybe_nodelete_remptr (c, callback<R>::line, 
-                                     &deleted); }
+    { maybe_nodelete_addptr (c.get (), callback<R>::line, &deleted); }
+  ~callback_c_0_0 () { maybe_nodelete_remptr (c.get (), callback<R>::line, 
+                                     &deleted); 
+              callback<R>::clear (); }
   R operator() ()
     {
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R>::line, callback<R>::dest);
-      return ((*c).*f) ();
+      return ((*(c.get ())).*f) ();
     }
 #else /* !WRAP_USE_NODELETE */
 public:
   callback_c_0_0 (callback_line_param const P &cc, cb_t ff)
     : callback_line_init (callback<R>) c (cc), f (ff) {}
   R operator() ()
-    { return ((*c).*f) (); }
+    { return ((*(c.get ())).*f) (); }
+  ~callback_c_0_0 () { callback<R>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      c.del ();
+      cf->set(true);
+    }
+  }
 };
 
 template<class C, class R>
@@ -767,12 +880,20 @@ class callback_0_1
   : public callback<R> {
   typedef R (*cb_t) (A1);
   cb_t f;
-  A1 a1;
+  container_t<A1> a1;
 public:
   callback_0_1 (callback_line_param cb_t ff, const A1 &aa1)
     : callback_line_init (callback<R>) f (ff), a1 (aa1) {}
+  ~callback_0_1 () { callback<R>::clear (); }
   R operator() ()
-    { return f (a1); }
+    { return f (a1.get ()); }
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      a1.del ();
+      cf->set (true);
+    }
+  } 
 };
 
 template<class R, class A1, class AA1>
@@ -786,33 +907,43 @@ template<class P, class C, class R, class A1>
 class callback_c_0_1
   : public callback<R> {
   typedef R (C::*cb_t) (A1);
-  P c;
+  container_t<P> c;
   cb_t f;
 #if WRAP_USE_NODELETE
-  A1 a1;
+  container_t<A1> a1;
   int deleted;
 public:
   callback_c_0_1 (callback_line_param const P &cc, cb_t ff, const A1 &aa1)
     : callback_line_init (callback<R>) c (cc), f (ff), a1 (aa1),
       deleted (false)
-    { maybe_nodelete_addptr (c, callback<R>::line, &deleted); }
-  ~callback_c_0_1 () { maybe_nodelete_remptr (c, callback<R>::line, 
-                                     &deleted); }
+    { maybe_nodelete_addptr (c.get (), callback<R>::line, &deleted); }
+  ~callback_c_0_1 () { maybe_nodelete_remptr (c.get (), callback<R>::line, 
+                                     &deleted); 
+              callback<R>::clear (); }
   R operator() ()
     {
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R>::line, callback<R>::dest);
-      return ((*c).*f) (a1);
+      return ((*(c.get ())).*f) (a1.get ());
     }
 #else /* !WRAP_USE_NODELETE */
-  A1 a1;
+  container_t<A1> a1;
 public:
   callback_c_0_1 (callback_line_param const P &cc, cb_t ff, const A1 &aa1)
     : callback_line_init (callback<R>) c (cc), f (ff), a1 (aa1) {}
   R operator() ()
-    { return ((*c).*f) (a1); }
+    { return ((*(c.get ())).*f) (a1.get ()); }
+  ~callback_c_0_1 () { callback<R>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      c.del ();
+      a1.del ();
+      cf->set(true);
+    }
+  }
 };
 
 template<class C, class R, class A1, class AA1>
@@ -846,13 +977,22 @@ class callback_0_2
   : public callback<R> {
   typedef R (*cb_t) (A1, A2);
   cb_t f;
-  A1 a1;
-  A2 a2;
+  container_t<A1> a1;
+  container_t<A2> a2;
 public:
   callback_0_2 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2)
     : callback_line_init (callback<R>) f (ff), a1 (aa1), a2 (aa2) {}
+  ~callback_0_2 () { callback<R>::clear (); }
   R operator() ()
-    { return f (a1, a2); }
+    { return f (a1.get (), a2.get ()); }
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      a1.del ();
+      a2.del ();
+      cf->set (true);
+    }
+  } 
 };
 
 template<class R, class A1, class AA1, class A2, class AA2>
@@ -866,35 +1006,46 @@ template<class P, class C, class R, class A1, class A2>
 class callback_c_0_2
   : public callback<R> {
   typedef R (C::*cb_t) (A1, A2);
-  P c;
+  container_t<P> c;
   cb_t f;
 #if WRAP_USE_NODELETE
-  A1 a1;
-  A2 a2;
+  container_t<A1> a1;
+  container_t<A2> a2;
   int deleted;
 public:
   callback_c_0_2 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2)
     : callback_line_init (callback<R>) c (cc), f (ff), a1 (aa1), a2 (aa2),
       deleted (false)
-    { maybe_nodelete_addptr (c, callback<R>::line, &deleted); }
-  ~callback_c_0_2 () { maybe_nodelete_remptr (c, callback<R>::line, 
-                                     &deleted); }
+    { maybe_nodelete_addptr (c.get (), callback<R>::line, &deleted); }
+  ~callback_c_0_2 () { maybe_nodelete_remptr (c.get (), callback<R>::line, 
+                                     &deleted); 
+              callback<R>::clear (); }
   R operator() ()
     {
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R>::line, callback<R>::dest);
-      return ((*c).*f) (a1, a2);
+      return ((*(c.get ())).*f) (a1.get (), a2.get ());
     }
 #else /* !WRAP_USE_NODELETE */
-  A1 a1;
-  A2 a2;
+  container_t<A1> a1;
+  container_t<A2> a2;
 public:
   callback_c_0_2 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2)
     : callback_line_init (callback<R>) c (cc), f (ff), a1 (aa1), a2 (aa2) {}
   R operator() ()
-    { return ((*c).*f) (a1, a2); }
+    { return ((*(c.get ())).*f) (a1.get (), a2.get ()); }
+  ~callback_c_0_2 () { callback<R>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      c.del ();
+      a1.del ();
+      a2.del ();
+      cf->set(true);
+    }
+  }
 };
 
 template<class C, class R, class A1, class AA1, class A2, class AA2>
@@ -928,14 +1079,24 @@ class callback_0_3
   : public callback<R> {
   typedef R (*cb_t) (A1, A2, A3);
   cb_t f;
-  A1 a1;
-  A2 a2;
-  A3 a3;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
 public:
   callback_0_3 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
     : callback_line_init (callback<R>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3) {}
+  ~callback_0_3 () { callback<R>::clear (); }
   R operator() ()
-    { return f (a1, a2, a3); }
+    { return f (a1.get (), a2.get (), a3.get ()); }
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      a1.del ();
+      a2.del ();
+      a3.del ();
+      cf->set (true);
+    }
+  } 
 };
 
 template<class R, class A1, class AA1, class A2, class AA2, class A3, class AA3>
@@ -949,37 +1110,49 @@ template<class P, class C, class R, class A1, class A2, class A3>
 class callback_c_0_3
   : public callback<R> {
   typedef R (C::*cb_t) (A1, A2, A3);
-  P c;
+  container_t<P> c;
   cb_t f;
 #if WRAP_USE_NODELETE
-  A1 a1;
-  A2 a2;
-  A3 a3;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
   int deleted;
 public:
   callback_c_0_3 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
     : callback_line_init (callback<R>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3),
       deleted (false)
-    { maybe_nodelete_addptr (c, callback<R>::line, &deleted); }
-  ~callback_c_0_3 () { maybe_nodelete_remptr (c, callback<R>::line, 
-                                     &deleted); }
+    { maybe_nodelete_addptr (c.get (), callback<R>::line, &deleted); }
+  ~callback_c_0_3 () { maybe_nodelete_remptr (c.get (), callback<R>::line, 
+                                     &deleted); 
+              callback<R>::clear (); }
   R operator() ()
     {
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R>::line, callback<R>::dest);
-      return ((*c).*f) (a1, a2, a3);
+      return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get ());
     }
 #else /* !WRAP_USE_NODELETE */
-  A1 a1;
-  A2 a2;
-  A3 a3;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
 public:
   callback_c_0_3 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
     : callback_line_init (callback<R>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3) {}
   R operator() ()
-    { return ((*c).*f) (a1, a2, a3); }
+    { return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get ()); }
+  ~callback_c_0_3 () { callback<R>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      c.del ();
+      a1.del ();
+      a2.del ();
+      a3.del ();
+      cf->set(true);
+    }
+  }
 };
 
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3>
@@ -1013,15 +1186,26 @@ class callback_0_4
   : public callback<R> {
   typedef R (*cb_t) (A1, A2, A3, A4);
   cb_t f;
-  A1 a1;
-  A2 a2;
-  A3 a3;
-  A4 a4;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
+  container_t<A4> a4;
 public:
   callback_0_4 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
     : callback_line_init (callback<R>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4) {}
+  ~callback_0_4 () { callback<R>::clear (); }
   R operator() ()
-    { return f (a1, a2, a3, a4); }
+    { return f (a1.get (), a2.get (), a3.get (), a4.get ()); }
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      a1.del ();
+      a2.del ();
+      a3.del ();
+      a4.del ();
+      cf->set (true);
+    }
+  } 
 };
 
 template<class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
@@ -1035,39 +1219,52 @@ template<class P, class C, class R, class A1, class A2, class A3, class A4>
 class callback_c_0_4
   : public callback<R> {
   typedef R (C::*cb_t) (A1, A2, A3, A4);
-  P c;
+  container_t<P> c;
   cb_t f;
 #if WRAP_USE_NODELETE
-  A1 a1;
-  A2 a2;
-  A3 a3;
-  A4 a4;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
+  container_t<A4> a4;
   int deleted;
 public:
   callback_c_0_4 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
     : callback_line_init (callback<R>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4),
       deleted (false)
-    { maybe_nodelete_addptr (c, callback<R>::line, &deleted); }
-  ~callback_c_0_4 () { maybe_nodelete_remptr (c, callback<R>::line, 
-                                     &deleted); }
+    { maybe_nodelete_addptr (c.get (), callback<R>::line, &deleted); }
+  ~callback_c_0_4 () { maybe_nodelete_remptr (c.get (), callback<R>::line, 
+                                     &deleted); 
+              callback<R>::clear (); }
   R operator() ()
     {
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R>::line, callback<R>::dest);
-      return ((*c).*f) (a1, a2, a3, a4);
+      return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get ());
     }
 #else /* !WRAP_USE_NODELETE */
-  A1 a1;
-  A2 a2;
-  A3 a3;
-  A4 a4;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
+  container_t<A4> a4;
 public:
   callback_c_0_4 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
     : callback_line_init (callback<R>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4) {}
   R operator() ()
-    { return ((*c).*f) (a1, a2, a3, a4); }
+    { return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get ()); }
+  ~callback_c_0_4 () { callback<R>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      c.del ();
+      a1.del ();
+      a2.del ();
+      a3.del ();
+      a4.del ();
+      cf->set(true);
+    }
+  }
 };
 
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
@@ -1101,16 +1298,28 @@ class callback_0_5
   : public callback<R> {
   typedef R (*cb_t) (A1, A2, A3, A4, A5);
   cb_t f;
-  A1 a1;
-  A2 a2;
-  A3 a3;
-  A4 a4;
-  A5 a5;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
+  container_t<A4> a4;
+  container_t<A5> a5;
 public:
   callback_0_5 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
     : callback_line_init (callback<R>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5) {}
+  ~callback_0_5 () { callback<R>::clear (); }
   R operator() ()
-    { return f (a1, a2, a3, a4, a5); }
+    { return f (a1.get (), a2.get (), a3.get (), a4.get (), a5.get ()); }
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      a1.del ();
+      a2.del ();
+      a3.del ();
+      a4.del ();
+      a5.del ();
+      cf->set (true);
+    }
+  } 
 };
 
 template<class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
@@ -1124,41 +1333,55 @@ template<class P, class C, class R, class A1, class A2, class A3, class A4, clas
 class callback_c_0_5
   : public callback<R> {
   typedef R (C::*cb_t) (A1, A2, A3, A4, A5);
-  P c;
+  container_t<P> c;
   cb_t f;
 #if WRAP_USE_NODELETE
-  A1 a1;
-  A2 a2;
-  A3 a3;
-  A4 a4;
-  A5 a5;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
+  container_t<A4> a4;
+  container_t<A5> a5;
   int deleted;
 public:
   callback_c_0_5 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
     : callback_line_init (callback<R>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5),
       deleted (false)
-    { maybe_nodelete_addptr (c, callback<R>::line, &deleted); }
-  ~callback_c_0_5 () { maybe_nodelete_remptr (c, callback<R>::line, 
-                                     &deleted); }
+    { maybe_nodelete_addptr (c.get (), callback<R>::line, &deleted); }
+  ~callback_c_0_5 () { maybe_nodelete_remptr (c.get (), callback<R>::line, 
+                                     &deleted); 
+              callback<R>::clear (); }
   R operator() ()
     {
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R>::line, callback<R>::dest);
-      return ((*c).*f) (a1, a2, a3, a4, a5);
+      return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), a5.get ());
     }
 #else /* !WRAP_USE_NODELETE */
-  A1 a1;
-  A2 a2;
-  A3 a3;
-  A4 a4;
-  A5 a5;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
+  container_t<A4> a4;
+  container_t<A5> a5;
 public:
   callback_c_0_5 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
     : callback_line_init (callback<R>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5) {}
   R operator() ()
-    { return ((*c).*f) (a1, a2, a3, a4, a5); }
+    { return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), a5.get ()); }
+  ~callback_c_0_5 () { callback<R>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      c.del ();
+      a1.del ();
+      a2.del ();
+      a3.del ();
+      a4.del ();
+      a5.del ();
+      cf->set(true);
+    }
+  }
 };
 
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
@@ -1198,10 +1421,38 @@ public:
   const char *const src;
   const char *const line;
   callback (const char *df, const char *f, const char *l)
-    : dest (df[0] == '&' ? df + 1 : df), src (f), line (l) {}
-#endif /* WRAP_DEBUG */
+    : dest (df[0] == '&' ? df + 1 : df), src (f), line (l),
+      _cleared_flag (ref_flag_t::alloc (false)) {}
+#else /* !WRAP_DEBUG */
+  callback () : _cleared_flag (ref_flag_t::alloc (false)) {}
+#endif /* !WRAP_DEBUG */
   virtual R operator() (B1) = 0;
+  virtual void signal (B1 b1)
+  {
+    ref_flag_ptr_t cf = _cleared_flag;
+    if (*cf) { second_signal (); }
+    else {
+      (void )(*this)(b1);
+      clear (cf);
+    }
+  }
   virtual ~callback () {}
+protected:
+  void second_signal () { 
+#if WRAP_DEBUG 
+    coordvar_second_signal (line);
+#else
+    coordvar_second_signal ("(unknown)");
+#endif /* WRAP_DEBUG */
+  }
+
+  void clear (ref_flag_ptr_t r = NULL) {
+    if (r) _clear (r);
+    else _clear (_cleared_flag);
+  }
+
+  virtual void _clear (ref_flag_ptr_t) = 0;
+  ref_flag_ptr_t _cleared_flag;
 };
 
 
@@ -1213,8 +1464,15 @@ class callback_1_0
 public:
   callback_1_0 (callback_line_param cb_t ff)
     : callback_line_init (callback<R, B1>) f (ff) {}
+  ~callback_1_0 () { callback<R, B1>::clear (); }
   R operator() (B1 b1)
     { return f (b1); }
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      cf->set (true);
+    }
+  } 
 };
 
 template<class R, class B1>
@@ -1228,7 +1486,7 @@ template<class P, class C, class R, class B1>
 class callback_c_1_0
   : public callback<R, B1> {
   typedef R (C::*cb_t) (B1);
-  P c;
+  container_t<P> c;
   cb_t f;
 #if WRAP_USE_NODELETE
   int deleted;
@@ -1236,23 +1494,32 @@ public:
   callback_c_1_0 (callback_line_param const P &cc, cb_t ff)
     : callback_line_init (callback<R, B1>) c (cc), f (ff),
       deleted (false)
-    { maybe_nodelete_addptr (c, callback<R, B1>::line, &deleted); }
-  ~callback_c_1_0 () { maybe_nodelete_remptr (c, callback<R, B1>::line, 
-                                     &deleted); }
+    { maybe_nodelete_addptr (c.get (), callback<R, B1>::line, &deleted); }
+  ~callback_c_1_0 () { maybe_nodelete_remptr (c.get (), callback<R, B1>::line, 
+                                     &deleted); 
+              callback<R, B1>::clear (); }
   R operator() (B1 b1)
     {
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1>::line, callback<R, B1>::dest);
-      return ((*c).*f) (b1);
+      return ((*(c.get ())).*f) (b1);
     }
 #else /* !WRAP_USE_NODELETE */
 public:
   callback_c_1_0 (callback_line_param const P &cc, cb_t ff)
     : callback_line_init (callback<R, B1>) c (cc), f (ff) {}
   R operator() (B1 b1)
-    { return ((*c).*f) (b1); }
+    { return ((*(c.get ())).*f) (b1); }
+  ~callback_c_1_0 () { callback<R, B1>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      c.del ();
+      cf->set(true);
+    }
+  }
 };
 
 template<class C, class R, class B1>
@@ -1286,12 +1553,20 @@ class callback_1_1
   : public callback<R, B1> {
   typedef R (*cb_t) (A1, B1);
   cb_t f;
-  A1 a1;
+  container_t<A1> a1;
 public:
   callback_1_1 (callback_line_param cb_t ff, const A1 &aa1)
     : callback_line_init (callback<R, B1>) f (ff), a1 (aa1) {}
+  ~callback_1_1 () { callback<R, B1>::clear (); }
   R operator() (B1 b1)
-    { return f (a1, b1); }
+    { return f (a1.get (), b1); }
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      a1.del ();
+      cf->set (true);
+    }
+  } 
 };
 
 template<class R, class B1, class A1, class AA1>
@@ -1305,33 +1580,43 @@ template<class P, class C, class R, class B1, class A1>
 class callback_c_1_1
   : public callback<R, B1> {
   typedef R (C::*cb_t) (A1, B1);
-  P c;
+  container_t<P> c;
   cb_t f;
 #if WRAP_USE_NODELETE
-  A1 a1;
+  container_t<A1> a1;
   int deleted;
 public:
   callback_c_1_1 (callback_line_param const P &cc, cb_t ff, const A1 &aa1)
     : callback_line_init (callback<R, B1>) c (cc), f (ff), a1 (aa1),
       deleted (false)
-    { maybe_nodelete_addptr (c, callback<R, B1>::line, &deleted); }
-  ~callback_c_1_1 () { maybe_nodelete_remptr (c, callback<R, B1>::line, 
-                                     &deleted); }
+    { maybe_nodelete_addptr (c.get (), callback<R, B1>::line, &deleted); }
+  ~callback_c_1_1 () { maybe_nodelete_remptr (c.get (), callback<R, B1>::line, 
+                                     &deleted); 
+              callback<R, B1>::clear (); }
   R operator() (B1 b1)
     {
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1>::line, callback<R, B1>::dest);
-      return ((*c).*f) (a1, b1);
+      return ((*(c.get ())).*f) (a1.get (), b1);
     }
 #else /* !WRAP_USE_NODELETE */
-  A1 a1;
+  container_t<A1> a1;
 public:
   callback_c_1_1 (callback_line_param const P &cc, cb_t ff, const A1 &aa1)
     : callback_line_init (callback<R, B1>) c (cc), f (ff), a1 (aa1) {}
   R operator() (B1 b1)
-    { return ((*c).*f) (a1, b1); }
+    { return ((*(c.get ())).*f) (a1.get (), b1); }
+  ~callback_c_1_1 () { callback<R, B1>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      c.del ();
+      a1.del ();
+      cf->set(true);
+    }
+  }
 };
 
 template<class C, class R, class B1, class A1, class AA1>
@@ -1365,13 +1650,22 @@ class callback_1_2
   : public callback<R, B1> {
   typedef R (*cb_t) (A1, A2, B1);
   cb_t f;
-  A1 a1;
-  A2 a2;
+  container_t<A1> a1;
+  container_t<A2> a2;
 public:
   callback_1_2 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2)
     : callback_line_init (callback<R, B1>) f (ff), a1 (aa1), a2 (aa2) {}
+  ~callback_1_2 () { callback<R, B1>::clear (); }
   R operator() (B1 b1)
-    { return f (a1, a2, b1); }
+    { return f (a1.get (), a2.get (), b1); }
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      a1.del ();
+      a2.del ();
+      cf->set (true);
+    }
+  } 
 };
 
 template<class R, class B1, class A1, class AA1, class A2, class AA2>
@@ -1385,35 +1679,46 @@ template<class P, class C, class R, class B1, class A1, class A2>
 class callback_c_1_2
   : public callback<R, B1> {
   typedef R (C::*cb_t) (A1, A2, B1);
-  P c;
+  container_t<P> c;
   cb_t f;
 #if WRAP_USE_NODELETE
-  A1 a1;
-  A2 a2;
+  container_t<A1> a1;
+  container_t<A2> a2;
   int deleted;
 public:
   callback_c_1_2 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2)
     : callback_line_init (callback<R, B1>) c (cc), f (ff), a1 (aa1), a2 (aa2),
       deleted (false)
-    { maybe_nodelete_addptr (c, callback<R, B1>::line, &deleted); }
-  ~callback_c_1_2 () { maybe_nodelete_remptr (c, callback<R, B1>::line, 
-                                     &deleted); }
+    { maybe_nodelete_addptr (c.get (), callback<R, B1>::line, &deleted); }
+  ~callback_c_1_2 () { maybe_nodelete_remptr (c.get (), callback<R, B1>::line, 
+                                     &deleted); 
+              callback<R, B1>::clear (); }
   R operator() (B1 b1)
     {
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1>::line, callback<R, B1>::dest);
-      return ((*c).*f) (a1, a2, b1);
+      return ((*(c.get ())).*f) (a1.get (), a2.get (), b1);
     }
 #else /* !WRAP_USE_NODELETE */
-  A1 a1;
-  A2 a2;
+  container_t<A1> a1;
+  container_t<A2> a2;
 public:
   callback_c_1_2 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2)
     : callback_line_init (callback<R, B1>) c (cc), f (ff), a1 (aa1), a2 (aa2) {}
   R operator() (B1 b1)
-    { return ((*c).*f) (a1, a2, b1); }
+    { return ((*(c.get ())).*f) (a1.get (), a2.get (), b1); }
+  ~callback_c_1_2 () { callback<R, B1>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      c.del ();
+      a1.del ();
+      a2.del ();
+      cf->set(true);
+    }
+  }
 };
 
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2>
@@ -1447,14 +1752,24 @@ class callback_1_3
   : public callback<R, B1> {
   typedef R (*cb_t) (A1, A2, A3, B1);
   cb_t f;
-  A1 a1;
-  A2 a2;
-  A3 a3;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
 public:
   callback_1_3 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
     : callback_line_init (callback<R, B1>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3) {}
+  ~callback_1_3 () { callback<R, B1>::clear (); }
   R operator() (B1 b1)
-    { return f (a1, a2, a3, b1); }
+    { return f (a1.get (), a2.get (), a3.get (), b1); }
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      a1.del ();
+      a2.del ();
+      a3.del ();
+      cf->set (true);
+    }
+  } 
 };
 
 template<class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3>
@@ -1468,37 +1783,49 @@ template<class P, class C, class R, class B1, class A1, class A2, class A3>
 class callback_c_1_3
   : public callback<R, B1> {
   typedef R (C::*cb_t) (A1, A2, A3, B1);
-  P c;
+  container_t<P> c;
   cb_t f;
 #if WRAP_USE_NODELETE
-  A1 a1;
-  A2 a2;
-  A3 a3;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
   int deleted;
 public:
   callback_c_1_3 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
     : callback_line_init (callback<R, B1>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3),
       deleted (false)
-    { maybe_nodelete_addptr (c, callback<R, B1>::line, &deleted); }
-  ~callback_c_1_3 () { maybe_nodelete_remptr (c, callback<R, B1>::line, 
-                                     &deleted); }
+    { maybe_nodelete_addptr (c.get (), callback<R, B1>::line, &deleted); }
+  ~callback_c_1_3 () { maybe_nodelete_remptr (c.get (), callback<R, B1>::line, 
+                                     &deleted); 
+              callback<R, B1>::clear (); }
   R operator() (B1 b1)
     {
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1>::line, callback<R, B1>::dest);
-      return ((*c).*f) (a1, a2, a3, b1);
+      return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), b1);
     }
 #else /* !WRAP_USE_NODELETE */
-  A1 a1;
-  A2 a2;
-  A3 a3;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
 public:
   callback_c_1_3 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
     : callback_line_init (callback<R, B1>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3) {}
   R operator() (B1 b1)
-    { return ((*c).*f) (a1, a2, a3, b1); }
+    { return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), b1); }
+  ~callback_c_1_3 () { callback<R, B1>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      c.del ();
+      a1.del ();
+      a2.del ();
+      a3.del ();
+      cf->set(true);
+    }
+  }
 };
 
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3>
@@ -1532,15 +1859,26 @@ class callback_1_4
   : public callback<R, B1> {
   typedef R (*cb_t) (A1, A2, A3, A4, B1);
   cb_t f;
-  A1 a1;
-  A2 a2;
-  A3 a3;
-  A4 a4;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
+  container_t<A4> a4;
 public:
   callback_1_4 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
     : callback_line_init (callback<R, B1>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4) {}
+  ~callback_1_4 () { callback<R, B1>::clear (); }
   R operator() (B1 b1)
-    { return f (a1, a2, a3, a4, b1); }
+    { return f (a1.get (), a2.get (), a3.get (), a4.get (), b1); }
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      a1.del ();
+      a2.del ();
+      a3.del ();
+      a4.del ();
+      cf->set (true);
+    }
+  } 
 };
 
 template<class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
@@ -1554,39 +1892,52 @@ template<class P, class C, class R, class B1, class A1, class A2, class A3, clas
 class callback_c_1_4
   : public callback<R, B1> {
   typedef R (C::*cb_t) (A1, A2, A3, A4, B1);
-  P c;
+  container_t<P> c;
   cb_t f;
 #if WRAP_USE_NODELETE
-  A1 a1;
-  A2 a2;
-  A3 a3;
-  A4 a4;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
+  container_t<A4> a4;
   int deleted;
 public:
   callback_c_1_4 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
     : callback_line_init (callback<R, B1>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4),
       deleted (false)
-    { maybe_nodelete_addptr (c, callback<R, B1>::line, &deleted); }
-  ~callback_c_1_4 () { maybe_nodelete_remptr (c, callback<R, B1>::line, 
-                                     &deleted); }
+    { maybe_nodelete_addptr (c.get (), callback<R, B1>::line, &deleted); }
+  ~callback_c_1_4 () { maybe_nodelete_remptr (c.get (), callback<R, B1>::line, 
+                                     &deleted); 
+              callback<R, B1>::clear (); }
   R operator() (B1 b1)
     {
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1>::line, callback<R, B1>::dest);
-      return ((*c).*f) (a1, a2, a3, a4, b1);
+      return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), b1);
     }
 #else /* !WRAP_USE_NODELETE */
-  A1 a1;
-  A2 a2;
-  A3 a3;
-  A4 a4;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
+  container_t<A4> a4;
 public:
   callback_c_1_4 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
     : callback_line_init (callback<R, B1>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4) {}
   R operator() (B1 b1)
-    { return ((*c).*f) (a1, a2, a3, a4, b1); }
+    { return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), b1); }
+  ~callback_c_1_4 () { callback<R, B1>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      c.del ();
+      a1.del ();
+      a2.del ();
+      a3.del ();
+      a4.del ();
+      cf->set(true);
+    }
+  }
 };
 
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
@@ -1620,16 +1971,28 @@ class callback_1_5
   : public callback<R, B1> {
   typedef R (*cb_t) (A1, A2, A3, A4, A5, B1);
   cb_t f;
-  A1 a1;
-  A2 a2;
-  A3 a3;
-  A4 a4;
-  A5 a5;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
+  container_t<A4> a4;
+  container_t<A5> a5;
 public:
   callback_1_5 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
     : callback_line_init (callback<R, B1>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5) {}
+  ~callback_1_5 () { callback<R, B1>::clear (); }
   R operator() (B1 b1)
-    { return f (a1, a2, a3, a4, a5, b1); }
+    { return f (a1.get (), a2.get (), a3.get (), a4.get (), a5.get (), b1); }
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      a1.del ();
+      a2.del ();
+      a3.del ();
+      a4.del ();
+      a5.del ();
+      cf->set (true);
+    }
+  } 
 };
 
 template<class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
@@ -1643,41 +2006,55 @@ template<class P, class C, class R, class B1, class A1, class A2, class A3, clas
 class callback_c_1_5
   : public callback<R, B1> {
   typedef R (C::*cb_t) (A1, A2, A3, A4, A5, B1);
-  P c;
+  container_t<P> c;
   cb_t f;
 #if WRAP_USE_NODELETE
-  A1 a1;
-  A2 a2;
-  A3 a3;
-  A4 a4;
-  A5 a5;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
+  container_t<A4> a4;
+  container_t<A5> a5;
   int deleted;
 public:
   callback_c_1_5 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
     : callback_line_init (callback<R, B1>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5),
       deleted (false)
-    { maybe_nodelete_addptr (c, callback<R, B1>::line, &deleted); }
-  ~callback_c_1_5 () { maybe_nodelete_remptr (c, callback<R, B1>::line, 
-                                     &deleted); }
+    { maybe_nodelete_addptr (c.get (), callback<R, B1>::line, &deleted); }
+  ~callback_c_1_5 () { maybe_nodelete_remptr (c.get (), callback<R, B1>::line, 
+                                     &deleted); 
+              callback<R, B1>::clear (); }
   R operator() (B1 b1)
     {
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1>::line, callback<R, B1>::dest);
-      return ((*c).*f) (a1, a2, a3, a4, a5, b1);
+      return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), a5.get (), b1);
     }
 #else /* !WRAP_USE_NODELETE */
-  A1 a1;
-  A2 a2;
-  A3 a3;
-  A4 a4;
-  A5 a5;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
+  container_t<A4> a4;
+  container_t<A5> a5;
 public:
   callback_c_1_5 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
     : callback_line_init (callback<R, B1>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5) {}
   R operator() (B1 b1)
-    { return ((*c).*f) (a1, a2, a3, a4, a5, b1); }
+    { return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), a5.get (), b1); }
+  ~callback_c_1_5 () { callback<R, B1>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      c.del ();
+      a1.del ();
+      a2.del ();
+      a3.del ();
+      a4.del ();
+      a5.del ();
+      cf->set(true);
+    }
+  }
 };
 
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
@@ -1717,10 +2094,38 @@ public:
   const char *const src;
   const char *const line;
   callback (const char *df, const char *f, const char *l)
-    : dest (df[0] == '&' ? df + 1 : df), src (f), line (l) {}
-#endif /* WRAP_DEBUG */
+    : dest (df[0] == '&' ? df + 1 : df), src (f), line (l),
+      _cleared_flag (ref_flag_t::alloc (false)) {}
+#else /* !WRAP_DEBUG */
+  callback () : _cleared_flag (ref_flag_t::alloc (false)) {}
+#endif /* !WRAP_DEBUG */
   virtual R operator() (B1, B2) = 0;
+  virtual void signal (B1 b1, B2 b2)
+  {
+    ref_flag_ptr_t cf = _cleared_flag;
+    if (*cf) { second_signal (); }
+    else {
+      (void )(*this)(b1, b2);
+      clear (cf);
+    }
+  }
   virtual ~callback () {}
+protected:
+  void second_signal () { 
+#if WRAP_DEBUG 
+    coordvar_second_signal (line);
+#else
+    coordvar_second_signal ("(unknown)");
+#endif /* WRAP_DEBUG */
+  }
+
+  void clear (ref_flag_ptr_t r = NULL) {
+    if (r) _clear (r);
+    else _clear (_cleared_flag);
+  }
+
+  virtual void _clear (ref_flag_ptr_t) = 0;
+  ref_flag_ptr_t _cleared_flag;
 };
 
 
@@ -1732,8 +2137,15 @@ class callback_2_0
 public:
   callback_2_0 (callback_line_param cb_t ff)
     : callback_line_init (callback<R, B1, B2>) f (ff) {}
+  ~callback_2_0 () { callback<R, B1, B2>::clear (); }
   R operator() (B1 b1, B2 b2)
     { return f (b1, b2); }
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      cf->set (true);
+    }
+  } 
 };
 
 template<class R, class B1, class B2>
@@ -1747,7 +2159,7 @@ template<class P, class C, class R, class B1, class B2>
 class callback_c_2_0
   : public callback<R, B1, B2> {
   typedef R (C::*cb_t) (B1, B2);
-  P c;
+  container_t<P> c;
   cb_t f;
 #if WRAP_USE_NODELETE
   int deleted;
@@ -1755,23 +2167,32 @@ public:
   callback_c_2_0 (callback_line_param const P &cc, cb_t ff)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff),
       deleted (false)
-    { maybe_nodelete_addptr (c, callback<R, B1, B2>::line, &deleted); }
-  ~callback_c_2_0 () { maybe_nodelete_remptr (c, callback<R, B1, B2>::line, 
-                                     &deleted); }
+    { maybe_nodelete_addptr (c.get (), callback<R, B1, B2>::line, &deleted); }
+  ~callback_c_2_0 () { maybe_nodelete_remptr (c.get (), callback<R, B1, B2>::line, 
+                                     &deleted); 
+              callback<R, B1, B2>::clear (); }
   R operator() (B1 b1, B2 b2)
     {
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1, B2>::line, callback<R, B1, B2>::dest);
-      return ((*c).*f) (b1, b2);
+      return ((*(c.get ())).*f) (b1, b2);
     }
 #else /* !WRAP_USE_NODELETE */
 public:
   callback_c_2_0 (callback_line_param const P &cc, cb_t ff)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff) {}
   R operator() (B1 b1, B2 b2)
-    { return ((*c).*f) (b1, b2); }
+    { return ((*(c.get ())).*f) (b1, b2); }
+  ~callback_c_2_0 () { callback<R, B1, B2>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      c.del ();
+      cf->set(true);
+    }
+  }
 };
 
 template<class C, class R, class B1, class B2>
@@ -1805,12 +2226,20 @@ class callback_2_1
   : public callback<R, B1, B2> {
   typedef R (*cb_t) (A1, B1, B2);
   cb_t f;
-  A1 a1;
+  container_t<A1> a1;
 public:
   callback_2_1 (callback_line_param cb_t ff, const A1 &aa1)
     : callback_line_init (callback<R, B1, B2>) f (ff), a1 (aa1) {}
+  ~callback_2_1 () { callback<R, B1, B2>::clear (); }
   R operator() (B1 b1, B2 b2)
-    { return f (a1, b1, b2); }
+    { return f (a1.get (), b1, b2); }
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      a1.del ();
+      cf->set (true);
+    }
+  } 
 };
 
 template<class R, class B1, class B2, class A1, class AA1>
@@ -1824,33 +2253,43 @@ template<class P, class C, class R, class B1, class B2, class A1>
 class callback_c_2_1
   : public callback<R, B1, B2> {
   typedef R (C::*cb_t) (A1, B1, B2);
-  P c;
+  container_t<P> c;
   cb_t f;
 #if WRAP_USE_NODELETE
-  A1 a1;
+  container_t<A1> a1;
   int deleted;
 public:
   callback_c_2_1 (callback_line_param const P &cc, cb_t ff, const A1 &aa1)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff), a1 (aa1),
       deleted (false)
-    { maybe_nodelete_addptr (c, callback<R, B1, B2>::line, &deleted); }
-  ~callback_c_2_1 () { maybe_nodelete_remptr (c, callback<R, B1, B2>::line, 
-                                     &deleted); }
+    { maybe_nodelete_addptr (c.get (), callback<R, B1, B2>::line, &deleted); }
+  ~callback_c_2_1 () { maybe_nodelete_remptr (c.get (), callback<R, B1, B2>::line, 
+                                     &deleted); 
+              callback<R, B1, B2>::clear (); }
   R operator() (B1 b1, B2 b2)
     {
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1, B2>::line, callback<R, B1, B2>::dest);
-      return ((*c).*f) (a1, b1, b2);
+      return ((*(c.get ())).*f) (a1.get (), b1, b2);
     }
 #else /* !WRAP_USE_NODELETE */
-  A1 a1;
+  container_t<A1> a1;
 public:
   callback_c_2_1 (callback_line_param const P &cc, cb_t ff, const A1 &aa1)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff), a1 (aa1) {}
   R operator() (B1 b1, B2 b2)
-    { return ((*c).*f) (a1, b1, b2); }
+    { return ((*(c.get ())).*f) (a1.get (), b1, b2); }
+  ~callback_c_2_1 () { callback<R, B1, B2>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      c.del ();
+      a1.del ();
+      cf->set(true);
+    }
+  }
 };
 
 template<class C, class R, class B1, class B2, class A1, class AA1>
@@ -1884,13 +2323,22 @@ class callback_2_2
   : public callback<R, B1, B2> {
   typedef R (*cb_t) (A1, A2, B1, B2);
   cb_t f;
-  A1 a1;
-  A2 a2;
+  container_t<A1> a1;
+  container_t<A2> a2;
 public:
   callback_2_2 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2)
     : callback_line_init (callback<R, B1, B2>) f (ff), a1 (aa1), a2 (aa2) {}
+  ~callback_2_2 () { callback<R, B1, B2>::clear (); }
   R operator() (B1 b1, B2 b2)
-    { return f (a1, a2, b1, b2); }
+    { return f (a1.get (), a2.get (), b1, b2); }
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      a1.del ();
+      a2.del ();
+      cf->set (true);
+    }
+  } 
 };
 
 template<class R, class B1, class B2, class A1, class AA1, class A2, class AA2>
@@ -1904,35 +2352,46 @@ template<class P, class C, class R, class B1, class B2, class A1, class A2>
 class callback_c_2_2
   : public callback<R, B1, B2> {
   typedef R (C::*cb_t) (A1, A2, B1, B2);
-  P c;
+  container_t<P> c;
   cb_t f;
 #if WRAP_USE_NODELETE
-  A1 a1;
-  A2 a2;
+  container_t<A1> a1;
+  container_t<A2> a2;
   int deleted;
 public:
   callback_c_2_2 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff), a1 (aa1), a2 (aa2),
       deleted (false)
-    { maybe_nodelete_addptr (c, callback<R, B1, B2>::line, &deleted); }
-  ~callback_c_2_2 () { maybe_nodelete_remptr (c, callback<R, B1, B2>::line, 
-                                     &deleted); }
+    { maybe_nodelete_addptr (c.get (), callback<R, B1, B2>::line, &deleted); }
+  ~callback_c_2_2 () { maybe_nodelete_remptr (c.get (), callback<R, B1, B2>::line, 
+                                     &deleted); 
+              callback<R, B1, B2>::clear (); }
   R operator() (B1 b1, B2 b2)
     {
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1, B2>::line, callback<R, B1, B2>::dest);
-      return ((*c).*f) (a1, a2, b1, b2);
+      return ((*(c.get ())).*f) (a1.get (), a2.get (), b1, b2);
     }
 #else /* !WRAP_USE_NODELETE */
-  A1 a1;
-  A2 a2;
+  container_t<A1> a1;
+  container_t<A2> a2;
 public:
   callback_c_2_2 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff), a1 (aa1), a2 (aa2) {}
   R operator() (B1 b1, B2 b2)
-    { return ((*c).*f) (a1, a2, b1, b2); }
+    { return ((*(c.get ())).*f) (a1.get (), a2.get (), b1, b2); }
+  ~callback_c_2_2 () { callback<R, B1, B2>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      c.del ();
+      a1.del ();
+      a2.del ();
+      cf->set(true);
+    }
+  }
 };
 
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2>
@@ -1966,14 +2425,24 @@ class callback_2_3
   : public callback<R, B1, B2> {
   typedef R (*cb_t) (A1, A2, A3, B1, B2);
   cb_t f;
-  A1 a1;
-  A2 a2;
-  A3 a3;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
 public:
   callback_2_3 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
     : callback_line_init (callback<R, B1, B2>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3) {}
+  ~callback_2_3 () { callback<R, B1, B2>::clear (); }
   R operator() (B1 b1, B2 b2)
-    { return f (a1, a2, a3, b1, b2); }
+    { return f (a1.get (), a2.get (), a3.get (), b1, b2); }
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      a1.del ();
+      a2.del ();
+      a3.del ();
+      cf->set (true);
+    }
+  } 
 };
 
 template<class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3>
@@ -1987,37 +2456,49 @@ template<class P, class C, class R, class B1, class B2, class A1, class A2, clas
 class callback_c_2_3
   : public callback<R, B1, B2> {
   typedef R (C::*cb_t) (A1, A2, A3, B1, B2);
-  P c;
+  container_t<P> c;
   cb_t f;
 #if WRAP_USE_NODELETE
-  A1 a1;
-  A2 a2;
-  A3 a3;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
   int deleted;
 public:
   callback_c_2_3 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3),
       deleted (false)
-    { maybe_nodelete_addptr (c, callback<R, B1, B2>::line, &deleted); }
-  ~callback_c_2_3 () { maybe_nodelete_remptr (c, callback<R, B1, B2>::line, 
-                                     &deleted); }
+    { maybe_nodelete_addptr (c.get (), callback<R, B1, B2>::line, &deleted); }
+  ~callback_c_2_3 () { maybe_nodelete_remptr (c.get (), callback<R, B1, B2>::line, 
+                                     &deleted); 
+              callback<R, B1, B2>::clear (); }
   R operator() (B1 b1, B2 b2)
     {
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1, B2>::line, callback<R, B1, B2>::dest);
-      return ((*c).*f) (a1, a2, a3, b1, b2);
+      return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), b1, b2);
     }
 #else /* !WRAP_USE_NODELETE */
-  A1 a1;
-  A2 a2;
-  A3 a3;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
 public:
   callback_c_2_3 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3) {}
   R operator() (B1 b1, B2 b2)
-    { return ((*c).*f) (a1, a2, a3, b1, b2); }
+    { return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), b1, b2); }
+  ~callback_c_2_3 () { callback<R, B1, B2>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      c.del ();
+      a1.del ();
+      a2.del ();
+      a3.del ();
+      cf->set(true);
+    }
+  }
 };
 
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3>
@@ -2051,15 +2532,26 @@ class callback_2_4
   : public callback<R, B1, B2> {
   typedef R (*cb_t) (A1, A2, A3, A4, B1, B2);
   cb_t f;
-  A1 a1;
-  A2 a2;
-  A3 a3;
-  A4 a4;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
+  container_t<A4> a4;
 public:
   callback_2_4 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
     : callback_line_init (callback<R, B1, B2>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4) {}
+  ~callback_2_4 () { callback<R, B1, B2>::clear (); }
   R operator() (B1 b1, B2 b2)
-    { return f (a1, a2, a3, a4, b1, b2); }
+    { return f (a1.get (), a2.get (), a3.get (), a4.get (), b1, b2); }
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      a1.del ();
+      a2.del ();
+      a3.del ();
+      a4.del ();
+      cf->set (true);
+    }
+  } 
 };
 
 template<class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
@@ -2073,39 +2565,52 @@ template<class P, class C, class R, class B1, class B2, class A1, class A2, clas
 class callback_c_2_4
   : public callback<R, B1, B2> {
   typedef R (C::*cb_t) (A1, A2, A3, A4, B1, B2);
-  P c;
+  container_t<P> c;
   cb_t f;
 #if WRAP_USE_NODELETE
-  A1 a1;
-  A2 a2;
-  A3 a3;
-  A4 a4;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
+  container_t<A4> a4;
   int deleted;
 public:
   callback_c_2_4 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4),
       deleted (false)
-    { maybe_nodelete_addptr (c, callback<R, B1, B2>::line, &deleted); }
-  ~callback_c_2_4 () { maybe_nodelete_remptr (c, callback<R, B1, B2>::line, 
-                                     &deleted); }
+    { maybe_nodelete_addptr (c.get (), callback<R, B1, B2>::line, &deleted); }
+  ~callback_c_2_4 () { maybe_nodelete_remptr (c.get (), callback<R, B1, B2>::line, 
+                                     &deleted); 
+              callback<R, B1, B2>::clear (); }
   R operator() (B1 b1, B2 b2)
     {
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1, B2>::line, callback<R, B1, B2>::dest);
-      return ((*c).*f) (a1, a2, a3, a4, b1, b2);
+      return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), b1, b2);
     }
 #else /* !WRAP_USE_NODELETE */
-  A1 a1;
-  A2 a2;
-  A3 a3;
-  A4 a4;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
+  container_t<A4> a4;
 public:
   callback_c_2_4 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4) {}
   R operator() (B1 b1, B2 b2)
-    { return ((*c).*f) (a1, a2, a3, a4, b1, b2); }
+    { return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), b1, b2); }
+  ~callback_c_2_4 () { callback<R, B1, B2>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      c.del ();
+      a1.del ();
+      a2.del ();
+      a3.del ();
+      a4.del ();
+      cf->set(true);
+    }
+  }
 };
 
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
@@ -2139,16 +2644,28 @@ class callback_2_5
   : public callback<R, B1, B2> {
   typedef R (*cb_t) (A1, A2, A3, A4, A5, B1, B2);
   cb_t f;
-  A1 a1;
-  A2 a2;
-  A3 a3;
-  A4 a4;
-  A5 a5;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
+  container_t<A4> a4;
+  container_t<A5> a5;
 public:
   callback_2_5 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
     : callback_line_init (callback<R, B1, B2>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5) {}
+  ~callback_2_5 () { callback<R, B1, B2>::clear (); }
   R operator() (B1 b1, B2 b2)
-    { return f (a1, a2, a3, a4, a5, b1, b2); }
+    { return f (a1.get (), a2.get (), a3.get (), a4.get (), a5.get (), b1, b2); }
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      a1.del ();
+      a2.del ();
+      a3.del ();
+      a4.del ();
+      a5.del ();
+      cf->set (true);
+    }
+  } 
 };
 
 template<class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
@@ -2162,41 +2679,55 @@ template<class P, class C, class R, class B1, class B2, class A1, class A2, clas
 class callback_c_2_5
   : public callback<R, B1, B2> {
   typedef R (C::*cb_t) (A1, A2, A3, A4, A5, B1, B2);
-  P c;
+  container_t<P> c;
   cb_t f;
 #if WRAP_USE_NODELETE
-  A1 a1;
-  A2 a2;
-  A3 a3;
-  A4 a4;
-  A5 a5;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
+  container_t<A4> a4;
+  container_t<A5> a5;
   int deleted;
 public:
   callback_c_2_5 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5),
       deleted (false)
-    { maybe_nodelete_addptr (c, callback<R, B1, B2>::line, &deleted); }
-  ~callback_c_2_5 () { maybe_nodelete_remptr (c, callback<R, B1, B2>::line, 
-                                     &deleted); }
+    { maybe_nodelete_addptr (c.get (), callback<R, B1, B2>::line, &deleted); }
+  ~callback_c_2_5 () { maybe_nodelete_remptr (c.get (), callback<R, B1, B2>::line, 
+                                     &deleted); 
+              callback<R, B1, B2>::clear (); }
   R operator() (B1 b1, B2 b2)
     {
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1, B2>::line, callback<R, B1, B2>::dest);
-      return ((*c).*f) (a1, a2, a3, a4, a5, b1, b2);
+      return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), a5.get (), b1, b2);
     }
 #else /* !WRAP_USE_NODELETE */
-  A1 a1;
-  A2 a2;
-  A3 a3;
-  A4 a4;
-  A5 a5;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
+  container_t<A4> a4;
+  container_t<A5> a5;
 public:
   callback_c_2_5 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5) {}
   R operator() (B1 b1, B2 b2)
-    { return ((*c).*f) (a1, a2, a3, a4, a5, b1, b2); }
+    { return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), a5.get (), b1, b2); }
+  ~callback_c_2_5 () { callback<R, B1, B2>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      c.del ();
+      a1.del ();
+      a2.del ();
+      a3.del ();
+      a4.del ();
+      a5.del ();
+      cf->set(true);
+    }
+  }
 };
 
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
@@ -2236,10 +2767,38 @@ public:
   const char *const src;
   const char *const line;
   callback (const char *df, const char *f, const char *l)
-    : dest (df[0] == '&' ? df + 1 : df), src (f), line (l) {}
-#endif /* WRAP_DEBUG */
+    : dest (df[0] == '&' ? df + 1 : df), src (f), line (l),
+      _cleared_flag (ref_flag_t::alloc (false)) {}
+#else /* !WRAP_DEBUG */
+  callback () : _cleared_flag (ref_flag_t::alloc (false)) {}
+#endif /* !WRAP_DEBUG */
   virtual R operator() (B1, B2, B3) = 0;
+  virtual void signal (B1 b1, B2 b2, B3 b3)
+  {
+    ref_flag_ptr_t cf = _cleared_flag;
+    if (*cf) { second_signal (); }
+    else {
+      (void )(*this)(b1, b2, b3);
+      clear (cf);
+    }
+  }
   virtual ~callback () {}
+protected:
+  void second_signal () { 
+#if WRAP_DEBUG 
+    coordvar_second_signal (line);
+#else
+    coordvar_second_signal ("(unknown)");
+#endif /* WRAP_DEBUG */
+  }
+
+  void clear (ref_flag_ptr_t r = NULL) {
+    if (r) _clear (r);
+    else _clear (_cleared_flag);
+  }
+
+  virtual void _clear (ref_flag_ptr_t) = 0;
+  ref_flag_ptr_t _cleared_flag;
 };
 
 
@@ -2251,8 +2810,15 @@ class callback_3_0
 public:
   callback_3_0 (callback_line_param cb_t ff)
     : callback_line_init (callback<R, B1, B2, B3>) f (ff) {}
+  ~callback_3_0 () { callback<R, B1, B2, B3>::clear (); }
   R operator() (B1 b1, B2 b2, B3 b3)
     { return f (b1, b2, b3); }
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      cf->set (true);
+    }
+  } 
 };
 
 template<class R, class B1, class B2, class B3>
@@ -2266,7 +2832,7 @@ template<class P, class C, class R, class B1, class B2, class B3>
 class callback_c_3_0
   : public callback<R, B1, B2, B3> {
   typedef R (C::*cb_t) (B1, B2, B3);
-  P c;
+  container_t<P> c;
   cb_t f;
 #if WRAP_USE_NODELETE
   int deleted;
@@ -2274,23 +2840,32 @@ public:
   callback_c_3_0 (callback_line_param const P &cc, cb_t ff)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff),
       deleted (false)
-    { maybe_nodelete_addptr (c, callback<R, B1, B2, B3>::line, &deleted); }
-  ~callback_c_3_0 () { maybe_nodelete_remptr (c, callback<R, B1, B2, B3>::line, 
-                                     &deleted); }
+    { maybe_nodelete_addptr (c.get (), callback<R, B1, B2, B3>::line, &deleted); }
+  ~callback_c_3_0 () { maybe_nodelete_remptr (c.get (), callback<R, B1, B2, B3>::line, 
+                                     &deleted); 
+              callback<R, B1, B2, B3>::clear (); }
   R operator() (B1 b1, B2 b2, B3 b3)
     {
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1, B2, B3>::line, callback<R, B1, B2, B3>::dest);
-      return ((*c).*f) (b1, b2, b3);
+      return ((*(c.get ())).*f) (b1, b2, b3);
     }
 #else /* !WRAP_USE_NODELETE */
 public:
   callback_c_3_0 (callback_line_param const P &cc, cb_t ff)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff) {}
   R operator() (B1 b1, B2 b2, B3 b3)
-    { return ((*c).*f) (b1, b2, b3); }
+    { return ((*(c.get ())).*f) (b1, b2, b3); }
+  ~callback_c_3_0 () { callback<R, B1, B2, B3>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      c.del ();
+      cf->set(true);
+    }
+  }
 };
 
 template<class C, class R, class B1, class B2, class B3>
@@ -2324,12 +2899,20 @@ class callback_3_1
   : public callback<R, B1, B2, B3> {
   typedef R (*cb_t) (A1, B1, B2, B3);
   cb_t f;
-  A1 a1;
+  container_t<A1> a1;
 public:
   callback_3_1 (callback_line_param cb_t ff, const A1 &aa1)
     : callback_line_init (callback<R, B1, B2, B3>) f (ff), a1 (aa1) {}
+  ~callback_3_1 () { callback<R, B1, B2, B3>::clear (); }
   R operator() (B1 b1, B2 b2, B3 b3)
-    { return f (a1, b1, b2, b3); }
+    { return f (a1.get (), b1, b2, b3); }
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      a1.del ();
+      cf->set (true);
+    }
+  } 
 };
 
 template<class R, class B1, class B2, class B3, class A1, class AA1>
@@ -2343,33 +2926,43 @@ template<class P, class C, class R, class B1, class B2, class B3, class A1>
 class callback_c_3_1
   : public callback<R, B1, B2, B3> {
   typedef R (C::*cb_t) (A1, B1, B2, B3);
-  P c;
+  container_t<P> c;
   cb_t f;
 #if WRAP_USE_NODELETE
-  A1 a1;
+  container_t<A1> a1;
   int deleted;
 public:
   callback_c_3_1 (callback_line_param const P &cc, cb_t ff, const A1 &aa1)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff), a1 (aa1),
       deleted (false)
-    { maybe_nodelete_addptr (c, callback<R, B1, B2, B3>::line, &deleted); }
-  ~callback_c_3_1 () { maybe_nodelete_remptr (c, callback<R, B1, B2, B3>::line, 
-                                     &deleted); }
+    { maybe_nodelete_addptr (c.get (), callback<R, B1, B2, B3>::line, &deleted); }
+  ~callback_c_3_1 () { maybe_nodelete_remptr (c.get (), callback<R, B1, B2, B3>::line, 
+                                     &deleted); 
+              callback<R, B1, B2, B3>::clear (); }
   R operator() (B1 b1, B2 b2, B3 b3)
     {
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1, B2, B3>::line, callback<R, B1, B2, B3>::dest);
-      return ((*c).*f) (a1, b1, b2, b3);
+      return ((*(c.get ())).*f) (a1.get (), b1, b2, b3);
     }
 #else /* !WRAP_USE_NODELETE */
-  A1 a1;
+  container_t<A1> a1;
 public:
   callback_c_3_1 (callback_line_param const P &cc, cb_t ff, const A1 &aa1)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff), a1 (aa1) {}
   R operator() (B1 b1, B2 b2, B3 b3)
-    { return ((*c).*f) (a1, b1, b2, b3); }
+    { return ((*(c.get ())).*f) (a1.get (), b1, b2, b3); }
+  ~callback_c_3_1 () { callback<R, B1, B2, B3>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      c.del ();
+      a1.del ();
+      cf->set(true);
+    }
+  }
 };
 
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1>
@@ -2403,13 +2996,22 @@ class callback_3_2
   : public callback<R, B1, B2, B3> {
   typedef R (*cb_t) (A1, A2, B1, B2, B3);
   cb_t f;
-  A1 a1;
-  A2 a2;
+  container_t<A1> a1;
+  container_t<A2> a2;
 public:
   callback_3_2 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2)
     : callback_line_init (callback<R, B1, B2, B3>) f (ff), a1 (aa1), a2 (aa2) {}
+  ~callback_3_2 () { callback<R, B1, B2, B3>::clear (); }
   R operator() (B1 b1, B2 b2, B3 b3)
-    { return f (a1, a2, b1, b2, b3); }
+    { return f (a1.get (), a2.get (), b1, b2, b3); }
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      a1.del ();
+      a2.del ();
+      cf->set (true);
+    }
+  } 
 };
 
 template<class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2>
@@ -2423,35 +3025,46 @@ template<class P, class C, class R, class B1, class B2, class B3, class A1, clas
 class callback_c_3_2
   : public callback<R, B1, B2, B3> {
   typedef R (C::*cb_t) (A1, A2, B1, B2, B3);
-  P c;
+  container_t<P> c;
   cb_t f;
 #if WRAP_USE_NODELETE
-  A1 a1;
-  A2 a2;
+  container_t<A1> a1;
+  container_t<A2> a2;
   int deleted;
 public:
   callback_c_3_2 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff), a1 (aa1), a2 (aa2),
       deleted (false)
-    { maybe_nodelete_addptr (c, callback<R, B1, B2, B3>::line, &deleted); }
-  ~callback_c_3_2 () { maybe_nodelete_remptr (c, callback<R, B1, B2, B3>::line, 
-                                     &deleted); }
+    { maybe_nodelete_addptr (c.get (), callback<R, B1, B2, B3>::line, &deleted); }
+  ~callback_c_3_2 () { maybe_nodelete_remptr (c.get (), callback<R, B1, B2, B3>::line, 
+                                     &deleted); 
+              callback<R, B1, B2, B3>::clear (); }
   R operator() (B1 b1, B2 b2, B3 b3)
     {
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1, B2, B3>::line, callback<R, B1, B2, B3>::dest);
-      return ((*c).*f) (a1, a2, b1, b2, b3);
+      return ((*(c.get ())).*f) (a1.get (), a2.get (), b1, b2, b3);
     }
 #else /* !WRAP_USE_NODELETE */
-  A1 a1;
-  A2 a2;
+  container_t<A1> a1;
+  container_t<A2> a2;
 public:
   callback_c_3_2 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff), a1 (aa1), a2 (aa2) {}
   R operator() (B1 b1, B2 b2, B3 b3)
-    { return ((*c).*f) (a1, a2, b1, b2, b3); }
+    { return ((*(c.get ())).*f) (a1.get (), a2.get (), b1, b2, b3); }
+  ~callback_c_3_2 () { callback<R, B1, B2, B3>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      c.del ();
+      a1.del ();
+      a2.del ();
+      cf->set(true);
+    }
+  }
 };
 
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2>
@@ -2485,14 +3098,24 @@ class callback_3_3
   : public callback<R, B1, B2, B3> {
   typedef R (*cb_t) (A1, A2, A3, B1, B2, B3);
   cb_t f;
-  A1 a1;
-  A2 a2;
-  A3 a3;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
 public:
   callback_3_3 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
     : callback_line_init (callback<R, B1, B2, B3>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3) {}
+  ~callback_3_3 () { callback<R, B1, B2, B3>::clear (); }
   R operator() (B1 b1, B2 b2, B3 b3)
-    { return f (a1, a2, a3, b1, b2, b3); }
+    { return f (a1.get (), a2.get (), a3.get (), b1, b2, b3); }
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      a1.del ();
+      a2.del ();
+      a3.del ();
+      cf->set (true);
+    }
+  } 
 };
 
 template<class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3>
@@ -2506,37 +3129,49 @@ template<class P, class C, class R, class B1, class B2, class B3, class A1, clas
 class callback_c_3_3
   : public callback<R, B1, B2, B3> {
   typedef R (C::*cb_t) (A1, A2, A3, B1, B2, B3);
-  P c;
+  container_t<P> c;
   cb_t f;
 #if WRAP_USE_NODELETE
-  A1 a1;
-  A2 a2;
-  A3 a3;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
   int deleted;
 public:
   callback_c_3_3 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3),
       deleted (false)
-    { maybe_nodelete_addptr (c, callback<R, B1, B2, B3>::line, &deleted); }
-  ~callback_c_3_3 () { maybe_nodelete_remptr (c, callback<R, B1, B2, B3>::line, 
-                                     &deleted); }
+    { maybe_nodelete_addptr (c.get (), callback<R, B1, B2, B3>::line, &deleted); }
+  ~callback_c_3_3 () { maybe_nodelete_remptr (c.get (), callback<R, B1, B2, B3>::line, 
+                                     &deleted); 
+              callback<R, B1, B2, B3>::clear (); }
   R operator() (B1 b1, B2 b2, B3 b3)
     {
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1, B2, B3>::line, callback<R, B1, B2, B3>::dest);
-      return ((*c).*f) (a1, a2, a3, b1, b2, b3);
+      return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), b1, b2, b3);
     }
 #else /* !WRAP_USE_NODELETE */
-  A1 a1;
-  A2 a2;
-  A3 a3;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
 public:
   callback_c_3_3 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3) {}
   R operator() (B1 b1, B2 b2, B3 b3)
-    { return ((*c).*f) (a1, a2, a3, b1, b2, b3); }
+    { return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), b1, b2, b3); }
+  ~callback_c_3_3 () { callback<R, B1, B2, B3>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      c.del ();
+      a1.del ();
+      a2.del ();
+      a3.del ();
+      cf->set(true);
+    }
+  }
 };
 
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3>
@@ -2570,15 +3205,26 @@ class callback_3_4
   : public callback<R, B1, B2, B3> {
   typedef R (*cb_t) (A1, A2, A3, A4, B1, B2, B3);
   cb_t f;
-  A1 a1;
-  A2 a2;
-  A3 a3;
-  A4 a4;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
+  container_t<A4> a4;
 public:
   callback_3_4 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
     : callback_line_init (callback<R, B1, B2, B3>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4) {}
+  ~callback_3_4 () { callback<R, B1, B2, B3>::clear (); }
   R operator() (B1 b1, B2 b2, B3 b3)
-    { return f (a1, a2, a3, a4, b1, b2, b3); }
+    { return f (a1.get (), a2.get (), a3.get (), a4.get (), b1, b2, b3); }
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      a1.del ();
+      a2.del ();
+      a3.del ();
+      a4.del ();
+      cf->set (true);
+    }
+  } 
 };
 
 template<class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
@@ -2592,39 +3238,52 @@ template<class P, class C, class R, class B1, class B2, class B3, class A1, clas
 class callback_c_3_4
   : public callback<R, B1, B2, B3> {
   typedef R (C::*cb_t) (A1, A2, A3, A4, B1, B2, B3);
-  P c;
+  container_t<P> c;
   cb_t f;
 #if WRAP_USE_NODELETE
-  A1 a1;
-  A2 a2;
-  A3 a3;
-  A4 a4;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
+  container_t<A4> a4;
   int deleted;
 public:
   callback_c_3_4 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4),
       deleted (false)
-    { maybe_nodelete_addptr (c, callback<R, B1, B2, B3>::line, &deleted); }
-  ~callback_c_3_4 () { maybe_nodelete_remptr (c, callback<R, B1, B2, B3>::line, 
-                                     &deleted); }
+    { maybe_nodelete_addptr (c.get (), callback<R, B1, B2, B3>::line, &deleted); }
+  ~callback_c_3_4 () { maybe_nodelete_remptr (c.get (), callback<R, B1, B2, B3>::line, 
+                                     &deleted); 
+              callback<R, B1, B2, B3>::clear (); }
   R operator() (B1 b1, B2 b2, B3 b3)
     {
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1, B2, B3>::line, callback<R, B1, B2, B3>::dest);
-      return ((*c).*f) (a1, a2, a3, a4, b1, b2, b3);
+      return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), b1, b2, b3);
     }
 #else /* !WRAP_USE_NODELETE */
-  A1 a1;
-  A2 a2;
-  A3 a3;
-  A4 a4;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
+  container_t<A4> a4;
 public:
   callback_c_3_4 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4) {}
   R operator() (B1 b1, B2 b2, B3 b3)
-    { return ((*c).*f) (a1, a2, a3, a4, b1, b2, b3); }
+    { return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), b1, b2, b3); }
+  ~callback_c_3_4 () { callback<R, B1, B2, B3>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      c.del ();
+      a1.del ();
+      a2.del ();
+      a3.del ();
+      a4.del ();
+      cf->set(true);
+    }
+  }
 };
 
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
@@ -2658,16 +3317,28 @@ class callback_3_5
   : public callback<R, B1, B2, B3> {
   typedef R (*cb_t) (A1, A2, A3, A4, A5, B1, B2, B3);
   cb_t f;
-  A1 a1;
-  A2 a2;
-  A3 a3;
-  A4 a4;
-  A5 a5;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
+  container_t<A4> a4;
+  container_t<A5> a5;
 public:
   callback_3_5 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
     : callback_line_init (callback<R, B1, B2, B3>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5) {}
+  ~callback_3_5 () { callback<R, B1, B2, B3>::clear (); }
   R operator() (B1 b1, B2 b2, B3 b3)
-    { return f (a1, a2, a3, a4, a5, b1, b2, b3); }
+    { return f (a1.get (), a2.get (), a3.get (), a4.get (), a5.get (), b1, b2, b3); }
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      a1.del ();
+      a2.del ();
+      a3.del ();
+      a4.del ();
+      a5.del ();
+      cf->set (true);
+    }
+  } 
 };
 
 template<class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
@@ -2681,41 +3352,55 @@ template<class P, class C, class R, class B1, class B2, class B3, class A1, clas
 class callback_c_3_5
   : public callback<R, B1, B2, B3> {
   typedef R (C::*cb_t) (A1, A2, A3, A4, A5, B1, B2, B3);
-  P c;
+  container_t<P> c;
   cb_t f;
 #if WRAP_USE_NODELETE
-  A1 a1;
-  A2 a2;
-  A3 a3;
-  A4 a4;
-  A5 a5;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
+  container_t<A4> a4;
+  container_t<A5> a5;
   int deleted;
 public:
   callback_c_3_5 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5),
       deleted (false)
-    { maybe_nodelete_addptr (c, callback<R, B1, B2, B3>::line, &deleted); }
-  ~callback_c_3_5 () { maybe_nodelete_remptr (c, callback<R, B1, B2, B3>::line, 
-                                     &deleted); }
+    { maybe_nodelete_addptr (c.get (), callback<R, B1, B2, B3>::line, &deleted); }
+  ~callback_c_3_5 () { maybe_nodelete_remptr (c.get (), callback<R, B1, B2, B3>::line, 
+                                     &deleted); 
+              callback<R, B1, B2, B3>::clear (); }
   R operator() (B1 b1, B2 b2, B3 b3)
     {
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1, B2, B3>::line, callback<R, B1, B2, B3>::dest);
-      return ((*c).*f) (a1, a2, a3, a4, a5, b1, b2, b3);
+      return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), a5.get (), b1, b2, b3);
     }
 #else /* !WRAP_USE_NODELETE */
-  A1 a1;
-  A2 a2;
-  A3 a3;
-  A4 a4;
-  A5 a5;
+  container_t<A1> a1;
+  container_t<A2> a2;
+  container_t<A3> a3;
+  container_t<A4> a4;
+  container_t<A5> a5;
 public:
   callback_c_3_5 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5) {}
   R operator() (B1 b1, B2 b2, B3 b3)
-    { return ((*c).*f) (a1, a2, a3, a4, a5, b1, b2, b3); }
+    { return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), a5.get (), b1, b2, b3); }
+  ~callback_c_3_5 () { callback<R, B1, B2, B3>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
+protected:
+  void _clear (ref_flag_ptr_t cf) {
+    if (!*cf) { 
+      c.del ();
+      a1.del ();
+      a2.del ();
+      a3.del ();
+      a4.del ();
+      a5.del ();
+      cf->set(true);
+    }
+  }
 };
 
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>

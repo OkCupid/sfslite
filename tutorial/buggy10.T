@@ -19,8 +19,8 @@ struct state_t {
   int n_tot, window_sz;
   int i;
 
-  void launch (ceo_callback_bool_t ceocc, CLOSURE);
-  void relaunch (ceo_callback_bool_t ceocc, CLOSURE);
+  void launch (cbb ceocc, CLOSURE);
+  void relaunch (cbb ceocc, CLOSURE);
 };
 
 static void foofoo (cbi cb)
@@ -29,11 +29,13 @@ static void foofoo (cbi cb)
   cb (40);
 }
 
-TAME(void state_t::launch (ceo_callback_bool_t cceoc))
+TAMED
+void state_t::launch (cbb cv)
 {
   // declare all of your "stack" variables here
   VARS {
     int fd, xx;
+    bool ret (true);
   }
 
   // Call tcpconnect, and block until it returns; when it does return,
@@ -42,7 +44,7 @@ TAME(void state_t::launch (ceo_callback_bool_t cceoc))
 
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", host.cstr(), port);
-    RESUME (false);
+    ret = false;
   } else {
     res.setsize (n_tot);
     errs.setsize (n_tot);
@@ -59,10 +61,11 @@ TAME(void state_t::launch (ceo_callback_bool_t cceoc))
 
     delaycb (10, 0, wrap (foofoo, @[window](xx)));
   }
-  RESUME (true);
+  cv->signal (ret);
 }
 
-TAME(void state_t::relaunch (ceo_callback_bool_t cceoc))
+TAMED
+void state_t::relaunch (cbb cceoc)
 {
   VARS {
     bool err_occurred (false);
@@ -92,7 +95,7 @@ TAME(void state_t::relaunch (ceo_callback_bool_t cceoc))
     }
   }
   warn << "All done...\n";
-  RESUME (!err_occurred);
+  cceoc->signal (!err_occurred);
 }
 
 state_t *s;

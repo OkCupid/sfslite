@@ -30,24 +30,24 @@ static void finish (bool rc)
 }
 
 TAMED static void 
-part1 (cb_hog_t *hog, coordgroup_t<> *JG, coordvar_void_t callercv)
+part1 (cb_hog_t *hog, coordgroup_t<> *JG, cbv cb)
 {
   delaycb (1, 0, @[*JG]());
   hog->call_me (@[*JG]());
-  RESUME;
+  cb->signal ();
 }
 
-TAMED static void part2 (coordgroup_t<> *JG, coordvar_void_t callercv)
+TAMED static void part2 (coordgroup_t<> *JG, cbv cb)
 {
   VARS { int i; }
   for (i = 0; i < 2; i++) {
     WAIT (*JG);
   }
-  RESUME;
+  cb->signal ();
 }
 
 
-TAMED static void buggy1b (coordvar_bool_t callercv)
+TAMED static void buggy1b (cbb cb)
 {
   VARS { 
     coordgroup_t<> JG; 
@@ -60,7 +60,7 @@ TAMED static void buggy1b (coordvar_bool_t callercv)
   if (fix_bug)
     delete hog;
 
-  RESUME (true);
+  cb->signal (true);
 }
 
 static void usage ()

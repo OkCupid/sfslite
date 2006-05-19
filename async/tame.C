@@ -9,7 +9,6 @@ int tame_options;
 int tame_global_int;
 u_int64_t closure_serial_number;
 bool tame_collect_jg_flag;
-static recycle_bin_t<ref_flag_t> *rfrb;
 
 int tame_init::count;
 
@@ -24,8 +23,6 @@ tame_init::start ()
   tame_options = 0;
   closure_serial_number = 0;
   tame_collect_jg_flag = false;
-
-  rfrb = New recycle_bin_t<ref_flag_t> ();
 
   char *e = safegetenv (TAME_OPTIONS);
   for (char *cp = e; cp && *cp; cp++) {
@@ -61,46 +58,41 @@ tame_error (const char *loc, const char *msg)
     panic ("abort on TAME failure");
 }
 
-void
-closure_t::enforce_cceoc (const char *l)
+//-----------------------------------------------------------------------
+// Methods relating to closures
+
+str
+closure_t::loc (int l) const
 {
-  if (_has_cceoc && _cceoc_count != 1) {
-    strbuf e ("CEOCC called %d times; expected exactly 1 call!", _cceoc_count);
-    str m (e);
-    tame_error (l, m.cstr ());
-  }
+  strbuf b;
+  b << _filename << ":" << l << " in function " << _funcname;
+  return b;
 }
 
-static void
-check_closure_destroyed (const char *loc, ptr<ref_flag_t> flag)
-{
-  if (!*flag) 
-    tame_error (loc, "reference to closure leaked");
-}
-
+closure_t::closure_t (const char *file, const char *fun)
+  : weak_refcounted_t<closure_t> (this),
+    _jumpto (0), 
+    _id (++closure_serial_number),
+    _filename (file),
+    _funcname (fun),
+    _must_deallocate (New refcounted<must_deallocate_t> ())
+  {}
 
 void
-closure_t::end_of_scope_checks (const char *loc)
+closure_t::end_of_scope_checks (int line)
 {
-  if (_has_cceoc)
-    enforce_cceoc (loc);
-
   // If we're really concerned about performance, we'll want to disable
   // leak-checking, since checking for leaks does demand registering
   // an extra callback.
   if (tame_check_leaks ()) {
-    set_weak_finalize_cb (wrap (check_closure_destroyed, loc, 
-				destroyed_flag ()));
-  
-    // potentially weak-decref us if we have join groups that should
-    // be going out of scope now.
-    kill_join_groups ();
 
-    // decref us for ourselves, since WE should be going out of scope
-    // Still need to run this check even for a function that only
-    // uses BLOCK { .. }, since it may leak a reference by assigning one
-    // of our CVs to a global variable
-    weak_decref ();
+    // Mark all coordination groups automatically allocated in
+    // VARS {..} as semi-deallocated.
+    semi_deallocate_coordgroups ();
+
+    // After everything unwinds, we can check that everything has
+    // been deallocated.
+    delaycb (0, 0, wrap (_must_deallocate, &must_deallocate_t::check));
   }
 }
 
@@ -113,12 +105,40 @@ closure_t::associate_join_group (mortal_ref_t mr, const void *jgwp)
 }
 
 void
-closure_t::kill_join_groups ()
+closure_t::semi_deallocate_coordgroups ()
 {
   for (size_t i = 0; i < _join_groups.size (); i++) {
     _join_groups[i].mark_dead ();
   }
 }
+
+void
+closure_t::error (int lineno, const char *msg)
+{
+  str s = loc (lineno);
+  tame_error (s.cstr(), msg);
+}
+
+void
+closure_t::init_block (int blockid, int lineno)
+{
+  _block._id = blockid;
+  _block._count = 1;
+  _block._lineno = lineno;
+}
+
+ptr<closure_wrapper_t>
+closure_t::make_wrapper (int blockid, int lineno)
+{
+  assert (blockid == _block._id);
+  ptr<closure_wrapper_t> ret = 
+    New refcounted<closure_wrapper_t> (mkref (this), lineno);
+  _block._count ++;
+  return ret;
+}
+
+//
+//-----------------------------------------------------------------------
 
 void 
 mortal_ref_t::mark_dead ()
@@ -169,33 +189,70 @@ closure_t::collect_join_groups ()
 //-----------------------------------------------------------------------
 
 //-----------------------------------------------------------------------
-// recycle ref flags
-
-recycle_bin_t<ref_flag_t> * ref_flag_t::get_recycle_bin () { return rfrb; }
-
-void
-ref_flag_t::recycle (ref_flag_t *p)
+// Closure wrappers are interfaces between closures and CVs that the CVs
+// carry around.  We're waiting for all of these interfaces to disappear,
+// which will prove that the closure reference was flushed, too.
+//
+closure_wrapper_t::closure_wrapper_t (ptr<closure_t> c, int l)
+  : _cls (c), _lineno (l) 
 {
-  if (get_recycle_bin ()->add (p)) {
-    p->set_can_recycle (false);
-  } else {
-    delete p;
-  }
+  _cls->must_deallocate ()->add (this);
 }
 
-ptr<ref_flag_t>
-ref_flag_t::alloc (const bool &b)
+closure_wrapper_t::~closure_wrapper_t () 
 {
-  ptr<ref_flag_t> ret = get_recycle_bin ()->get ();
-  if (ret) {
-    ret->set_can_recycle (true);
-    ret->set (b);
-  } else {
-    ret = New refcounted<ref_flag_t> (b);
+  _cls->must_deallocate ()->rem (this);
+}
+
+
+void
+closure_t::maybe_reenter (int lineno)
+{
+  if (block_dec_count (lineno))
+    reenter ();
+}
+
+bool
+closure_t::block_dec_count (int lineno)
+{
+  bool ret = false;
+  if (_block._count <= 0) {
+    error (lineno, "too many signals for BLOCK environment.");
+  } else if (--_block._count == 0) {
+    ret = true;
   }
   return ret;
 }
 
+void
+must_deallocate_t::check ()
+{
+  qhash<str, int> tab;
+  vec<str> lst;
+  must_deallocate_obj_t *p;
+  for (p = _objs.first ; p ; p = _objs.next (p)) {
+    strbuf b;
+    str t = p->loc ();
+    b << t << ": Object of type '" << p->must_dealloc_typ () << "' leaked";
+    str s = b;
+    int *n = tab[s];
+    if (n) { (*n)++; }
+    else { 
+      tab.insert (s, 1); 
+      lst.push_back (s);
+    }
+  }
 
-//
-//-----------------------------------------------------------------------
+  for (size_t i = 0; i < lst.size (); i++) {
+    if (!(tame_options & TAME_ERROR_SILENT)) {
+      str s = lst[i];
+      warn << s;
+      if (*tab[s] > 1) 
+	warnx << " (" << *tab[s] << " times)";
+      warnx << "\n";
+    }
+  }
+
+  if (lst.size () > 0 && (tame_options & TAME_ERROR_FATAL))
+    panic ("abort on TAME failure\n");
+}

@@ -31,7 +31,7 @@ static void finish (bool rc)
 }
 
 TAMED static 
-void buggy1a (coordvar_bool_t callercv)
+void buggy1a (cbb cv)
 {
   VARS {
     cb_hog_t *hog (New cb_hog_t ());
@@ -40,7 +40,7 @@ void buggy1a (coordvar_bool_t callercv)
     delaycb (1, 0, @()); 
     hog->call_me (@());
   }
-  SIGNAL (true);
+  cv->signal (true);
   BLOCK { delaycb (1, 0, @()); }
 
   if (fix_bug)

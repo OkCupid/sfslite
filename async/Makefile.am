@@ -21,7 +21,7 @@ core.C daemonize.C dns.C dnsparse.C err.C fdwait.C ident.C ifchg.C	\
 ihash.C itree.C lockfile.C malloc.C msb.C myaddrs.C myname.C		\
 parseopt.C pipe2str.C refcnt.C rxx.C sigio.C socket.C spawn.C str.C	\
 str2file.C straux.C suio++.C suio_vuprintf.C tcpconnect.C litetime.C 	\
-tame.C
+tame.C coordvar.C
 
 aiod_SOURCES = aiod.C
 aiod_LDADD = $(LIBASYNC) $(LIBPY)
@@ -33,7 +33,7 @@ bbuddy.h bitvec.h callback.h cbuf.h dns.h dnsimpl.h dnsparse.h err.h	\
 fdlim.h ihash.h init.h itree.h keyfunc.h list.h msb.h opnew.h		\
 parseopt.h pcre.h qhash.h refcnt.h rxx.h serial.h stllike.h str.h	\
 suio++.h sysconf.h union.h vatmpl.h vec.h rwfd.h litetime.h tame.h      \
-corebench.h
+corebench.h coordvar.h
 
 
 #

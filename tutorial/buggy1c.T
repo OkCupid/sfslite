@@ -23,7 +23,7 @@ static void finish (bool rc)
 }
 
 TAMED static void 
-buggy1c (coordvar_bool_t callercv)
+buggy1c (cbb cv)
 {
   VARS { 
     coordgroup_t<> JG (__FILE__, __LINE__); 
@@ -37,7 +37,7 @@ buggy1c (coordvar_bool_t callercv)
   for (i = 0; i < (fix_bug ? 2 : 1); i++) {
     WAIT (JG);
     if (i == 0) 
-      SIGNAL (true);
+      cv->signal (true);
   }
   warn << "leaving buggy1c\n";
 }

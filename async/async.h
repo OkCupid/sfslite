@@ -89,8 +89,6 @@ extern u_int64_t ifchg_count;
 ifchgcb_t *ifchgcb (cbv);
 void ifchgcb_remove (ifchgcb_t *chg);
 
-extern u_int64_t time_in_acheck;
-
 #define SFSLITE_PATCHLEVEL 8009001
 #define SFSLITE_PATCHLEVEL_STR "0.8.9pre1"
 

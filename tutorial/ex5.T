@@ -18,7 +18,7 @@ public:
   void dostuff (int port, coordvar_t<bool>::t cb) 
   { dostuff_private (port, cb); }
 private:
-  void dostuff_private (int port, coordvar_t<bool>::t callercv, CLOSURE);
+  void dostuff_private (int port, cbb cv, CLOSURE);
   str _name;
 };
 
@@ -49,7 +49,7 @@ static void foo_func (my_enum_t e)
 
 
 TAMED void 
-remote_host_t::dostuff_private (int port, coordvar_t<bool>::t callercv)
+remote_host_t::dostuff_private (int port, cbb cv)
 {
   // declare all of your "stack" variables here
   VARS {
@@ -109,7 +109,7 @@ remote_host_t::dostuff_private (int port, coordvar_t<bool>::t callercv)
     }
   }
   warn << "All done...\n";
-  SIGNAL (!err_occurred);
+  cv->signal (!err_occurred);
 }
 
 static void finish (bool rc)

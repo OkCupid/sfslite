@@ -49,7 +49,7 @@ void try_rpc (str h, int port, cbb cb)
       }
     }
   }
-  (*cb) (ret);
+  cb->signal (ret);
 }
  
 static void finish (bool rc)

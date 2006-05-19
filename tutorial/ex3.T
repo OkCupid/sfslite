@@ -7,7 +7,7 @@
 #include "arpc.h"
  
 TAMED static 
-void try_rpc (str h, int port, coordvar_t<bool>::t callercv)
+void try_rpc (str h, int port, cbb cv)
 {
   VARS {
     bool ret (false);
@@ -46,7 +46,7 @@ void try_rpc (str h, int port, coordvar_t<bool>::t callercv)
       }
     }
   }
-  SIGNAL (ret);
+  cv->signal (ret);
   fd ++;
 }
  

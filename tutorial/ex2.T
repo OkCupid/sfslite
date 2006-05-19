@@ -19,6 +19,8 @@ void try_rpc (str h, int port, cbb cb)
     ex_struct_t r3;
     clnt_stat e1, e2, e3;
   }
+
+  BLOCK { tcpconnect (h, port, @(fd)); }
  
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", h.cstr(), port);
@@ -42,7 +44,7 @@ void try_rpc (str h, int port, cbb cb)
       ret = true;
     }
   }
-  (*cb) (true);
+  cb->signal (true);
 }
  
 static void finish (bool rc)

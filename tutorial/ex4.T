@@ -70,7 +70,7 @@ bool dostuff (str h, int port, cbb cb)
     }
     warn << "All done...\n";
   }
-  (*cb) (!err_occurred);
+  cb->signal (!err_occurred);
   return true;
 }
 

@@ -73,15 +73,17 @@ tame_standalone(tcpconnect)
 tame_standalone(buggy1a)
 tame_standalone(buggy1b)
 tame_standalone(buggy1c)
+tame_rpcclient(buggy10)
 tame_standalone(null)
+tame_standalone(test)
+tame_standalone(buggy2)
 
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
 
-noinst_PROGRAMS = tame_exes ex4m exsrv
+noinst_PROGRAMS = tame_exes exsrv
 
 exsrv_SOURCES = exsrv.C ex_prot.C
-ex4m_SOURCES = ex4m.C ex_prot.C
 
 RPC_AUTOGEN_FILES = ex_prot.C ex_prot.h
 

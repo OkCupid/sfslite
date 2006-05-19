@@ -273,18 +273,6 @@ tame_fn_t::add_env (tame_env_t *e)
     e->set_id (++_n_labels);
 }
 
-bool
-tame_fn_t::do_cceoc () const
-{
-  return _args && _args->lookup (cceoc_argname);
-}
-
-str
-tame_fn_t::cceoc_typename () const 
-{
-  const var_t *v = _args->lookup (cceoc_argname);
-  return (v ? v->type ().to_str () : NULL);
-}
 
 //-----------------------------------------------------------------------
 // Output utility routines
@@ -513,21 +501,6 @@ tame_nonblock_callback_t::output_generic (strbuf &b)
     << "}\n\n";
 }
   
-void 
-tame_block_callback_t::output_in_class (strbuf &b)
-{
-  b << "  void cb" << _cb_ind  << " () {\n";
-
-  str loc = state.loc (_line_number);
-  b << "    if (-- _cb_num_calls" << _cb_ind << " < 0 ) {\n"
-    << "      tame_error (\"" << loc << "\", \"callback overcalled!\");\n"
-    << "    }\n";
-
-  b << "    if (!--_block" << _block->id () << ")\n"
-    << "      reenter ();\n"
-    << "  }\n\n";
-}
-
 void
 tame_fn_t::output_reenter (strbuf &b)
 {
@@ -589,20 +562,6 @@ output_is_onstack (strbuf &b)
 }
 
 void
-tame_fn_t::output_block_cb_switch (strbuf &b)
-{
-  b << "  void block_cb_switch (int i) {\n"
-    << "    switch (i) {\n";
-  for (u_int i = 1; i <= _cbs.size (); i++) {
-    b << "    case " << i << ": cb" << i << "(); break;\n"; 
-  }
-  b << "    default: panic (\"unexpected case\");\n"
-    << "    }\n"
-    << "  }\n";
-}
-
-
-void
 tame_fn_t::output_closure (outputter_t *o)
 {
   my_strbuf_t b;
@@ -629,9 +588,10 @@ tame_fn_t::output_closure (outputter_t *o)
     _args->paramlist (b, DECLARATIONS);
   }
 
-  str cceoc = str (do_cceoc () ? "true" : "false");
+  b << ") : closure_t (\"" << state.infile_name () << "\", \"" 
+    << _name << "\"), "
+    ;
 
-  b << ") : closure_t (" << cceoc << "), ";
   if (need_self ()) {
     str s = _self.name ();
     b.mycat (s) << " (";
@@ -647,26 +607,11 @@ tame_fn_t::output_closure (outputter_t *o)
   if (_args) _args->paramlist (b, NAMES);
   b << ")";
 
-  for ( size_t i = 0; i < _envs.size () ; i++) {
-    if (_envs[i]->needs_counter ()) 
-      b << ", _block" << _envs[i]->id () << " (0)";
-  }
-
-  for ( u_int i = 1; i <= _cbs.size (); i++) {
-    b << ", _cb_num_calls" << i << " (0)";
-  }
-
   b << " {}\n\n";
 
 
   if (_class) {
     output_set_method_pointer (b);
-  }
-
-  output_block_cb_switch (b);
-
-  for (u_int i = 0; i < _cbs.size (); i++) {
-    _cbs[i]->output_in_class (b);
   }
 
   output_reenter (b);
@@ -717,15 +662,6 @@ tame_fn_t::output_closure (outputter_t *o)
   if (_class)
     b << "  method_type_t _method;\n";
 
-  for (size_t i = 0; i < _envs.size (); i++) {
-    if (_envs[i]->needs_counter ()) 
-      b << "  int _block" << _envs[i]->id () << ";\n";
-  }
-
-  for (u_int i = 1; i <= _cbs.size () ; i++) {
-    b << "  int _cb_num_calls" << i << ";\n";
-  }
-
   output_is_onstack (b);
 
   b << "};\n\n";
@@ -765,6 +701,7 @@ void
 tame_fn_t::output_jump_tab (strbuf &b)
 {
   b << "  switch (" << TAME_CLOSURE_NAME << "->jumpto ()) {\n"
+    << "  case 0: break;\n"
     ;
   for (u_int i = 0; i < _envs.size (); i++) {
     if (_envs[i]->is_jumpto ()) {
@@ -776,6 +713,7 @@ tame_fn_t::output_jump_tab (strbuf &b)
     }
   }
   b << "  default:\n"
+    << "    panic (\"unexpected case.\\n\");\n"
     << "    break;\n"
     << "  }\n";
 }
@@ -848,9 +786,6 @@ tame_fn_t::output_vars (outputter_t *o, int ln)
   my_strbuf_t b;
 
   output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL, ln);
-  if (do_cceoc ()) {
-    b << "  " << _cceoc_sentinel.decl () << ";\n";
-  }
 
   b << "  " << _closure.decl () << ";\n"
     << "  "
@@ -943,7 +878,8 @@ tame_block_t::output (outputter_t *o)
   output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL);
 
   b << "  do {\n"
-    << "    " << TAME_CLOSURE_NAME << "->_block" << _id << " = 1;\n"
+    << "    " << TAME_CLOSURE_NAME << "->init_block (" 
+    << _id << ", " << _lineno << ");\n"
     ;
 
   _fn->jump_out (b, _id);
@@ -961,7 +897,8 @@ tame_block_t::output (outputter_t *o)
 
   om = o->switch_to_mode (OUTPUT_TREADMILL);
   b << "\n"
-    << "    if (--" << TAME_CLOSURE_NAME << "->_block" << _id << ")\n"
+    << "    if (!" << TAME_CLOSURE_NAME << "->block_dec_count (" 
+    << _lineno << "))\n"
     << "      ";
 
   b.mycat (_fn->return_expr ());
@@ -972,11 +909,6 @@ tame_block_t::output (outputter_t *o)
     << "    ;\n"
     ;
 
-  // XXX: Workaround to bug, in which static checking that cceoc called once,
-  // and Duff's device don't interact well. Eventually we should have
-  // a real solution or maybe deactivate 
-  if (_fn->did_cceoc_call ()) 
-    b << "  SET_CCEOC_STACK_SENTINEL();\n";
 
   o->output_str (b);
   o->switch_to_mode (om);
@@ -995,20 +927,9 @@ tame_fn_t::return_expr () const
 }
 
 void
-parse_state_t::output_cceoc_argname (outputter_t *o)
-{
-  output_mode_t m = o->switch_to_mode (OUTPUT_TREADMILL);
-  strbuf b;
-  b << "\n#define CCEOC_ARGNAME  " << cceoc_argname << "\n";
-  o->output_str (b);
-  o->switch_to_mode (m);
-}
-
-void
 parse_state_t::output (outputter_t *o)
 {
   o->start_output ();
-  output_cceoc_argname (o);
   element_list_t::output (o);
 }
 
@@ -1088,20 +1009,17 @@ tame_nonblock_callback_t::output_vars (strbuf &b, bool first,
 void
 tame_block_callback_t::output (outputter_t *o)
 {
-  int bid = _block->id ();
   my_strbuf_t b;
   output_mode_t om = o->switch_to_mode (OUTPUT_PASSTHROUGH);
-  b << "(++" << TAME_CLOSURE_NAME << "->_block" << bid << ", "
-    << "++" << TAME_CLOSURE_NAME << "->_cb_num_calls" << _cb_ind << ", "
-    ;
-
-  b << "wrap (__block_cb" << _call_with->size ();
+  b << "wrap ("
+    << TAME_CLOSURE_NAME << "->make_wrapper ("
+    << _block->id ()  << ", " << _line_number << "), "
+    << "&closure_wrapper_t::block_cb" << _call_with->size ();
   if (_call_with->size ()) {
     b << "<";
     _call_with->output_vars (b, true, "TTT(", ")");
     b << ">";
   }
-  b << ", " << CLOSURE_RFCNT << ", " << _cb_ind;
   if (_call_with->size ()) {
     b << ", refset_t<";
     _call_with->output_vars (b, true, "TTT(", ")");
@@ -1109,7 +1027,7 @@ tame_block_callback_t::output (outputter_t *o)
     _call_with->output_vars (b, true, "", "");
     b << ")";
   }
-  b << "))";
+  b << ")";
   o->output_str (b);
   o->switch_to_mode (om);
 }
@@ -1259,10 +1177,10 @@ tame_ret_t::output (outputter_t *o)
 {
   output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL);
   my_strbuf_t b;
-  str loc = state.loc (_line_number);
 
   // always do end of scope checks
-  b << "  END_OF_SCOPE (\"" << loc << "\");\n";
+  b << "  " << TAME_CLOSURE_NAME << "->end_of_scope_checks (" 
+    << _line_number << ");\n";
   o->output_str (b);
   b.tosuio ()->clear ();
 
@@ -1285,10 +1203,7 @@ tame_unblock_t::output (outputter_t *o)
   my_strbuf_t b;
   output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL);
   str loc = state.loc (_line_number);
-  b << "  do {\n"
-    << "    const ";
-  b.mycat (_fn->cceoc_typename ()) << " ";
-  b.mycat (tmp) << " (CCEOC_ARGNAME);\n";
+  b << "  do {\n";
   
   str n = macro_name ();
   b << n << " (\"" << loc << "\", ";
@@ -1297,7 +1212,6 @@ tame_unblock_t::output (outputter_t *o)
     b << ", " << _params;
   }
   b << "); ";
-  _fn->do_cceoc_call ();
   do_return_statement (b);
   b << "  } while (0);\n";
 
@@ -1316,8 +1230,9 @@ tame_fn_return_t::output (outputter_t *o)
 {
   my_strbuf_t b;
   output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL);
-  str loc = state.loc (_line_number);
-  b << "  END_OF_SCOPE(\"" << loc << "\");\n";
+
+  b << "  " << TAME_CLOSURE_NAME << "->end_of_scope_checks (" 
+    << _line_number << ");\n";
   b << "  ";
   b.mycat (_fn->return_expr ());
   b << ";\n";
