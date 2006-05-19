@@ -91,19 +91,19 @@ struct sfskeyinfo {
 
   virtual int cmp (sfskeyinfo *k) const { return -1; }
   int cmp (const str &r, bool kcomplete) const 
-  { return (strcmp (r, kcomplete ? fn () : kn)); }
+    { return (strcmp (r, kcomplete ? fn () : kn)); }
   int gcmp (const sfskeyinfo &k) const { return (version - k.version); }
   virtual void setpriority (int i) {}
   virtual bool set_hostname (const str &s = NULL) { return true; }
   virtual str fn () const { return kn; }
   virtual str prefix () const { return kn; }
   str fn_std () const { return strbuf (kn << "#" << version); }
-  str afn () const ;
+  str afn () const;
   virtual bool setlink () const { return false; }
   virtual bool has_backup_keys () const { return false; }
   virtual bool bump_privk_version () { return false; };
   bool is_proactive () const 
-  { return (kt == SFSKI_PROAC || rkt == SFSKI_PROAC); }
+    { return (kt == SFSKI_PROAC || rkt == SFSKI_PROAC); }
 
   str kn;
   str dir;
@@ -257,20 +257,26 @@ private:
   };
 
   struct lstate {
-    lstate (const user_host_t &u, ptr<sfspriv> k, km_login_cb c, 
-	    u_int32_t op)
-      : uh (u), key (k), cb (c), opts (op), fetching (false) {}
     const user_host_t uh;
     ptr<sfspriv> key;
     ptr<sfspub> pkey;
     const km_login_cb cb;
     ptr<sfscon> scon;
     ptr<aclnt> c;
+#if 0
     sfs_loginres res;
     sfs_autharg2 arg;
+#endif
     sfsauth2_query_res aqr;
     u_int32_t opts;
     bool fetching;
+    sfs_authorizer *a;
+    sfs_seqno seqno;
+    lstate (const user_host_t &u, ptr<sfspriv> k, km_login_cb c, 
+	    u_int32_t op)
+      : uh (u), key (k), cb (c), opts (op), fetching (false),
+	 a (NULL), seqno (0) {}
+    ~lstate () { delete a; }
   };
 
   struct fpkstate_t { // fetch pub key state
@@ -328,7 +334,8 @@ public:
   
   // helpers for login function
   void gotcon (lstate *s, str err, ptr<sfscon> sc);
-  void gotunixlogin (lstate *s, int ntries, clnt_stat err);
+  //void gotunixlogin (lstate *s, int ntries, clnt_stat err);
+  void gotunixlogin (lstate *s, ptr<sfscon> sc, str err);
   void gotlogin (lstate *s, str err);
   void gotlogin_r (lstate *ls, sfskeyinfo *ki, str err);
 
@@ -385,7 +392,7 @@ private:
   str check_uinfo (const sfsauth2_query_res &aqr);
 
   bool checkflag;
-  qhash<str, key_con_t * > keycontab;
+  qhash<str, key_con_t *> keycontab;
   qhash<str, ptr<sfscon> > anoncontab;
   u_int32_t uid;
   str user;
@@ -404,5 +411,6 @@ private:
 
 };
 
+str seconds2str (sfs_time t);
 
 #endif

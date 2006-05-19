@@ -148,6 +148,7 @@ sfs_2schnorr_priv::sign (const sfsauth2_sigreq &sreq, sfs_authinfo ainfo,
     return ;
   }
   connecting = true;
+
   sfs_connect_path (hostname, SFS_AUTHSERV, 
 		    wrap (this, &sfs_2schnorr_priv::gotcon, sreq, ainfo, cb),
 		    true, true);
@@ -168,9 +169,20 @@ sfs_2schnorr_priv::gotcon (sfsauth2_sigreq sreq, sfs_authinfo ainfo,
     con_finish (cb, "Cannot make new schnorr client");
     return;
   }
+
+#if 0
+  ref<sfskey_authorizer> ska (New refcounted<sfskey_authorizer>);
+  ska->setkey (this);
+  ska->cred = false;
+  sfs_connect_crypt (sc, 
+		     wrap (this, &sfs_2schnorr_priv::gotlogin,
+			   sreq, ainfo, ska, cb),
+		     ska);
+#else
   sfs_dologin (scon, this, 0, 
 	       wrap (this, &sfs_2schnorr_priv::gotlogin, sreq, ainfo, cb),
 	       false);
+#endif
 }
 
 ptr<sfspriv>
@@ -217,7 +229,10 @@ sfs_2schnorr_priv::update () const
 
 void
 sfs_2schnorr_priv::gotlogin (sfsauth2_sigreq sreq, sfs_authinfo ainfo,
-			    cbsign cb, str err)
+			     //ref<sfskey_authorizer>,
+			     cbsign cb,
+			     //ptr<sfscon> nsc,
+			     str err)
 {
   if (err) {
     strbuf b;

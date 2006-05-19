@@ -29,15 +29,11 @@
 #include "arpc.h"
 #include "crypt.h"
 #include "seqno.h"
+#include "sfssesscrypt.h"
 
 ptr<aclnt> getauthclnt ();
 
 class sfsserv {
-  struct condat {
-    sfs_connectinfo ci;
-    sfs_connectres cr;
-  };
-
   ptr<sfspriv> privkey;
 public:
   const ref<axprt_crypt> xc;
@@ -45,11 +41,16 @@ public:
   const ref<bool> destroyed;
 private:
   vec<size_t> authfreelist;
-  rpc_ptr<condat> cd;
   sfs_hashcharge charge;
   ptr<sfs_servinfo_w> si;
 
 protected:
+  struct condat {
+    sfs_connectinfo ci;
+    sfs_connectres cr;
+  };
+
+  rpc_ptr<condat> cd;
   ref<asrv> sfssrv;
   void dispatch (svccb *sbp);
   virtual ptr<sfspriv> doconnect (const sfs_connectarg *,
@@ -63,6 +64,7 @@ public:
   vec<auto_auth> authtab;
   vec<sfsauth_cred> credtab;
   str client_name;
+  ptr<aclnt> authc;
 
   explicit sfsserv (ref<axprt_crypt> xc, ptr<axprt> x = NULL);
   virtual ~sfsserv ();

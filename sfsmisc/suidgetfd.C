@@ -23,6 +23,7 @@
 
 #include "sfsmisc.h"
 #include "sfsagent.h"
+#include <grp.h>
 
 static int
 recvfd (int fd)
@@ -42,7 +43,8 @@ suidgetfd (str prog)
   close_on_exec (fds[0]);
 
   str path = fix_exec_path ("suidconnect");
-  char *av[] = { "suidconnect", const_cast<char *> (prog.cstr ()), NULL };
+  char *av[] = { "suidconnect", "-q",
+		 const_cast<char *> (prog.cstr ()), NULL };
   if (spawn (path, av, fds[1]) == -1) {
     close (fds[0]);
     close (fds[1]);
@@ -71,7 +73,18 @@ suidgetfd_required (str prog)
   
   int fd = recvfd (fds[0]);
   if (fd < 0) {
-    warn << "are you sure " << path << " is setgid?\n";
+    struct stat sb;
+    if (!runinplace && !stat (path, &sb)
+	&& (sb.st_gid != sfs_gid || !(sb.st_mode & 02000))) {
+      if (struct group *gr = getgrgid (sfs_gid))
+	warn << path << " should be setgid to group " << gr->gr_name << "\n";
+      else
+	warn << path << " should be setgid to group " << sfs_gid << "\n";
+    }
+    else {
+      warn << "have you launched the appropriate daemon (sfscd or sfssd)?\n";
+      warn << "have subsidiary daemons died (check your system logs)?\n";
+    }
     fatal ("could not suidconnect for %s\n", prog.cstr ());
   }
   close (fds[0]);

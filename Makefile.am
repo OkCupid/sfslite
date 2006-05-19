@@ -10,7 +10,13 @@ else
 TUTORIAL =
 endif
 
-SUBDIRS = async rpcc arpc crypt sfsmisc contrib tame $(TUTORIAL)
+if USE_SFSMISC
+SVC = svc
+else
+SVC =
+endif
+
+SUBDIRS = async rpcc arpc crypt $(SVC) sfsmisc contrib tame $(TUTORIAL) 
 DIST_SUBDIRS = $(SUBDIRS)
 #
 # end sfslite change
@@ -41,7 +47,8 @@ autoconf.h: stamp-auto-h
 stamp-auto-h: $(srcdir)/autoconf.sed $(CONFIG_HEADER)
 	@rm -f autoconf.h~
 	sed -f $(srcdir)/autoconf.sed $(CONFIG_HEADER) > autoconf.h~
-	cmp autoconf.h~ autoconf.h || mv -f autoconf.h~ autoconf.h
+	cmp autoconf.h~ autoconf.h > /dev/null 2>&1 \
+		|| mv -f autoconf.h~ autoconf.h
 	@rm -f autoconf.h~
 	@echo timestamp > stamp-auto-h
 

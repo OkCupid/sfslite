@@ -1,3 +1,4 @@
+// -*-c++-*-
 /* $Id$ */
 
 /*
@@ -36,17 +37,18 @@ struct sfskey {
   str keyname;
   str pwd;
   u_int cost;
-  sfssrp_parms *srpparms;
+  rpc_ptr<sfssrp_parms> srpparms;
   str esk; 
   sfs_keytype pkt;
   ptr<eksblowfish> eksb;
   bool generated;
-  sfskey () : cost (0), srpparms (NULL), generated (false) {}
+  sfskey () : cost (0), generated (false) {}
 };
 
 /* sfssrpconnect.C */
-void sfs_connect_srp (str &user, srp_client *srpp, sfs_connect_cb cb,
-		      str *userp = NULL, str *pwdp = NULL);
+sfs_connect_t *sfs_connect_srp (str user, srp_client *srpp, sfs_connect_cb cb,
+				str *userp = NULL, str *pwdp = NULL,
+				bool *serverokp = NULL);
 bool get_srp_params (ptr<aclnt> c, bigint *g, bigint *N);
 
 /* sfskeyfetch.C */
@@ -73,7 +75,6 @@ sfsfetchkey (str keyname, callback<void, ptr<sfskey>, str,
 /* sfskeymisc.C */
 extern vec<int> pwd_fds;
 extern bool opt_pwd_fd;
-
 str myusername ();
 str sfskeysave (str path, const sfskey *sk, bool excl = true);
 str sfskeygen (sfskey *sk, u_int nbits, str prompt = NULL, bool askname = true,

@@ -138,8 +138,10 @@ sfskeymgr::setuser (str u)
   sfs_aid aid;
   if ((uid = getuid ()) < 0)
     fatal << "Cannot find user ID\n";
+#if 0  /* let the server enforce this -- it's not our problem */
   if (uid != 0 && u && u != myusername ())
     fatal << "Can only use -u flag as root\n";
+#endif
   user = u;
   if (uid == 0) {
     if (!user) {
@@ -149,14 +151,14 @@ sfskeymgr::setuser (str u)
       }
       struct passwd *pw = NULL;
       if (!(pw = getpwuid (uid)))
-	fatal << "Cannot find pwent for uid " << uid << "\n";
+	fatal << "Cannot find user for uid " << uid << "\n";
       user = pw->pw_name;
-    } else {
-      g_opts |= KM_NOHM;
     }
-  } else if (!user && !(user = myusername ())) {
-    fatal << "Cannot lookup my username\n";
+    else
+      g_opts |= KM_NOHM;
   }
+  else if (!user && !(user = myusername ()))
+    fatal << "Cannot look up my username\n";
 }
 
 bool
@@ -548,7 +550,8 @@ sfskeymgr::login (const str &hostname, km_login_cb cb,
   lstate *ls = New lstate (uh, key, cb, opts);
   if (k && (*k)->con) { // connection was opened previously without login
     gotcon (ls, NULL, (*k)->con);
-  } else if (!connect (uh, wrap (this, &sfskeymgr::gotcon, ls))) {
+  }
+  else if (!connect (uh, wrap (this, &sfskeymgr::gotcon, ls))) {
     delete ls;
     str err = strbuf () << uh.hostname 
 			<< ": full SFS path or SRP connection needed";
@@ -562,7 +565,8 @@ sfskeymgr::connect (const str &h, concb c)
   host_t host;
   if (!get_host (h, &host)) {
     (*c) ("Could not parse hostname", NULL);
-  } else if (!connect (host, c)) {
+  }
+  else if (!connect (host, c)) {
     (*c) ("No complete SFS path given, and connection is not cached", NULL);
   }
 }
@@ -573,15 +577,26 @@ sfskeymgr::connect (const host_t &h, concb c)
   ptr<sfscon> *con;
   vec<concb> **q;
   bool ret = false;
-  if ((con = anoncontab[h.ahash]) || 
-      (h.sfspath && (con = anoncontab[h.sfspath]))) {
-    (*c) (NULL, New refcounted<sfscon> (**con));
+  if ((con = anoncontab[h.ahash])
+      || (h.sfspath && (con = anoncontab[h.sfspath]))) {
+    // (*c) (NULL, New refcounted<sfscon> (**con));
+    /* XXX - I'm replacing the above line with the following one.  I
+     * don't fully understand this, and so it may not be correct.
+     * However, the way the authentication code works, if you tried to
+     * log in multiple times to copies of the same sfscon (i.e., same
+     * file descriptor), there would be no way to coordinate the
+     * sequence numbers.  So I don't see how these anon connections
+     * can really be re-used anyway.  -dm
+     */
+    (*c) (NULL, *con);
     ret = true;
-  } else if ((q = cqueue[h.ahash]) || 
-	     (h.sfspath && (q = cqueue[h.sfspath]))) {
+  }
+  else if ((q = cqueue[h.ahash])
+	   || (h.sfspath && (q = cqueue[h.sfspath]))) {
     (*q)->push_back (c);
     ret = true;
-  } else if (h.sfspath) {
+  }
+  else if (h.sfspath) {
     vec<concb> *v = New vec<concb> ();
     cqueue.insert (h.sfspath, v);
     if (h.sfspath != h.ahash)
@@ -628,12 +643,15 @@ sfskeymgr::gotcon (lstate *ls, str err, ptr<sfscon> sc)
   ls->c = aclnt::alloc (sc->x, sfs_program_1);
   if (sc->auth) {
     gotlogin (ls, NULL);
-  } else if (ls->uh.sfspath && ls->uh.sfspath == "-" && (ls->opts & KM_UNX)) {
+  }
+  else if (ls->uh.sfspath && ls->uh.sfspath == "-" && (ls->opts & KM_UNX)) {
     unixlogin (ls);
-  } else if (!ls->key) {
+  }
+  else if (!ls->key) {
     getpubkey (ls->scon->x, ls->uh.user, 
 	       wrap (this, &sfskeymgr::login_gotpubkey, ls));
-  } else {
+  }
+  else {
     sfs_dologin (sc, ls->key, 0,
 		 wrap (this, &sfskeymgr::gotlogin, ls));
   }
@@ -759,51 +777,26 @@ sfskeymgr::gotlogin (lstate *ls, str err)
 void
 sfskeymgr::unixlogin (lstate *ls, int ntries)
 {
-  if (ntries == 0) {
-    ls->arg.set_type (SFS_UNIXPWAUTH);
-    ls->arg.pwauth->req.type = SFS_SIGNED_AUTHREQ;
-    ls->arg.pwauth->req.authid = ls->scon->authid;
-    ls->arg.pwauth->req.user = user;
-  }
-
-  sfs_loginarg larg;
-  if (uid) 
-    ls->arg.pwauth->password = getpwd ("  UNIX password: ");
-  else 
-    ls->arg.pwauth->password = "";
-
-  ls->arg.pwauth->req.seqno = ntries;
-  larg.seqno = ntries;
-  if (!xdr2bytes (larg.certificate, ls->arg)) {
-    done (ls, "Cannot marshal login arguments");
-    return ;
-  }
-  
-  ls->c->call (SFSPROC_LOGIN, &larg, &ls->res,
-	       wrap (this, &sfskeymgr::gotunixlogin, ls, ntries));
+  ls->a = New sfsunixpw_authorizer;
+  sfs_connect_crypt (ls->scon, wrap (this, &sfskeymgr::gotunixlogin, ls),
+		     ls->a, user, ls->seqno);
 }
 
 void
-sfskeymgr::gotunixlogin (lstate *ls, int ntries, clnt_stat err)
+sfskeymgr::gotunixlogin (lstate *ls, ptr<sfscon> sc, str err)
 {
-  if (err) {
-    done (ls, cse2str (err));
-    return;
-  }
-  if (ls->res.status == SFSLOGIN_OK) {
-    ls->scon->auth = authuint_create (*ls->res.authno);
-    gotlogin (ls, NULL);
-    return;
-  }
-  if (!uid) {
-    done (ls, "Root login rejected by authserver");
-    return;
-  }
-  if (ntries == 2) {
-    done (ls, "Too many login failures.");
-    return;
-  }
-  unixlogin (ls, ntries + 1);
+  /* XXX - don't like this "global" user, but the point is that the
+   * username may be different from what you log in as.  For example,
+   * on OpenBSD you could run:
+   *
+   *    sfskey register -f -u dm:skey
+   *
+   * to get skey authentication, but the username that comes back
+   * would be dm.
+   */ 
+  if (str unixuser = dynamic_cast<sfsunixpw_authorizer *> (ls->a)->unixuser)
+    user = unixuser;
+  done (ls, err);
 }
 
 sfskey *
@@ -1074,7 +1067,7 @@ sfskeystore::generate (str raw, sfski_type xt, bool kcomplete)
   lsdir ();
   bool exists = false;
   if (!raw) {
-    str hn = myname ();  // XXX - this should be more robust 
+    str hn = sfshostname ();  // XXX - this should be more robust 
     if (!hn) {
       warn << "Could not fetch local hostname\n";
       return NULL;
@@ -1140,7 +1133,7 @@ sfskeyinfo_proac::set_hostname (const str &s)
   // XXX - should be more robust
   if (s) {
     host = s;
-  } else if (!(host = myname ())) {
+  } else if (!(host = sfshostname ())) {
     warn << "Cannot get my hostname\n";
     return false;
   }
@@ -1545,6 +1538,8 @@ sfskeymgr::save (sfskey *k, sfskeyinfo *ki, u_int32_t l_opts)
   }
   if (l_opts & KM_CHNGK)
     k->keyname = ki->fn ();
+  if (!k->cost)
+    k->cost = sfs_pwdcost;
   return ks->save (k, ki, l_opts);
 }
 
@@ -1630,7 +1625,7 @@ sfskeymgr::get_userhost (const str &h, user_host_t *uh)
 {
   if (!h || !h.len () || h == "-") {
     uh->user = user;
-    uh->hostname = myname ();
+    uh->hostname = sfshostname ();
     uh->sfspath = "-";
     uh->hash = strbuf (user << "@-");
     uh->ahash = "-";
@@ -1741,3 +1736,22 @@ sfskeyinfo::afn () const
   }
   return ret;
 }
+
+str
+seconds2str (sfs_time t)
+{
+  sfs_time wk = t / (7 * 24 * 60 * 60);
+  t = t - (wk * 7 * 24 * 60 * 60);
+  sfs_time dy = t / (24 * 60 * 60);
+  t = t - (dy * 24 * 60 * 60);
+  sfs_time hr = t / (60 * 60);
+  t = t - (hr * 60 * 60);
+  sfs_time mn = t / 60;
+  t = t - (mn * 60);
+
+  strbuf s;
+  s.fmt ("%" U64F "dw, %" U64F "dd, %" U64F "dh, %" U64F "dm, "
+         "%" U64F "ds", wk, dy, hr, mn, t);
+  return s;
+}
+

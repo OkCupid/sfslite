@@ -122,21 +122,21 @@ afsdir::xdr (XDR *x, void *_sbp)
   bool (*putentry) (XDR *, afsnode *, filename, u_int32_t);
 
   if (v2) {
-    const readdirargs *arg = sbp->template getarg<readdirargs> ();
+    const readdirargs *arg = sbp->Xtmpl getarg<readdirargs> ();
     d = static_cast<afsdir *> (afsnode::fh2node (&arg->dir));
     cookie = getint (arg->cookie.base ());
     count = arg->count;
     putentry = xdr_putentry;
   }
   else if (sbp->proc () == NFSPROC3_READDIR) {
-    const readdir3args *arg = sbp->template getarg<readdir3args> ();
+    const readdir3args *arg = sbp->Xtmpl getarg<readdir3args> ();
     d = static_cast<afsdir *> (afsnode::fh3node (&arg->dir));
     cookie = arg->cookie;
     count = arg->count;
     putentry = xdr_putentry3;
   }
   else if (sbp->proc () == NFSPROC3_READDIRPLUS) {
-    const readdirplus3args *arg = sbp->template getarg<readdirplus3args> ();
+    const readdirplus3args *arg = sbp->Xtmpl getarg<readdirplus3args> ();
     d = static_cast<afsdir *> (afsnode::fh3node (&arg->dir));
     cookie = arg->cookie;
     count = arg->dircount;

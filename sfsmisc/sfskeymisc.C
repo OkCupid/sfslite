@@ -33,9 +33,9 @@ vec<int> pwd_fds;
 str
 myusername ()
 {
-  if (const char *p = getlogin ())
+  if (const char *p = getenv ("USER"))
     return p;
-  else if ((p = getenv ("USER")))
+  else if ((p = getlogin ()))
     return p;
   else if (struct passwd *pw = getpwuid (getuid ()))
     return pw->pw_name;
@@ -62,7 +62,7 @@ defkeyname (str user)
 {
   if (!user && !(user = myusername ()))
     fatal << "cannot find login name\n";
-  if (str host = myname ())
+  if (str host = sfshostname ())
     return user << "@" << host;
   else
     fatal << "cannot find local host name\n";

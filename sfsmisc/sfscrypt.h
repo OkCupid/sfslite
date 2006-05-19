@@ -222,8 +222,8 @@ public:
   static bool check_keysize (size_t nbits, size_t ll, size_t ul,
 			     const str &t, str *s = NULL);
   bool check_opts () const { return (!get_opt (get_bad_opts ())); }
-  bool get_pubkey_hash (sfs_hash *h) const ;
-  str get_pubkey_hash () const;
+  bool get_pubkey_hash (sfs_hash *h, int vers = 2) const ;
+  str get_pubkey_hash (int vers = 2) const;
 
   const str keylabel;
 protected:
@@ -231,7 +231,6 @@ protected:
   virtual u_char get_bad_opts () const { return (SFS_DECRYPT | SFS_SIGN); }
   bool get_opt (u_char o) const { return (opts & o); }
   const sfs_keytype ktype;
-  const int eksb_id;
   const u_char opts;
 };
 

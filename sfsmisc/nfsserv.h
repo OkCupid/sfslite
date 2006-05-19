@@ -116,9 +116,7 @@ template<int N> class nfscall_cb : public nfscall {
   typedef ref<callback<void, res_type> > cb_t;
   cb_t cb;
 public:
-  nfscall_cb (const authunix_parms *au, arg_type a, cb_t c,
-	      nfsserv *srv = NULL)
-    : nfscall (au, N, a), cb (c) { if ((stopserv = srv)) srv->mkcb (this); }
+  nfscall_cb (const authunix_parms *au, arg_type a, cb_t c, nfsserv *srv);
   ~nfscall_cb () {
     /* Note, if xdr_res is not the default, we could always marshall
      * and unmarshall the result to get it in the right type.  That
@@ -148,6 +146,15 @@ struct nfsserv : public virtual refcount {
   virtual void getreply (nfscall *nc) { nc->sendreply (); }
   virtual bool encodefh (nfs_fh3 &fh);
 };
+
+template<int N> inline
+nfscall_cb<N>::nfscall_cb (const authunix_parms *au, arg_type a, cb_t c,
+			   nfsserv *srv)
+  : nfscall (au, N, a), cb (c)
+{
+  if ((stopserv = srv))
+    srv->mkcb (this);
+}
 
 class nfsserv_udp : public nfsserv {
   int fd;

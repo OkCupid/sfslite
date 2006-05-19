@@ -110,9 +110,9 @@ public:
   ~sfs_2schnorr_priv () { if (sclnt) delete sclnt; }
 
   bool get_privkey_hash (u_int8_t *buf, const sfs_hash &hostid) const 
-  { return false; }
-  bool decrypt (const sfs_ctext2 &ct, str *msg, u_int sz) 
-    const { return false; }
+    { return false; }
+  bool decrypt (const sfs_ctext2 &ct, str *msg, u_int sz) const
+    { return false; }
   bool sign (sfs_sig2 *sig, const str &msg);
   void sign (const sfsauth2_sigreq &sr, sfs_authinfo ainfo, cbsign cb);
   bool export_privkey (sfs_privkey2_clear *k) const;
@@ -125,7 +125,8 @@ public:
   // should be private -- called as callbacks
   void gotcon (sfsauth2_sigreq sr, sfs_authinfo ainfo, 
 	       cbsign cb, ptr<sfscon> sc, str err);
-  void gotlogin (sfsauth2_sigreq sr, sfs_authinfo ainfo, cbsign cb, str err);
+  void gotlogin (sfsauth2_sigreq sr, sfs_authinfo ainfo,
+		 cbsign cb, str err);
 
   ptr<sfspriv> update () const; 
   ptr<sfspriv> regen () const;

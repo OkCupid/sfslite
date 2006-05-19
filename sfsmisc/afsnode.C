@@ -333,7 +333,7 @@ afsnode::nfs3_access (svccb *sbp)
   access3res res (NFS3_OK);
   mkpoattr (res.resok->obj_attributes, sbp2aid (sbp));
   res.resok->access = ((ACCESS3_READ | ACCESS3_LOOKUP | ACCESS3_EXECUTE)
-		       & sbp->template getarg<access3args> ()->access);
+		       & sbp->Xtmpl getarg<access3args> ()->access);
   sbp->reply (&res);
 }
 
@@ -370,11 +370,11 @@ sbp2node (svccb *sbp)
   static ref<stalenode_t> stalenode = New refcounted<stalenode_t>;
   switch (sbp->vers ()) {
   case 2:
-    if (afsnode *a = afsnode::fh2node (sbp->template getarg<nfs_fh> ()))
+    if (afsnode *a = afsnode::fh2node (sbp->Xtmpl getarg<nfs_fh> ()))
       return a;
     break;
   case 3:
-    if (afsnode *a = afsnode::fh3node (sbp->template getarg<nfs_fh3> ()))
+    if (afsnode *a = afsnode::fh3node (sbp->Xtmpl getarg<nfs_fh3> ()))
       return a;
     break;
   }
@@ -392,7 +392,7 @@ afsnode::dispatch (svccb *sbp)
     sbp2node (sbp)->nfs_getattr (sbp);
     break;
   case NFSPROC_LOOKUP:
-    sbp2node (sbp)->nfs_lookup (sbp, sbp->template getarg<diropargs> ()->name);
+    sbp2node (sbp)->nfs_lookup (sbp, sbp->Xtmpl getarg<diropargs> ()->name);
     break;
   case NFSPROC_READLINK:
     sbp2node (sbp)->nfs_readlink (sbp);
@@ -457,7 +457,7 @@ afsnode::dispatch3 (svccb *sbp)
     break;
   case NFSPROC3_LOOKUP:
     sbp2node (sbp)->nfs_lookup (sbp,
-				sbp->template getarg<diropargs3> ()->name);
+				sbp->Xtmpl getarg<diropargs3> ()->name);
     break;
   case NFSPROC3_ACCESS:
     sbp2node (sbp)->nfs3_access (sbp);
@@ -528,7 +528,7 @@ void
 afsreg::nfs_read (svccb *sbp)
 {
   if (sbp->vers () == 3) {
-    read3args *arg = sbp->template getarg<read3args> ();
+    read3args *arg = sbp->Xtmpl getarg<read3args> ();
     read3res res (NFS3_OK);
     res.resok->eof = arg->offset + arg->count >= contents.len ();
     if (arg->offset >= contents.len ())
@@ -544,7 +544,7 @@ afsreg::nfs_read (svccb *sbp)
     sbp->replyref (res);
   }
   else if (sbp->vers () == 2) {
-    readargs *arg = sbp->template getarg<readargs> ();
+    readargs *arg = sbp->Xtmpl getarg<readargs> ();
     readres res (NFS_OK);
     if (arg->offset < contents.len ()) {
       res.reply->data.setsize (min<u_int32_t> (arg->count,

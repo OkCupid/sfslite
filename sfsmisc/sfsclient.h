@@ -31,6 +31,7 @@
 #include "qhash.h"
 #include "axprt_crypt.h"
 #include "sfscrypt.h"
+#include "sfscd_prot.h"
 
 struct sfscd_mountarg;
 class rabin_priv;
@@ -134,31 +135,32 @@ public:
 };
 
 class sfsserver_auth : public sfsserver {
+protected:
   struct userauth : public virtual refcount {
     const sfs_aid aid;
-  private:
+  protected:
     const ref<sfsserver_auth> sp;
     vec<nfscall *> ncvec;
     timecb_t *tmo;
     callbase *cbase;
     bool aborted;
     sfsagent_auth_res ares;
-    sfs_loginres sres;
+    sfs_loginres_old sres;
     sfs_seqno seqno;
     int ntries;
+    u_int32_t authno;
 
-    void finish (u_int32_t authno);
+    userauth (sfs_aid aid, const ref<sfsserver_auth> &s);
+    ~userauth ();
+    virtual void finish ();
     void aresult (clnt_stat);
     void sresult (clnt_stat);
     void timeout ();
-    void sendreq ();
-  protected:
-    userauth (sfs_aid aid, const ref<sfsserver_auth> &s);
-    ~userauth ();
+
   public:
+    void sendreq ();
     void pushreq (nfscall *nc);
     void abort ();
-    static ref<userauth> alloc (sfs_aid aid, const ref<sfsserver_auth> &s);
   };
   friend class userauth;
 
@@ -170,13 +172,13 @@ class sfsserver_auth : public sfsserver {
   static timecb_t *keytmo;
   static void keyexpire ();
 
-protected:
   sfsserver_auth (const sfsserverargs &a)
     : sfsserver (a), seqno (0)  {}
   void setx (int fd) { x = xc = axprt_crypt::alloc (fd); }
   virtual void crypt (sfs_connectok cres, ref<const sfs_servinfo_w> si, 
 		      crypt_cb cb);
 
+  virtual ref<userauth> userauth_alloc (sfs_aid);
   virtual bool authok (nfscall *);
   virtual AUTH *authof (sfs_aid aid) { return authnos[aid]; }
   virtual void flushstate ();
@@ -185,6 +187,31 @@ public:
   ptr<axprt_crypt> xc;
   static void keygen ();
   virtual void authclear (sfs_aid);
+};
+
+class sfsserver_credmap : public sfsserver_auth {
+protected:
+  struct userauth_credmap : public userauth {
+    ref<sfsauth_cred> cred;
+
+    userauth_credmap (sfs_aid aid, const ref<sfsserver_credmap> &s);
+    ~userauth_credmap () {}
+    virtual void finish ();
+    void cresult (clnt_stat);
+  };
+  friend class userauth_credmap;
+
+  sfsserver_credmap (const sfsserverargs &a) : sfsserver_auth (a) {}
+  ref<userauth> userauth_alloc (sfs_aid);
+  void flushstate ();
+public:
+  qhash<sfs_aid, ref<sfsauth_cred> > credmap;
+  qhash<u_int32_t, u_int32_t> uidmap;
+
+  void authclear (sfs_aid);
+  bool nomap (const authunix_parms *aup);
+  void mapcred (const authunix_parms *aup, ex_fattr3 *fp,
+		u_int32_t unknown_uid, u_int32_t unknown_gid);
 };
 
 template<class T> void

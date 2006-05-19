@@ -29,32 +29,39 @@
 #include "sfsmisc.h"
 #include "sfsagent.h"
 #include "agentmisc.h"
+#include "sfssesscrypt.h"
 
-class agentconn : public virtual refcount {
+class agentconn : public virtual refcount, public virtual sfs_authorizer {
 private:
+  bool ccddone;
   int agentfd;
   ptr<aclnt> agentclnt_ctl;
   ptr<aclnt> agentclnt_cb;
   ptr<axprt_unix> sfscdxprt;
   ptr<aclnt> sfscdclnt;
 
+  static void authcb (sfsagent_auth_res *resp, cbv cb, clnt_stat stat);
 
 public:
   agentconn ()
-    : agentfd (-1) {}
+    : ccddone (false), agentfd (-1) {}
   ~agentconn () {}
 
-  int cagent_fd ();
-
+  int cagent_fd (bool required = true);
   ptr<aclnt> ccd (bool required = true);
   ref<aclnt> cagent_ctl ();
   ref<aclnt> cagent_cb ();
 
   str lookup (str &hostname);
-  ptr<sfsagent_auth_res> auth (sfsagent_authinit_arg &arg);
   ptr<sfsagent_rex_res> rex (str dest, str schost, bool forwardagent,
                              bool agentconnect, bool resumable);
+  ptr<bool> keepalive (str schost);
   bool isagentrunning ();
+
+  void authinit (const sfsagent_authinit_arg *argp,
+			 sfsagent_auth_res *resp, cbv cb);
+  void authmore (const sfsagent_authmore_arg *argp,
+		 sfsagent_auth_res *resp, cbv cb);
 };
 
 #endif /* _SFSMISC_AGENTCONN_H_ */

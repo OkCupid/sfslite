@@ -22,6 +22,10 @@
  *
  */
 
+/* This code is shared by the agent (agent/agentrex.C) and rex
+ * (rex/rex.C), both of which have occasion to connect to rexd.
+ */
+
 #include "rex.h"
 
 bool rexfd::garbage_bool;
@@ -48,6 +52,82 @@ is_fd_rdonly (int fd)
   return (n & O_ACCMODE) == O_RDONLY;
 }
 
+rexfd::rexfd (rexchannel *pch, int fd)
+  : pch (pch), proxy (pch->get_proxy ()), channo (pch->get_channo ()),
+    fd (fd)
+{
+/*   warn << "--reached rexfd\n"; */
+  if (fd < 0)
+    fatal ("attempt to create negative fd: %d\n", fd);
+  pch->insert_fd (fd, mkref (this));
+}
+
+rexfd::~rexfd () { 
+/*   warn << "--reached ~rexfd\n"; */
+  rex_int_arg arg;
+  arg.channel = channo;
+  arg.val = fd;
+  proxy->call (REX_CLOSE, &arg, &garbage_bool, aclnt_cb_null);
+
+// NOTE: We don't call remove_fd() here but leave it up to the derived
+// class.  Calling the remove_fd() function removes the fd from the
+// channel's list which is the last reference to it which causes it to
+// be deleted which causes the destructor to be called which causes
+// this base class destructor to be called which would then call
+// remove_fd() again which finally results in an error because we
+// already removed it once */
+}
+
+void
+rexfd::abort ()
+{
+  rex_payload payarg;
+  payarg.channel = channo;
+  payarg.fd = fd;
+  proxy->call (REX_DATA, &payarg, &garbage_bool, aclnt_cb_null);
+  
+  pch->remove_fd (fd); 
+}
+
+void
+rexfd::data (svccb *sbp)
+{
+  rex_payload *argp = sbp->Xtmpl getarg<rex_payload> ();
+  if (!argp->data.size ()) {
+    rex_payload payarg;
+    payarg.channel = channo;
+    payarg.fd = fd;
+    payarg.data.set ((char *)NULL, 0);
+    proxy->call (REX_DATA, &payarg, &garbage_bool, aclnt_cb_null);
+    
+    pch->remove_fd (fd); 
+  }
+  sbp->replyref (true);
+}
+
+void
+unixfd::update_connstate (int how, int)
+{
+  if (localfd_in < 0)
+    return;
+  
+  if (how == SHUT_WR)
+    weof = true; 
+  else if (how == SHUT_RD)
+    reof = true;
+  else
+    weof = reof = true;
+
+  /* XXX - what about SHUT_RDWR?  Shouldn't that sendeof, too? */
+  if (how == SHUT_WR)
+    paios_out->sendeof ();
+  
+  if (weof && reof) {
+    localfd_in = -1;
+    pch->remove_fd (fd);
+  }
+}
+
 void
 unixfd::readeof ()
 {
@@ -63,8 +143,10 @@ unixfd::readeof ()
 void 
 unixfd::rcb ()
 {
-  if (reof)
+  if (reof) {
+    fdcb (localfd_in, selread, NULL);
     return;
+  }
 
   char buf[16*1024];
   int fdrecved = -1;
@@ -125,7 +207,7 @@ unixfd::newfd (svccb *sbp)
 {
   assert (paios_out);
 
-  rexcb_newfd_arg *argp = sbp->template getarg<rexcb_newfd_arg> ();
+  rexcb_newfd_arg *argp = sbp->Xtmpl getarg<rexcb_newfd_arg> ();
     
   int s[2];
     
@@ -151,7 +233,7 @@ unixfd::data (svccb *sbp)
 {
   assert (paios_out);
     
-  rex_payload *argp = sbp->template getarg<rex_payload> ();
+  rex_payload *argp = sbp->Xtmpl getarg<rex_payload> ();
     
   if (argp->data.size () > 0) {
     if (weof) {
@@ -169,7 +251,8 @@ unixfd::data (svccb *sbp)
       
     //we don't shutdown immediately to give data a chance to
     //asynchronously flush
-    paios_out->setwcb (wrap (this, &unixfd::update_connstate, SHUT_WR));
+    int flag = SHUT_WR;
+    paios_out->setwcb (wrap (this, &unixfd::update_connstate, flag));
   }
 }
 
@@ -208,7 +291,7 @@ unixfd::unixfd (rexchannel *pch, int fd, int localfd_in, int localfd_out,
 
   make_async (this->localfd_in);
   if (!is_fd_wronly (this->localfd_in))
-    fdcb (localfd_in, selread, wrap (this, &unixfd::rcb));
+    fdcb (this->localfd_in, selread, wrap (this, &unixfd::rcb));
     
   /* for tty support we split the input/output to two local FDs */
   if (localfd_out >= 0)
@@ -221,10 +304,21 @@ unixfd::unixfd (rexchannel *pch, int fd, int localfd_in, int localfd_out,
 void
 rexchannel::remove_fd (int fdn)
 {
-//   warn << "--reached remove_fd (" << fdn << "), fdc = " << fdc << "\n";
+  // warn ("--[%p] remove_fd (%d), fdc = %d, size = %d\n",
+  //       this, fdn, fdc, vfds.size ());
+  assert (fdn >= 0);
+  assert ((unsigned) fdn < vfds.size ());
   vfds[fdn] = NULL;
   if (!--fdc)
     sess->remove_chan (channo); 
+}
+
+void
+rexchannel::deref_vfds ()
+{
+  size_t lvfds = vfds.size ();
+  for (size_t f = 0; f < lvfds; f++)
+    vfds[f] = NULL;
 }
 
 void
@@ -238,7 +332,7 @@ rexchannel::abort () {
 void
 rexchannel::quit ()
 {
-  //  warn << "--entering rexchannel::quit\n";
+  // warn ("--[%p] rexchannel::quit\n", this);
   rex_int_arg arg;
   arg.channel = channo;
   arg.val = 15;
@@ -257,7 +351,7 @@ void
 rexchannel::data (svccb *sbp)
 {
   assert (sbp->prog () == REXCB_PROG && sbp->proc () == REXCB_DATA);
-  rex_payload *dp = sbp->template getarg<rex_payload> ();
+  rex_payload *dp = sbp->Xtmpl getarg<rex_payload> ();
   assert (dp->channel == channo);
   if (dp->fd < 0 ||
       implicit_cast<size_t> (dp->fd) >= vfds.size () ||
@@ -275,7 +369,7 @@ void
 rexchannel::newfd (svccb *sbp)
 {
   assert (sbp->prog () == REXCB_PROG && sbp->proc () == REXCB_NEWFD);
-  rexcb_newfd_arg *arg = sbp->template getarg<rexcb_newfd_arg> ();
+  rexcb_newfd_arg *arg = sbp->Xtmpl getarg<rexcb_newfd_arg> ();
 
   int fd = arg->fd;
 
@@ -291,6 +385,8 @@ rexchannel::newfd (svccb *sbp)
 void
 rexchannel::exited (int status)
 {
+  // warn ("--[%p] rexchannel::exited (%d); fdc = %d, vfds.size = %d\n",
+  //       this, status, fdc, vfds.size ());
   for (size_t ix = 0; ix < vfds.size();  ix++) {
     if (!vfds[ix]) continue;
     vfds[ix]->exited ();
@@ -302,7 +398,8 @@ rexchannel::insert_fd (int fdn, ptr<rexfd> rfd)
 {
   assert (fdn >= 0);
 
-//   warn ("--reached insert_fd (%d)\n", fdn);
+  // warn ("--[%p] insert_fd (%d), fdc = %d, size = %d\n",
+  //       this, fdn, fdc, vfds.size ());
   size_t oldsize = vfds.size ();
   size_t neededsize = fdn + 1;
     
@@ -321,12 +418,265 @@ rexchannel::insert_fd (int fdn, ptr<rexfd> rfd)
   fdc++;
 }
 
+
+/* rexsession */
+
+rexsession::rexsession (str schostname, ptr<axprt_crypt> proxyxprt,
+                        vec<char> &secretid,
+			callback<bool>::ptr failcb,
+                        callback<bool>::ptr timeoutcb,
+			bool verbose, bool resumable_init)
+  : verbose (verbose), proxyxprt (proxyxprt), secretid (secretid),
+    resumable (false), suspended (false),
+    cchan (0), channelspending (0),
+    endcb (NULL), failcb (failcb), timeoutcb (timeoutcb),
+    schost (schostname), ifchg (NULL), silence_tmo_enabled (false),
+    rexserv (asrv_resumable::alloc (proxyxprt, rexcb_prog_1,
+                                    wrap (this, &rexsession::rexcb_dispatch))),
+    proxy (aclnt_resumable::alloc (proxyxprt, rex_prog_1,
+                                   wrap (this, &rexsession::fail)))
+{
+  silence_tmo_init ();
+  setresumable (resumable_init);
+}
+
+rexsession::~rexsession ()
+{
+  ifchg_cb_clear ();
+  silence_tmo_disable ();
+
+  set_call_hook (NULL);
+  set_recv_hook (NULL);
+}
+
+void
+rexsession::ifchg_cb_set ()
+{
+  if (!ifchg)
+    ifchg = ifchgcb (wrap (implicit_cast<axprt_stream *> (proxyxprt.get ()),
+                           &axprt_stream::sockcheck));
+}
+
+void
+rexsession::ifchg_cb_clear ()
+{
+  if (ifchg) {
+    ifchgcb_remove (ifchg);
+    ifchg = NULL;
+  }
+}
+
+#define SILENCE_TMO ((time_t) 60)
+#define PROBE_TMO ((time_t) 15)
+
+void
+rexsession::silence_tmo_init ()
+{
+  set_call_hook (wrap (this, &rexsession::rpc_call_hook));
+  set_recv_hook (wrap (this, &rexsession::rpc_recv_hook));
+
+  silence_check_cb = NULL;
+  probe_call = NULL;
+
+  silence_tmo_reset ();
+}
+
+void
+rexsession::silence_tmo_reset ()
+{
+  silence_tmo_min = timenow + SILENCE_TMO;
+  last_heard = timenow;
+}
+
+void
+rexsession::silence_tmo_enable ()
+{
+  assert (!silence_tmo_enabled);
+  if (timeoutcb) {
+    silence_tmo_enabled = true;
+    silence_check ();
+  }
+}
+
+void
+rexsession::silence_tmo_disable ()
+{
+  silence_tmo_enabled = false;
+  if (silence_check_cb) {
+    timecb_remove (silence_check_cb);
+    silence_check_cb = NULL;
+  }
+  if (probe_call) {
+    probe_call->cancel ();
+    probe_call = NULL;
+  }
+}
+
+void
+rexsession::silence_check ()
+{
+  silence_check_cb = NULL;
+
+  if (!proxy->calls_outstanding ())
+    return;
+
+  time_t tmo_time = max<time_t> (silence_tmo_min, last_heard + SILENCE_TMO);
+  if (timenow >= tmo_time) {
+    silence_tmo_disable ();
+    probe_call = ping (wrap (this, &rexsession::probed), PROBE_TMO);
+  }
+  else
+    silence_check_cb = timecb (tmo_time,
+                               wrap (this, &rexsession::silence_check));
+}
+
+void
+rexsession::probed (clnt_stat err)
+{
+  probe_call = NULL;
+
+  if (err == RPC_TIMEDOUT)
+    (*timeoutcb) ();
+  else if (err)
+    fail ();
+}
+
+inline void
+rexsession::rpc_call_hook ()
+{
+  if (!proxy->calls_outstanding ())
+    silence_tmo_min = timenow + SILENCE_TMO;
+
+  if (!silence_check_cb && silence_tmo_enabled)
+    silence_check ();
+}
+
+inline void
+rexsession::rpc_recv_hook ()
+{
+  last_heard = timenow;
+}
+
+callbase *
+rexsession::ping (callback<void, clnt_stat>::ref cb, time_t timeout)
+{
+  if (timeout)
+    return proxy->timedcall (timeout, REX_NULL, NULL, NULL, cb);
+  else
+    return proxy->call (REX_NULL, NULL, NULL, cb);
+}
+
+bool
+rexsession::fail ()
+{
+  if (!suspended) {
+    suspend ();
+    if (failcb)
+      return (*failcb) ();  // might call resume
+    else if (endcb) {
+      (*endcb) ();
+      return false;
+    }
+  }
+  return true;
+}
+
+void
+rexsession::suspend ()
+{
+  if (!suspended) {
+    suspended = true;
+    proxy->stop ();
+    rexserv->stop ();
+    if (resumable) {
+      ifchg_cb_clear ();
+      silence_tmo_disable ();
+    }
+  }
+}
+
+void
+rexsession::setresumable (bool mode)
+{
+  if (resumable != mode) {
+    resumable = mode;
+    if (resumable) {
+      ifchg_cb_set ();
+      silence_tmo_enable ();
+    }
+    else {
+      ifchg_cb_clear ();
+      silence_tmo_disable ();
+    }
+    rex_setresumable_arg arg (resumable);
+    if (resumable)
+      arg.secretid->set (secretid.base (), secretid.size ());
+    proxy->call (REX_SETRESUMABLE, &arg, NULL, aclnt_cb_null);
+  }
+}
+
+void
+rexsession::resumed (ptr<axprt_crypt> xprt, ref<bool> resp,
+                     ptr<aclnt> proxytmp, callback<void, bool>::ref cb,
+                     clnt_stat err)
+{
+  proxytmp = NULL;
+  if (err) {
+    warn << "REX_RESUME RPC failed (" << err << ")\n";
+    cb (false);
+    return;
+  }
+  if (!*resp) {
+    warn << "proxy couldn't resume rex session\n";
+    cb (false);
+    return;
+  }
+  proxyxprt = xprt;
+
+  ifchg_cb_set ();
+  silence_tmo_reset ();
+  silence_tmo_enable ();
+  proxy->post_resume ();
+
+  suspended = false;
+  cb (true);
+}
+
+callbase *
+rexsession::resume (ptr<axprt_crypt> xprt, sfs_seqno seqno,
+                    callback<void, bool>::ref cb)
+{
+  if (!resumable) {
+    cb (false);
+    return NULL;
+  }
+
+  suspend ();
+
+  if (!(rexserv->resume (xprt))) {
+    cb (false);
+    return NULL;
+  }
+  if (!(proxy->pre_resume (xprt))) {
+    cb (false);
+    return NULL;
+  }
+
+  ref<aclnt> proxytmp = aclnt::alloc (xprt, rex_prog_1);
+  ref<bool> resp = New refcounted<bool> ();
+  rex_resume_arg arg;
+  arg.seqno = seqno;
+  arg.secretid.set (secretid.base (), secretid.size ());
+  return proxytmp->timedcall (30, REX_RESUME, &arg, resp,
+                                  wrap (this, &rexsession::resumed, xprt, resp,
+                                        proxytmp, cb));
+}
+
 void
 rexsession::rexcb_dispatch (svccb *sbp)
 {
   if (!sbp) {
-    warn << "rexcb_dispatch: error\n";
-    if (endcb) endcb ();
+    fail ();
     return;
   }
       
@@ -338,7 +688,7 @@ rexsession::rexcb_dispatch (svccb *sbp)
 	
   case REXCB_EXIT:
     {
-      rex_int_arg *argp = sbp->template getarg<rex_int_arg> ();
+      rex_int_arg *argp = sbp->Xtmpl getarg<rex_int_arg> ();
       rexchannel *chan = channels[argp->channel];
 	  
       if (chan) {
@@ -359,7 +709,7 @@ rexsession::rexcb_dispatch (svccb *sbp)
 	
   case REXCB_DATA:
     {
-      rex_payload *argp = sbp->template getarg<rex_payload> ();
+      rex_payload *argp = sbp->Xtmpl getarg<rex_payload> ();
       rexchannel *chan = channels[argp->channel];
 
       if (chan)
@@ -372,7 +722,7 @@ rexsession::rexcb_dispatch (svccb *sbp)
 	
   case REXCB_NEWFD:
     {
-      rex_int_arg *argp = sbp->template getarg<rex_int_arg> ();
+      rex_int_arg *argp = sbp->Xtmpl getarg<rex_int_arg> ();
       rexchannel *chan = channels[argp->channel];
 
       if (chan)
@@ -393,6 +743,9 @@ void
 rexsession::madechannel (ptr<rex_mkchannel_res> resp, 
 			 ptr<rexchannel> newchan, clnt_stat err)
 {
+  assert (channelspending);
+  channelspending--;
+
   if (err) {
     warn << "REX_MKCHANNEL RPC failed (" << err << ")\n";
     newchan->channelinit (0, proxy, 1);
@@ -414,169 +767,24 @@ rexsession::madechannel (ptr<rex_mkchannel_res> resp,
     channels.insert (resp->resok->channel, newchan);
     newchan->channelinit (resp->resok->channel, proxy, 0);
   }
+
+  if (!cchan && !channelspending)
+    if (endcb)
+      endcb ();
 }
-    
-void
-rexsession::seq2sessinfo (u_int64_t seqno, sfs_hash *sidp, sfs_sessinfo *sip,
-			  rex_sesskeydat *kcsdat, rex_sesskeydat *kscdat)
-{
-  kcsdat->seqno = seqno;
-  kscdat->seqno = seqno;
-    
-  sfs_sessinfo si;
-  si.type = SFS_SESSINFO;
-  si.kcs.setsize (sha1::hashsize);
-  sha1_hashxdr (si.kcs.base (), *kcsdat, true);
-  si.ksc.setsize (sha1::hashsize);
-  sha1_hashxdr (si.ksc.base (), *kscdat, true);
-    
-  if (sidp)
-    sha1_hashxdr (sidp->base (), si, true);
-  if (sip)
-    *sip = si;
-    
-  bzero (si.kcs.base (), si.kcs.size ());
-  bzero (si.ksc.base (), si.ksc.size ());
-}
-
-void
-rexsession::attached (rexd_attach_res *resp, ptr<axprt_crypt> sessxprt,
-		      sfs_sessinfo *sessinfo, clnt_stat err)
-{
-  if (err) {
-    fatal << "FAILED (" << err << ")\n";
-  }
-  else if (*resp != SFS_OK) {
-    //warn << "FAILED (attach err " << int (*resp) << ")\n";
-    warn << "Unable to attach to proxy..."
-	 << "killing cached connection and retrying.\n";
-    delete sessinfo;
-    delete resp;
-    connect (true);
-    return;
-  }
-  delete resp;
-  if (verbose)
-    warn << "attached\n";
-    
-  proxyxprt = axprt_crypt::alloc (sessxprt->reclaim ());
-  proxyxprt->encrypt (sessinfo->kcs.base (), sessinfo->kcs.size (),
-		      sessinfo->ksc.base (), sessinfo->ksc.size ());
-    
-  bzero (sessinfo->kcs.base (), sessinfo->kcs.size ());
-  bzero (sessinfo->ksc.base (), sessinfo->ksc.size ());
-  delete sessinfo;
-    
-  proxy = aclnt::alloc (proxyxprt, rex_prog_1);
-  rexserv = asrv::alloc (proxyxprt, rexcb_prog_1,
-			 wrap (this, &rexsession::rexcb_dispatch));
-    
-  sessioncreatedcb ();
-}
-
-void
-rexsession::connected (rex_sesskeydat *kcsdat, rex_sesskeydat *kscdat,
-		       sfs_seqno *rexseqno, ptr<sfscon> sc, str err)
-{
-  if (!sc) {
-    fatal << schost << ": FAILED (" << err << ")\n";
-  }
-    
-  ptr<axprt_crypt> sessxprt = sc->x;
-  ptr<aclnt> sessclnt = aclnt::alloc (sessxprt, rexd_prog_1);
-    
-  rexd_attach_arg arg;
-    
-  arg.seqno = *rexseqno;
-  sfs_sessinfo *sessinfo = New sfs_sessinfo;
-    
-  seq2sessinfo (0, &arg.sessid, NULL, kcsdat, kscdat);
-  seq2sessinfo (arg.seqno, &arg.newsessid, sessinfo, kcsdat, kscdat);
-    
-  // ECP comment: why doesn't agent just give us sessid,newsessid,sessinfo??
-
-  rexd_attach_res *resp = New rexd_attach_res;
-  sessclnt->call (REXD_ATTACH, &arg, resp, wrap (this,
-						 &rexsession::attached,
-						 resp, sessxprt, sessinfo));
-  delete kcsdat;
-  delete kscdat;
-  delete rexseqno;
-}
-
-void
-rexsession::connect (bool bypass_cache)
-{
-  ref<agentconn> aconn = New refcounted<agentconn> ();
-
-  if (bypass_cache) {
-    sfs_hostname arg = schost;
-    bool res;
-    if (clnt_stat err = 
-	aconn->cagent_ctl ()->scall (AGENTCTL_KILLSESS, &arg, &res))
-      fatal << "agent: " << err << "\n";
-    if (!res)
-      fatal << "no rexsessions connected to " << schost << "\n";
-  }
-
-  ptr<sfsagent_rex_res> ares = aconn->rex (schost, forwardagent);
-  if (!ares)
-    fatal << "could not connect to agent\n";
-  if (!ares->status)
-    fatal << "agent failed to establish a connection to "
-	  << schost << ".\n"
-	  << "     Perhaps you don't have permissions to login there.\n"
-	  << "     Perhaps you don't have any keys loaded in your agent.\n"
-	  << "     Perhaps the remote machine is not running a REX server.\n";
-  
-  rex_sesskeydat *kscdat = New rex_sesskeydat;
-  rex_sesskeydat *kcsdat = New rex_sesskeydat;
-  sfs_seqno *rexseqno = New sfs_seqno;
-	    
-  kcsdat->type = SFS_KCS;
-  kcsdat->cshare = ares->resok->kcs.kcs_share;
-  kcsdat->sshare = ares->resok->kcs.ksc_share;
-  kscdat->type = SFS_KSC;
-  kscdat->cshare = ares->resok->ksc.kcs_share;
-  kscdat->sshare = ares->resok->ksc.ksc_share;
-  *rexseqno = ares->resok->seqno;
-  sfs_connect_path (schost, SFS_REX,
-		    wrap (this, &rexsession::connected,
-			   kcsdat, kscdat, rexseqno),
-		    false);
-}
-
-//use this one if you already have an encrypted transport connected to proxy
-rexsession::rexsession (str schostname, ptr<axprt_crypt> proxyxprt)
-  : verbose (false), proxyxprt (proxyxprt),
-    cchan (0), endcb (NULL), schost (schostname)
-{
-  proxy = aclnt::alloc (proxyxprt, rex_prog_1);
-  rexserv = asrv::alloc (proxyxprt, rexcb_prog_1,
-			 wrap (this, &rexsession::rexcb_dispatch));
-}
-
-rexsession::rexsession (cbv scb, str schostname, 
-			bool fa)
-  : verbose (false), 
-    cchan (0), endcb (NULL),
-    schost (schostname), sessioncreatedcb (scb), forwardagent (fa)
-{
-  connect ();
-}
-
+ 
 void
 rexsession::makechannel (ptr<rexchannel> newchan, rex_env env)
 {
   rex_mkchannel_arg arg;
 
-  vec<str> command = newchan->get_cmd ();
-  arg.av.setsize (command.size ());
-  for (size_t i = 0; i < command.size (); i++)
-    arg.av[i] = command[i];
+  arg.av.setsize (newchan->get_cmd ().size ());
+  for (size_t i = 0; i < arg.av.size (); i++)
+    arg.av[i] = newchan->get_cmd ()[i];
   arg.nfds = newchan->get_initnfds ();
   arg.env = env;
     
+  channelspending++;
   ref<rex_mkchannel_res> resp (New refcounted<rex_mkchannel_res> ());
   proxy->call (REX_MKCHANNEL, &arg, resp, wrap (this,
 						&rexsession::madechannel,
@@ -586,16 +794,18 @@ rexsession::makechannel (ptr<rexchannel> newchan, rex_env env)
 void
 rexsession::remove_chan (int channo)
 {
-  /* warn << "--reached remove_chan; cchan = " << cchan << "\n"; */
+  // warn << "--reached remove_chan; cchan = " << cchan << "\n";
   if (channels[channo] && !channels[channo]->got_exit_cb) {
-    /* warn << "--remove_chan: removing chan but haven't seen REXCB_EXIT yet\n"; */
+    // warn ("--remove_chan [%p]: removing chan but "
+    //       "haven't seen REXCB_EXIT yet\n", channels[channo].get ());
     channels_pending_exit.insert (channo, channels[channo]);
     channels.remove (channo);
     return;
   }
+  // warn ("--remove_chan [%p]\n", channels[channo].get ());
   channels.remove (channo);
-  if (!--cchan) {
-    /* warn << "--remove_chan: removing last channel\n"; */
+  if (!--cchan && !channelspending) {
+    // warn << "--remove_chan: removing last channel\n";
     if (endcb)
       endcb ();
   }
@@ -604,10 +814,10 @@ rexsession::remove_chan (int channo)
 void
 rexsession::remove_chan_pending_exit (int channo)
 {
-  /* warn << "--reached remove_chan_pending_exit; cchan = " << cchan << "\n"; */
+  // warn << "--reached remove_chan_pending_exit; cchan = " << cchan << "\n";
   channels_pending_exit.remove (channo);
-  if (!--cchan) {
-    /* warn << "--remove_chan_pending_exit: removing last channel\n"; */
+  if (!--cchan && !channelspending) {
+    // warn << "--remove_chan_pending_exit: removing last channel\n";
     if (endcb)
       endcb ();
   }

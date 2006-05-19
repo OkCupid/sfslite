@@ -49,20 +49,6 @@ nfsdbfetch (cbs cb)
   chldrun (wrap (nfsdbcat), cb);
 }
 
-inline bool
-hexconv (int &out, const char in)
-{
-  if (in >= '0' && in <= '9')
-    out = in - '0';
-  else if (in >= 'a' && in <= 'f')
-    out = in - ('a' - 10);
-  else if (in >= 'A' && in <= 'F')
-    out = in - ('A' - 10);
-  else
-    return false;
-  return true;
-}
-
 template<size_t max> inline bool
 a2bytes (rpc_bytes<max> &b, str a)
 {

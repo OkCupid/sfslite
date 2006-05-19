@@ -86,9 +86,14 @@ sfs_unixserv (str sock, cbi cb, mode_t mode)
 }
 
 struct suidaccept {
+#ifdef HAVE_GETPEEREID
+  uid_t uid;
+  gid_t gid;
+#endif /* HAVE_GETPEEREID */
   suidservcb::ptr cb;
   ptr<axprt_unix> ax;
   ptr<asrv> as;
+
   void dispatch (svccb *);
 };
 
@@ -108,7 +113,19 @@ suidaccept::dispatch (svccb *sbp)
 {
   if (sbp) {
     const authunix_parms *aup = sbp->getaup ();
-    if (aup) {
+    if (!aup) {
+      warn ("suidserv: ignoring SETUID message with no auth\n");
+      sbp->reject (AUTH_REJECTEDCRED);
+    }
+#ifdef HAVE_GETPEEREID
+    else if (uid && (implicit_cast<u_int32_t> (uid)
+		     != implicit_cast<u_int32_t> (aup->aup_uid))) {
+      warn ("suidserv: rejected connection from UID %u claiming to be %u\n",
+	    uid, aup->aup_uid);
+      sbp->reject (AUTH_REJECTEDVERF);
+    }
+#endif /* HAVE_GETPEEREID */
+    else {
       authunix_parms au = *aup;
       if (aup->aup_machname)
 	au.aup_machname = xstrdup (aup->aup_machname);
@@ -122,12 +139,11 @@ suidaccept::dispatch (svccb *sbp)
       ax = NULL;
       xfree (au.aup_machname);
       xfree (au.aup_gids);
-    }
-    else {
-      warn ("suidserv: ignoring SETUID message with no auth\n");
-      sbp->reject (AUTH_REJECTEDCRED);
+      delete this;
+      return;
     }
   }
+  as->setcb (NULL);
   delete this;
 }
 
@@ -140,6 +156,14 @@ suidaccept_cb (suidservcb cb, int fd)
   }
 
   suidaccept *sa = New suidaccept;
+#ifdef HAVE_GETPEEREID
+  if (getpeereid (fd, &sa->uid, &sa->gid) < 0) {
+    warn ("getpeereid: %m\n");
+    close (fd);
+    delete sa;
+    return;
+  }
+#endif /* HAVE_GETPEEREID */
   sa->cb = cb;
   sa->ax = axprt_unix::alloc (fd);
   assert (!sa->ax->ateof ());

@@ -53,6 +53,14 @@ sfsserver_auth::crypt (sfs_connectok cres, ref<const sfs_servinfo_w> si,
   sfs_client_crypt (sfsc, privkey, carg, cres, si, cb, xc);
 }
 
+ref<sfsserver_auth::userauth>
+sfsserver_auth::userauth_alloc (sfs_aid aid)
+{
+  ref<userauth> uap (New refcounted<userauth> (aid, mkref (this)));
+  uap->sendreq ();
+  return uap;
+}
+
 bool
 sfsserver_auth::authok (nfscall *nc)
 {
@@ -61,7 +69,7 @@ sfsserver_auth::authok (nfscall *nc)
     return true;
   ptr<userauth> uap = authpending[aid];
   if (!uap)
-    uap = userauth::alloc (aid, mkref (this));
+    uap = userauth_alloc (aid);
   uap->pushreq (nc);
   return false;
 }
@@ -91,20 +99,11 @@ sfsserver_auth::authclear (sfs_aid aid)
 }
 
 sfsserver_auth::userauth::userauth (sfs_aid a, const ref<sfsserver_auth> &s)
-  : aid (a), sp (s), cbase (NULL), aborted (false), ntries (0)
+  : aid (a), sp (s), cbase (NULL), aborted (false), ntries (0), authno (0)
 {
   sp->authpending.insert (aid, mkref (this));
   tmo = delaycb (3, 0, wrap (this, &sfsserver_auth::userauth::timeout));
 }
-
-ref<sfsserver_auth::userauth>
-sfsserver_auth::userauth::alloc (sfs_aid aid, const ref<sfsserver_auth> &s)
-{
-  ref<userauth> uap (New refcounted<userauth> (aid, s));
-  uap->sendreq ();
-  return uap;
-}
-
 
 sfsserver_auth::userauth::~userauth ()
 {
@@ -131,6 +130,10 @@ sfsserver_auth::userauth::pushreq (nfscall *nc)
 void
 sfsserver_auth::userauth::abort ()
 {
+  if (authno && sp->x && !sp->x->ateof () && sp->sfsc) {
+    sp->sfsc->call (SFSPROC_LOGOUT, &authno, NULL, aclnt_cb_null);
+    authno = 0;
+  }
   if (!aborted) {
     aborted = true;
     if (tmo) {
@@ -149,8 +152,10 @@ sfsserver_auth::userauth::abort ()
 void
 sfsserver_auth::userauth::sendreq ()
 {
-  if (!ntries)
-    seqno = ++sp->seqno;
+  if (!ntries) {
+    ++sp->seqno;
+    seqno = sp->seqno;
+  }
   sfscd_agentreq_arg arg;
   arg.aid = aid;
   arg.agentreq.set_type (AGENTCB_AUTHINIT);
@@ -158,6 +163,7 @@ sfsserver_auth::userauth::sendreq ()
   arg.agentreq.init->requestor = "";
   arg.agentreq.init->authinfo = sp->authinfo;
   arg.agentreq.init->seqno = seqno;
+  arg.agentreq.init->server_release = sp->si->get_relno ();
   cbase = sp->prog.cdc->call (SFSCDCBPROC_AGENTREQ, &arg, &ares,
 			      wrap (this, &sfsserver_auth::userauth::aresult));
 }
@@ -168,67 +174,72 @@ sfsserver_auth::userauth::aresult (clnt_stat err)
   cbase = NULL;
   if (err) {
     warn << "sfscd: " << err << "\n";
-    finish (0);
+    finish ();
   }
   else if (!ares.authenticate)
-    finish (0);
+    finish ();
   else {
     sfs_loginarg arg;
     arg.seqno = seqno;
     arg.certificate = *ares.certificate;
     sp->sfsc->call (SFSPROC_LOGIN, &arg, &sres,
 		    wrap (mkref (this),
-			  &sfsserver_auth::userauth::sresult));
+			  &sfsserver_auth::userauth::sresult),
+		    NULL, NULL, xdr_sfs_loginres_old);
   }
 }
 
 void
 sfsserver_auth::userauth::sresult (clnt_stat err)
 {
-  cbase = NULL;
-  if (err)
-    finish (0);
-  else if (aborted) {
-    if (sres.status == SFSLOGIN_OK && sp->x && !sp->x->ateof () && sp->sfsc)
-      sp->sfsc->call (SFSPROC_LOGOUT, sres.authno.addr (), NULL,
-		      aclnt_cb_null);
+  assert (!cbase);		// Not canceled so we don't leak authnos
+  if (err) {
+    finish ();
+    return;
   }
-  else
-    switch (sres.status) {
-    case SFSLOGIN_OK:
-      finish (*sres.authno);
+  if (sres.status == SFSLOGIN_OK)
+    authno = *sres.authno;
+    // authno = sres.resok->authno;
+  if (aborted)
+    return;
+
+  switch (sres.status) {
+  case SFSLOGIN_OK:
+    finish ();
+    break;
+  case SFSLOGIN_MORE:
+    {
+      sfscd_agentreq_arg arg;
+      arg.aid = aid;
+      arg.agentreq.set_type (AGENTCB_AUTHMORE);
+      arg.agentreq.more->authinfo = sp->authinfo;
+      arg.agentreq.more->seqno = seqno;
+      arg.agentreq.more->checkserver = false;
+      arg.agentreq.more->more = *sres.resmore;
+      cbase = sp->prog.cdc->call (SFSCDCBPROC_AGENTREQ, &arg, &ares,
+				  wrap (this,
+					&sfsserver_auth::userauth::aresult));
       break;
-    case SFSLOGIN_MORE:
-      {
-	sfscd_agentreq_arg arg;
-	arg.aid = aid;
-	arg.agentreq.set_type (AGENTCB_AUTHMORE);
-	arg.agentreq.more->authinfo = sp->authinfo;
-	arg.agentreq.more->seqno = seqno;
-	arg.agentreq.more->challenge = *sres.resmore;
-	cbase = sp->prog.cdc->call (SFSCDCBPROC_AGENTREQ, &arg, &ares,
-				    wrap (this,
-					  &sfsserver_auth::userauth::aresult));
-	break;
-      }
-    case SFSLOGIN_BAD:
-      ntries++;
-      sendreq ();
-      break;
-    case SFSLOGIN_ALLBAD:
-      finish (0);
-      break;
-    default:
-      warn << "userauth: bad status in loginres!\n";
-      finish (0);
     }
+  case SFSLOGIN_BAD:
+    ntries++;
+    sendreq ();
+    break;
+  case SFSLOGIN_ALLBAD:
+    finish ();
+    break;
+  default:
+    warn << "userauth: bad status in loginres!\n";
+    finish ();
+  }
 }
 
 void
-sfsserver_auth::userauth::finish (u_int32_t authno)
+sfsserver_auth::userauth::finish ()
 {
   assert (!aborted);
   auto_auth aa (authuint_create (authno));
+  authno = 0;
   sp->authnos.insert (aid, aa);
   sp->authpending.remove (aid);
 }

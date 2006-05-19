@@ -32,6 +32,8 @@ extern str dotsfs;
 extern str agentsock;
 extern str userkeysdir;
 
+str agent_userdir (u_int32_t uid, bool create);
+str agent_usersock (bool create_dir = false);
 void agent_setsock ();
 void agent_ckdir (bool fail_on_keysdir = true);
 bool agent_ckdir (const str &dir);

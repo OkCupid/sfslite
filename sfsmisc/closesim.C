@@ -188,11 +188,11 @@ closesim::getcall (nfscall *nc)
     break;
   case NFSPROC3_RENAME:
     dofh (nc->getfh3arg ());
-    dofh (&nc->template getarg<rename3args> ()->to.dir);
+    dofh (&nc->Xtmpl getarg<rename3args> ()->to.dir);
     break;
   case NFSPROC3_LINK:
     dofh (nc->getfh3arg ());
-    dofh (&nc->template getarg<link3args> ()->link.dir);
+    dofh (&nc->Xtmpl getarg<link3args> ()->link.dir);
     break;
   default:
     dofh (nc->getfh3arg ());

@@ -28,7 +28,7 @@
 #include "crypt.h"
 
 static void stalereply (nfscall *nc) { nc->error (NFS3ERR_BADHANDLE); }
-const nfsserv::cb_t nfsserv::stalecb (wrap (stalereply));
+const nfsserv::cb_t nfsserv::stalecb (gwrap (stalereply));
 
 /* A simulated close call. */
 const rpcgen_table nfscall::closert = {
@@ -253,7 +253,7 @@ nfsserv_fixup::getreply (nfscall *nc)
 {
   /* After JUKEBOX errors, FreeBSD resends requests using the same xid. */
   if (nc->proc () != NFSPROC3_NULL
-      && *nc->template getres<nfsstat3> () == NFS3ERR_JUKEBOX)
+      && *nc->Xtmpl getres<nfsstat3> () == NFS3ERR_JUKEBOX)
     nc->nocache = true;
 
   /* Many NFS3 clients flip out if lookups replies don't have attributes */

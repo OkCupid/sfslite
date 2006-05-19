@@ -66,6 +66,23 @@ sfsserv::sfsserv (ref<axprt_crypt> xxc, ptr<axprt> xx)
 sfsserv::~sfsserv ()
 {
   *destroyed = true;
+
+  if (authid_valid && authc) {
+    /* We want to clear up any potential stateful login information
+     * still sitting around in sfsauthd.  After all, we might been in
+     * the middle of some authentication.  The auth server only keeps
+     * one pending login state per authid, so we just need to send an
+     * SFS_NOAUTH login. */
+    sfsauth2_loginarg arg;
+    arg.arg.seqno = 0;
+    arg.arg.certificate.setsize (4);
+    putint (arg.arg.certificate.base (), SFS_NOAUTH);
+    arg.authid = authid;
+    arg.source = strbuf () << client_name << "!"
+			   << (progname ? progname : str ("???"));
+    authc->call (SFSAUTH2_LOGIN, &arg, NULL, aclnt_cb_null,
+		 NULL, NULL, xdr_void);
+  }
 }
 
 u_int32_t
@@ -75,8 +92,10 @@ sfsserv::authnoalloc ()
 
   if (authfreelist.size ())
     authno = authfreelist.pop_back ();
-  else if (authtab.size () >= 0x10000)
+  else if (authtab.size () >= 0x10000) {
+    warn << "no authnos available";
     authno = 0;
+  }
   else {
     authno = authtab.size ();
     authtab.push_back ();
@@ -177,7 +196,7 @@ sfsserv::sfs_connect (svccb *sbp)
     return;
   }
   cd.alloc ();
-  cd->ci = *sbp->template getarg <sfs_connectarg> ();
+  cd->ci = *sbp->Xtmpl getarg <sfs_connectarg> ();
   cd->cr.set_status (SFS_OK);
   cd->cr.reply->charge.bitcost = sfs_hashcost;
   rnd.getbytes (cd->cr.reply->charge.target.base (), charge.target.size ());
@@ -216,7 +235,7 @@ sfsserv::sfs_encrypt (svccb *sbp, int pvers)
   sfs_get_authid (&authid, ci2service (cd->ci), si->get_hostname (), 
 		  &hostid, &sessid);
   authid_valid = true;
-  cd.clear ();
+  // cd.clear ();
 }
 
 static void
@@ -241,9 +260,9 @@ sfs_login_cb (ref<bool> destroyed, sfsserv *srv, svccb *sbp,
 	break;
       }
 
-      *res.authno = srv->authalloc (&resp->resok->cred, 1);
-      if (!*res.authno) {
-	warn << "ran out of authnos (or bad cred type v1)\n";
+      res.resok->authno = srv->authalloc (&resp->resok->cred, 1);
+      if (!res.resok->authno) {
+	warn << "credential type not supported (v1)\n";
 	res.set_status (SFSLOGIN_BAD);
       }
       break;
@@ -262,12 +281,12 @@ sfs_login2_cb (ref<bool> destroyed, sfsserv *srv, svccb *sbp,
 {
   if (stat || *destroyed) {
     if (stat)
-      warn << "authserv: " << stat << "\n";
+      warn << "credential type not supported (v2)\n";
     sbp->replyref (sfs_loginres (SFSLOGIN_ALLBAD));
     return;
   }
 
-  sfs_loginarg *argp = sbp->template getarg<sfs_loginarg> ();
+  sfs_loginarg *argp = sbp->Xtmpl getarg<sfs_loginarg> ();
   sfs_loginres res (resp->status);
   switch (resp->status) {
   case SFSLOGIN_OK:
@@ -276,16 +295,19 @@ sfs_login2_cb (ref<bool> destroyed, sfsserv *srv, svccb *sbp,
 	res.set_status (SFSLOGIN_BAD) ;
 	break;
       }
-      *res.authno = srv->authalloc (resp->resok->creds.base (),
-				    resp->resok->creds.size ());
-      if (!*res.authno) {
-	warn << "ran out of authnos (or bad cred type v2)\n";
+      res.resok->authno = srv->authalloc (resp->resok->creds.base (),
+					  resp->resok->creds.size ());
+      if (!res.resok->authno) {
+	//warn << "ran out of authnos (or bad cred type v2)\n";
 	res.set_status (SFSLOGIN_BAD);
 	break;
       }
-
-      if (!srv->seqstate.check (argp->seqno))
+      else if (!srv->seqstate.check (argp->seqno))
 	res.set_status (SFSLOGIN_BAD);
+      else {
+	res.resok->resmore = resp->resok->resmore;
+	res.resok->hello = resp->resok->hello;
+      }
       break;
     }
   case SFSLOGIN_MORE:
@@ -299,31 +321,32 @@ sfs_login2_cb (ref<bool> destroyed, sfsserv *srv, svccb *sbp,
 void
 sfsserv::sfs_login (svccb *sbp)
 {
-  ptr<aclnt> c;
-  if (!authid_valid || !(c = getauthclnt ())) {
+  if (!authid_valid
+      || ((!authc || authc->xi->ateof ()) && !(authc = getauthclnt ()))) {
     sbp->replyref (sfs_loginres (SFSLOGIN_ALLBAD));
     return;
   }
-  if (c->rp.versno == 1) {
+  if (authc->rp.versno == 1) {
     sfsauth_loginres *resp = New sfsauth_loginres;
-    c->call (SFSAUTHPROC_LOGIN, sbp->template getarg<sfs_loginarg> (), resp,
-	     wrap (sfs_login_cb, destroyed, this, sbp, resp));
+    authc->call (SFSAUTHPROC_LOGIN,
+		 sbp->Xtmpl getarg<sfs_loginarg> (), resp,
+		 wrap (sfs_login_cb, destroyed, this, sbp, resp));
     return;
   }
   ref<sfsauth2_loginres> resp = New refcounted<sfsauth2_loginres> ();
   sfsauth2_loginarg arg;
-  arg.arg = *sbp->template getarg<sfs_loginarg> ();
+  arg.arg = *sbp->Xtmpl getarg<sfs_loginarg> ();
   arg.authid = authid;
   arg.source = strbuf () << client_name << "!"
 			 << (progname ? progname : str ("???"));
-  c->call (SFSAUTH2_LOGIN, &arg, resp,
-	   wrap (sfs_login2_cb, destroyed, this, sbp, resp));
+  authc->call (SFSAUTH2_LOGIN, &arg, resp,
+	       wrap (sfs_login2_cb, destroyed, this, sbp, resp));
 }
 
 void
 sfsserv::sfs_logout (svccb *sbp)
 {
-  authfree (*sbp->template getarg<u_int32_t> ());
+  authfree (*sbp->Xtmpl getarg<u_int32_t> ());
   sbp->reply (NULL);
 }
 
@@ -337,7 +360,7 @@ sfsserv::sfs_idnames (svccb *sbp)
     return;
   }
 
-  ::sfs_idnums *argp = sbp->template getarg< ::sfs_idnums> ();
+  ::sfs_idnums *argp = sbp->Xtmpl getarg< ::sfs_idnums> ();
   ::sfs_idnames res;
   if (argp->uid != -1)
     if (struct passwd *p = getpwuid (argp->uid)) {
@@ -362,7 +385,7 @@ sfsserv::sfs_idnums (svccb *sbp)
     return;
   }
 
-  ::sfs_idnames *argp = sbp->template getarg< ::sfs_idnames> ();
+  ::sfs_idnames *argp = sbp->Xtmpl getarg< ::sfs_idnames> ();
   ::sfs_idnums res = { -1, -1 };
   if (argp->uidname.present)
     if (struct passwd *p = getpwnam (argp->uidname.name->cstr ()))
@@ -427,9 +450,11 @@ sfssd_cb_with_axprt(sfsserv_cb cb, ptr<axprt_crypt> x)
 }
 
 void
-sfssd_slave (sfsserv_cb cb, bool allowstandalone)
+sfssd_slave (sfsserv_cb cb)
 {
-  sfssd_slave_axprt (wrap(sfssd_cb_with_axprt, cb), allowstandalone);
+  u_int16_t port = sfs_defport ? sfs_defport : SFS_PORT;
+  if (!sfssd_slave_axprt (wrap (sfssd_cb_with_axprt, cb), true, port))
+    fatal ("binding TCP port %d: %m\n", port);
 }
 
 bool
@@ -442,7 +467,7 @@ sfssd_slave (sfsserv_cb cb, bool allowstandalone, u_int port)
 void
 sfssd_slavegen (str sock, sfsserv_cb cb)
 {
-  sfssd_slavegen_axprt (sock, wrap(sfssd_cb_with_axprt, cb));
+  sfssd_slavegen_axprt (sock, wrap (sfssd_cb_with_axprt, cb));
 }
 
 void
@@ -451,16 +476,11 @@ sfssd_slavegen_axprt(str sock, sfsserv_axprt_cb cb)
   sfs_unixserv (sock, wrap (sfssd_slavegen_cb, cb));
 }
 
-void
-sfssd_slave_axprt (sfsserv_axprt_cb cb, bool allowstandalone)
-{
-  if (!sfssd_slave_axprt (cb, allowstandalone, sfs_defport))
-    fatal ("binding TCP port %d: %m\n", sfs_defport);
-}
-
 bool
 sfssd_slave_axprt (sfsserv_axprt_cb cb, bool allowstandalone, u_int port)
 {
+  if (!port)
+    port = SFS_PORT;
   if (cloneserv (0, wrap (sfs_accept, true, cb)))
     return true;
   else if (!allowstandalone) {

@@ -26,8 +26,10 @@
 #include "crypt.h"
 #include "parseopt.h"
 
+#if 0
 #include "rxx.h"
-static rxx ppv2 ("@([\\w\\.\\-]+)(%(\\d+))?,([a-z0-9]+)");
+static rxx ppv2 ("@([\\w\\.\\-]+)(%([1-9]\\d*))?,([a-z0-9]+)");
+#endif
 
 
 bool
@@ -67,10 +69,10 @@ sfsgethost_dotlabel (const char *&p)
   return true;
 }
 str
-sfsgethost (const char *&p)
+sfsgethost (const char *&p, bool qualified)
 {
   const char *s = p;
-  if (!sfsgethost_label (s) || !sfsgethost_dotlabel (s))
+  if (!sfsgethost_label (s) || (qualified && !sfsgethost_dotlabel (s)))
     return NULL;
   while (sfsgethost_dotlabel (s))
     ;
@@ -101,9 +103,70 @@ sfs_parsepath (str path, str *host, sfs_hash *hostid, u_int16_t *portp,
 }
 
 bool
+sfsgetlocation (const char *&pp, str *hostp, u_int16_t *portp,
+		bool qualified)
+{
+  const char *p = pp;
+
+  str host = sfsgethost (p, qualified);
+  if (!host)
+    return false;
+
+  int64_t port = 0;
+  if (*p == '%') {
+    p++;
+    port = strtoi64 (p, const_cast<char **> (&p), 10);
+    if (port <= 0 || port >= 0xffff || isdigit (*p))
+      return false;
+  }
+
+  pp = p;
+  if (hostp)
+    *hostp = host;
+  if (portp)
+    *portp = port;
+  return true;
+}
+
+bool
+sfsgetatlocation (const char *&pp, str *hostp, u_int16_t *portp,
+		  bool qualified)
+{
+  const char *p = pp;
+  if (*p++ != '@')
+    return false;
+  if (!sfsgetlocation (p, hostp, portp, qualified))
+    return false;
+  pp = p;
+  return true;
+}
+
+bool
 sfs_parsepath_v2 (str path, str *hostp, sfs_hash *hostidp, u_int16_t *portp)
 {
-  u_int16_t port = SFS_PORT;
+#if 1
+  str host;
+  u_int16_t port;
+  sfs_hash dummy;
+  if (!hostidp) 
+    hostidp = &dummy;
+
+  const char *p = path;
+  if (!sfsgetatlocation (p, &host, &port))
+    return false;
+  if (*p++ != ',')
+    return false;
+  if (!sfs_ascii2hostid (hostidp, p))
+    return false;
+
+  if (hostp)
+    *hostp = host;
+  if (portp)
+    *portp = port;
+  return true;
+
+#else
+  u_int16_t port = 0;
   const char *cp;
   sfs_hash dummy;
   if (!hostidp) 
@@ -129,13 +192,14 @@ sfs_parsepath_v2 (str path, str *hostp, sfs_hash *hostidp, u_int16_t *portp)
   if (portp)
     *portp = port;
   return true;
+#endif
 }
 
 bool
 sfs_parsepath_v1 (str path, str *host, sfs_hash *hostid, u_int16_t *portp)
 {
   const char *p = path;
-  u_int16_t port = SFS_PORT;
+  u_int16_t port = 0;
 
   if (isdigit (*p)) {
     int64_t atno = strtoi64 (path, const_cast<char **> (&p), 10);
@@ -153,17 +217,6 @@ sfs_parsepath_v1 (str path, str *host, sfs_hash *hostid, u_int16_t *portp)
   if (host)
     host->setbuf (path, p - path);
   return *p++ == ':' && sfs_ascii2hostid (hostid, p);
-}
-
-str
-sfs_canonifypath (str path)
-{
-  if (!ppv2.match (path))
-    return NULL;
-  str port = ppv2[3];
-  if (port && atoi (port) == SFS_PORT)
-    return strbuf () << "@" << ppv2[1] << "," << ppv2[4];
-  return NULL;
 }
 
 ptr<sfs_servinfo_w>
@@ -205,31 +258,8 @@ sfs_servinfo_w::mkhostid (sfs_hash *id, int vers) const
 bool
 sfs_servinfo_w::mkhostid_v2 (sfs_hash *id) const
 {
-  const char *p = get_hostname ();
-  if (!sfsgethost (p) || *p) {
-    bzero (id->base (), id->size ());
-    return false;
-  }
-      
-  // Compute SHA-1( SHA-1(k), k )
-  sha1ctx sha;
-  sfs_pubkey2_hash k;
-  k.type = SFS_PUBKEY2_HASH;
-  k.pubkey = get_pubkey ();
-  str s = xdr2str (k);
-  u_int8_t h[sha1::hashsize];
-  if (s.len () <= 0) {
-    warn << "sfs_mkhostid (" << get_hostname () << "): XDR failed!\n";
-    bzero (id->base (), id->size ());
-    return false;
-  }
-  sha.update (s.cstr (), s.len ());
-  sha.final (&h);
-  sha.reset ();
-  sha.update (h, sha1::hashsize);
-  sha.update (s.cstr (), s.len ());
-  sha.final (id);
-  return true;
+  ptr<sfspub> pk = sfscrypt.alloc (get_pubkey ());
+  return pk->get_pubkey_hash (id, 2);
 }
 
 bool 
@@ -276,16 +306,15 @@ sfs_servinfo_w::mkpath (int vers, int port) const
   if (!mkhostid (&hostid, vers))
     return ":ERROR: Could not make hostid"; 
   if (vers == 1) {
+    if (port)
+      b << port << "@";
     b << get_hostname () << ":" << armor32 (&hostid, sizeof (hostid)) ;
-    if (port && port != SFS_PORT)
-      b << "@" << port;
   } else {
     b << "@" << get_hostname ();
-    if (!port) port = get_port ();
-    if (port && port != SFS_PORT)
+    if (port == -1)
+      port = get_port ();
+    if (port)
       b << "%" << port;
-    else if (!port && sfs_defport != SFS_PORT)
-      b << "%" << sfs_defport;
     b << "," << armor32 (&hostid, sizeof (hostid));
   }
   return b;
@@ -305,8 +334,14 @@ sfs_servinfo_w::ckpath (const str &sname) const
   str location;
   sfs_hash hid;
   int vers;
-  return sfs_parsepath (sname, &location, &hid, NULL, &vers)
-    && location == get_hostname () && ckhostid (&hid, vers);
+  if (!sfs_parsepath (sname, &location, &hid, NULL, &vers))
+    return false;
+  str hn = get_hostname ();
+  if (location != hn)
+    return false;
+  if (!ckhostid (&hid, vers))
+    return false;
+  return true;
 }
 
 bool
@@ -351,8 +386,9 @@ sfs_pathrevoke_w::check (sfs_hash *hidp)
   if (!sfscrypt.verify (rev.msg.path.pubkey, rev.sig, xdr2str (rev.msg)))
     return false;
 
-  if (rsi && (!rsi->mkhostid (&hostid)
-	      || implicit_cast<time_t> (rev.msg.redirect->expire) >= timenow))
+  if (rsi
+      && (!rsi->mkhostid (&hostid)
+	  || (rev.msg.redirect->expire >= implicit_cast<sfs_time> (timenow))))
     return false;
   
   return true;

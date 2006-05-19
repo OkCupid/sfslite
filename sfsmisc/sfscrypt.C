@@ -437,7 +437,8 @@ sfs_rabin_pub::verify_r (const bigint &n, size_t len, str &msg, str *e) const
   if (!check_keysize (e))
     return false;
   msg = pubk->verify_r (n, len);
-  if (msg) return true;
+  if (msg)
+    return true;
   else {
     if (e) *e = "signature verification failed";
     return false;
@@ -703,6 +704,8 @@ ptr<sfspub>
 sfs_esign_alloc::alloc (const sfs_pubkey2 &k, u_char o) const
 {
   assert (k.type == ktype);
+  if (k.esign->k <= 4)
+    return NULL;
   ptr<esign_pub> epk = New refcounted<esign_pub> (k.esign->n, k.esign->k);
   if (!epk) return NULL;
   ref<sfspub> ret = New refcounted<sfs_esign_pub, vbase> (epk, o);
@@ -769,7 +772,9 @@ timestr ()
   char buf[80];
   struct timeval t;
   struct tm *tmp;
-  if (gettimeofday (&t, NULL) < 0 || !(tmp = localtime ((time_t *)&t.tv_sec)))
+  time_t time_tmp;
+  if (gettimeofday (&t, NULL) < 0 || !(time_tmp = t.tv_sec) || 
+      !(tmp = localtime (&time_tmp)))
     return "** TIME LOOKUP FAILED **";
   int n = strftime (buf, sizeof (buf), "%a, %d %b %Y %H:%M:%S %z", tmp);
   assert (implicit_cast<size_t> (n) < sizeof (buf));
@@ -777,19 +782,57 @@ timestr ()
 }
 
 bool
-sfspub::get_pubkey_hash (sfs_hash *h) const
+sfspub::get_pubkey_hash (sfs_hash *id, int vers) const
 {
-  sfs_pubkey2 p;
-  if (!export_pubkey (&p)) return false;
-  sha1_hashxdr (h->base (), p);
-  return true;
+  switch (vers) {
+
+    // V1 is for user management, mainly.
+  case 1: 
+    {
+      sfs_pubkey2 p;
+      if (!export_pubkey (&p)) return false;
+      sha1_hashxdr (id->base (), p);
+      return true;
+      break;
+    }
+
+    // V2 is for turning pubkeys into hostid's, as in the case
+    // of SFS paths
+  case 2:
+    {
+      sha1ctx sha;
+      sfs_pubkey2_hash k;
+      k.type = SFS_PUBKEY2_HASH;
+      if (!export_pubkey (&k.pubkey))
+	return false;
+      str s = xdr2str (k);
+      u_int8_t h[sha1::hashsize];
+      if (s.len () <= 0) {
+	warn << "sfs_mkhostid (" << get_hostname () << "): XDR failed!\n";
+	bzero (id->base (), id->size ());
+	return false;
+      }
+      sha.update (s.cstr (), s.len ());
+      sha.final (h);
+      sha.reset ();
+      sha.update (h, sha1::hashsize);
+      sha.update (s.cstr (), s.len ());
+      sha.final (id->base ());
+      return true;
+      break;
+
+    }
+  default:
+    break;
+  }
+  return false;
 }
 
 str
-sfspub::get_pubkey_hash () const
+sfspub::get_pubkey_hash (int vers) const
 {
   sfs_hash h;
-  if (!get_pubkey_hash (&h))
+  if (!get_pubkey_hash (&h, vers))
     return NULL;
   return str (h.base (), h.size ());
 }

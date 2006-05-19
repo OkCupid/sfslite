@@ -35,13 +35,11 @@
 #include "crypt.h"
 #include "hashcash.h"
 #include "sfscrypt.h"
+#include "sfssesscrypt.h"
 
 #ifdef MAINTAINER
-bool sfs_nocrypt = getenv ("SFS_NOCRYPT");
+bool sfs_nocrypt = safegetenv ("SFS_NOCRYPT");
 #endif /* MAINTAINER */
-struct sfs_client_crypt_state;
-void sfs_client_crypt_call (ptr<aclnt> a, sfs_client_crypt_state *st, 
-			    int pvers);
 
 void
 sfs_get_sesskey (sfs_hash *ksc, sfs_hash *kcs,
@@ -144,10 +142,10 @@ sfs_server_crypt (svccb *sbp, sfspriv *sk,
   sfs_encryptarg2 *arg2 = NULL;
     
   if (pvers == 1) {
-    arg = sbp->template getarg<sfs_encryptarg> ();
+    arg = sbp->Xtmpl getarg<sfs_encryptarg> ();
     clntpub = sfscrypt.alloc (arg->pubkey, SFS_ENCRYPT);
   } else {
-    arg2 = sbp->template getarg<sfs_encryptarg2> ();
+    arg2 = sbp->Xtmpl getarg<sfs_encryptarg2> ();
     clntpub = sfscrypt.alloc (arg2->pubkey, SFS_ENCRYPT);
   }
   
@@ -213,8 +211,8 @@ sfs_server_crypt (svccb *sbp, sfspriv *sk,
 
 #ifdef MAINTAINER
   if (!sfs_nocrypt)
-    cx->encrypt (ksc.base (), ksc.size (), kcs.base (), kcs.size ());
 #endif /* MAINTAINER */
+    cx->encrypt (ksc.base (), ksc.size (), kcs.base (), kcs.size ());
 
   bzero (ksc.base (), ksc.size ());
   bzero (kcs.base (), kcs.size ());
@@ -242,14 +240,13 @@ struct sfs_client_crypt_state {
 };
 
 static void
-sfs_client_crypt_cb (ptr<aclnt> c, sfs_client_crypt_state *st, 
+sfs_client_crypt_cb (ptr<aclnt> c, ref<sfs_client_crypt_state> st, 
 		     int pvers, clnt_stat err)
 {
   if (err) {
     warnx << st->si->get_hostname () << ": negotiating session key: "
 	  << err << "\n";
     (*st->cb) (NULL);
-    delete st;
     return;
   }
 
@@ -271,18 +268,57 @@ sfs_client_crypt_cb (ptr<aclnt> c, sfs_client_crypt_state *st,
 
 #ifdef MAINTAINER
   if (!sfs_nocrypt) 
-    xprt2crypt (st->x)->encrypt (&kcs, sizeof (kcs), &ksc, sizeof (ksc));
 #endif /* MAINTAINER */
+    xprt2crypt (st->x)->encrypt (&kcs, sizeof (kcs), &ksc, sizeof (ksc));
 
   bzero (&ksc, sizeof (ksc));
   bzero (&kcs, sizeof (kcs));
   bzero (&st->cmsg, sizeof (st->cmsg));
 
   (*st->cb) (&sessid);
-  delete st;
 }
 
-void
+static callbase *
+sfs_client_crypt_call (ptr<aclnt> c, ref<sfs_client_crypt_state> st, int pvers)
+{
+  sfs_encryptarg arg;
+  sfs_encryptarg2 arg2;
+
+  if (pvers == 1) {
+    hashcash_pay (arg.payment.base (), st->hostid.base (), 
+		  st->charge.target.base (), st->charge.bitcost);
+    if (!st->spk->encrypt (&arg.kmsg, wstr (&st->cmsg, sizeof (st->cmsg))) 
+	|| !st->csk->export_pubkey (&arg.pubkey)) {
+      warn << st->hostname << ": For SFSPROC_ENCRYPT, must have Rabin "
+	   << "cryptosystem on both ends\n";
+      goto fail;
+    }
+    /* The timed call is for forward secrecy.  clntkey gets used for
+     * other session keys, so we don't want to sit on it forever. */
+    return c->timedcall (600, SFSPROC_ENCRYPT, &arg, &(st->res),
+			 wrap (sfs_client_crypt_cb, c, st, pvers));
+  } else {
+    hashcash_pay (arg2.payment.base (), st->hostid.base (),
+		  st->charge.target.base (), st->charge.bitcost);
+    if (!st->spk->encrypt (&arg2.kmsg, wstr (&st->cmsg, sizeof (st->cmsg)))) {
+      warn << st->hostname << ": Encrypt with server public key failed\n";
+      goto fail;
+    }
+    if (!st->csk->export_pubkey (&arg2.pubkey)) {
+      warn << st->hostname << ": cannot retrieve client public key\n";
+      goto fail;
+    }
+    return c->timedcall (600, SFSPROC_ENCRYPT2, &arg2, &(st->res2),
+			 wrap (sfs_client_crypt_cb, c, st, pvers));
+  }
+
+ fail:
+  set_random_key (xprt2crypt (c->xprt ()), NULL);
+  (*(st->cb)) (NULL);
+  return NULL;
+}
+
+callbase *
 sfs_client_crypt (ptr<aclnt> c, ptr<sfspriv> clntpriv,
 		  const sfs_connectinfo &ci, 
 		  const sfs_connectok &cres,
@@ -293,8 +329,8 @@ sfs_client_crypt (ptr<aclnt> c, ptr<sfspriv> clntpriv,
   assert (c->rp.progno == SFS_PROGRAM && c->rp.versno == SFS_VERSION);
   int pvers = si->get_vers ();
   str s;
-  sfs_client_crypt_state *st
-    = New sfs_client_crypt_state (clntpriv, si, ci, cb);
+  ref<sfs_client_crypt_state> st
+    = New refcounted<sfs_client_crypt_state> (clntpriv, si, ci, cb);
 
   st->hostname = si->get_hostname (); 
   if (!(st->spk = sfscrypt.alloc (si->get_pubkey (), SFS_ENCRYPT))) {
@@ -322,55 +358,11 @@ sfs_client_crypt (ptr<aclnt> c, ptr<sfspriv> clntpriv,
     st->x = c->xprt ();
   rnd.getbytes (&st->cmsg, sizeof (st->cmsg));
 
-  sfs_client_crypt_call (c, st, pvers);
-  return;
+  return sfs_client_crypt_call (c, st, pvers);
 
  fail:
-  delete st;
   set_random_key (xprt2crypt (c->xprt ()), NULL);
   (*cb) (NULL);
-  return;
+  return NULL;
 }
 
-void
-sfs_client_crypt_call (ptr<aclnt> c, sfs_client_crypt_state *st, int pvers)
-{
-  sfs_encryptarg arg;
-  sfs_encryptarg2 arg2;
-
-  if (pvers == 1) {
-    hashcash_pay (arg.payment.base (), st->hostid.base (), 
-		  st->charge.target.base (), st->charge.bitcost);
-    if (!st->spk->encrypt (&arg.kmsg, wstr (&st->cmsg, sizeof (st->cmsg))) 
-	|| !st->csk->export_pubkey (&arg.pubkey)) {
-      warn << st->hostname << ": For SFSPROC_ENCRYPT, must have Rabin "
-	   << "cryptosystem on both ends\n";
-      goto fail;
-    }
-    /* The timed call is for forward secrecy.  clntkey gets used for
-     * other session keys, so we don't want to sit on it forever. */
-    c->timedcall (300, SFSPROC_ENCRYPT, &arg, &(st->res),
-		  wrap (sfs_client_crypt_cb, c, st, pvers));
-    return;
-  } else {
-    hashcash_pay (arg2.payment.base (), st->hostid.base (),
-		  st->charge.target.base (), st->charge.bitcost);
-    if (!st->spk->encrypt (&arg2.kmsg, wstr (&st->cmsg, sizeof (st->cmsg)))) {
-      warn << st->hostname << ": Encrypt with server public key failed\n";
-      goto fail;
-    }
-    if (!st->csk->export_pubkey (&arg2.pubkey)) {
-      warn << st->hostname << ": cannot retrieve client public key\n";
-      goto fail;
-    }
-    c->timedcall (300, SFSPROC_ENCRYPT2, &arg2, &(st->res2),
-		  wrap (sfs_client_crypt_cb, c, st, pvers));
-    return;
-  }
-
- fail:
-  delete st;
-  set_random_key (xprt2crypt (c->xprt ()), NULL);
-  (*(st->cb)) (NULL);
-  return;
-}

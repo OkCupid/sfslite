@@ -23,6 +23,7 @@
 
 #include "agentconn.h"
 #include "rxx.h"
+#include "rexcommon.h"
 
 str
 agentconn::lookup (str &file)
@@ -50,6 +51,33 @@ agentconn::lookup (str &file)
   return ret;
 }
 
+void
+agentconn::authcb (sfsagent_auth_res *resp, cbv cb, clnt_stat stat)
+{
+  if (stat) {
+    warn << "agent: " << stat << "\n";
+    resp->set_authenticate (false);
+  }
+  (*cb) ();
+}
+
+void
+agentconn::authinit (const sfsagent_authinit_arg *argp,
+		     sfsagent_auth_res *resp, cbv cb)
+{
+  cagent_cb()->call (AGENTCB_AUTHINIT, argp, resp,
+		     wrap (authcb, resp, cb));
+}
+
+void
+agentconn::authmore (const sfsagent_authmore_arg *argp,
+		     sfsagent_auth_res *resp, cbv cb)
+{
+  cagent_cb()->call (AGENTCB_AUTHMORE, argp, resp,
+		     wrap (authcb, resp, cb));
+}
+
+#if 0
 ptr<sfsagent_auth_res>
 agentconn::auth (sfsagent_authinit_arg &arg)
 {
@@ -75,14 +103,19 @@ agentconn::auth (sfsagent_authinit_arg &arg)
     *res = r;
   return res;
 }
+#endif
 
 ptr<sfsagent_rex_res>
-agentconn::rex (str &pathname, bool forwardagent)
+agentconn::rex (str dest, str schost,
+                bool forwardagent, bool blockactive, bool resumable)
 {
-  ref<sfsagent_rex_res> res = New refcounted<sfsagent_rex_res> (FALSE);
+  ref<sfsagent_rex_res> res = New refcounted<sfsagent_rex_res_w> (FALSE);
   sfsagent_rex_arg a;
-  a.dest = pathname;
+  a.dest = dest;
+  a.schost = schost;
   a.forwardagent = forwardagent;
+  a.blockactive = blockactive;
+  a.resumable = resumable;
   sfsagent_rex_res r;
 
   if (clnt_stat stat = cagent_ctl ()->scall (AGENTCTL_REX, &a, &r)) {
@@ -94,20 +127,35 @@ agentconn::rex (str &pathname, bool forwardagent)
   return res;
 }
 
+ptr<bool>
+agentconn::keepalive (str schost)
+{
+  ref<bool> res = New refcounted<bool> (false);
+  bool r;
+
+  if (clnt_stat stat = cagent_ctl ()->scall (AGENTCTL_KEEPALIVE,
+                                             &schost, &r)) {
+    warn << "agent (cb): " << stat << "\n";
+    return NULL;
+  }
+  else {
+    *res = r;
+    return res;
+  }
+}
+
 bool
 agentconn::isagentrunning ()
 {
-  int32_t res;
-  return !(ccd ()->scall (AGENT_GETAGENT, NULL, &res) 
-	   || res
-	   || sfscdxprt->recvfd () < 0);
+  return cagent_fd (false) >= 0;
 }
 
 ptr<aclnt>
 agentconn::ccd (bool required)
 {
-  if (sfscdclnt)
+  if (sfscdclnt || (ccddone && !required))
     return sfscdclnt;
+  ccddone = true;
   int fd = required ? suidgetfd_required ("agent") : suidgetfd ("agent");
   if (fd >= 0) {
     sfscdxprt = axprt_unix::alloc (fd);
@@ -117,7 +165,7 @@ agentconn::ccd (bool required)
 }
 
 int
-agentconn::cagent_fd ()
+agentconn::cagent_fd (bool required)
 {
   if (agentfd >= 0)
     return agentfd;
@@ -133,17 +181,29 @@ agentconn::cagent_fd ()
   }
   else if (agentsock) {
     agentfd = unixsocket_connect (agentsock);
-    if (agentfd < 0)
+    if (agentfd < 0 && required)
       fatal ("%s: %m\n", agentsock.cstr ());
   }
-  else {
+  else if (ccd (false)) {
     int32_t res;
-    if (clnt_stat err = ccd ()->scall (AGENT_GETAGENT, NULL, &res))
-      fatal << "sfscd: " << err << "\n";
-    if (res)
-      fatal << "connecting to agent via sfscd: " << strerror (res) << "\n";
-    if ((agentfd = sfscdxprt->recvfd ()) < 0)
-      fatal << "connecting to agent via sfscd: could not get file descriptor\n";
+    if (clnt_stat err = ccd ()->scall (AGENT_GETAGENT, NULL, &res)) {
+      if (required)
+	fatal << "sfscd: " << err << "\n";
+    }
+    else if (res) {
+      if (required)
+	fatal << "connecting to agent via sfscd: " << strerror (res) << "\n";
+    }
+    else if ((agentfd = sfscdxprt->recvfd ()) < 0) {
+      fatal << "connecting to agent via sfscd: "
+	    << "could not get file descriptor\n";
+    }
+  }
+  else {
+    if (str sock = agent_usersock (true))
+      agentfd = unixsocket_connect (sock);
+    if (agentfd < 0 && required)
+      fatal << "sfscd not running and no standalone agent socket\n";
   }
   return agentfd;
 }
@@ -167,6 +227,14 @@ agentconn::cagent_cb ()
     return agentclnt_cb;
 
   int fd = cagent_fd ();
+
+  // str name (progname ? progname : str ("LOCAL"));
+  str name ("LOCAL");		// XXX
+  int32_t err;
+  if (clnt_stat stat = cagent_ctl ()->scall (AGENTCTL_FORWARD, &name, &err))
+    fatal << "agent: " << stat << "\n";
+  if (err)
+    fatal << "agent forwarding: " << strerror (err) << "\n";
 
   agentclnt_cb = aclnt::alloc (axprt_stream::alloc (fd), agentcb_prog_1);
   return agentclnt_cb;

@@ -1987,3 +1987,18 @@ AC_DEFUN([SFS_TUTORIAL],
 test "${enable_tutorial+set}" = "set" && with_tutorial="yes"
 AM_CONDITIONAL(USE_TUTORIAL, test "$with_tutorial" = "yes")
 ])
+
+dnl
+dnl Compile (optionally) full sfsmisc
+dnl
+AC_DEFUN([SFS_MISC],
+[AC_ARG_ENABLE(sfsmisc,
+--enable-sfsmisc      compile the full sfsmisc/ library)
+test "${enable_sfsmisc+set}" = "set" && with_sfsmisc="yes"
+AM_CONDITIONAL(USE_SFSMISC, test "$with_sfsmisc" = "yes")
+if test "$with_sfsmisc" = "yes"
+then
+	AC_DEFINE(HAVE_SFSMISC, 1, 
+		  Define if we're compiling with full sfsmisc library)
+fi
+])

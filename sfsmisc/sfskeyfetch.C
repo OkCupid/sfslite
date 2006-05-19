@@ -73,7 +73,8 @@ keyfetch_srp_cb (ptr<sfscon> *scp, str *errp, ptr<sfscon> sc, str err)
   if (sc) {
     *scp = sc;
     *errp = "";
- } else
+ }
+  else
     *errp = err;
 }
 
@@ -99,8 +100,9 @@ keyfetch_srp_opaque (sfskey *sk, str keyname, ptr<sfscon> *scp,
   str pwd;
   if (sk->pwd) { pwd = sk->pwd; }
 
+  bool serverok = false;
   sfs_connect_srp (sk->keyname, &srp, wrap (keyfetch_srp_cb, &sc, &serr),
-		   &sk->keyname, &pwd);
+		   &sk->keyname, &pwd, &serverok);
   while (!serr)
     acheck ();
   if (serr.len ())
@@ -140,7 +142,8 @@ keyfetch_srp_opaque (sfskey *sk, str keyname, ptr<sfscon> *scp,
       return NULL;
     }
 
-  } else { // vers == 2
+  }
+  else { // vers == 2
 
     c = aclnt::alloc (sc->x, sfsauth_prog_2);
     
@@ -164,7 +167,7 @@ keyfetch_srp_opaque (sfskey *sk, str keyname, ptr<sfscon> *scp,
 
   sk->cost = srp.cost;
   sk->pwd = pwd;
-  sk->srpparms = New sfssrp_parms;
+  sk->srpparms.alloc ();
   sk->srpparms->N = srp.N;
   sk->srpparms->g = srp.g;
   sk->eksb = New refcounted<eksblowfish> (srp.eksb);
@@ -174,7 +177,8 @@ keyfetch_srp_opaque (sfskey *sk, str keyname, ptr<sfscon> *scp,
   clnt_stat err = RPC_SUCCESS;  // initialize it to keep gcc happy
   if (vers == 1) { 
     err = c->scall (SFSAUTHPROC_CERTINFO, NULL, certinfores);
-  } else {  // vers == 2
+  }
+  else {  // vers == 2
     aqa.type = SFSAUTH_CERTINFO;
     sfsauth_dbkey nullkey (SFSAUTH_DBKEY_NULL);
     aqa.key = nullkey;
@@ -222,8 +226,10 @@ keyfetch_srp (sfskey *sk, str keyname, ptr<sfscon> *scp,
 {
   ptr<sfscon> sc;
   str r = keyfetch_srp_opaque (sk, keyname, &sc, cip, warnp);
-  if (scp) *scp = sc;
-  if (r) return r;
+  if (scp)
+    *scp = sc;
+  if (r)
+    return r;
   if (!(sk->key = sfscrypt.alloc (sk->pkt, sk->esk, sk->eksb, sc, 
 				  SFS_SIGN))) 
     return sk->keyname << ": cannot decrypt private key returned from "

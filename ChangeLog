@@ -4,6 +4,10 @@ $Id$
 0.8.9
  - support for callback::signal() within SFS
  - simplified runtime leak-checking support
+ - added --enable-sfsmisc for building SFSmisc with sfslite; the drawback
+   here is that compilation will be longer, but the advantage is that
+   some the user-level FS libraries from SFS will be compiled, as needed
+   by some software such as Chord.
 
 0.8.8
  - Some critical path optimizations for tame to reduce the number of 

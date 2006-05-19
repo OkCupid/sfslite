@@ -26,10 +26,128 @@
 #include "agentconn.h"
 #include "crypt.h"
 #include "rxx.h"
+#include <dirent.h>
 
 str dotsfs; 
 str agentsock;
 str userkeysdir;
+
+inline bool
+agent_userdir_ok (const char *file, u_int32_t uid)
+{
+  struct stat sb;
+  return !lstat (file, &sb)
+    && S_ISDIR (sb.st_mode) && sb.st_uid == uid
+    && (sb.st_mode & 0777) == 0700;
+}
+
+
+static str
+agent_userdir_search (const char *tmpdir, u_int32_t uid, bool create)
+{
+  DIR *dp = opendir (".");
+  if (!dp) {
+    warn ("%s: %m\n", tmpdir);
+    return NULL;
+  }
+
+  str rx (strbuf ("sfs-%d-(0|[1-9]\\d{0,6})", uid));
+  rxx filter (rx);
+
+  u_int best = (u_int) -1;
+  while (dirent *dep = readdir (dp)) {
+    if (filter.match (dep->d_name)) {
+      u_int num = atoi (filter[1]);
+      str file (strbuf ("sfs-%d-%u", uid, num));
+      assert (file == dep->d_name);
+      if (num < best && agent_userdir_ok (file, uid))
+	best = num;
+    }
+  }
+  closedir (dp);
+
+  if (best != (u_int) -1)
+    return strbuf ("sfs-%d-%u", uid, best);
+  else if (!create)
+    return NULL;
+
+  for (u_int n = 0; n < 1999999; n++) {
+    str path (strbuf ("sfs-%d-%u", uid, n));
+    if (!mkdir (path, 0700))
+      return path;
+    else if (errno != EEXIST)
+      return NULL;
+    /* utimes because we want to avoid having cron jobs delete the old
+     * directory we are now using.  There is a tiny race condition in
+     * that our utimes and agent_userdir_ok could both execute
+     * between, say, lstat and exec calls in find. */
+    else if (!utimes (path, NULL) && agent_userdir_ok (path, uid))
+      return path;
+  }
+  return NULL;
+}
+
+str
+agent_userdir (u_int32_t uid, bool create)
+{
+  int fd = open (".", O_RDONLY);
+  if (fd < 0) {
+    warn ("current working directory (.): %m\n");
+    return NULL;
+  }
+
+  char *tmpdir = safegetenv ("TMPDIR");
+  if (!tmpdir || tmpdir[0] != '/')
+    tmpdir = "/tmp";
+  
+  str ret;
+  struct stat sb;
+  uid_t myuid = getuid ();
+
+  if (chdir (tmpdir) < 0)
+    warn ("%s: %m\n", tmpdir);
+  else if (stat (".", &sb) < 0)
+    warn ("%s: %m\n", tmpdir);
+  else if ((sb.st_mode & 022) && !(sb.st_mode & 01000))
+    warn ("bad permissions on %s; chmod +t or set TMPDIR elsewhere", tmpdir);
+  else if (myuid == uid)
+    ret = agent_userdir_search (tmpdir, uid, create);
+  else if (!myuid) {
+    int fds[2];
+    if (pipe (fds) < 0)
+      warn ("pipe: %m\n");
+    else if (pid_t pid = afork ()) {
+      close (fds[1]);
+      strbuf sb;
+      while (sb.tosuio ()->input (fds[0]) > 0)
+	;
+      close (fds[0]);
+      int status = 1;
+      if (!waitpid (pid, &status, 0) && !status)
+	ret = sb;
+    }
+    else {
+      close (fds[0]);
+      _exit (setuid (uid)
+	     || !(ret = agent_userdir_search (tmpdir, uid, create))
+	     || (write (fds[1], ret, ret.len ())
+	         != implicit_cast<ssize_t> (ret.len ())));
+    }
+  }
+
+  fchdir (fd);
+  close (fd);
+  return ret ? str (strbuf ("%s/", tmpdir) << ret) : str (NULL);
+}
+
+str
+agent_usersock (bool create_dir)
+{
+  str dir = agent_userdir (myaid () & 0xffffffff, create_dir);
+  if (!dir)
+    return NULL;
+  return strbuf ("%s/agent-%" U64F "d.sock", dir.cstr (), myaid ());
+}
 
 void
 agent_setsock ()

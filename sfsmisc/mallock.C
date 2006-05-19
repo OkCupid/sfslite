@@ -26,6 +26,24 @@ setlock ()
   mlockall (MCL_CURRENT|MCL_FUTURE);
 }
 
+#ifdef __OpenBSD__
+EXITFN (unsetlock);
+
+/* This function is to test a theory that unlocking is panicking the
+ * OpenBSD kernel */
+#include <unistd.h>
+static void
+unsetlock ()
+{
+  char msg1[] = "About to call munlockall...\n";
+  char msg2[] = "...munlockall called\n";
+  write (2, msg1, sizeof (msg1) - 1);
+  sleep (1);
+  munlockall ();
+  write (2, msg2, sizeof (msg2) - 1);
+}
+#endif /* __OpenBSD__ */
+
 #elif defined (__FreeBSD__) || defined (__OpenBSD__)
 
 /*

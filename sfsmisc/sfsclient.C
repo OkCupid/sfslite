@@ -28,19 +28,19 @@
 #include "crypt.h"
 #include "nfs3close_prot.h"
 
-#define SFSPREF ".SFS "
+#define SFSPREF ".SFS \177"
 #define SFSFH SFSPREF "FH"
 
 time_t mount_idletime = 300;
 
 static int
-getportno (const sfsserverargs &a)
+getportno (int fd)
 {
-  int port = SFS_PORT;
+  int port = -1;
   struct sockaddr_in sin;
   socklen_t sinlen = sizeof (sin);
   bzero (&sin, sizeof (sin));
-  if (!getpeername (a.fd, (sockaddr *) &sin, &sinlen))
+  if (!getpeername (fd, (sockaddr *) &sin, &sinlen))
     port = ntohs (sin.sin_port);
   return port;
 }
@@ -52,13 +52,22 @@ sfsserver::sfsserver (const sfsserverargs &a)
 {
   si = sfs_servinfo_w::alloc (a.ma->cres->servinfo);
   refcount_inc ();
-
   authinfo.type = SFS_AUTHINFO;
-  authinfo.service = carg.civers <= 4 ? carg.ci4->service : carg.ci5->service;
-  path = si->mkpath (2, getportno (a));
-  bool pathok = (sfs_parsepath (path, &authinfo.name) && si->ckpath (path) &&
-		 si->mkhostid_client (&authinfo.hostid));
-  assert (pathok);
+  portno = getportno (a.fd);
+  if (a.ma->carg.civers == 4) {
+    authinfo.service = carg.ci4->service;
+    path = si->mkpath (2, portno);
+  }
+  else {
+    path = a.ma->carg.ci5->sname;
+    authinfo.service = carg.ci5->service;
+  }
+
+  if (a.ma->hostname.len ())
+    dnsname = a.ma->hostname;
+  authinfo.name = si->get_hostname ();
+  assert (si->ckpath (path));
+  si->mkhostid_client (&authinfo.hostid);
 
   prog.pathtab.insert (this);
   prog.idleq.insert_tail (this);
@@ -113,6 +122,7 @@ sfsserver::reconnect ()
       close (x->reclaim ());
       x = NULL;
     }
+    srvl = NULL;
     flushstate ();
     // prog.cdc->call (SFSCDCBPROC_HIDEFS, &path, NULL, aclnt_cb_null);
     reconnect_0 ();
@@ -123,12 +133,24 @@ void
 sfsserver::reconnect_0 ()
 {
   recon_tmo = NULL;
-  str hname;
-  u_int16_t port;
-  if (!sfs_parsepath (path, &hname, NULL, &port))
-    panic << path << ": cannot parse\n";
-  tcpconnect (hname, port,
-	      wrap (mkref (this), &sfsserver::reconnect_1), false);
+  if (dnsname && dnsname.len ()
+      && ((portno >= 0 && !srvl) || isdigit (dnsname[dnsname.len () - 1])))
+    tcpconnect (dnsname, portno,
+		wrap (mkref (this), &sfsserver::reconnect_1), false);
+  else {
+    str hname;
+    u_int16_t port;
+    if (!sfs_parsepath (path, &hname, NULL, &port))
+      panic << path << ": cannot parse\n";
+    if (port)
+      tcpconnect (hname, port,
+		  wrap (mkref (this), &sfsserver::reconnect_1), false,
+		  &dnsname);
+    else
+      tcpconnect_srv (hname, "sfs", SFS_PORT,
+		      wrap (mkref (this), &sfsserver::reconnect_1), false,
+		      &srvl, &dnsname);
+  }
 }
 
 void
@@ -139,14 +161,23 @@ sfsserver::reconnect_1 (int fd)
     unlock ();
   }
   else if (fd < 0) {
-    close (fd);
+    srvl = NULL;
+    // dnsname = NULL;
     connection_failure ();
   }
   else {
-    setfd (fd);
-    ref<sfs_connectres> cres = New refcounted<sfs_connectres>;
-    sfsc->call (SFSPROC_CONNECT, &carg, cres,
-		wrap (mkref (this), &sfsserver::reconnect_2, cres));
+    int port = getportno (fd);
+    if (port < 0) {
+      close (fd);
+      connection_failure ();
+    }
+    else {
+      portno = port;
+      setfd (fd);
+      ref<sfs_connectres> cres = New refcounted<sfs_connectres>;
+      sfsc->call (SFSPROC_CONNECT, &carg, cres,
+		  wrap (mkref (this), &sfsserver::reconnect_2, cres));
+    }
   }
 }
 
@@ -163,12 +194,14 @@ sfsserver::reconnect_2 (ref<sfs_connectres> cres, clnt_stat err)
     connection_failure (true);
   else if (cres->status)
     connection_failure ();
+  else if (srvl && si->get_hostname () != nsi->get_hostname ())
+    connection_failure ();
   else if (!(*si == *nsi) || !nsi->ckpath (path)) {
-    warn << path << ": server has changed public key\n";
+    warn << path << ": server has changed name or public key\n";
     connection_failure (true);
-  } else {
-    crypt (*cres->reply, si, wrap (mkref (this), &sfsserver::getsessid));
   }
+  else
+    crypt (*cres->reply, si, wrap (mkref (this), &sfsserver::getsessid));
 }
 
 void
@@ -179,6 +212,7 @@ sfsserver::getsessid (const sfs_hash *sessid)
   else if (!sessid)
     connection_failure ();
   else {
+    srvl = NULL;
     authinfo.sessid = *sessid;
     sfs_fsinfo *fsi = fsinfo_alloc ();
     sfsc->call (SFSPROC_GETFSINFO, NULL, fsi,
@@ -342,7 +376,7 @@ sfsserver::getnfscall (nfscall *nc)
     return;
   }
   if (nc->proc () != NFSPROC3_GETATTR
-      || nc->template getarg<nfs_fh3> ()->data != rootfh.data) {
+      || nc->Xtmpl getarg<nfs_fh3> ()->data != rootfh.data) {
     touch ();
     if (!authok (nc))
       return;
@@ -383,13 +417,13 @@ sfsprog::cddispatch (svccb *sbp)
     sbp->reply (NULL);
     break;
   case SFSCDPROC_INIT:
-    sfs_suidserv (sbp->template getarg<sfscd_initarg> ()->name,
+    sfs_suidserv (sbp->Xtmpl getarg<sfscd_initarg> ()->name,
 		  wrap (this, &sfsprog::ctlaccept));
     sbp->reply (NULL);
     break;
   case SFSCDPROC_MOUNT:
     {
-      sfscd_mountarg *arg = sbp->template getarg<sfscd_mountarg> ();
+      sfscd_mountarg *arg = sbp->Xtmpl getarg<sfscd_mountarg> ();
       ref<nfsserv> nns = nd->servalloc ();
       if (needclose)
 	nns = close_simulate (nns);
@@ -400,20 +434,20 @@ sfsprog::cddispatch (svccb *sbp)
       break;
     }
   case SFSCDPROC_UNMOUNT:
-    if (sfsserver *s = pathtab[*sbp->template getarg<nfspath3> ()])
+    if (sfsserver *s = pathtab[*sbp->Xtmpl getarg<nfspath3> ()])
       s->destroy ();
     sbp->reply (NULL);
     break;
   case SFSCDPROC_FLUSHAUTH:
     {
-      sfs_aid aid = *sbp->template getarg<sfs_aid> ();
+      sfs_aid aid = *sbp->Xtmpl getarg<sfs_aid> ();
       for (sfsserver *s = pathtab.first (); s; s = pathtab.next (s))
 	s->authclear (aid);
       sbp->reply (NULL);
       break;
     }
   case SFSCDPROC_CONDEMN:
-    if (sfsserver *s = pathtab[*sbp->template getarg<nfspath3> ()])
+    if (sfsserver *s = pathtab[*sbp->Xtmpl getarg<nfspath3> ()])
       s->condemn ();
     sbp->reply (NULL);
     break;
@@ -486,7 +520,7 @@ sfsprog::linkdispatch (nfscall *nc)
   switch (nc->proc ()) {
   case NFSPROC3_GETATTR:
     {
-      nfs_fh3 *arg = nc->template getarg<nfs_fh3> ();
+      nfs_fh3 *arg = nc->Xtmpl getarg<nfs_fh3> ();
       getattr3res res (NFS3_OK);
       mklnkfattr (res.attributes.addr (), arg);
       nc->reply (&res);
@@ -494,7 +528,7 @@ sfsprog::linkdispatch (nfscall *nc)
     }
   case NFSPROC3_READLINK:
     {
-      nfs_fh3 *arg = nc->template getarg<nfs_fh3> ();
+      nfs_fh3 *arg = nc->Xtmpl getarg<nfs_fh3> ();
       readlink3res res (NFS3_OK);
       res.resok->symlink_attributes.set_present (true);
       mklnkfattr (res.resok->symlink_attributes.attributes.addr (), arg);
@@ -532,7 +566,7 @@ sfsprog::intercept (sfsserver *s, nfscall *nc)
   switch (nc->proc ()) {
   case NFSPROC3_SETATTR:
     {
-      setattr3args *sar = nc->template getarg<setattr3args> ();
+      setattr3args *sar = nc->Xtmpl getarg<setattr3args> ();
       sattr3 &sa = sar->new_attributes;
       if (sa.mode.set || sa.size.set || sa.atime.set || sa.mtime.set
 	  || !sa.uid.set || !sa.gid.set || *sa.uid.val != (u_int32_t) -2)
@@ -544,7 +578,7 @@ sfsprog::intercept (sfsserver *s, nfscall *nc)
     }
   case NFSPROC3_LOOKUP:
     {
-      diropargs3 *arg = nc->template getarg<diropargs3> ();
+      diropargs3 *arg = nc->Xtmpl getarg<diropargs3> ();
       if (strncmp (arg->name, SFSPREF, sizeof (SFSPREF) - 1))
 	return false;
       lookup3res res (NFS3_OK);
@@ -701,12 +735,12 @@ sfsprog::sfsctl::dispatch (svccb *sbp)
     sbp->reply (NULL);
     return;
   case SFSCTL_SETPID:
-    setpid (*sbp->template getarg<int32_t> ());
+    setpid (*sbp->Xtmpl getarg<int32_t> ());
     sbp->reply (NULL);
     return;
   }
 
-  sfsserver *si = prog->pathtab[*sbp->template getarg<filename3> ()];
+  sfsserver *si = prog->pathtab[*sbp->Xtmpl getarg<filename3> ()];
   if (!si) {
     sfsctl_err (sbp, NFS3ERR_STALE);
     return;
@@ -733,7 +767,7 @@ sfsprog::sfsctl::dispatch (svccb *sbp)
   case SFSCTL_GETIDNAMES:
     {
       sfsctl_getidnames_arg *argp
-	= sbp->template getarg<sfsctl_getidnames_arg> ();
+	= sbp->Xtmpl getarg<sfsctl_getidnames_arg> ();
       sfs_idnames *resp = New sfs_idnames;
       si->sfsc->call (SFSPROC_IDNAMES, &argp->nums, resp,
 		      wrap (idnames_cb, sbp, resp), auth);
@@ -743,7 +777,7 @@ sfsprog::sfsctl::dispatch (svccb *sbp)
   case SFSCTL_GETIDNUMS:
     {
       sfsctl_getidnums_arg *argp
-	= sbp->template getarg<sfsctl_getidnums_arg> ();
+	= sbp->Xtmpl getarg<sfsctl_getidnums_arg> ();
       sfs_idnums *resp = New sfs_idnums;
       si->sfsc->call (SFSPROC_IDNUMS, &argp->names, resp,
 		      wrap (idnums_cb, sbp, resp), auth);
@@ -761,7 +795,7 @@ sfsprog::sfsctl::dispatch (svccb *sbp)
   case SFSCTL_LOOKUP:
     {
       sfsctl_lookup_arg *argp
-	= sbp->template getarg<sfsctl_lookup_arg> ();
+	= sbp->Xtmpl getarg<sfsctl_lookup_arg> ();
       lookup3res *resp = New lookup3res;
       si->sfsc->call (NFSPROC3_LOOKUP, &argp->arg, resp,
 		      wrap (lookup_cb, sbp, resp), auth,
@@ -772,7 +806,7 @@ sfsprog::sfsctl::dispatch (svccb *sbp)
   case SFSCTL_GETACL:
     {
       sfsctl_getacl_arg *argp
-	= sbp->template getarg<sfsctl_getacl_arg> ();
+	= sbp->Xtmpl getarg<sfsctl_getacl_arg> ();
       ex_read3res *resp = New ex_read3res;
       si->sfsc->call (ex_NFSPROC3_GETACL, &argp->arg, resp,
 		      wrap (getacl_cb, sbp, resp), auth,
@@ -783,7 +817,7 @@ sfsprog::sfsctl::dispatch (svccb *sbp)
   case SFSCTL_SETACL:
     {
       sfsctl_setacl_arg *argp
-	= sbp->template getarg<sfsctl_setacl_arg> ();
+	= sbp->Xtmpl getarg<sfsctl_setacl_arg> ();
       ex_write3res *resp = New ex_write3res;
       si->sfsc->call (ex_NFSPROC3_SETACL, &argp->arg, resp,
 		      wrap (setacl_cb, sbp, resp), auth,

@@ -32,6 +32,7 @@
 #include "sfsmisc.h"
 #include "sfsauth_prot.h"
 #include "qhash.h"
+#include "sfssesscrypt.h"
 
 union sfs_sa {
   sockaddr sa;
@@ -78,15 +79,26 @@ struct sfscon {
   ptr<axprt_crypt> x;
   str path;
   sfs_service service;
+  sfs_connectinfo ci;
+  sfs_connectok cres;
   ptr<const sfs_servinfo_w> servinfo;
   sfs_authinfo authinfo;
   sfs_hash hostid;
   sfs_hash sessid;
   sfs_hash authid;
   bool hostid_valid;
+  bool encrypting;
   AUTH *auth;
   str user;
-  sfscon () : sa_len (0), port (0), hostid_valid (false), auth (NULL) {}
+  sfscon () : sa_len (0), port (0), hostid_valid (false),
+	      encrypting (false), auth (NULL) {}
+  sfscon (const sfscon &c)
+    : sa (c.sa), sa_len (c.sa_len), dnsname (c.dnsname), port (c.port),
+      x (c.x), path (c.path), service (c.service), ci (c.ci), cres (c.cres),
+      servinfo (c.servinfo), authinfo (c.authinfo), hostid (c.hostid),
+      sessid (c.sessid), authid (c.authid), hostid_valid (c.hostid_valid),
+      encrypting (c.encrypting), auth (NULL)
+    { assert (encrypting); }
   ~sfscon () { if (auth) AUTH_DESTROY (auth); }
 };
 
@@ -98,15 +110,19 @@ class sfs_reconnect_t {
   const sfs_connect_cb cb;
   const ref<sfscon> sc;
   bool force;
+  bool encrypt;
   str host;
   u_int16_t port;
+  sfs_authorizer *authorizer;
+  str user;
 
   dnsreq_t *areq, *srvreq;
   sfs_connect_t *sfscl;
   ptr<hostent> h;
   ptr<srvlist> srvl;
 
-  sfs_reconnect_t (sfs_connect_cb cb, ref<sfscon> sc, bool force);
+  sfs_reconnect_t (sfs_connect_cb cb, ref<sfscon> sc, bool force,
+		   bool encrypt, sfs_authorizer *a, str user);
   ~sfs_reconnect_t ();
   void fail (str msg) { (*cb) (NULL, msg); delete this; }
   void dnscb_a (ptr<hostent> hh, int dnserr);
@@ -116,8 +132,9 @@ class sfs_reconnect_t {
 
 public:
   static sfs_reconnect_t *alloc (ref<sfscon> sc, sfs_connect_cb cb,
-				 bool force = true)
-    { return New sfs_reconnect_t (cb, sc, force); }
+				 bool force = true, bool encrypt = true,
+				 sfs_authorizer *a = NULL, str user = NULL)
+    { return New sfs_reconnect_t (cb, sc, force, encrypt, a, user); }
   void cancel () { delete this; }
 };
 
@@ -139,7 +156,6 @@ class sfs_connect_t {
   tcpconnect_t *tcpc;
   callbase *cbase;
 
-  sfs_connectarg cargvers;
   sfs_connectres cres;
   ptr<srvlist> srvl;
   str dnsname;
@@ -153,14 +169,21 @@ class sfs_connect_t {
   sfs_hash hostid;
   u_int16_t port;
   bhash<str> location_cache;
+
+  ref<bool> destroyed;
+  rpc_ptr<sfsagent_authmore_arg> marg;
+  rpc_ptr<sfsagent_auth_res> ares;
+  rpc_ptr<sfs_loginres> lres;
+  rpc_ptr<sfs_loginres_old> olres;
   
   static void ckey_clear () { ckey = NULL; }
 
   ~sfs_connect_t ();
+  void init ();
   void fail (int e, str msg) { errno = e; (*cb) (NULL, msg); delete this; }
   void srvfail (int e, str msg);
   void succeed ();
-  void carg_reset () { cargvers.set_civers (5); *cargvers.ci5 = ci5; }
+  void carg_reset () { sc->ci.set_civers (5); *sc->ci.ci5 = ci5; }
   bool setsock (int fd);
 
   bool start_common ();
@@ -170,20 +193,27 @@ class sfs_connect_t {
   bool dogetconres ();
   void docrypt ();
   void cryptcb (const sfs_hash *sessidp);
+  void doauth ();
+  void dologin (ref<bool> destroyed);
+  void donelogin (clnt_stat);
+  void checkedserver (ref<bool> d);
 
 public:
+  sfsagent_authinit_arg aarg;
   sfs_connectinfo_5 ci5;
   bool encrypt;
   bool check_hostid;
+  sfs_authorizer *authorizer;
   
   sfs_connect_t (const sfs_connect_cb &c)
     : cb (c), tcpc (NULL), cbase (NULL),
-      sc (New refcounted<sfscon>), local_authd (false),
-      last_srv_err (0), port (0),
-      encrypt (true), check_hostid (true) {
-    ci5.release = SFS_RELEASE;
-    ci5.service = SFS_SFS;
-  }
+      sc (New refcounted<sfscon>), local_authd (false), last_srv_err (0),
+      port (0), destroyed (New refcounted<bool> (false)), encrypt (true),
+      check_hostid (true), authorizer (NULL) { init (); }
+  sfs_connect_t (ref<sfscon> s, const sfs_connect_cb &c)
+    : cb (c), tcpc (NULL), cbase (NULL), sc (s), local_authd (false),
+    last_srv_err (0), port (0), destroyed (New refcounted<bool> (false)),
+      encrypt (true), check_hostid (true), authorizer (NULL) { init (); }
 
   str &sname () { return ci5.sname; }
   sfs_service &service () { return ci5.service; }
@@ -193,8 +223,7 @@ public:
   bool start (ptr<aclnt> c);
   bool start (ptr<srvlist> sl);
   bool start (in_addr a, u_int16_t port);
-  bool start (const sfs_connectarg &carg, const sfs_connectok &cres,
-	      str dnsname, int fd);
+  bool start_scon ();
   void cancel ();
 };
 
@@ -247,15 +276,17 @@ sfs_connect_t *sfs_connect (const sfs_connectarg &carg, sfs_connect_cb cb,
                             bool encrypt = true, bool check_hostid = true);
 sfs_connect_t *sfs_connect_path (str path, sfs_service service,
                                  sfs_connect_cb cb, bool encrypt = true,
-                                 bool check_hostid = true);
+                                 bool check_hostid = true,
+				 sfs_authorizer *a = NULL, str user = NULL);
 sfs_connect_t *sfs_connect_host (str host, sfs_service service,
                                  sfs_connect_cb cb, bool encrypt = true);
-sfs_connect_t *sfs_connect_crypt (const sfs_connectarg &carg,
-				  const sfs_connectok &cres, str dnsname,
-				  int fd, sfs_connect_cb cb);
+sfs_connect_t *sfs_connect_crypt (ref<sfscon> sc, sfs_connect_cb cb,
+				  sfs_authorizer *a = NULL, str user = NULL,
+				  sfs_seqno seq = 0);
 void sfs_connect_cancel (sfs_connect_t *);
 
 typedef callback<void, str>::ref sfs_dologin_cb;
-void sfs_dologin (ptr<sfscon> sc, sfspriv *k, int seqno, sfs_dologin_cb cb,
+void sfs_dologin (ref<sfscon> scon, sfspriv *key, int seqno, sfs_dologin_cb cb,
 		  bool cred = true);
+
 #endif /* _SFSCONNECT_H_ */

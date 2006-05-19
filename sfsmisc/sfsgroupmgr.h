@@ -32,7 +32,7 @@ typedef callback<void, ptr<sfsauth2_query_res>, str>::ref grpmgr_query_cb;
 
 class sfsgroupmgr {
 public:
-  sfsgroupmgr ();
+  //sfsgroupmgr ();
   sfsgroupmgr (ptr<sfskeymgr> km) : kmgr (km) {};
 
   void query (str group, grpmgr_query_cb cb) { do_query (group, cb, false); }
