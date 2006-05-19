@@ -1,6 +1,10 @@
 
 $Id$
 
+0.8.9
+ - support for signal() within SFS
+ - simplified runtime leak-checking support
+
 0.8.8
  - Some critical path optimizations for tame to reduce the number of 
    calls to wrap.  Some might be unsafe; needs to be triple-checked.
