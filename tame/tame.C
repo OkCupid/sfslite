@@ -19,7 +19,6 @@ usage ()
 	<< "    -v  show version number and exit\n"
 	<< "\n"
 	<< "  Options:\n"
-	<< "       (default=callercv)\n"
 	<< "    -o  specify output file\n"
 	<< "    -c  compile mode; infer output file name from input file "
 	<< "name\n"
