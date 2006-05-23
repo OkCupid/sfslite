@@ -50,9 +50,16 @@ ref_flag_t::alloc (const bool &b)
 //-----------------------------------------------------------------------
 
 void
-coordvar_second_signal (const char *line)
+coordvar_second_signal (const char *file, const char *line)
 {
-  warn << "second signal on coordination variable from line: " << line << "\n";
+  warn << "signal after deallaction";
+  if (file && line) {
+    warnx << " (on coordvar allocated from " << file << ":" << line << ")";
+  } else {
+    warnx << " (no further information without debugging build)";
+  }
+  warnx << "\n";
+
   if (coordvar_strict_mode) 
     panic ("Aborting due to coordvar strict mode\n");
 }

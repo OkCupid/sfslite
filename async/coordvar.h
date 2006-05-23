@@ -91,6 +91,6 @@ typedef ptr<ref_flag_t> ref_flag_ptr_t;
 // In strict mode, panic on a second signal.
 extern bool coordvar_strict_mode;
 
-void coordvar_second_signal (const char *line);
+void coordvar_second_signal (const char *file, const char *line);
 
 #endif /* _COORDVAR_H_INCLUDED */

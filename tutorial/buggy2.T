@@ -3,7 +3,6 @@
 
 #include "tame.h"
 #include "parseopt.h"
-#include "ex_prot.h"
 #include "arpc.h"
 
 bool fix_bug;

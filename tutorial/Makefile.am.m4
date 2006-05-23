@@ -77,6 +77,7 @@ tame_rpcclient(buggy10)
 tame_standalone(null)
 tame_standalone(test)
 tame_standalone(buggy2)
+tame_standalone(buggy3)
 
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl

@@ -196,20 +196,23 @@ $endnotdebug
   virtual void signal ($cbargs2)
   {
     ref_flag_ptr_t cf = _cleared_flag;
-    if (*cf) { second_signal (); }
-    else {
+    if (!second_signal ()) {
       (void )(*this)($cbargs3);
       clear (cf);
     }
   }
   virtual ~callback () {}
 protected:
-  void second_signal () { 
+  inline bool second_signal () {
+    if (*_cleared_flag) {
 #if WRAP_DEBUG 
-    coordvar_second_signal (line);
+      coordvar_second_signal (src, line);
 #else
-    coordvar_second_signal ("(unknown)");
+      coordvar_second_signal (NULL, NULL);
 $enddebug
+      return true;
+    }
+    return false;
   }
 
   void clear (ref_flag_ptr_t r = NULL) {
@@ -283,7 +286,8 @@ ${adecl}public:
     : callback_line_init (callback<$RBlist>) $ainit {}
   ~$type () { callback<$RBlist>::clear (); }
   R operator() ($bargs)
-    { return f ($ablist); }
+    { (void)callback<$RBlist>::second_signal (); 
+       return f ($ablist); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
@@ -311,7 +315,8 @@ ${adecl}public:
     : callback_line_init (callback<$RBlist>) $ainit {}
   ~$type () { callback<$RBlist>::clear (); }
   void operator() ($bargs)
-    { f ($ablist); }
+    { (void)callback<$RBlist>::second_signal (); 
+      f ($ablist); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
@@ -359,6 +364,7 @@ public:
       if (deleted)
         panic ("callback from %s to %s on deleted object\\n", 
                callback<$RBlist>::line, callback<$RBlist>::dest);
+      (void)callback<$RBlist>::second_signal ();
       return ((*(c.get ())).*f) ($ablist);
     }
 #else $bc !WRAP_USE_NODELETE $ec
@@ -366,7 +372,10 @@ ${adecl}public:
   $type (callback_line_param $aargs)
     : callback_line_init (callback<$RBlist>) $ainit {}
   R operator() ($bargs)
-    { return ((*(c.get ())).*f) ($ablist); }
+  {
+     (void)callback<$RBlist>::second_signal ();
+     return ((*(c.get ())).*f) ($ablist); 
+  }
   ~$type () { callback<$RBlist>::clear (); }
 #endif $bc !WRAP_USE_NODELETE $ec
 protected:
@@ -399,7 +408,8 @@ ${adecl}public:
     : callback_line_init (callback<$RBlist>) $ainit {}
   ~$type () { callback<$RBlist>::clear (); }
   void operator() ($bargs)
-    { ((*(c.get ())).*f) ($ablist); }
+    { (void)callback<$RBlist>::second_signal (); 
+      ((*(c.get ())).*f) ($ablist); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
@@ -757,20 +767,23 @@ public:
   virtual void signal ()
   {
     ref_flag_ptr_t cf = _cleared_flag;
-    if (*cf) { second_signal (); }
-    else {
+    if (!second_signal ()) {
       (void )(*this)();
       clear (cf);
     }
   }
   virtual ~callback () {}
 protected:
-  void second_signal () { 
+  inline bool second_signal () {
+    if (*_cleared_flag) {
 #if WRAP_DEBUG 
-    coordvar_second_signal (line);
+      coordvar_second_signal (src, line);
 #else
-    coordvar_second_signal ("(unknown)");
+      coordvar_second_signal (NULL, NULL);
 #endif /* WRAP_DEBUG */
+      return true;
+    }
+    return false;
   }
 
   void clear (ref_flag_ptr_t r = NULL) {
@@ -793,7 +806,8 @@ public:
     : callback_line_init (callback<R>) f (ff) {}
   ~callback_0_0 () { callback<R>::clear (); }
   R operator() ()
-    { return f (); }
+    { (void)callback<R>::second_signal (); 
+       return f (); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
@@ -830,6 +844,7 @@ public:
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R>::line, callback<R>::dest);
+      (void)callback<R>::second_signal ();
       return ((*(c.get ())).*f) ();
     }
 #else /* !WRAP_USE_NODELETE */
@@ -837,7 +852,10 @@ public:
   callback_c_0_0 (callback_line_param const P &cc, cb_t ff)
     : callback_line_init (callback<R>) c (cc), f (ff) {}
   R operator() ()
-    { return ((*(c.get ())).*f) (); }
+  {
+     (void)callback<R>::second_signal ();
+     return ((*(c.get ())).*f) (); 
+  }
   ~callback_c_0_0 () { callback<R>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
 protected:
@@ -886,7 +904,8 @@ public:
     : callback_line_init (callback<R>) f (ff), a1 (aa1) {}
   ~callback_0_1 () { callback<R>::clear (); }
   R operator() ()
-    { return f (a1.get ()); }
+    { (void)callback<R>::second_signal (); 
+       return f (a1.get ()); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
@@ -925,6 +944,7 @@ public:
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R>::line, callback<R>::dest);
+      (void)callback<R>::second_signal ();
       return ((*(c.get ())).*f) (a1.get ());
     }
 #else /* !WRAP_USE_NODELETE */
@@ -933,7 +953,10 @@ public:
   callback_c_0_1 (callback_line_param const P &cc, cb_t ff, const A1 &aa1)
     : callback_line_init (callback<R>) c (cc), f (ff), a1 (aa1) {}
   R operator() ()
-    { return ((*(c.get ())).*f) (a1.get ()); }
+  {
+     (void)callback<R>::second_signal ();
+     return ((*(c.get ())).*f) (a1.get ()); 
+  }
   ~callback_c_0_1 () { callback<R>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
 protected:
@@ -984,7 +1007,8 @@ public:
     : callback_line_init (callback<R>) f (ff), a1 (aa1), a2 (aa2) {}
   ~callback_0_2 () { callback<R>::clear (); }
   R operator() ()
-    { return f (a1.get (), a2.get ()); }
+    { (void)callback<R>::second_signal (); 
+       return f (a1.get (), a2.get ()); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
@@ -1025,6 +1049,7 @@ public:
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R>::line, callback<R>::dest);
+      (void)callback<R>::second_signal ();
       return ((*(c.get ())).*f) (a1.get (), a2.get ());
     }
 #else /* !WRAP_USE_NODELETE */
@@ -1034,7 +1059,10 @@ public:
   callback_c_0_2 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2)
     : callback_line_init (callback<R>) c (cc), f (ff), a1 (aa1), a2 (aa2) {}
   R operator() ()
-    { return ((*(c.get ())).*f) (a1.get (), a2.get ()); }
+  {
+     (void)callback<R>::second_signal ();
+     return ((*(c.get ())).*f) (a1.get (), a2.get ()); 
+  }
   ~callback_c_0_2 () { callback<R>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
 protected:
@@ -1087,7 +1115,8 @@ public:
     : callback_line_init (callback<R>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3) {}
   ~callback_0_3 () { callback<R>::clear (); }
   R operator() ()
-    { return f (a1.get (), a2.get (), a3.get ()); }
+    { (void)callback<R>::second_signal (); 
+       return f (a1.get (), a2.get (), a3.get ()); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
@@ -1130,6 +1159,7 @@ public:
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R>::line, callback<R>::dest);
+      (void)callback<R>::second_signal ();
       return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get ());
     }
 #else /* !WRAP_USE_NODELETE */
@@ -1140,7 +1170,10 @@ public:
   callback_c_0_3 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
     : callback_line_init (callback<R>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3) {}
   R operator() ()
-    { return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get ()); }
+  {
+     (void)callback<R>::second_signal ();
+     return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get ()); 
+  }
   ~callback_c_0_3 () { callback<R>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
 protected:
@@ -1195,7 +1228,8 @@ public:
     : callback_line_init (callback<R>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4) {}
   ~callback_0_4 () { callback<R>::clear (); }
   R operator() ()
-    { return f (a1.get (), a2.get (), a3.get (), a4.get ()); }
+    { (void)callback<R>::second_signal (); 
+       return f (a1.get (), a2.get (), a3.get (), a4.get ()); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
@@ -1240,6 +1274,7 @@ public:
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R>::line, callback<R>::dest);
+      (void)callback<R>::second_signal ();
       return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get ());
     }
 #else /* !WRAP_USE_NODELETE */
@@ -1251,7 +1286,10 @@ public:
   callback_c_0_4 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
     : callback_line_init (callback<R>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4) {}
   R operator() ()
-    { return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get ()); }
+  {
+     (void)callback<R>::second_signal ();
+     return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get ()); 
+  }
   ~callback_c_0_4 () { callback<R>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
 protected:
@@ -1308,7 +1346,8 @@ public:
     : callback_line_init (callback<R>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5) {}
   ~callback_0_5 () { callback<R>::clear (); }
   R operator() ()
-    { return f (a1.get (), a2.get (), a3.get (), a4.get (), a5.get ()); }
+    { (void)callback<R>::second_signal (); 
+       return f (a1.get (), a2.get (), a3.get (), a4.get (), a5.get ()); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
@@ -1355,6 +1394,7 @@ public:
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R>::line, callback<R>::dest);
+      (void)callback<R>::second_signal ();
       return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), a5.get ());
     }
 #else /* !WRAP_USE_NODELETE */
@@ -1367,7 +1407,10 @@ public:
   callback_c_0_5 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
     : callback_line_init (callback<R>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5) {}
   R operator() ()
-    { return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), a5.get ()); }
+  {
+     (void)callback<R>::second_signal ();
+     return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), a5.get ()); 
+  }
   ~callback_c_0_5 () { callback<R>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
 protected:
@@ -1430,20 +1473,23 @@ public:
   virtual void signal (B1 b1)
   {
     ref_flag_ptr_t cf = _cleared_flag;
-    if (*cf) { second_signal (); }
-    else {
+    if (!second_signal ()) {
       (void )(*this)(b1);
       clear (cf);
     }
   }
   virtual ~callback () {}
 protected:
-  void second_signal () { 
+  inline bool second_signal () {
+    if (*_cleared_flag) {
 #if WRAP_DEBUG 
-    coordvar_second_signal (line);
+      coordvar_second_signal (src, line);
 #else
-    coordvar_second_signal ("(unknown)");
+      coordvar_second_signal (NULL, NULL);
 #endif /* WRAP_DEBUG */
+      return true;
+    }
+    return false;
   }
 
   void clear (ref_flag_ptr_t r = NULL) {
@@ -1466,7 +1512,8 @@ public:
     : callback_line_init (callback<R, B1>) f (ff) {}
   ~callback_1_0 () { callback<R, B1>::clear (); }
   R operator() (B1 b1)
-    { return f (b1); }
+    { (void)callback<R, B1>::second_signal (); 
+       return f (b1); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
@@ -1503,6 +1550,7 @@ public:
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1>::line, callback<R, B1>::dest);
+      (void)callback<R, B1>::second_signal ();
       return ((*(c.get ())).*f) (b1);
     }
 #else /* !WRAP_USE_NODELETE */
@@ -1510,7 +1558,10 @@ public:
   callback_c_1_0 (callback_line_param const P &cc, cb_t ff)
     : callback_line_init (callback<R, B1>) c (cc), f (ff) {}
   R operator() (B1 b1)
-    { return ((*(c.get ())).*f) (b1); }
+  {
+     (void)callback<R, B1>::second_signal ();
+     return ((*(c.get ())).*f) (b1); 
+  }
   ~callback_c_1_0 () { callback<R, B1>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
 protected:
@@ -1559,7 +1610,8 @@ public:
     : callback_line_init (callback<R, B1>) f (ff), a1 (aa1) {}
   ~callback_1_1 () { callback<R, B1>::clear (); }
   R operator() (B1 b1)
-    { return f (a1.get (), b1); }
+    { (void)callback<R, B1>::second_signal (); 
+       return f (a1.get (), b1); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
@@ -1598,6 +1650,7 @@ public:
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1>::line, callback<R, B1>::dest);
+      (void)callback<R, B1>::second_signal ();
       return ((*(c.get ())).*f) (a1.get (), b1);
     }
 #else /* !WRAP_USE_NODELETE */
@@ -1606,7 +1659,10 @@ public:
   callback_c_1_1 (callback_line_param const P &cc, cb_t ff, const A1 &aa1)
     : callback_line_init (callback<R, B1>) c (cc), f (ff), a1 (aa1) {}
   R operator() (B1 b1)
-    { return ((*(c.get ())).*f) (a1.get (), b1); }
+  {
+     (void)callback<R, B1>::second_signal ();
+     return ((*(c.get ())).*f) (a1.get (), b1); 
+  }
   ~callback_c_1_1 () { callback<R, B1>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
 protected:
@@ -1657,7 +1713,8 @@ public:
     : callback_line_init (callback<R, B1>) f (ff), a1 (aa1), a2 (aa2) {}
   ~callback_1_2 () { callback<R, B1>::clear (); }
   R operator() (B1 b1)
-    { return f (a1.get (), a2.get (), b1); }
+    { (void)callback<R, B1>::second_signal (); 
+       return f (a1.get (), a2.get (), b1); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
@@ -1698,6 +1755,7 @@ public:
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1>::line, callback<R, B1>::dest);
+      (void)callback<R, B1>::second_signal ();
       return ((*(c.get ())).*f) (a1.get (), a2.get (), b1);
     }
 #else /* !WRAP_USE_NODELETE */
@@ -1707,7 +1765,10 @@ public:
   callback_c_1_2 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2)
     : callback_line_init (callback<R, B1>) c (cc), f (ff), a1 (aa1), a2 (aa2) {}
   R operator() (B1 b1)
-    { return ((*(c.get ())).*f) (a1.get (), a2.get (), b1); }
+  {
+     (void)callback<R, B1>::second_signal ();
+     return ((*(c.get ())).*f) (a1.get (), a2.get (), b1); 
+  }
   ~callback_c_1_2 () { callback<R, B1>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
 protected:
@@ -1760,7 +1821,8 @@ public:
     : callback_line_init (callback<R, B1>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3) {}
   ~callback_1_3 () { callback<R, B1>::clear (); }
   R operator() (B1 b1)
-    { return f (a1.get (), a2.get (), a3.get (), b1); }
+    { (void)callback<R, B1>::second_signal (); 
+       return f (a1.get (), a2.get (), a3.get (), b1); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
@@ -1803,6 +1865,7 @@ public:
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1>::line, callback<R, B1>::dest);
+      (void)callback<R, B1>::second_signal ();
       return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), b1);
     }
 #else /* !WRAP_USE_NODELETE */
@@ -1813,7 +1876,10 @@ public:
   callback_c_1_3 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
     : callback_line_init (callback<R, B1>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3) {}
   R operator() (B1 b1)
-    { return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), b1); }
+  {
+     (void)callback<R, B1>::second_signal ();
+     return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), b1); 
+  }
   ~callback_c_1_3 () { callback<R, B1>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
 protected:
@@ -1868,7 +1934,8 @@ public:
     : callback_line_init (callback<R, B1>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4) {}
   ~callback_1_4 () { callback<R, B1>::clear (); }
   R operator() (B1 b1)
-    { return f (a1.get (), a2.get (), a3.get (), a4.get (), b1); }
+    { (void)callback<R, B1>::second_signal (); 
+       return f (a1.get (), a2.get (), a3.get (), a4.get (), b1); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
@@ -1913,6 +1980,7 @@ public:
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1>::line, callback<R, B1>::dest);
+      (void)callback<R, B1>::second_signal ();
       return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), b1);
     }
 #else /* !WRAP_USE_NODELETE */
@@ -1924,7 +1992,10 @@ public:
   callback_c_1_4 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
     : callback_line_init (callback<R, B1>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4) {}
   R operator() (B1 b1)
-    { return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), b1); }
+  {
+     (void)callback<R, B1>::second_signal ();
+     return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), b1); 
+  }
   ~callback_c_1_4 () { callback<R, B1>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
 protected:
@@ -1981,7 +2052,8 @@ public:
     : callback_line_init (callback<R, B1>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5) {}
   ~callback_1_5 () { callback<R, B1>::clear (); }
   R operator() (B1 b1)
-    { return f (a1.get (), a2.get (), a3.get (), a4.get (), a5.get (), b1); }
+    { (void)callback<R, B1>::second_signal (); 
+       return f (a1.get (), a2.get (), a3.get (), a4.get (), a5.get (), b1); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
@@ -2028,6 +2100,7 @@ public:
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1>::line, callback<R, B1>::dest);
+      (void)callback<R, B1>::second_signal ();
       return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), a5.get (), b1);
     }
 #else /* !WRAP_USE_NODELETE */
@@ -2040,7 +2113,10 @@ public:
   callback_c_1_5 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
     : callback_line_init (callback<R, B1>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5) {}
   R operator() (B1 b1)
-    { return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), a5.get (), b1); }
+  {
+     (void)callback<R, B1>::second_signal ();
+     return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), a5.get (), b1); 
+  }
   ~callback_c_1_5 () { callback<R, B1>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
 protected:
@@ -2103,20 +2179,23 @@ public:
   virtual void signal (B1 b1, B2 b2)
   {
     ref_flag_ptr_t cf = _cleared_flag;
-    if (*cf) { second_signal (); }
-    else {
+    if (!second_signal ()) {
       (void )(*this)(b1, b2);
       clear (cf);
     }
   }
   virtual ~callback () {}
 protected:
-  void second_signal () { 
+  inline bool second_signal () {
+    if (*_cleared_flag) {
 #if WRAP_DEBUG 
-    coordvar_second_signal (line);
+      coordvar_second_signal (src, line);
 #else
-    coordvar_second_signal ("(unknown)");
+      coordvar_second_signal (NULL, NULL);
 #endif /* WRAP_DEBUG */
+      return true;
+    }
+    return false;
   }
 
   void clear (ref_flag_ptr_t r = NULL) {
@@ -2139,7 +2218,8 @@ public:
     : callback_line_init (callback<R, B1, B2>) f (ff) {}
   ~callback_2_0 () { callback<R, B1, B2>::clear (); }
   R operator() (B1 b1, B2 b2)
-    { return f (b1, b2); }
+    { (void)callback<R, B1, B2>::second_signal (); 
+       return f (b1, b2); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
@@ -2176,6 +2256,7 @@ public:
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1, B2>::line, callback<R, B1, B2>::dest);
+      (void)callback<R, B1, B2>::second_signal ();
       return ((*(c.get ())).*f) (b1, b2);
     }
 #else /* !WRAP_USE_NODELETE */
@@ -2183,7 +2264,10 @@ public:
   callback_c_2_0 (callback_line_param const P &cc, cb_t ff)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff) {}
   R operator() (B1 b1, B2 b2)
-    { return ((*(c.get ())).*f) (b1, b2); }
+  {
+     (void)callback<R, B1, B2>::second_signal ();
+     return ((*(c.get ())).*f) (b1, b2); 
+  }
   ~callback_c_2_0 () { callback<R, B1, B2>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
 protected:
@@ -2232,7 +2316,8 @@ public:
     : callback_line_init (callback<R, B1, B2>) f (ff), a1 (aa1) {}
   ~callback_2_1 () { callback<R, B1, B2>::clear (); }
   R operator() (B1 b1, B2 b2)
-    { return f (a1.get (), b1, b2); }
+    { (void)callback<R, B1, B2>::second_signal (); 
+       return f (a1.get (), b1, b2); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
@@ -2271,6 +2356,7 @@ public:
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1, B2>::line, callback<R, B1, B2>::dest);
+      (void)callback<R, B1, B2>::second_signal ();
       return ((*(c.get ())).*f) (a1.get (), b1, b2);
     }
 #else /* !WRAP_USE_NODELETE */
@@ -2279,7 +2365,10 @@ public:
   callback_c_2_1 (callback_line_param const P &cc, cb_t ff, const A1 &aa1)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff), a1 (aa1) {}
   R operator() (B1 b1, B2 b2)
-    { return ((*(c.get ())).*f) (a1.get (), b1, b2); }
+  {
+     (void)callback<R, B1, B2>::second_signal ();
+     return ((*(c.get ())).*f) (a1.get (), b1, b2); 
+  }
   ~callback_c_2_1 () { callback<R, B1, B2>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
 protected:
@@ -2330,7 +2419,8 @@ public:
     : callback_line_init (callback<R, B1, B2>) f (ff), a1 (aa1), a2 (aa2) {}
   ~callback_2_2 () { callback<R, B1, B2>::clear (); }
   R operator() (B1 b1, B2 b2)
-    { return f (a1.get (), a2.get (), b1, b2); }
+    { (void)callback<R, B1, B2>::second_signal (); 
+       return f (a1.get (), a2.get (), b1, b2); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
@@ -2371,6 +2461,7 @@ public:
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1, B2>::line, callback<R, B1, B2>::dest);
+      (void)callback<R, B1, B2>::second_signal ();
       return ((*(c.get ())).*f) (a1.get (), a2.get (), b1, b2);
     }
 #else /* !WRAP_USE_NODELETE */
@@ -2380,7 +2471,10 @@ public:
   callback_c_2_2 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff), a1 (aa1), a2 (aa2) {}
   R operator() (B1 b1, B2 b2)
-    { return ((*(c.get ())).*f) (a1.get (), a2.get (), b1, b2); }
+  {
+     (void)callback<R, B1, B2>::second_signal ();
+     return ((*(c.get ())).*f) (a1.get (), a2.get (), b1, b2); 
+  }
   ~callback_c_2_2 () { callback<R, B1, B2>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
 protected:
@@ -2433,7 +2527,8 @@ public:
     : callback_line_init (callback<R, B1, B2>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3) {}
   ~callback_2_3 () { callback<R, B1, B2>::clear (); }
   R operator() (B1 b1, B2 b2)
-    { return f (a1.get (), a2.get (), a3.get (), b1, b2); }
+    { (void)callback<R, B1, B2>::second_signal (); 
+       return f (a1.get (), a2.get (), a3.get (), b1, b2); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
@@ -2476,6 +2571,7 @@ public:
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1, B2>::line, callback<R, B1, B2>::dest);
+      (void)callback<R, B1, B2>::second_signal ();
       return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), b1, b2);
     }
 #else /* !WRAP_USE_NODELETE */
@@ -2486,7 +2582,10 @@ public:
   callback_c_2_3 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3) {}
   R operator() (B1 b1, B2 b2)
-    { return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), b1, b2); }
+  {
+     (void)callback<R, B1, B2>::second_signal ();
+     return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), b1, b2); 
+  }
   ~callback_c_2_3 () { callback<R, B1, B2>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
 protected:
@@ -2541,7 +2640,8 @@ public:
     : callback_line_init (callback<R, B1, B2>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4) {}
   ~callback_2_4 () { callback<R, B1, B2>::clear (); }
   R operator() (B1 b1, B2 b2)
-    { return f (a1.get (), a2.get (), a3.get (), a4.get (), b1, b2); }
+    { (void)callback<R, B1, B2>::second_signal (); 
+       return f (a1.get (), a2.get (), a3.get (), a4.get (), b1, b2); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
@@ -2586,6 +2686,7 @@ public:
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1, B2>::line, callback<R, B1, B2>::dest);
+      (void)callback<R, B1, B2>::second_signal ();
       return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), b1, b2);
     }
 #else /* !WRAP_USE_NODELETE */
@@ -2597,7 +2698,10 @@ public:
   callback_c_2_4 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4) {}
   R operator() (B1 b1, B2 b2)
-    { return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), b1, b2); }
+  {
+     (void)callback<R, B1, B2>::second_signal ();
+     return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), b1, b2); 
+  }
   ~callback_c_2_4 () { callback<R, B1, B2>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
 protected:
@@ -2654,7 +2758,8 @@ public:
     : callback_line_init (callback<R, B1, B2>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5) {}
   ~callback_2_5 () { callback<R, B1, B2>::clear (); }
   R operator() (B1 b1, B2 b2)
-    { return f (a1.get (), a2.get (), a3.get (), a4.get (), a5.get (), b1, b2); }
+    { (void)callback<R, B1, B2>::second_signal (); 
+       return f (a1.get (), a2.get (), a3.get (), a4.get (), a5.get (), b1, b2); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
@@ -2701,6 +2806,7 @@ public:
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1, B2>::line, callback<R, B1, B2>::dest);
+      (void)callback<R, B1, B2>::second_signal ();
       return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), a5.get (), b1, b2);
     }
 #else /* !WRAP_USE_NODELETE */
@@ -2713,7 +2819,10 @@ public:
   callback_c_2_5 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5) {}
   R operator() (B1 b1, B2 b2)
-    { return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), a5.get (), b1, b2); }
+  {
+     (void)callback<R, B1, B2>::second_signal ();
+     return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), a5.get (), b1, b2); 
+  }
   ~callback_c_2_5 () { callback<R, B1, B2>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
 protected:
@@ -2776,20 +2885,23 @@ public:
   virtual void signal (B1 b1, B2 b2, B3 b3)
   {
     ref_flag_ptr_t cf = _cleared_flag;
-    if (*cf) { second_signal (); }
-    else {
+    if (!second_signal ()) {
       (void )(*this)(b1, b2, b3);
       clear (cf);
     }
   }
   virtual ~callback () {}
 protected:
-  void second_signal () { 
+  inline bool second_signal () {
+    if (*_cleared_flag) {
 #if WRAP_DEBUG 
-    coordvar_second_signal (line);
+      coordvar_second_signal (src, line);
 #else
-    coordvar_second_signal ("(unknown)");
+      coordvar_second_signal (NULL, NULL);
 #endif /* WRAP_DEBUG */
+      return true;
+    }
+    return false;
   }
 
   void clear (ref_flag_ptr_t r = NULL) {
@@ -2812,7 +2924,8 @@ public:
     : callback_line_init (callback<R, B1, B2, B3>) f (ff) {}
   ~callback_3_0 () { callback<R, B1, B2, B3>::clear (); }
   R operator() (B1 b1, B2 b2, B3 b3)
-    { return f (b1, b2, b3); }
+    { (void)callback<R, B1, B2, B3>::second_signal (); 
+       return f (b1, b2, b3); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
@@ -2849,6 +2962,7 @@ public:
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1, B2, B3>::line, callback<R, B1, B2, B3>::dest);
+      (void)callback<R, B1, B2, B3>::second_signal ();
       return ((*(c.get ())).*f) (b1, b2, b3);
     }
 #else /* !WRAP_USE_NODELETE */
@@ -2856,7 +2970,10 @@ public:
   callback_c_3_0 (callback_line_param const P &cc, cb_t ff)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff) {}
   R operator() (B1 b1, B2 b2, B3 b3)
-    { return ((*(c.get ())).*f) (b1, b2, b3); }
+  {
+     (void)callback<R, B1, B2, B3>::second_signal ();
+     return ((*(c.get ())).*f) (b1, b2, b3); 
+  }
   ~callback_c_3_0 () { callback<R, B1, B2, B3>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
 protected:
@@ -2905,7 +3022,8 @@ public:
     : callback_line_init (callback<R, B1, B2, B3>) f (ff), a1 (aa1) {}
   ~callback_3_1 () { callback<R, B1, B2, B3>::clear (); }
   R operator() (B1 b1, B2 b2, B3 b3)
-    { return f (a1.get (), b1, b2, b3); }
+    { (void)callback<R, B1, B2, B3>::second_signal (); 
+       return f (a1.get (), b1, b2, b3); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
@@ -2944,6 +3062,7 @@ public:
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1, B2, B3>::line, callback<R, B1, B2, B3>::dest);
+      (void)callback<R, B1, B2, B3>::second_signal ();
       return ((*(c.get ())).*f) (a1.get (), b1, b2, b3);
     }
 #else /* !WRAP_USE_NODELETE */
@@ -2952,7 +3071,10 @@ public:
   callback_c_3_1 (callback_line_param const P &cc, cb_t ff, const A1 &aa1)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff), a1 (aa1) {}
   R operator() (B1 b1, B2 b2, B3 b3)
-    { return ((*(c.get ())).*f) (a1.get (), b1, b2, b3); }
+  {
+     (void)callback<R, B1, B2, B3>::second_signal ();
+     return ((*(c.get ())).*f) (a1.get (), b1, b2, b3); 
+  }
   ~callback_c_3_1 () { callback<R, B1, B2, B3>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
 protected:
@@ -3003,7 +3125,8 @@ public:
     : callback_line_init (callback<R, B1, B2, B3>) f (ff), a1 (aa1), a2 (aa2) {}
   ~callback_3_2 () { callback<R, B1, B2, B3>::clear (); }
   R operator() (B1 b1, B2 b2, B3 b3)
-    { return f (a1.get (), a2.get (), b1, b2, b3); }
+    { (void)callback<R, B1, B2, B3>::second_signal (); 
+       return f (a1.get (), a2.get (), b1, b2, b3); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
@@ -3044,6 +3167,7 @@ public:
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1, B2, B3>::line, callback<R, B1, B2, B3>::dest);
+      (void)callback<R, B1, B2, B3>::second_signal ();
       return ((*(c.get ())).*f) (a1.get (), a2.get (), b1, b2, b3);
     }
 #else /* !WRAP_USE_NODELETE */
@@ -3053,7 +3177,10 @@ public:
   callback_c_3_2 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff), a1 (aa1), a2 (aa2) {}
   R operator() (B1 b1, B2 b2, B3 b3)
-    { return ((*(c.get ())).*f) (a1.get (), a2.get (), b1, b2, b3); }
+  {
+     (void)callback<R, B1, B2, B3>::second_signal ();
+     return ((*(c.get ())).*f) (a1.get (), a2.get (), b1, b2, b3); 
+  }
   ~callback_c_3_2 () { callback<R, B1, B2, B3>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
 protected:
@@ -3106,7 +3233,8 @@ public:
     : callback_line_init (callback<R, B1, B2, B3>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3) {}
   ~callback_3_3 () { callback<R, B1, B2, B3>::clear (); }
   R operator() (B1 b1, B2 b2, B3 b3)
-    { return f (a1.get (), a2.get (), a3.get (), b1, b2, b3); }
+    { (void)callback<R, B1, B2, B3>::second_signal (); 
+       return f (a1.get (), a2.get (), a3.get (), b1, b2, b3); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
@@ -3149,6 +3277,7 @@ public:
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1, B2, B3>::line, callback<R, B1, B2, B3>::dest);
+      (void)callback<R, B1, B2, B3>::second_signal ();
       return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), b1, b2, b3);
     }
 #else /* !WRAP_USE_NODELETE */
@@ -3159,7 +3288,10 @@ public:
   callback_c_3_3 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3) {}
   R operator() (B1 b1, B2 b2, B3 b3)
-    { return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), b1, b2, b3); }
+  {
+     (void)callback<R, B1, B2, B3>::second_signal ();
+     return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), b1, b2, b3); 
+  }
   ~callback_c_3_3 () { callback<R, B1, B2, B3>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
 protected:
@@ -3214,7 +3346,8 @@ public:
     : callback_line_init (callback<R, B1, B2, B3>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4) {}
   ~callback_3_4 () { callback<R, B1, B2, B3>::clear (); }
   R operator() (B1 b1, B2 b2, B3 b3)
-    { return f (a1.get (), a2.get (), a3.get (), a4.get (), b1, b2, b3); }
+    { (void)callback<R, B1, B2, B3>::second_signal (); 
+       return f (a1.get (), a2.get (), a3.get (), a4.get (), b1, b2, b3); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
@@ -3259,6 +3392,7 @@ public:
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1, B2, B3>::line, callback<R, B1, B2, B3>::dest);
+      (void)callback<R, B1, B2, B3>::second_signal ();
       return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), b1, b2, b3);
     }
 #else /* !WRAP_USE_NODELETE */
@@ -3270,7 +3404,10 @@ public:
   callback_c_3_4 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4) {}
   R operator() (B1 b1, B2 b2, B3 b3)
-    { return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), b1, b2, b3); }
+  {
+     (void)callback<R, B1, B2, B3>::second_signal ();
+     return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), b1, b2, b3); 
+  }
   ~callback_c_3_4 () { callback<R, B1, B2, B3>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
 protected:
@@ -3327,7 +3464,8 @@ public:
     : callback_line_init (callback<R, B1, B2, B3>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5) {}
   ~callback_3_5 () { callback<R, B1, B2, B3>::clear (); }
   R operator() (B1 b1, B2 b2, B3 b3)
-    { return f (a1.get (), a2.get (), a3.get (), a4.get (), a5.get (), b1, b2, b3); }
+    { (void)callback<R, B1, B2, B3>::second_signal (); 
+       return f (a1.get (), a2.get (), a3.get (), a4.get (), a5.get (), b1, b2, b3); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
@@ -3374,6 +3512,7 @@ public:
       if (deleted)
         panic ("callback from %s to %s on deleted object\n", 
                callback<R, B1, B2, B3>::line, callback<R, B1, B2, B3>::dest);
+      (void)callback<R, B1, B2, B3>::second_signal ();
       return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), a5.get (), b1, b2, b3);
     }
 #else /* !WRAP_USE_NODELETE */
@@ -3386,7 +3525,10 @@ public:
   callback_c_3_5 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5) {}
   R operator() (B1 b1, B2 b2, B3 b3)
-    { return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), a5.get (), b1, b2, b3); }
+  {
+     (void)callback<R, B1, B2, B3>::second_signal ();
+     return ((*(c.get ())).*f) (a1.get (), a2.get (), a3.get (), a4.get (), a5.get (), b1, b2, b3); 
+  }
   ~callback_c_3_5 () { callback<R, B1, B2, B3>::clear (); }
 #endif /* !WRAP_USE_NODELETE */
 protected:
