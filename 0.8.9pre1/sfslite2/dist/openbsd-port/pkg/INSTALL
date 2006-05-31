@@ -1,0 +1,89 @@
+#!/bin/sh
+
+PATH=/bin:/usr/bin:/sbin:/usr/sbin
+
+PREFIX=${PKG_PREFIX:-/usr/local}
+
+# verify proper execution
+#
+if [ $# -ne 2 ]; then
+    echo "usage: $0 distname { PRE-INSTALL | POST-INSTALL | DEINSTALL }" >&2
+    exit 1
+fi
+
+# Verify/process the command
+#
+case $2 in
+    PRE-INSTALL)
+	mv -f $PREFIX/share/sfs/sfs_config \
+		$PREFIX/share/sfs/sfs_config.save 2>/dev/null
+	exit 0
+        ;;
+    POST-INSTALL)
+	;;
+    DEINSTALL)
+	exit 0
+	;;
+    *)
+        echo "usage: $0 distname { PRE-INSTALL | POST-INSTALL | DEINSTALL }" >&2
+        exit 1
+        ;;
+esac
+
+
+#
+# Installing SFS...
+#
+
+sfsuser_line=`egrep '^sfsuser ' $PREFIX/share/sfs/sfs_config.save 2> /dev/null`
+set ""`echo $sfsuser_line`
+sfs_defuser=$2
+sfs_defgroup=$3
+
+resvgids_line=`egrep '^resvgids ' $PREFIX/share/sfs/sfs_config.save 2> /dev/null`
+test "$resvgids_line" \
+    || resvgids_line=`egrep '^#resvgids ' $PREFIX/share/sfs/sfs_config`
+
+echo "SFS needs a its own user and group IDs."
+test -z "$sfs_defuser" && sfs_defuser=sfs
+echo -n "What username do you want to use? [$sfs_defuser] "
+read sfs_user
+test -z "$sfs_user" && sfs_user=$sfs_defuser
+
+if id "$sfs_user" > /dev/null; then
+	:
+else
+    echo "User $sfs_defuser does not exist.  You must create the account."
+fi
+
+test -z "$sfs_defgroup" && sfs_defgroup=`id -ng $sfs_user 2>/dev/null`
+test -z "$sfs_defgroup" && sfs_defgroup=$sfs_user
+echo -n "What groupname do you want to use? [$sfs_defgroup] "
+read sfs_group
+test -z "$sfs_group" && sfs_group="$sfs_defgroup"
+
+echo Editing $PREFIX/share/sfs/sfs_config...
+rm -f $PREFIX/share/sfs/sfs_config~
+sed -e "s/^sfsuser.*/sfsuser $sfs_user $sfs_group/" \
+	-e "s/^#resvgids .*/$resvgids_line/" \
+	$PREFIX/share/sfs/sfs_config > $PREFIX/share/sfs/sfs_config~
+mv -f $PREFIX/share/sfs/sfs_config~ $PREFIX/share/sfs/sfs_config
+
+echo chmod 04555 $PREFIX/lib/sfs/newaid
+chmod 04555 $PREFIX/lib/sfs/newaid
+
+echo chgrp $sfs_group $PREFIX/lib/sfs/suidconnect
+if chgrp $sfs_group $PREFIX/lib/sfs/suidconnect; then
+	echo chmod 02555 $PREFIX/lib/sfs/suidconnect
+	chmod 02555 $PREFIX/lib/sfs/suidconnect
+else
+	cat <<EOF
+** Warning: could not put $PREFIX/lib/sfs/suidconnect
+** in the $sfs_group group.  You must create this group, then run:
+	chgrp $sfs_group $PREFIX/lib/sfs/suidconnect
+	chmod 02555 $sfs_group $PREFIX/lib/sfs/suidconnect
+EOF
+fi
+
+exit 0
+
