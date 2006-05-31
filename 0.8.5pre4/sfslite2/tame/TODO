@@ -1,0 +1,29 @@
+
+- non-void functions (add RETURN { ... } feature)
+ -- autogenerate default return values from retvalue's type
+- better indentation
+- RETURN made to look more like return; 
+- template support
+
+From Jan UCLA visit:
+- callbacks set values with references as opposed to pointers, to accommodate
+  smart arrays.
+- fencepost counting of VARS-allocated join_groups
+- new, optional NONBLOCK syntax:
+
+ NONBLOCK (jg, 0) { ..... @(i) ..... }
+ NONBLOCK (jg) { .... @[0](i) ..... }
+	       { .... @[jg,0](i) .... }
+
+
+
+	tcpconnect ("www.yahoo.com", 80, @[jg,i](fd[i]));
+
+	tcpconnect ("www.yahoo.com", 80, @(jg, i; fd[i]));
+
+	tcpconnect ("www.yahoo.com", 80, @([jg, i], fd[i]));
+
+
+	JOIN (jg, return_id) {
+	   if (fd <= 0) panic ("BARF!");
+	}
