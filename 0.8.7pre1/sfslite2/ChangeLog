@@ -1,0 +1,28 @@
+
+$Id$
+
+0.8.7
+ - Fixed bug _block_cb3
+
+0.8.6
+ - Changed "unwrap" to "tame"
+ - Simplified "tame" syntax; now have NONBLOCK .. JOIN instead of CRCC*
+ - Added line number translation on tame output; can be disabled via the
+	-L flag or by setting the NO_LINE_NUMBER environment variable
+ - Turn compile on tutorial on by configure-time switch '--enable-tutorial'
+ - tame -v now shows a version number.
+ - Compile fixes for GCC 4.0 in rpctypes.h
+ - Now, no need to do TAME(void myfn()) { .. } ; rather
+   TAME void myfn () { ... } works just as well.
+ - Instead of JOIN/join_group use WAIT/coordgroup
+ - No more need for nonblock; use  @[]() instead
+
+0.8.5 (pre-releases only due to versioning bug)
+	
+0.8.4 
+ - Fix warn() statements in paillier.C so that they compile on ia64
+ - Fix bugs in unwrap for trivial input files; was accessing NULL
+   pointers.
+
+0.8.3 and before 
+ - Undocumented
