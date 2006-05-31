@@ -21,7 +21,7 @@ void get_web_page (str host, int port, strbuf *resp, cbb done)
   VARS {
     int fd, rc;
     strbuf req;
-    coordgroup_t<> read_jg, write_jg;
+    coordgroup_t<> read_cg, write_cg;
   }
 
   //
@@ -53,10 +53,10 @@ void get_web_page (str host, int port, strbuf *resp, cbb done)
   // times.  That is, fdcb will call us back every time the socket
   // 'fd' is available for writing.
   //
-  fdcb (fd, selwrite, @[write_jg]());
+  fdcb (fd, selwrite, @[write_cg]());
   
   while (true) {
-    WAIT (write_jg);
+    WAIT (write_cg);
 
     //
     // Use this syntax to output the results of the string buffer
@@ -79,12 +79,12 @@ void get_web_page (str host, int port, strbuf *resp, cbb done)
     //
     // suio::resid() returns the # of bytes left to write.  If there
     // are any bytes left to write, we'll need to be called back from
-    // fdcb again, and we'll therefore need to join again.  Use the
-    // coordgroup_t::rejoin call to schedule an additional join for
-    // this join group.
+    // fdcb again, and we'll therefore need to wait again.  Use the
+    // coordgroup_t::add_var call to schedule an additional coordination
+    // variable for this coordination group.
     //
     if (req.tosuio ()->resid ()) {
-      write_jg.add_join ();
+      write_cg.add_var ();
     }
     
     // 
@@ -100,14 +100,14 @@ void get_web_page (str host, int port, strbuf *resp, cbb done)
   // 
   // As before, but now we need to schedule a callback for reading
   //
-  fdcb (fd, selread, @[read_jg]());
+  fdcb (fd, selread, @[read_cg]());
   
   //
   // The details of the reading loop are almost identical to the
   // writing loop above.
   //
   while (true) {
-    WAIT (read_jg);
+    WAIT (read_cg);
     if ((rc = resp->tosuio ()->input (fd)) < 0 && errno != EAGAIN) {
       warn << "read failed...\n";
       fdcb (fd, selread, NULL);
@@ -116,7 +116,7 @@ void get_web_page (str host, int port, strbuf *resp, cbb done)
       return;
     }
     if (rc != 0) {
-      read_jg.add_join ();
+      read_cg.add_var ();
     } else {
       fdcb (fd, selread, NULL);
       break;
@@ -158,7 +158,7 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
     get_web_page (hosts[i], port, &responses[i], @[CG,i,res](*res));
   }
   
-  while (CG.need_join ()) {
+  while (CG.need_wait ()) {
     WAIT (CG, i, res);
     warn << hosts[i]  << ":" << port << ": ";
     if (*res) {

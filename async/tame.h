@@ -745,6 +745,11 @@ public:
    * paper.
    */
   u_int n_signals_left () const { return n_vars_left (); }
+
+  /**
+   * Whether we still should be waiting on this coordgroup or not
+   */
+  bool need_wait () const { return n_vars_left () > 0; }
   
   /**
    * Get the next signal, and put the results into the given
