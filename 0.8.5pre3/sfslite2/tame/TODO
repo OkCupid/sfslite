@@ -1,0 +1,6 @@
+
+- non-void functions (add RETURN { ... } feature)
+ -- autogenerate default return values from retvalue's type
+- better indentation
+- RETURN made to look more like return; 
+- template support
