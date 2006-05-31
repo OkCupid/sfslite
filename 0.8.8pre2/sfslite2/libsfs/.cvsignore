@@ -1,0 +1,13 @@
+.deps
+.libs
+Makefile
+Makefile.am
+Makefile.in
+nfs3_prot.c
+nfs3_prot.h
+nfs3exp_prot.c
+nfs3exp_prot.h
+sfs_prot.c
+sfs_prot.h
+sfsagent.c
+sfsagent.h

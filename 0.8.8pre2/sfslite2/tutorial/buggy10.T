@@ -1,0 +1,135 @@
+// -*-c++-*-
+/* $Id$ */
+
+#include "tame.h"
+#include "arpc.h"
+#include "parseopt.h"
+#include "ex_prot.h"
+
+struct state_t {
+  state_t (str h, int p) : host (h), port (p), n_tot (10), window_sz (5) {}
+
+  str host;
+  int port;
+  join_group_t<int> window;
+  vec<int> res;
+  vec<clnt_stat> errs;
+  ptr<axprt_stream> x;
+  ptr<aclnt> cli;
+  int n_tot, window_sz;
+  int i;
+
+  void launch (ceo_callback_bool_t ceocc, CLOSURE);
+  void relaunch (ceo_callback_bool_t ceocc, CLOSURE);
+};
+
+static void foofoo (cbi cb)
+{
+  warnx << "foofoo!\n";
+  cb (40);
+}
+
+TAME(void state_t::launch (ceo_callback_bool_t cceoc))
+{
+  // declare all of your "stack" variables here
+  VARS {
+    int fd, xx;
+  }
+
+  // Call tcpconnect, and block until it returns; when it does return,
+  // assign the local variable 'fd' to the result.
+  BLOCK { tcpconnect (host, port, @(fd)); }
+
+  if (fd < 0) {
+    warn ("%s:%d: connection failed: %m\n", host.cstr(), port);
+    RESUME (false);
+  } else {
+    res.setsize (n_tot);
+    errs.setsize (n_tot);
+    x = axprt_stream::alloc (fd);
+    cli = aclnt::alloc (x, ex_prog_1);
+
+    for (i = 0; i < window_sz && i < n_tot; i++) {
+
+      // launch an asychronous function call, but don't
+      // block on its return. Associate the call with the 
+      // join group 'window' and the index value 'i'
+      NONBLOCK (window, i) {
+	cli->call (EX_RANDOM, NULL, &res[i], @(errs[i]));
+      }
+    }
+
+    NONBLOCK (window) {
+      delaycb (10, 0, wrap (foofoo, @(xx)));
+    }
+  }
+  RESUME (true);
+}
+
+TAME(void state_t::relaunch (ceo_callback_bool_t cceoc))
+{
+  VARS {
+    bool err_occurred (false);
+    int j;
+  }
+  // a join is needed for every call that returns
+  for (j = 0; j < n_tot; j++) {
+    
+    // Block until a call has returned; when it has, get
+    // the index variable associated with the call, and assign
+    // it to 'return_id' for the scope of the JOIN block.
+    JOIN (window, return_id) {
+      if (errs[return_id]) {
+	err_occurred = true;
+	warn << "RPC error: " << errs[return_id] << "\n";
+      } else {
+	warn << "Success " << return_id << ": " << res[return_id] << "\n";
+	
+	// in the common case, for every call that returns,
+	// another should be launched. but don't bother launching
+	// more if an error occurred.
+	if (i < n_tot && !err_occurred) {
+	  NONBLOCK (window, i) {
+	    cli->call (EX_RANDOM, NULL, &res[i], @(errs[i]));
+	  }
+	  i++;
+	}
+      }
+    }
+  }
+  warn << "All done...\n";
+  RESUME (!err_occurred);
+}
+
+state_t *s;
+
+static void go_cb2 (bool rc)
+{
+  delete s;
+  delaycb (40, 0, wrap (exit, 0));
+}
+
+static void go_cb1 (bool rc)
+{
+  if (rc) {
+    s->relaunch (wrap (go_cb2));
+  } else
+    exit (-1);
+}
+
+static void go (str h, int p)
+{
+  s = New state_t (h, p);
+  s->launch (wrap (go_cb1));
+}
+
+int
+main (int argc, char *argv[])
+{
+  int port;
+  if (argc != 3 || !convertint (argv[2], &port))
+    fatal << "usage: ex2 <hostname> <port>\n";
+
+  go (argv[1], port);
+  amain ();
+}
