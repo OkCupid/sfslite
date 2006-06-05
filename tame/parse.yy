@@ -585,6 +585,7 @@ type_specifier: T_VOID		{ $$ = "void" ; }
  */
 type_qualifier:	T_CONST		{ $$ = "const"; }
 	| T_STRUCT		{ $$ = "struct"; }
+	| T_TYPENAME		{ $$ = "typename"; }
 	;
 
 type_qualifier_list: type_qualifier
