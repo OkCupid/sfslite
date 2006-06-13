@@ -50,6 +50,7 @@ public:
   virtual u_int64_t get_raw_bytes_sent () const { return 0; }
   virtual int sndbufsize () const { panic ("unimplemented"); }
   virtual void poll () = 0;
+  virtual int getfd () = 0;
 
   void send (const void *data, size_t len, const sockaddr *dest) {
     iovec iov = {(char *) data, len};

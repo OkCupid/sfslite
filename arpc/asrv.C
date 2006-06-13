@@ -364,7 +364,6 @@ asrv::seteof (ref<xhinfo> xi, const sockaddr *src, bool force)
 void
 asrv::sendreply (svccb *sbp, xdrsuio *x, bool)
 {
-  dec_svccb_count ();
   if (!xi->ateof () && x)
     xi->xh->sendv (x->iov (), x->iovcnt (), sbp->addr);
   /* If x contains a marshaled version of sbp->template getres<...> (),
@@ -372,6 +371,7 @@ asrv::sendreply (svccb *sbp, xdrsuio *x, bool)
    * the object getres returned). */
   if (sbp->resdat)
     xsuio (x)->clear ();
+  dec_svccb_count ();
   delete sbp;
 }
 
@@ -728,6 +728,9 @@ asrv_delayed_eof::sendreply (svccb *s, xdrsuio *x, bool nocache)
 {
   if (_eof) {
     warn << "Swallowing RPC reply due to EOF on TCP socket.\n";
+    dec_svccb_count ();
+  } else if (xprt ()->getfd () < 0) {
+    warn << "Swallowing RPC reply due to unexpected EOF/error on socket.\n";
     dec_svccb_count ();
   } else {
     // decref already happens in sendreply(), so no need to do it a 
