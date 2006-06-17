@@ -93,13 +93,13 @@ void		return T_VOID;
 char		return T_CHAR;
 short		return T_SHORT;
 int		return T_INT;
+long{WSPACE}+long	return T_LONG_LONG;
 long		return T_LONG;
 float		return T_FLOAT;
 double		return T_DOUBLE;
 signed		return T_SIGNED;
 unsigned	return T_UNSIGNED;
 static		return T_STATIC;
-long\s+long	return T_LONG_LONG;
 template	{ yy_push_state (TEMPLATE_ENTER); return T_TEMPLATE; }
 
 {ID} 		{ return std_ret (T_ID); }
