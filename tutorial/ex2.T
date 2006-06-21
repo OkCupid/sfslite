@@ -6,8 +6,10 @@
 #include "arpc.h"
 #include "ex_prot.h"
 
-TAMED static 
-void try_rpc (str h, int port, cbb cb)
+TAMED 
+static 
+void 
+try_rpc (str h, int port, cbb cb)
 {
   VARS {
     bool ret (false);

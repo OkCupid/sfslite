@@ -850,26 +850,40 @@ void start_join_group_collection ();
  */
 class canceller_t {
 public:
-  canceller_t () {}
+  canceller_t () 
+    : _toolate (false), _queued_cancel (false), _cancelled (false) {}
 
   // the cancelable function calls this 
-  void wait (cbv b) { cb = b; }
+  void wait (cbv b) 
+  { 
+    if (_queued_cancel) {
+      b->signal ();
+    } else {
+      _cb = b; 
+    }
+  }
+
+  bool cancelled () const { return _cancelled; }
 
   // the canceller calls this to cancel the cancelable function
   void cancel ()
   {
-    if (cb) {
-      cbv::ptr t = cb;
-      cb = NULL;
-      (*t) ();
+    _cancelled = true;
+    if (_cb) {
+      cbv::ptr t = _cb;
+      _cb = NULL;
+      t->signal ();
+    } else if (!_toolate) {
+      _queued_cancel = true;
     }
   }
 
   // the cancelable function can call this if it deems that it is too
   // late to cancel.
-  void toolate () { cb = NULL; }
+  void toolate () { _toolate = true; _cb = NULL; }
 private:
-  cbv::ptr cb;
+  cbv::ptr _cb;
+  bool _toolate, _queued_cancel, _cancelled;
 };
 
 
