@@ -52,7 +52,7 @@ ref_flag_t::alloc (const bool &b)
 void
 coordvar_second_signal (const char *file, const char *line)
 {
-  warn << "signal after deallaction";
+  warn << "signal after deallocation";
   if (file && line) {
     warnx << " (on coordvar allocated from " << file << ":" << line << ")";
   } else {
