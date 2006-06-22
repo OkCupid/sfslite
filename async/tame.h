@@ -880,7 +880,8 @@ public:
 
   // the cancelable function can call this if it deems that it is too
   // late to cancel.
-  void toolate () { _toolate = true; _cb = NULL; }
+  void toolate () { _toolate = true; clear (); }
+  void clear () { _cb = NULL; }
 private:
   cbv::ptr _cb;
   bool _toolate, _queued_cancel, _cancelled;
