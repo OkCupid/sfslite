@@ -579,14 +579,23 @@ class joiner_t : public virtual refcount,
 public:
   joiner_t (ptr<join_group_pointer_t<T1,T2,T3,T4> > p, const char *l,
 	    ptr<must_deallocate_t> md) 
-    : _weak_ref (p->make_weak_ref ()), _loc (l), _must_deallocate (md) 
+    : _weak_ref (p->make_weak_ref ()), _loc (l), _must_deallocate (md),
+      _joined (false)
   {
     _must_deallocate->add (this);
   }
-  ~joiner_t () { _must_deallocate->rem (this); }
+
+  ~joiner_t () 
+  { 
+    if (!_joined && _weak_ref.pointer ())
+      _weak_ref.pointer ()->remove_join ();
+    _must_deallocate->rem (this); 
+  }
 
   void join (value_set_t<T1,T2,T3,T4> w)
   {
+    _joined = true;
+
     // Need at least one return to the bottom event loop between
     // a call into the callback and a join.
     delaycb (0, 0, wrap (mkref (this), &joiner_t<T1,T2,T3,T4>::join_cb, w));
@@ -615,6 +624,7 @@ private:
   weak_ref_t<join_group_pointer_t<T1,T2,T3,T4> > _weak_ref;
   const char *_loc;
   ptr<must_deallocate_t> _must_deallocate;
+  bool _joined;
 };
 
 
