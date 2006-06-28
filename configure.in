@@ -321,11 +321,11 @@ dnl
 SHORTVERSION=`echo ${VERSION} | awk -F. '{ print $1 "." $2 }' `
 AC_SUBST(SHORTVERSION)
 if test -z "$sfslibdir"; then
-	sfslibdirp='${pkglibdir}-${SHORTVERSION}'
+	sfslibpdir='${pkglibdir}-${SHORTVERSION}'
 	sfslibdir='${pkglibdir}-${SHORTVERSION}${sfstagdir}'
 fi
 AC_SUBST(sfslibdir)
-AC_SUBST(sfslibdirp)
+AC_SUBST(sfslibpdir)
 if test -z "$sfsincludedir"; then
 	sfsincludedirp='${pkgincludedir}-${SHORTVERSION}'
 	sfsincludedir='${pkgincludedir}-${SHORTVERSION}${sfstagdir}'

@@ -22,10 +22,11 @@ DIST_SUBDIRS = $(SUBDIRS)
 # end sfslite change
 #
 
-
 noinst_HEADERS = nfsconf.h
 
-EXTRA_DIST = setup autoconf.sed .cvsignore STANDARDS 
+sfslibp_DATA = acsfs.m4
+
+EXTRA_DIST = setup autoconf.sed .cvsignore STANDARDS acsfs.m4
 
 CLEANFILES = core *.core *~
 

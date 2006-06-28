@@ -587,8 +587,9 @@ public:
 
   ~joiner_t () 
   { 
-    if (!_joined && _weak_ref.pointer ())
+    if (!_joined && _weak_ref.pointer ()) {
       _weak_ref.pointer ()->remove_join ();
+    }
     _must_deallocate->rem (this); 
   }
 
