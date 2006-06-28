@@ -58,9 +58,9 @@ mmcd_shutdown (void *rgn, size_t sz, int fd, char *fn, int sig)
   munmap (rgn, sz);
   close (fd);
 
-  //
-  // XXX - this might segfault other processes ; not sure
-  //
+  /*
+   *  XXX - this might segfault other processes ; not sure
+   */ 
   unlink (fn);
 }
 
@@ -137,10 +137,10 @@ main (int argc, char *argv[])
 
   setprogname (argv[0]);
 
-  //
-  // make the file the right size by writing our time
-  // there
-  //
+  /* 
+   * make the file the right size by writing our time
+   * there
+   */
   mmcd_gettime (ts);
   ts[1]  = ts[0];
 
