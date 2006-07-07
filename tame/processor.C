@@ -8,6 +8,7 @@
 // times.
 //
 bhash<u_int> _generic_cb_tab;
+bhash<u_int> _generic_mk_cv_tab;
 
 static u_int cross (u_int a, u_int b) 
 {
@@ -18,8 +19,14 @@ static u_int cross (u_int a, u_int b)
 bool generic_cb_exists (u_int a, u_int b) 
 { return _generic_cb_tab[cross (a,b)]; }
 
+bool generic_mk_cv_exists (u_int a, u_int b)
+{ return _generic_mk_cv_tab[cross (a,b)]; }
+
 void generic_cb_declare (u_int a, u_int b)
 { _generic_cb_tab.insert (cross (a,b)); }
+
+void generic_mk_cv_declare (u_int a, u_int b)
+{ _generic_mk_cv_tab.insert (cross (a,b)); }
 
 //
 //-----------------------------------------------------------------------
@@ -421,53 +428,125 @@ tame_nonblock_callback_t::cb_name () const
 {
   strbuf b;
   size_t N_w = n_args ();
-  u_int N_p = _call_with->size ();
+  size_t N_p = _call_with->size ();
   b << "__nonblock_cb_" << N_w << "_" << N_p;
   return b;
 }
 
+str
+tame_nonblock_callback_t::mk_cv_name () const
+{
+  strbuf b;
+  size_t N_w = n_args ();
+  size_t N_p = _call_with->size ();
+  b << "__make_cv_" << N_w << "_" << N_p;
+  return b;
+}
+
+str mkseq (const str &f, size_t n, bool first)
+{
+  strbuf b;
+  static rxx pct_rxx ("%");
+  vec<str> pieces;
+
+  split (&pieces, pct_rxx, f);
+  
+  for (size_t i = 1; i <= n; i++) {
+    if (!first) b << ", ";
+    else first = false;
+    if (f[0] == '%') b << i;
+    for (size_t j = 0; j < pieces.size (); j++) {
+      b << pieces[j];
+      if (j < pieces.size () - 1) b << i;
+    }
+    if (f[f.len () - 1] == '%') b << i;
+  }
+  return b;
+}
+
 void
-tame_nonblock_callback_t::output_generic (strbuf &b)
+tame_nonblock_callback_t::output_generic_mk_cv (my_strbuf_t &b)
 {
   size_t N_w = n_args ();
-  u_int N_p = _call_with->size ();
+  size_t N_p = _call_with->size ();
+  if (generic_mk_cv_exists (N_w, N_p))
+    return;
+
+  generic_mk_cv_declare (N_w, N_p);
+  b << "template<class G";
+  b.mycat (mkseq ("class W%", N_w, false));
+  b.mycat (mkseq ("class P%", N_p, false));
+  b << ">\n";
+  b << "static ";
+  if (N_p == 0) {
+    b << "cbv\n";
+  } else {
+    b << "typename callback<void";
+    b.mycat (mkseq ("P%", N_p, false));
+    b << ">::ref\n";
+  }
+
+  b.mycat (mk_cv_name ());
+
+  b << " (ptr<closure_t> c, const char *loc, G &g";
+  b.mycat (mkseq ("const W% &w%", N_w, false));
+  b.mycat (mkseq ("P% &v%", N_p, false));
+  b << ")\n"
+    << "{\n"
+    << "  g.launch_one (c);\n"
+    << "  return wrap (";
+  b.mycat (cb_name ());
+  if (N_p || N_w) {
+    b << "<";
+    b.mycat (mkseq ("P%", N_p, true));
+    b.mycat (mkseq ("W%", N_w, N_p == 0));
+    b << ">";
+  }
+  b << ",\n";
+  b << "\tc, g.make_joiner (loc),\n";
+  if (N_p) {
+    b << "\trefset_t<";
+    b.mycat (mkseq ("P%", N_p, true));
+    b << "> (";
+    b.mycat (mkseq ("v%", N_p, true));
+    b << "), \n";
+  }
+
+  b << "\tvalue_set_t<";
+  b.mycat (mkseq ("W%", N_w, true));
+  b << "> (";
+  b.mycat (mkseq ("w%", N_w, true));
+  b << "));\n"
+    << "}\n\n";
+}
+
+void
+tame_nonblock_callback_t::output_generic (my_strbuf_t &b)
+{
+  size_t N_w = n_args ();
+  size_t N_p = _call_with->size ();
 
   if (generic_cb_exists (N_w, N_p))
     return;
-  bool first = true;
 
   generic_cb_declare (N_w, N_p);
   if (N_p > 0 || N_w > 0) {
     b << "template<";
-    for (u_int i = 1; i <= N_p; i++) {
-      if (first) first = false;
-      else b << ", ";
-      b << "class P" << i;
-    }
-    for (u_int i = 1; i <= N_w; i++) {
-      if (first) first = false;
-      else b << ", ";
-    b << "class W" << i;
-    }
+    b.mycat (mkseq ("class P%", N_p, true));
+    b.mycat (mkseq ("class W%", N_w, N_p == 0));
     b << "> ";
   }
   b << "static void\n";
   b.cat (cb_name ().cstr (), true);
   b << " (ptr<closure_t> hold, "
     << "ptr<joiner_t<";
-  for (u_int i = 1; i <= N_w; i++) {
-    if (i != 1) b << ", ";
-    b << "W" << i;
-  }
+  b.mycat (mkseq ("W%", N_w, true));
   b << "> > j";
   
   if (N_p) {
     b << ",\n";
     b << "\t\trefset_t<";
-    for (u_int i = 1; i <= N_p; i++) {
-      if (i != 1) b << ", ";
-      b << "P" << i;
-    }
+    b.mycat (mkseq ("P%", N_p, true));
     b << "> rs";
   }
 
@@ -475,30 +554,23 @@ tame_nonblock_callback_t::output_generic (strbuf &b)
   // for now this makes things much simpler.
   b << ",\n";
   b << "\t\tvalue_set_t<";
-  for (u_int i = 1; i <= N_w; i++) {
-    if (i != 1) b << ", ";
-    b << "W" << i;
-  }
+  b.mycat (mkseq ("W%", N_w, true));
   b << "> w";
 
   if (N_p) {
     b << ",\n\t\t";
-    for (u_int i = 1; i <= N_p; i++) {
-      if (i != 1) b << ", ";
-      b << "P" << i << " v" << i;
-    }
+    b.mycat (mkseq ("P% v%", N_p, true));
   }
   b << ")\n{\n";
   if (N_p) {
     b << "  rs.assign (";
-    for (u_int i = 1; i <= N_p; i++) {
-      if (i != 1) b << ", ";
-      b << "v" << i;
-    }
+    b.mycat (mkseq ("v%", N_p, true));
     b << ");\n";
   }
   b << "  j->join (w);\n"
     << "}\n\n";
+
+  output_generic_mk_cv (b);
 }
   
 void
@@ -852,7 +924,7 @@ tame_fn_t::output (outputter_t *o)
 void
 tame_fn_t::output_generic (outputter_t *o)
 {
-  strbuf b;
+  my_strbuf_t b;
   output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL);
   for (u_int i = 0; i < _nbcbs.size (); i++) {
     _nbcbs[i]->output_generic (b);
@@ -1026,46 +1098,21 @@ tame_nonblock_callback_t::output (outputter_t *o)
   my_strbuf_t b;
   output_mode_t om = o->switch_to_mode (OUTPUT_PASSTHROUGH);
 
-  strbuf tmp;
-  tmp << "(" << join_group ().name () << ")";
-  str jgn = tmp;
+  str jgn = join_group ().name ();
   str loc = state.loc (_line_number);
+
+  b.mycat (mk_cv_name ());
+  b << "(" << CLOSURE_GENERIC << ", \"";
+  b.mycat (loc);
+  b << "\", " << jgn;
   
-  b << "(" << jgn << ".launch_one (" CLOSURE_GENERIC "), "
-    << "wrap (";
-  b.mycat (cb_name ());
-
-  if (_call_with->size () || n_args ()) {
-    b << " <";
-
-    bool first = true;
-
-    first = _call_with->output_vars (b, first, "typeof (", ")");
-    first = output_vars (b, first, "typeof (", ")");
-    
-    b << ">";
+  if (n_args ()) {
+    output_vars (b, false, "", "");
   }
-  b << ", " CLOSURE_GENERIC ", " << jgn 
-    << ".make_joiner (\"" << loc << "\")";
+  if (_call_with->size ())
+    _call_with->output_vars (b, false, NULL, NULL);
 
-  if (_call_with->size ()) {
-    b << ", refset_t<";
-    _call_with->output_vars (b, true, "TTT (", ")");
-    b << "> (";
-    _call_with->output_vars (b, true, "", "");
-    b << ")";
-  }
-
-  // note we ouput an empty value set if there are no values
-  // to wrap in.
-  b << ", value_set_t<";
-  if (n_args ()) 
-    output_vars (b, true, "typeof (", ")");
-  b << "> (";
-  if (n_args ()) 
-    output_vars (b, true, NULL, NULL);
-
-  b << ")))";
+  b << ")";
 
   o->output_str (b);
   o->switch_to_mode (om);

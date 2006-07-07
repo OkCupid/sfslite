@@ -296,7 +296,7 @@ public:
     : _line_number (ln), _call_with (l) {}
 
   virtual void output (outputter_t *o) { tame_env_t::output (o); }
-  virtual void output_generic (strbuf &b) = 0;
+  virtual void output_generic (my_strbuf_t &b) = 0;
   virtual void set_nonblock (tame_nonblock_t *n) {}
   
   ptr<expr_list_t> call_with () { return _call_with; }
@@ -311,7 +311,7 @@ public:
 			   ptr<expr_list_t> l);
   ~tame_block_callback_t () {}
   void output (outputter_t *o);
-  void output_generic (strbuf &b) {}
+  void output_generic (my_strbuf_t &b) {}
   int global_cb_ind () const { return _cb_ind; }
 private:
   tame_fn_t *_parent_fn;
@@ -325,10 +325,12 @@ public:
 			    ptr<expr_list_t> wi)
     : tame_callback_t (ln, l), _nonblock (n), _wrap_in (wi) {}
   void output (outputter_t *o);
-  void output_generic (strbuf &b);
+  void output_generic (my_strbuf_t &b);
+  void output_generic_mk_cv (my_strbuf_t &b);
   void set_wrap_in (ptr<expr_list_t> l) { _wrap_in = l; }
   void set_nonblock (tame_nonblock_t *n) { _nonblock = n; }
   str cb_name () const;
+  str mk_cv_name () const;
 
   var_t join_group () const;
   bool output_vars (strbuf &b, bool first,
