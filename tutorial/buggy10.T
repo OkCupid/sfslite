@@ -11,7 +11,7 @@ struct state_t {
 
   str host;
   int port;
-  join_group_t<int> window;
+  coordgroup_t<int> window;
   vec<int> res;
   vec<clnt_stat> errs;
   ptr<axprt_stream> x;
