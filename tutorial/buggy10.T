@@ -19,8 +19,8 @@ struct state_t {
   int n_tot, window_sz;
   int i;
 
-  void launch (cbb ceocc, CLOSURE);
-  void relaunch (cbb ceocc, CLOSURE);
+  void launch (cbb cv, CLOSURE);
+  void relaunch (cbb cv, CLOSURE);
 };
 
 static void foofoo (cbi cb)
@@ -65,11 +65,12 @@ void state_t::launch (cbb cv)
 }
 
 TAMED
-void state_t::relaunch (cbb cceoc)
+void state_t::relaunch (cbb cv)
 {
   VARS {
     bool err_occurred (false);
     int j;
+    int return_id;
   }
   // a join is needed for every call that returns
   for (j = 0; j < n_tot; j++) {
@@ -77,25 +78,24 @@ void state_t::relaunch (cbb cceoc)
     // Block until a call has returned; when it has, get
     // the index variable associated with the call, and assign
     // it to 'return_id' for the scope of the JOIN block.
-    JOIN (window, return_id) {
-      if (errs[return_id]) {
-	err_occurred = true;
-	warn << "RPC error: " << errs[return_id] << "\n";
-      } else {
-	warn << "Success " << return_id << ": " << res[return_id] << "\n";
-	
-	// in the common case, for every call that returns,
-	// another should be launched. but don't bother launching
-	// more if an error occurred.
-	if (i < n_tot && !err_occurred) {
-	  cli->call (EX_RANDOM, NULL, &res[i], @[window,i](errs[i]));
-	  i++;
-	}
+    WAIT (window, return_id);
+    if (errs[return_id]) {
+      err_occurred = true;
+      warn << "RPC error: " << errs[return_id] << "\n";
+    } else {
+      warn << "Success " << return_id << ": " << res[return_id] << "\n";
+      
+      // in the common case, for every call that returns,
+      // another should be launched. but don't bother launching
+      // more if an error occurred.
+      if (i < n_tot && !err_occurred) {
+	cli->call (EX_RANDOM, NULL, &res[i], @[window,i](errs[i]));
+	i++;
       }
     }
   }
   warn << "All done...\n";
-  cceoc->signal (!err_occurred);
+  cv->signal (!err_occurred);
 }
 
 state_t *s;

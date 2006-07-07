@@ -851,9 +851,6 @@ struct coordvar_t {
 
 extern int TAME_GLOBAL_INT;
 
-// Tame template type
-#define TTT(x) typeof(UNREF(typeof(x)))
-
 void start_join_group_collection ();
 
 
