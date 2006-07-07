@@ -2011,3 +2011,22 @@ then
 		  Define if we're compiling with full sfsmisc library)
 fi
 ])
+dnl SFS_SET_CLOCK
+dnl
+dnl  Check for function in sfs that allows different types of clocks
+dnl  to be set.
+dnl
+AC_DEFUN([SFS_SET_CLOCK],
+[AC_CACHE_CHECK(for sfs_set_clock, sfs_cv_set_clock,
+[
+CC_REAL=$CC
+CC=$CXX
+AC_TRY_COMPILE([ #include "async.h" ], sfs_set_clock (SFS_CLOCK_TIMER);,
+	 	sfs_cv_set_clock=yes)
+CC=$CC_REAL
+])
+if test "$sfs_cv_set_clock" = "yes"
+then
+	AC_DEFINE(HAVE_SFS_SET_CLOCK, 1, Toggle SFS core clock)
+fi
+])
