@@ -856,6 +856,45 @@ extern int TAME_GLOBAL_INT;
 
 void start_join_group_collection ();
 
+
+/*
+ * Expand  @(b1,b2,b3,b4) using the make_cvX functions...
+ */
+inline cbv 
+make_cv0 (ptr<closure_t> c, int blockid, int lineno)
+{
+  return wrap (c->make_wrapper (blockid, lineno), 
+	       &closure_wrapper_t::block_cb0);
+}
+
+template<class B1> 
+typename callback<void, B1>::ref
+make_cv1 (ptr<closure_t> c, int blockid, int lineno, B1 &b1)
+{
+  return wrap (c->make_wrapper (blockid, lineno),
+	       &closure_wrapper_t::block_cb1<B1>,
+	       refset_t<B1> (b1));
+}
+
+template<class B1, class B2> 
+typename callback<void, B1, B2>::ref
+make_cv2 (ptr<closure_t> c, int blockid, int lineno, B1 &b1, B2 &b2)
+{
+  return wrap (c->make_wrapper (blockid, lineno),
+	       &closure_wrapper_t::block_cb2<B1,B2>,
+	       refset_t<B1,B2> (b1,b2));
+}
+
+template<class B1, class B2, class B3>
+typename callback<void, B1, B2, B3>::ref
+make_cv3 (ptr<closure_t> c, int blockid, int lineno, B1 &b1, B2 &b2, B3 &b3)
+{
+  return wrap (c->make_wrapper (blockid, lineno),
+	       &closure_wrapper_t::block_cb3<B1,B2,B3>,
+	       refset_t<B1,B2,B3> (b1,b2,b3));
+}
+
+
 /**
  * A helper class useful for canceling an TAME'd function midstream.
  */

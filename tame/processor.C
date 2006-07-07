@@ -1011,22 +1011,10 @@ tame_block_callback_t::output (outputter_t *o)
 {
   my_strbuf_t b;
   output_mode_t om = o->switch_to_mode (OUTPUT_PASSTHROUGH);
-  b << "wrap ("
-    << TAME_CLOSURE_NAME << "->make_wrapper ("
-    << _block->id ()  << ", " << _line_number << "), "
-    << "&closure_wrapper_t::block_cb" << _call_with->size ();
-  if (_call_with->size ()) {
-    b << "<";
-    _call_with->output_vars (b, true, "TTT(", ")");
-    b << ">";
-  }
-  if (_call_with->size ()) {
-    b << ", refset_t<";
-    _call_with->output_vars (b, true, "TTT(", ")");
-    b << "> (";
-    _call_with->output_vars (b, true, "", "");
-    b << ")";
-  }
+  b << "make_cv" << _call_with->size () << " ("
+    << CLOSURE_GENERIC << ", " << _block->id () << ", " 
+    << _line_number;
+  _call_with->output_vars (b, false);
   b << ")";
   o->output_str (b);
   o->switch_to_mode (om);
