@@ -18,6 +18,7 @@ $a\
 / HAVE_GMP_CXX_OPS/b pdefine
 / HAVE_INET_ATON/b pdefine
 / HAVE_INT32_T/b pdefine
+/ HAVE_SSIZE_T/b pdefine
 / HAVE_INT64_T/b pdefine
 / HAVE_MEMCPY/b pdefine
 / HAVE_MEMORY_H/b pdefine
