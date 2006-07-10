@@ -1599,12 +1599,37 @@ dnl
 AC_DEFUN([SFS_SFS],
 [AC_ARG_WITH(sfs,
 --with-sfs[[=PATH]]         specify location of SFS libraries)
+AC_ARG_WITH(heavy,
+--with-heavy                do not use sfslite)
 if test "$with_sfs" = yes -o "$with_sfs" = ""; then
     for dir in "$prefix" /usr/local /usr; do
-	if test -f $dir/lib/sfs/libasync.la; then
-	    with_sfs=$dir
+
+	dnl
+	dnl sfs${sfstagdir} in there for bkwds comptability
+	dnl
+	sfsprefixes="sfs${sfstagdir} sfs"
+
+	dnl
+	dnl can turn off sfslite with the --with-heavy flag
+	dnl
+	if test ! "$with_heavy" -o "$with_heavy" = "no"; then
+	   sfsprefixes="sfslite${sfstagdir} $sfsprefixes"
+	fi
+
+	BREAKOUT=0
+	for sfsprfx in $sfsprefixes
+	do
+	    if test -f $dir/lib/${sfsprfx}/libasync.la; then
+		with_sfs=$dir
+		BREAKOUT=1
+		break
+	    fi
+	done
+
+	if test $BREAKOUT -eq 1; then
 	    break
 	fi
+
     done
 fi
 case "$with_sfs" in
@@ -1630,18 +1655,16 @@ if test -f ${with_sfs}/Makefile -a -f ${with_sfs}/autoconf.h; then
     done
     CPPFLAGS="$CPPFLAGS -I${with_sfs}/svc"
     LIBASYNC=${with_sfs}/async/libasync.la
+    LIBSVC=${with_sfs}/svc/libsvc.la
     LIBARPC=${with_sfs}/arpc/libarpc.la
     LIBSFSCRYPT=${with_sfs}/crypt/libsfscrypt.la
     LIBSFSMISC=${with_sfs}/sfsmisc/libsfsmisc.la
-    LIBSVC=${with_sfs}/svc/libsvc.la
-    LIBSFS=${with_sfs}/libsfs/libsfs.la
     MALLOCK=${with_sfs}/sfsmisc/mallock.o
-    RPCC=${with_sfs}/rpcc/rpcc
     TAME=${with_sfs}/tame/tame
-elif test -f ${with_sfs}/include/sfs/autoconf.h \
-	-a -f ${with_sfs}/lib/sfs/libasync.la; then
-    sfsincludedir="${with_sfs}/include/sfs"
-    sfslibdir=${with_sfs}/lib/sfs
+elif test -f ${with_sfs}/include/${sfsprfx}/autoconf.h \
+	-a -f ${with_sfs}/lib/${sfsprfx}/libasync.la; then
+    sfsincludedir="${with_sfs}/include/${sfsprfx}"
+    sfslibdir=${with_sfs}/lib/${sfsprfx}
     if egrep '#define DMALLOC' ${sfsincludedir}/autoconf.h > /dev/null; then
 	test -z "$with_dmalloc" -o "$with_dmalloc" = no && with_dmalloc=yes
     else
@@ -1653,23 +1676,32 @@ elif test -f ${with_sfs}/include/sfs/autoconf.h \
     LIBSFSCRYPT=${sfslibdir}/libsfscrypt.la
     LIBSFSMISC=${sfslibdir}/libsfsmisc.la
     LIBSVC=${sfslibdir}/libsvc.la
-    LIBSFS=${with_sfs}/lib/libsfs.a
     MALLOCK=${sfslibdir}/mallock.o
-
     SFS_PATH_PROG(rpcc, ${sfslibdir})
-    if test "$PATH_RPCC" -a -x "$PATH_RPCC"; then
+    if test "$PATH_RPCC" -a -x "$PATH_RPCC" 
+    then
 	RPCC="$PATH_RPCC"
     fi
-
     SFS_PATH_PROG(tame, ${sfslibdir})
-    if test "$PATH_TAME" -a -x "$PATH_TAME"; then
+    if test "$PATH_TAME" -a -x "$PATH_TAME"
+    then
 	TAME="$PATH_TAME"
     fi
-
 else
     AC_MSG_ERROR("Can\'t find SFS libraries")
 fi
-SFS_NOPAGING
+
+if test "$enable_static" = yes -a -z "${NOPAGING+set}"; then
+    case "$host_os" in
+	openbsd*)
+	    test "$ac_cv_prog_gcc" = yes && NOPAGING="-Wl,-Bstatic,-N"
+	    MALLOCK=		# mallock.o panics the OpenBSD kernel
+	;;
+	freebsd*)
+	    test "$ac_cv_prog_gcc" = yes && NOPAGING="-Wl,-Bstatic"
+	;;
+    esac
+fi
 
 sfslibdir='$(libdir)/sfs'
 sfsincludedir='$(libdir)/include'
@@ -1681,7 +1713,6 @@ AC_SUBST(LIBARPC)
 AC_SUBST(LIBSFSCRYPT)
 AC_SUBST(LIBSFSMISC)
 AC_SUBST(LIBSVC)
-AC_SUBST(LIBSFS)
 AC_SUBST(RPCC)
 AC_SUBST(TAME)
 AC_SUBST(MALLOCK)
@@ -1690,11 +1721,18 @@ AC_SUBST(NOPAGING)
 SFS_GMP
 SFS_DMALLOC
 
-LDEPS='$(LIBSFSMISC) $(LIBSVC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC)'
-LDADD="$LDEPS "'$(LIBGMP)'' $(LIBPY)'
+if test "$with_sfsmisc"  = "yes"; 
+then
+	LDEPS='$(LIBSFSMISC) $(LIBSVC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC)'
+else
+	LDEPS='$(LIBSFSMISC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC)'
+fi
+
+LDADD="$LDEPS "'$(LIBGMP) $(LIBPY)'
 AC_SUBST(LDEPS)
 AC_SUBST(LDADD)
 ])
+
 dnl
 dnl Test user ID and group ID required for SFS
 dnl
