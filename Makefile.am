@@ -22,7 +22,7 @@ ARPCGEN = arpcgen
 else
 LIBSFS = 
 ARPCGEN =
-fi
+endif
 
 SUBDIRS = async rpcc arpc crypt $(ARPCGEN) $(LIBSFS) $(SVC) sfsmisc contrib \
 	tame libtame $(TUTORIAL) 
