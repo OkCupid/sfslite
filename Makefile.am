@@ -11,13 +11,15 @@ TUTORIAL =
 endif
 
 if USE_SFSMISC
-SVC = svc
+SVC = svc libsfs
+ARPCGEN = arpcgen
 else
 SVC =
+ARPCGEN = 
 endif
 
-SUBDIRS = async rpcc arpc crypt $(SVC) sfsmisc contrib tame libtame \
-	$(TUTORIAL) 
+SUBDIRS = async rpcc arpc crypt $(ARPCGEN) $(SVC) sfsmisc contrib tame \
+	libtame $(TUTORIAL) 
 DIST_SUBDIRS = $(SUBDIRS)
 #
 # end sfslite change
@@ -108,7 +110,7 @@ aux-all aux-mostlyclean aux-clean aux-distclean aux-maintainer-clean:
 
 .PHONY: rpcclean bldclean
 rpcclean:
-	for dir in arpc tutorial ; do \
+	for dir in arpc $(SVC) tutorial ; do \
 		(cd $$dir && $(MAKE) rpcclean); \
 	done
 

@@ -121,8 +121,23 @@ main (int argc, char **argv)
     fprintf (stderr, "%s: %s\n", argv[1], clnt_sperrno (err));
   else if (res)
     fprintf (stderr, "%s: %s\n", argv[1], strerror (res));
-  else if (sendfd (0, fd) >= 0)
+  else if (sendfd (0, fd) >= 0) {
+#ifdef __APPLE__
+    /* Work around garbage-collection bug in MacOS where passed socket
+     * becomes invalid if we exit too soon. */
+    if (fd < FD_SETSIZE) {
+      fd_set fds;
+      struct timeval tv;
+
+      FD_ZERO (&fds);
+      FD_SET (fd, &fds);
+      tv.tv_sec = 60;
+      tv.tv_usec = 0;
+      select (fd + 1, &fds, NULL, NULL, &tv);
+    }
+#endif /* __APPLE__ */
     exit (0);
+  }
   else
     perror ("suidconnect: sendfd");
   exit (1);

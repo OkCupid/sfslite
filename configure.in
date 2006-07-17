@@ -446,7 +446,7 @@ SFS_MISC
 
 AC_OUTPUT(Makefile async/Makefile rpcc/Makefile arpc/Makefile
 	crypt/Makefile sfsmisc/Makefile contrib/Makefile tame/Makefile
-	svc/Makefile libtame/Makefile)
+	svc/Makefile libtame/Makefile arpcgen/Makefile libsfs/Makefile)
 
 if test "$with_tutorial" = "yes"; then
 	AC_OUTPUT(tutorial/Makefile)

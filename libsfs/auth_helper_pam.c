@@ -31,6 +31,7 @@
 #endif /* !HAVE_PAM_PAM_APPL_H */
 
 static suio *chatter;
+static int conversed;
 
 static int
 rpc_conv (int num_msg, const struct pam_message **msg,
@@ -62,6 +63,7 @@ rpc_conv (int num_msg, const struct pam_message **msg,
     case PAM_PROMPT_ECHO_ON:
       {
 	char *text;
+	conversed = 1;
 	suio_copy (chatter, msg[i]->msg, strlen (msg[i]->msg));
 	suio_copy (chatter, "", 1);
 	text = suio_flatten (chatter);
@@ -123,6 +125,16 @@ authhelp_go (void)
     authhelp_approve (u, text);
 
     xfree (text);
+  }
+  else if (!conversed) {
+    fprintf (stderr, "%s PAM(%s): %s\n", progname,
+	     service, pam_strerror (pamh, err));
+    if (!chdir ("/etc/pam.d") && access (service, F_OK))
+      fprintf (stderr, "%s PAM(%s): %s\n", progname, service,
+	       "Try running: ln -s system-auth /etc/pam.d/sfs");
+    else
+      fprintf (stderr, "%s PAM(%s): make PAM config allows service %s"
+	       " or other\n", progname, service, service);
   }
 
 #if 0

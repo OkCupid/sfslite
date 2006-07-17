@@ -27,7 +27,7 @@
 #include <unistd.h>
 #include <stdio.h>
 
-static int use_tty;		/* For debugging */
+static int use_rpc;		/* For debugging */
 char *progname;
 char *service;
 char *user;
@@ -106,26 +106,26 @@ authhelp_approve_rpc (char *u, char *hello)
 char *
 authhelp_input (char *prompt, int echo)
 {
-  if (use_tty)
-    return authhelp_input_tty (prompt, echo);
-  else
+  if (use_rpc)
     return authhelp_input_rpc (prompt, echo);
+  else
+    return authhelp_input_tty (prompt, echo);
 }
 
 void
 authhelp_approve (char *user, char *hello)
 {
-  if (use_tty)
-    authhelp_approve_tty (user, hello);
-  else
+  if (use_rpc)
     authhelp_approve_rpc (user, hello);
+  else
+    authhelp_approve_tty (user, hello);
 }
 
 static void usage (void) __attribute__ ((noreturn));
 static void
 usage (void)
 {
-  fprintf (stderr, "usage: %s [-t] <service> [<user>]\n", progname);
+  fprintf (stderr, "usage: %s [-r] <service> [<user>]\n", progname);
   exit (1);
 }
 
@@ -144,10 +144,14 @@ main (int argc, char **argv)
    * avoid any kind of "login -froot" type bugs here.
    */
   optind = 1;
-  if (optind < argc && !strcmp (argv[optind], "-t")) {
-    use_tty = 1;
+  if (optind < argc && !strcmp (argv[optind], "--"))
+    optind++;
+  else if (optind < argc && !strcmp (argv[optind], "-r")) {
+    use_rpc = 1;
     optind++;
   }
+  else if (optind < argc && argv[optind][0] == '-')
+    usage ();
 
   if (optind + 2 == argc)
     user = argv[optind+1];

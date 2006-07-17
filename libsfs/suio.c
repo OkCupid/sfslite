@@ -362,7 +362,7 @@ __suio_copy (struct suio *uio, const char *data, u_int len)
   }
 
   dp = uio->uio_dp;
-  n = len < (u_int) uio->uio_dspace ? len : uio->uio_dspace;
+  n = len < (u_int) uio->uio_dspace ? len : (u_int) uio->uio_dspace;
   memcpy (dp, data, n);
   __suio_addiov (uio, dp, n);
  

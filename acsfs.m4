@@ -1689,6 +1689,11 @@ elif test -f ${with_sfs}/include/${sfsprfx}/autoconf.h \
     then
 	TAME="$PATH_TAME"
     fi
+    SFS_PATH_PROG(arpcgen, ${sfslibdir})
+    if test "$PATH_ARPCGEN" -a -x "$PATH_ARPCGEN"
+    then
+	ARPCGEN="$PATH_ARPCGEN"
+    fi
 else
     AC_MSG_ERROR("Can\'t find SFS libraries")
 fi
@@ -1717,6 +1722,7 @@ AC_SUBST(LIBSFSMISC)
 AC_SUBST(LIBSVC)
 AC_SUBST(LIBTAME)
 AC_SUBST(RPCC)
+AC_SUBST(ARPCGEN)
 AC_SUBST(TAME)
 AC_SUBST(MALLOCK)
 AC_SUBST(NOPAGING)
