@@ -1659,6 +1659,7 @@ if test -f ${with_sfs}/Makefile -a -f ${with_sfs}/autoconf.h; then
     LIBARPC=${with_sfs}/arpc/libarpc.la
     LIBSFSCRYPT=${with_sfs}/crypt/libsfscrypt.la
     LIBSFSMISC=${with_sfs}/sfsmisc/libsfsmisc.la
+    LIBTAME=${with_sfs}/libtame/libtame.la
     MALLOCK=${with_sfs}/sfsmisc/mallock.o
     TAME=${with_sfs}/tame/tame
 elif test -f ${with_sfs}/include/${sfsprfx}/autoconf.h \
@@ -1676,6 +1677,7 @@ elif test -f ${with_sfs}/include/${sfsprfx}/autoconf.h \
     LIBSFSCRYPT=${sfslibdir}/libsfscrypt.la
     LIBSFSMISC=${sfslibdir}/libsfsmisc.la
     LIBSVC=${sfslibdir}/libsvc.la
+    LIBTAME=${sfslibdir}/libtame.la
     MALLOCK=${sfslibdir}/mallock.o
     SFS_PATH_PROG(rpcc, ${sfslibdir})
     if test "$PATH_RPCC" -a -x "$PATH_RPCC" 
@@ -1713,6 +1715,7 @@ AC_SUBST(LIBARPC)
 AC_SUBST(LIBSFSCRYPT)
 AC_SUBST(LIBSFSMISC)
 AC_SUBST(LIBSVC)
+AC_SUBST(LIBTAME)
 AC_SUBST(RPCC)
 AC_SUBST(TAME)
 AC_SUBST(MALLOCK)
@@ -1723,9 +1726,9 @@ SFS_DMALLOC
 
 if test "$with_sfsmisc"  = "yes"; 
 then
-	LDEPS='$(LIBSFSMISC) $(LIBSVC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC)'
+	LDEPS='$(LIBTAME) $(LIBSFSMISC) $(LIBSVC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC)'
 else
-	LDEPS='$(LIBSFSMISC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC)'
+	LDEPS='$(LIBTAME) $(LIBSFSMISC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC)'
 fi
 
 LDADD="$LDEPS "'$(LIBGMP) $(LIBPY)'

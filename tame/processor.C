@@ -121,7 +121,7 @@ type_t::to_str () const
 }
 
 str
-type_t::to_str_w_template_args () const
+type_t::to_str_w_template_args (bool p) const
 {
   strbuf b;
   b << _base_type;
@@ -129,7 +129,7 @@ type_t::to_str_w_template_args () const
     b << _template_args;
   b << " ";
 
-  if (_pointer)
+  if (p && _pointer)
     b << _pointer;
 
   return b;
@@ -322,7 +322,7 @@ str
 tame_fn_t::reenter_fn () const
 {
   strbuf b;
-  b << closure ().type ().base_type ()
+  b << closure ().type ().to_str_w_template_args (false)
     << "::reenter";
   return b;
 }

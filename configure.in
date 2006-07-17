@@ -249,7 +249,7 @@ done
 dnl
 dnl Everything can come AFTER the standard libraries
 dnl
-for lib in arpc sfsmisc sfsrodb adb; do
+for lib in arpc sfsmisc libtame; do
     CPPFLAGS="$CPPFLAGS -I"'$(top_srcdir)'"/$lib"
 done
 
@@ -269,7 +269,9 @@ AC_SUBST(LIBSFSRODB)
 LIBSFSRODB='$(top_builddir)/sfsrodb/libsfsrodb.la'
 AC_SUBST(LIBSFSMISC)
 LIBSFSMISC='$(top_builddir)/sfsmisc/libsfsmisc.la'
-LDADD='$(LIBSFSMISC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC) $(LIBGMP)'
+AC_SUBST(LIBTAME)
+LIBTAME='$(top_builddir)/libtame/libtame.la'
+LDADD='$(LIBTAME) $(LIBSFSMISC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC) $(LIBGMP)'
 LDADD="$LDADD "'$(LIBPY)'
 
 if test "$enable_shared" = yes; then
@@ -444,7 +446,7 @@ SFS_MISC
 
 AC_OUTPUT(Makefile async/Makefile rpcc/Makefile arpc/Makefile
 	crypt/Makefile sfsmisc/Makefile contrib/Makefile tame/Makefile
-	svc/Makefile)
+	svc/Makefile libtame/Makefile)
 
 if test "$with_tutorial" = "yes"; then
 	AC_OUTPUT(tutorial/Makefile)

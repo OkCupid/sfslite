@@ -16,7 +16,8 @@ else
 SVC =
 endif
 
-SUBDIRS = async rpcc arpc crypt $(SVC) sfsmisc contrib tame $(TUTORIAL) 
+SUBDIRS = async rpcc arpc crypt $(SVC) sfsmisc contrib tame libtame \
+	$(TUTORIAL) 
 DIST_SUBDIRS = $(SUBDIRS)
 #
 # end sfslite change

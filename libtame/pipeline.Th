@@ -1,0 +1,90 @@
+
+// -*-c++-*-
+/* $Id: tame.h 2077 2006-07-07 18:24:23Z max $ */
+
+#ifndef _LIBTAME_PIPELINE_H_
+#define _LIBTAME_PIPELINE_H_
+
+#include "async.h"
+#include "tame.h"
+
+template<class W1 = int, class W2 = int, class W3 = int>
+class pipeliner_t {
+public:
+  pipeliner_t (size_t w, size_t n) : 
+    _wsz (w),
+    _n_calls (n),
+    _cg (__FILE__, __LINE__) ,
+    _cancelled (false)
+  { assert (_wsz > 0); }
+
+  virtual ~pipeliner_t () {}
+
+  void run (cbv done, CLOSURE);
+  void cancel () { _cancelled = true; }
+
+protected:
+  virtual void process_wv (W1 w1, W2 w2, W3 w3) {}
+  virtual cbv::ptr make_cb (size_t i, CLOSURE) = 0;
+  virtual void pipeline_op (size_t i, cbv done, CLOSURE) = 0;
+
+  size_t _wsz, _n_calls;
+  coordgroup_t<W1,W2,W3> _cg;
+  bool _cancelled;
+
+private:
+  void wait_n (size_t n, cbv done, CLOSURE);
+  void launch (size_t i, cbv done, CLOSURE);
+};
+
+TAMED template<class W1, class W2, class W3> void
+pipeliner_t<W1,W2,W3>::wait_n (size_t n, cbv done)
+{
+  VARS {
+    W1 w1;
+    W2 w2;
+    W3 w3;
+  }
+  while (_cg.n_signals_left () > n) {
+    WAIT (_cg, w1, w2, w3);
+    process_wv (w1, w2, w3);
+  }
+  done->signal ();
+}
+
+TAMED template<class W1, class W2, class W3> void
+pipeliner_t<W1,W2,W3>::launch (size_t i, cbv done)
+{
+  BLOCK { wait_n (_wsz - 1, @()); }
+  pipeline_op (i, make_cb (i));
+  done->signal ();
+}
+
+TAMED template<class W1, class W2, class W3> void
+pipeliner_t<W1,W2,W3>::run (cbv done)
+{
+  VARS {
+    size_t i;
+  }
+  for (i = 0; i < _n_calls && !_cancelled; i++) {
+    BLOCK { launch (i, @()); }
+  }
+  BLOCK { wait_n (0, @()); }
+  done->signal ();
+}
+
+class pipeliner_void_t : public pipeliner_t<> {
+public:
+  pipeliner_void_t (size_t w, size_t s) : pipeliner_t<> (w, s) {}
+protected:
+  cbv::ptr make_cb (size_t i, CLOSURE);
+};
+
+typedef callback<void, size_t, cbb, ptr<closure_t> >::ref pipeline_op_t;
+
+void do_pipeline (size_t w, size_t n, pipeline_op_t op, cbv done, CLOSURE);
+
+
+#endif /* _LIBTAME_PIPELINE_H_ */
+
+

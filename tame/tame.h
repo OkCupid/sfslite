@@ -206,7 +206,7 @@ public:
   str base_type () const { return _base_type; }
   str pointer () const { return _pointer; }
   str to_str () const;
-  str to_str_w_template_args () const;
+  str to_str_w_template_args (bool p = true) const;
   str mk_ptr () const;
   str alloc_ptr (const str &nm, const str &args) const;
   str type_without_pointer () const;
