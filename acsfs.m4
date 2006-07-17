@@ -2058,6 +2058,16 @@ then
 		  Define if we're compiling with full sfsmisc library)
 fi
 ])
+dnl
+dnl Compile (optionally) arpcgen and libsfs
+dnl
+AC_DEFUN([SFS_LIBSFS],
+[AC_ARG_ENABLE(libsfs,
+--enable-libsfs   compile the libsfs C library and arpcgen)
+test "${enable_libsfs+set}" = "set" && with_libsfs="yes"
+AM_CONDITIONAL(USE_LIBSFS, test "$with_libsfs" = "yes")
+])
+dnl
 dnl SFS_SET_CLOCK
 dnl
 dnl  Check for function in sfs that allows different types of clocks
