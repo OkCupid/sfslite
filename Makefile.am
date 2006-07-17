@@ -90,8 +90,8 @@ install-data-hook:
 	@echo If you previously installed older versions of SFS, you may want
 	@echo to remove their directories and files:
 	@echo
-	@echo "   " $(prefix)/include/sfs-VERSION
-	@echo "   " $(prefix)/lib/sfs-VERSION
+	@echo "   " $(prefix)/include/sfslite-VERSION
+	@echo "   " $(prefix)/lib/sfslite-VERSION
 	@echo
 	@echo where VERSION is less than $(SHORTVERSION). 
 	@echo "***************************************************************"
