@@ -36,9 +36,8 @@ bool dostuff (str h, int port, cbb cb)
     ptr<axprt_stream> x;
     ptr<aclnt> cli;
     bool err (false);
-    int n_tot (40), window_sz (5), i;
+    int n_tot (40), window_sz (5);
     bool ret (true);
-    int return_id;
   }
 
   DEFAULT_RETURN { return ret; } 

@@ -4,6 +4,10 @@
 
 #include "pipeline.h"
 
+pipeliner_t::pipeliner_t (size_t w) : 
+  _wsz (w), _cg (__FILE__, __LINE__), _cancelled (false)
+{ assert (_wsz > 0); }
+
 TAMED void
 pipeliner_t::wait_n (size_t n, cbv done)
 {

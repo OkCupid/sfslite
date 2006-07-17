@@ -10,10 +10,7 @@
 
 class pipeliner_t {
 public:
-  pipeliner_t (size_t w) : 
-    _wsz (w), _cg (__FILE__, __LINE__), _cancelled (false)
-  { assert (_wsz > 0); }
-
+  pipeliner_t (size_t w);
   virtual ~pipeliner_t () {}
 
   void run (cbv done, CLOSURE);
