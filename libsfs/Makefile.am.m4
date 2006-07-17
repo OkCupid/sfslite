@@ -13,7 +13,7 @@ if USE_AUTH_HELPER
 AUTH_HELPER = auth_helper
 endif
 
-lib_LIBRARIES = libsfs.a
+sfslib_LIBRARIES = libsfs.a
 sfsexec_PROGRAMS = pathinfo suidconnect $(AUTH_HELPER)
 noinst_PROGRAMS = tst
 
