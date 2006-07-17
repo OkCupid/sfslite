@@ -4,20 +4,47 @@
 
 #include "pipeline.h"
 
-TAMED cbv::ptr
-pipeliner_void_t::make_cb (size_t i)
+TAMED void
+pipeliner_t::wait_n (size_t n, cbv done)
 {
-  VARS { cbv::ptr ret; }
-  DEFAULT_RETURN { return ret; }
-  ret = @[_cg]();
+  while (_cg.n_signals_left () > n) {
+    WAIT (_cg);
+  }
+  done->signal ();
 }
 
-class pipeliner_cb_t : public pipeliner_void_t {
+TAMED void
+pipeliner_t::launch (size_t i, cbv done)
+{
+  BLOCK { wait_n (_wsz - 1, @()); }
+  pipeline_op (i, @[_cg]() );
+  done->signal ();
+}
+
+TAMED void
+pipeliner_t::run (cbv done)
+{
+  VARS {
+    size_t i;
+  }
+  for (i = 0; i < keep_going (i) && !_cancelled; i++) {
+    BLOCK { launch (i, @()); }
+  }
+  BLOCK { wait_n (0, @()); }
+  done->signal ();
+}
+
+class pipeliner_cb_t : public pipeliner_t {
 public:
   pipeliner_cb_t (size_t w, size_t n, pipeline_op_t o)
-    : pipeliner_void_t (w, n), _op (o) {}
+    : pipeliner_t (w), _n_calls (n), _op (o) {}
+
+protected:
   void pipeline_op (size_t i, cbv cb, CLOSURE);
+  bool keep_going (size_t i) const { return i < _n_calls; }
+
 private:
+  size_t _n_calls;
   pipeline_op_t _op;
 
 };
