@@ -3,9 +3,9 @@ $(PROGRAMS): $(LDEPS)
 
 sfslib_LTLIBRARIES = libtame.la
 
-libtame_la_SOURCES = pipeline.C
+libtame_la_SOURCES = pipeline.C lock.C
 
-sfslib_HEADERS = pipeline.h
+sfslib_HEADERS = pipeline.h lock.h
 
 SUFFIXES = .C .T .h
 
@@ -14,17 +14,19 @@ SUFFIXES = .C .T .h
 
 pipeline.o: pipeline.C
 pipeline.lo: pipeline.C
+lock.o: lock.C
+lock.lo: lock.C
 
 .PHONY: tameclean
 
 tameclean:
-	rm -f $(srcdir)/pipeline.C
+	rm -f $(srcdir)/pipeline.C $(srcdir)/lock.C
 
-EXTRA_DIST = .cvsignore pipeline.T
+EXTRA_DIST = .cvsignore pipeline.T lock.T
 CLEANFILES = core *.core *~ *.rpo
 
 MAINTAINERCLEANFILES = Makefile.in config.guess config.h.in config.sub \
 	configure install-sh ltconfig ltmain.sh missing mkinstalldirs \
 	stamp-h.in 
 
-BUILT_SOURCES = pipeline.C
+BUILT_SOURCES = pipeline.C lock.C
