@@ -204,7 +204,7 @@ $endnotdebug
   virtual ~callback () {}
 protected:
   inline bool second_signal () {
-    if (_cleared_flag && *_cleared_flag) {
+    if (*_cleared_flag) {
 #if WRAP_DEBUG 
       coordvar_second_signal (src, line);
 #else
@@ -290,7 +290,7 @@ ${adecl}public:
        return f ($ablist); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
 ${dellist}      cf->set (true);
     }
   } 
@@ -319,7 +319,7 @@ ${adecl}public:
       f ($ablist); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
 ${dellist}      cf->set(true);
     }
   }
@@ -380,7 +380,7 @@ ${adecl}public:
 #endif $bc !WRAP_USE_NODELETE $ec
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       c.del ();
 ${dellist}      cf->set(true);
     }
@@ -412,7 +412,7 @@ ${adecl}public:
       ((*(c.get ())).*f) ($ablist); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       c.del ();
 ${dellist}      cf->set(true);
     }
@@ -775,7 +775,7 @@ public:
   virtual ~callback () {}
 protected:
   inline bool second_signal () {
-    if (_cleared_flag && *_cleared_flag) {
+    if (*_cleared_flag) {
 #if WRAP_DEBUG 
       coordvar_second_signal (src, line);
 #else
@@ -810,7 +810,7 @@ public:
        return f (); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       cf->set (true);
     }
   } 
@@ -860,7 +860,7 @@ public:
 #endif /* !WRAP_USE_NODELETE */
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       c.del ();
       cf->set(true);
     }
@@ -908,7 +908,7 @@ public:
        return f (a1.get ()); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       a1.del ();
       cf->set (true);
     }
@@ -961,7 +961,7 @@ public:
 #endif /* !WRAP_USE_NODELETE */
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       c.del ();
       a1.del ();
       cf->set(true);
@@ -1011,7 +1011,7 @@ public:
        return f (a1.get (), a2.get ()); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       a1.del ();
       a2.del ();
       cf->set (true);
@@ -1067,7 +1067,7 @@ public:
 #endif /* !WRAP_USE_NODELETE */
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       c.del ();
       a1.del ();
       a2.del ();
@@ -1119,7 +1119,7 @@ public:
        return f (a1.get (), a2.get (), a3.get ()); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       a1.del ();
       a2.del ();
       a3.del ();
@@ -1178,7 +1178,7 @@ public:
 #endif /* !WRAP_USE_NODELETE */
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       c.del ();
       a1.del ();
       a2.del ();
@@ -1232,7 +1232,7 @@ public:
        return f (a1.get (), a2.get (), a3.get (), a4.get ()); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       a1.del ();
       a2.del ();
       a3.del ();
@@ -1294,7 +1294,7 @@ public:
 #endif /* !WRAP_USE_NODELETE */
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       c.del ();
       a1.del ();
       a2.del ();
@@ -1350,7 +1350,7 @@ public:
        return f (a1.get (), a2.get (), a3.get (), a4.get (), a5.get ()); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       a1.del ();
       a2.del ();
       a3.del ();
@@ -1415,7 +1415,7 @@ public:
 #endif /* !WRAP_USE_NODELETE */
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       c.del ();
       a1.del ();
       a2.del ();
@@ -1481,7 +1481,7 @@ public:
   virtual ~callback () {}
 protected:
   inline bool second_signal () {
-    if (_cleared_flag && *_cleared_flag) {
+    if (*_cleared_flag) {
 #if WRAP_DEBUG 
       coordvar_second_signal (src, line);
 #else
@@ -1516,7 +1516,7 @@ public:
        return f (b1); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       cf->set (true);
     }
   } 
@@ -1566,7 +1566,7 @@ public:
 #endif /* !WRAP_USE_NODELETE */
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       c.del ();
       cf->set(true);
     }
@@ -1614,7 +1614,7 @@ public:
        return f (a1.get (), b1); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       a1.del ();
       cf->set (true);
     }
@@ -1667,7 +1667,7 @@ public:
 #endif /* !WRAP_USE_NODELETE */
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       c.del ();
       a1.del ();
       cf->set(true);
@@ -1717,7 +1717,7 @@ public:
        return f (a1.get (), a2.get (), b1); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       a1.del ();
       a2.del ();
       cf->set (true);
@@ -1773,7 +1773,7 @@ public:
 #endif /* !WRAP_USE_NODELETE */
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       c.del ();
       a1.del ();
       a2.del ();
@@ -1825,7 +1825,7 @@ public:
        return f (a1.get (), a2.get (), a3.get (), b1); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       a1.del ();
       a2.del ();
       a3.del ();
@@ -1884,7 +1884,7 @@ public:
 #endif /* !WRAP_USE_NODELETE */
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       c.del ();
       a1.del ();
       a2.del ();
@@ -1938,7 +1938,7 @@ public:
        return f (a1.get (), a2.get (), a3.get (), a4.get (), b1); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       a1.del ();
       a2.del ();
       a3.del ();
@@ -2000,7 +2000,7 @@ public:
 #endif /* !WRAP_USE_NODELETE */
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       c.del ();
       a1.del ();
       a2.del ();
@@ -2056,7 +2056,7 @@ public:
        return f (a1.get (), a2.get (), a3.get (), a4.get (), a5.get (), b1); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       a1.del ();
       a2.del ();
       a3.del ();
@@ -2121,7 +2121,7 @@ public:
 #endif /* !WRAP_USE_NODELETE */
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       c.del ();
       a1.del ();
       a2.del ();
@@ -2187,7 +2187,7 @@ public:
   virtual ~callback () {}
 protected:
   inline bool second_signal () {
-    if (_cleared_flag && *_cleared_flag) {
+    if (*_cleared_flag) {
 #if WRAP_DEBUG 
       coordvar_second_signal (src, line);
 #else
@@ -2222,7 +2222,7 @@ public:
        return f (b1, b2); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       cf->set (true);
     }
   } 
@@ -2272,7 +2272,7 @@ public:
 #endif /* !WRAP_USE_NODELETE */
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       c.del ();
       cf->set(true);
     }
@@ -2320,7 +2320,7 @@ public:
        return f (a1.get (), b1, b2); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       a1.del ();
       cf->set (true);
     }
@@ -2373,7 +2373,7 @@ public:
 #endif /* !WRAP_USE_NODELETE */
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       c.del ();
       a1.del ();
       cf->set(true);
@@ -2423,7 +2423,7 @@ public:
        return f (a1.get (), a2.get (), b1, b2); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       a1.del ();
       a2.del ();
       cf->set (true);
@@ -2479,7 +2479,7 @@ public:
 #endif /* !WRAP_USE_NODELETE */
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       c.del ();
       a1.del ();
       a2.del ();
@@ -2531,7 +2531,7 @@ public:
        return f (a1.get (), a2.get (), a3.get (), b1, b2); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       a1.del ();
       a2.del ();
       a3.del ();
@@ -2590,7 +2590,7 @@ public:
 #endif /* !WRAP_USE_NODELETE */
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       c.del ();
       a1.del ();
       a2.del ();
@@ -2644,7 +2644,7 @@ public:
        return f (a1.get (), a2.get (), a3.get (), a4.get (), b1, b2); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       a1.del ();
       a2.del ();
       a3.del ();
@@ -2706,7 +2706,7 @@ public:
 #endif /* !WRAP_USE_NODELETE */
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       c.del ();
       a1.del ();
       a2.del ();
@@ -2762,7 +2762,7 @@ public:
        return f (a1.get (), a2.get (), a3.get (), a4.get (), a5.get (), b1, b2); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       a1.del ();
       a2.del ();
       a3.del ();
@@ -2827,7 +2827,7 @@ public:
 #endif /* !WRAP_USE_NODELETE */
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       c.del ();
       a1.del ();
       a2.del ();
@@ -2893,7 +2893,7 @@ public:
   virtual ~callback () {}
 protected:
   inline bool second_signal () {
-    if (_cleared_flag && *_cleared_flag) {
+    if (*_cleared_flag) {
 #if WRAP_DEBUG 
       coordvar_second_signal (src, line);
 #else
@@ -2928,7 +2928,7 @@ public:
        return f (b1, b2, b3); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       cf->set (true);
     }
   } 
@@ -2978,7 +2978,7 @@ public:
 #endif /* !WRAP_USE_NODELETE */
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       c.del ();
       cf->set(true);
     }
@@ -3026,7 +3026,7 @@ public:
        return f (a1.get (), b1, b2, b3); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       a1.del ();
       cf->set (true);
     }
@@ -3079,7 +3079,7 @@ public:
 #endif /* !WRAP_USE_NODELETE */
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       c.del ();
       a1.del ();
       cf->set(true);
@@ -3129,7 +3129,7 @@ public:
        return f (a1.get (), a2.get (), b1, b2, b3); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       a1.del ();
       a2.del ();
       cf->set (true);
@@ -3185,7 +3185,7 @@ public:
 #endif /* !WRAP_USE_NODELETE */
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       c.del ();
       a1.del ();
       a2.del ();
@@ -3237,7 +3237,7 @@ public:
        return f (a1.get (), a2.get (), a3.get (), b1, b2, b3); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       a1.del ();
       a2.del ();
       a3.del ();
@@ -3296,7 +3296,7 @@ public:
 #endif /* !WRAP_USE_NODELETE */
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       c.del ();
       a1.del ();
       a2.del ();
@@ -3350,7 +3350,7 @@ public:
        return f (a1.get (), a2.get (), a3.get (), a4.get (), b1, b2, b3); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       a1.del ();
       a2.del ();
       a3.del ();
@@ -3412,7 +3412,7 @@ public:
 #endif /* !WRAP_USE_NODELETE */
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       c.del ();
       a1.del ();
       a2.del ();
@@ -3468,7 +3468,7 @@ public:
        return f (a1.get (), a2.get (), a3.get (), a4.get (), a5.get (), b1, b2, b3); }
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       a1.del ();
       a2.del ();
       a3.del ();
@@ -3533,7 +3533,7 @@ public:
 #endif /* !WRAP_USE_NODELETE */
 protected:
   void _clear (ref_flag_ptr_t cf) {
-    if (cf && !*cf) { 
+    if (!*cf) { 
       c.del ();
       a1.del ();
       a2.del ();
