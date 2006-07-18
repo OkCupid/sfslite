@@ -204,7 +204,7 @@ $endnotdebug
   virtual ~callback () {}
 protected:
   inline bool second_signal () {
-    if (*_cleared_flag) {
+    if (_cleared_flag && *_cleared_flag) {
 #if WRAP_DEBUG 
       coordvar_second_signal (src, line);
 #else
