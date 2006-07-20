@@ -1601,9 +1601,18 @@ AC_DEFUN([SFS_SFS],
 --with-sfs[[=PATH]]         specify location of SFS libraries)
 AC_ARG_WITH(heavy,
 --with-heavy                do not use sfslite)
-if test "$with_sfs" = yes -o "$with_sfs" = ""; then
-    for dir in "$prefix" /usr/local /usr; do
 
+dnl
+dnl Look for sfs and find out if sfs is installed with a sfsprfx like
+dnl shdbg, debug, etc
+dnl
+if test "$with_sfs" = yes -o "$with_sfs" = ""; then
+  dirs="$prefix /usr/local /usr"
+else
+  dirs="$with_sfs"
+fi
+
+for dir in $dirs; do
 	dnl
 	dnl sfs${sfstagdir} in there for bkwds comptability
 	dnl
@@ -1619,7 +1628,7 @@ if test "$with_sfs" = yes -o "$with_sfs" = ""; then
 	BREAKOUT=0
 	for sfsprfx in $sfsprefixes
 	do
-	    if test -f $dir/lib/${sfsprfx}/libasync.la; then
+    if test -f $dir/lib/${sfsprfx}/libasync.la; then
 		with_sfs=$dir
 		BREAKOUT=1
 		break
@@ -1630,8 +1639,9 @@ if test "$with_sfs" = yes -o "$with_sfs" = ""; then
 	    break
 	fi
 
-    done
-fi
+  sfsprfx=""
+done
+
 case "$with_sfs" in
     /*) ;;
     *) with_sfs="$PWD/$with_sfs" ;;
@@ -1650,7 +1660,7 @@ if test -f ${with_sfs}/Makefile -a -f ${with_sfs}/autoconf.h; then
     esac
 
     CPPFLAGS="$CPPFLAGS -I${with_sfs}"
-    for lib in async arpc crypt sfsmisc; do
+    for lib in async arpc crypt sfsmisc libsfs; do
 	CPPFLAGS="$CPPFLAGS -I${sfssrcdir}/$lib"
     done
     CPPFLAGS="$CPPFLAGS -I${with_sfs}/svc"
