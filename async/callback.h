@@ -451,7 +451,6 @@ sub pwrap_c_b_a ($$$) {
     my $rtargs = jc ("$const C *", 'C', 'R', mklist ('B%', $b), 
 	                 mklist ('A%', $a));
     my $rtype = "refcounted<callback_c_${b}_${a}${typesuffix}<$rtargs> >";
-	#if ($const) { die $rtype; }
     my $ABlist = jc (mklist ('A%', $a), mklist ('B%', $b));
     my $fargs = jc ("$const C *p, R (C::*f) ($ABlist) $const", mklist ('const AA% &a%', $a));
     my $falist = jc ('p, f', mklist ('a%', $a));
