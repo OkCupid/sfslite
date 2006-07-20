@@ -1672,6 +1672,8 @@ if test -f ${with_sfs}/Makefile -a -f ${with_sfs}/autoconf.h; then
     LIBTAME=${with_sfs}/libtame/libtame.la
     MALLOCK=${with_sfs}/sfsmisc/mallock.o
     TAME=${with_sfs}/tame/tame
+    RPCC=${with_sfs}/rpcc/rpcc
+    ARPCGEN=${with_sfs}/arpcgen/arpcgen
 elif test -f ${with_sfs}/include/${sfsprfx}/autoconf.h \
 	-a -f ${with_sfs}/lib/${sfsprfx}/libasync.la; then
     sfsincludedir="${with_sfs}/include/${sfsprfx}"
