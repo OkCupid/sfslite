@@ -585,8 +585,8 @@ while (<DATA>) {
 
 print <<'EOF';
 
-#ifndef _CALLBACK_H_INCLUDED_
-#define _CALLBACK_H_INCLUDED_ 1
+#ifndef _CALLBACK2_H_INCLUDED_
+#define _CALLBACK2_H_INCLUDED_ 1
 
 #include "refcnt.h"
 #include "coordvar.h"
@@ -682,14 +682,14 @@ EOF
 # versions of gcc, using __PRETTY_FUNCTION__ outside of any function
 # causes link-time errors
 
-print "\n", '#endif /', '* !_CALLBACK_H_INCLUDED_ *', '/', "\n";
+print "\n", '#endif /', '* !_CALLBACK2_H_INCLUDED_ *', '/', "\n";
 
 __END__
 # */
 #endif /* perl */
 
-#ifndef _CALLBACK_H_INCLUDED_
-#define _CALLBACK_H_INCLUDED_ 1
+#ifndef _CALLBACK2_H_INCLUDED_
+#define _CALLBACK2_H_INCLUDED_ 1
 
 #include "refcnt.h"
 #include "coordvar.h"
@@ -5471,4 +5471,4 @@ class refops<callback<R, B1, B2, B3> > {
 #endif /* !WRAP_DEBUG */
 
 
-#endif /* !_CALLBACK_H_INCLUDED_ */
+#endif /* !_CALLBACK2_H_INCLUDED_ */

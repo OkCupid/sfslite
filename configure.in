@@ -444,6 +444,7 @@ dnl
 SFS_TUTORIAL
 SFS_MISC
 SFS_LIBSFS
+SFS_CALLBACK
 
 AC_OUTPUT(Makefile async/Makefile rpcc/Makefile arpc/Makefile
 	crypt/Makefile sfsmisc/Makefile contrib/Makefile tame/Makefile

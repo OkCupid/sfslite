@@ -61,6 +61,7 @@ $a\
 / TIME_WITH_SYS_TIME/b pdefine
 / WORDS_BIGENDIAN/b pdefine
 / PYMALLOC/b pdefine
+/ SFS_HAVE_CALLBACK2/b pdefine
 
 :skip
 d

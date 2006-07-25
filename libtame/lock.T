@@ -1,4 +1,5 @@
 
+// -*-c++-*-
 #include "lock.h"
 
 lock_t::waiter_t *
@@ -12,7 +13,7 @@ lock_t::acquire (lock_t::mode_t m, cbv cb)
     ret = New lock_t::waiter_t (m, cb);
     _waiters.insert_head (ret);
   }
-  if (!ret) cb->signal ();
+  if (!ret) SIGNAL (cb);
   return ret;
 }
 
@@ -61,5 +62,5 @@ lock_t::timed_acquire (lock_t::mode_t m, u_int s, u_int ms, cbb cb)
   WAIT (G, ok);
   if (!ok) cancel (w);
   else timecb_remove (tcb);
-  cb->signal (ok);
+  SIGNAL (cb, ok);
 }

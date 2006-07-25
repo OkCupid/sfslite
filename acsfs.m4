@@ -2099,3 +2099,15 @@ then
 	AC_DEFINE(HAVE_SFS_SET_CLOCK, 1, Toggle SFS core clock)
 fi
 ])
+dnl
+dnl SFS_CALLBACK
+dnl
+AC_DEFUN([SFS_CALLBACK],
+[AC_ARG_ENABLE(callback2,
+--enable-callback2   use callback.h version 2)
+if test "${enable_callback2+set}" = "set" -o \ 
+	"${with_tutorial}" = "yes"; then \
+	AC_DEFINE(SFS_HAVE_CALLBACK2, 1, Toggle callback2.h with CB signaling)
+fi
+])
+

@@ -14,7 +14,7 @@ pipeliner_t::wait_n (size_t n, cbv done)
   while (_cg.n_signals_left () > n) {
     WAIT (_cg);
   }
-  done->signal ();
+  SIGNAL (done);
 }
 
 TAMED void
@@ -22,7 +22,7 @@ pipeliner_t::launch (size_t i, cbv done)
 {
   BLOCK { wait_n (_wsz - 1, @()); }
   pipeline_op (i, @[_cg]() );
-  done->signal ();
+  SIGNAL (done);
 }
 
 TAMED void
@@ -35,7 +35,7 @@ pipeliner_t::run (cbv done)
     BLOCK { launch (i, @()); }
   }
   BLOCK { wait_n (0, @()); }
-  done->signal ();
+  SIGNAL (done);
 }
 
 class pipeliner_cb_t : public pipeliner_t {
@@ -61,7 +61,7 @@ pipeliner_cb_t::pipeline_op (size_t i, cbv cb)
   }
   BLOCK { (*_op) (i, @(ok), NULL); }
   if (!ok) cancel ();
-  cb->signal ();
+  SIGNAL (cb);
 }
 
 TAMED void
@@ -71,5 +71,5 @@ do_pipeline (size_t w, size_t n, pipeline_op_t op, cbv done)
     pipeliner_cb_t ppl (w, n, op);
   }
   BLOCK { ppl.run (@()); }
-  done->signal ();
+  SIGNAL (done);
 }

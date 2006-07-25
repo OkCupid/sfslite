@@ -904,7 +904,7 @@ public:
   void wait (cbv b) 
   { 
     if (_queued_cancel) {
-      b->signal ();
+      SIGNAL (b);
     } else {
       _cb = b; 
     }
@@ -919,7 +919,7 @@ public:
     if (_cb) {
       cbv::ptr t = _cb;
       _cb = NULL;
-      t->signal ();
+      SIGNAL (t);
     } else if (!_toolate) {
       _queued_cancel = true;
     }
