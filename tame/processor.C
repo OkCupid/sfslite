@@ -32,9 +32,9 @@ void generic_mk_cv_declare (u_int a, u_int b)
 //-----------------------------------------------------------------------
 
 
-var_t::var_t (const str &t, ptr<declarator_t> d, vartyp_t a)
-  : _type (t, d->pointer ()), _name (d->name ()), _asc (a), 
-    _initializer (d->initializer ()) {}
+var_t::var_t (const type_modifier_t &t, ptr<declarator_t> d, vartyp_t a)
+  : _type (t.to_str (), d->pointer ()), _name (d->name ()), _asc (a), 
+    _initializer (d->initializer ()), _flags (t.flags ()) {}
 
 //
 // note that a callback ID is only necessary in the (optimized case)
@@ -742,13 +742,21 @@ tame_fn_t::output_closure (outputter_t *o)
   o->switch_to_mode (om);
 }
 
+bool
+var_t::do_output () const
+{
+  return (!(_flags & HOLDVAR_FLAG));
+}
+
 void
 tame_fn_t::output_stack_vars (strbuf &b)
 {
   for (u_int i = 0; i < _stack_vars.size (); i++) {
     const var_t &v = _stack_vars._vars[i];
-    b << "  " << v.ref_decl () << " = " 
-      << closure_nm () << "->_stack." << v.name () << ";\n" ;
+    if (v.do_output ()) {
+      b << "  " << v.ref_decl () << " = " 
+	<< closure_nm () << "->_stack." << v.name () << ";\n" ;
+    }
   } 
 }
 
@@ -1282,6 +1290,27 @@ parse_state_t::loc (u_int l) const
   b << _infile_name << ":" << l << ": in function " 
     << function_const ().name ();
   return b;
+}
+
+type_modifier_t &
+type_modifier_t::concat (const type_modifier_t &m)
+{
+  _flags |= (m._flags);
+  for (size_t i = 0; i < m._v.size (); i++) {
+    _v.push_back (m._v[i]);
+  }
+  return (*this);
+}
+
+str
+type_modifier_t::to_str () const
+{
+  strbuf _b;
+  for (size_t i = 0; i < _v.size (); i++) {
+    if ( i != 0 ) _b << " ";
+    _b << _v[i];
+  }
+  return _b;
 }
 
 //

@@ -100,6 +100,7 @@ double		return T_DOUBLE;
 signed		return T_SIGNED;
 unsigned	return T_UNSIGNED;
 static		return T_STATIC;
+holdvar		return T_HOLDVAR;
 template	{ yy_push_state (TEMPLATE_ENTER); return T_TEMPLATE; }
 
 {ID} 		{ return std_ret (T_ID); }

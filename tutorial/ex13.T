@@ -15,7 +15,7 @@ do_rpc (ptr<aclnt> cli, bool *errp, size_t i, cbb cb)
     int res;
     clnt_stat err;
     bool ok (true);
-    autocb_t<bool> acb (cb, ok);
+    holdvar autocb_t<bool> acb (cb, ok);
   }
   BLOCK { cli->call (EX_RANDOM, NULL, &res, @(err)); }
   if (err) {

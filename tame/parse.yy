@@ -49,6 +49,7 @@ int vars_lineno;
 %token T_UNSIGNED
 %token T_STATIC
 %token T_TEMPLATE
+%token T_HOLDVAR
 
 %token T_2COLON
 %token T_RETURN
@@ -69,9 +70,11 @@ int vars_lineno;
 %type <str> template_instantiation_list template_instantiation
 %type <str> template_instantiation_opt typedef_name_single
 %type <str> template_instantiation_list_opt identifier
-%type <str> typedef_name type_qualifier_list_opt type_qualifier_list
-%type <str> type_qualifier type_specifier type_modifier_list
-%type <str> type_modifier declaration_specifiers passthrough expr
+%type <str> typedef_name
+%type <str> type_specifier 
+%type <str> passthrough expr
+%type <typ_mod> type_modifier type_modifier_list declaration_specifiers 
+%type <typ_mod> type_qualifier_list_opt type_qualifier_list type_qualifier 
 %type <str> cpp_initializer_opt
 
 %type <decl> init_declarator declarator direct_declarator 
@@ -160,7 +163,7 @@ static_opt: T_STATIC 	{ $$ = STATIC_DECL; }
 /* declaration_specifiers is no longer optional ?! */
 fn_declaration: fn_specifiers declaration_specifiers declarator const_opt
 	{
-	   $$ = New tame_fn_t ($1, $2, $3, $4, get_yy_lineno (), 
+	   $$ = New tame_fn_t ($1, $2.to_str (), $3, $4, get_yy_lineno (), 
 	                       get_yy_loc ());
 	}
 	;
@@ -545,7 +548,8 @@ direct_declarator: typedef_name
  */
 declaration_specifiers: type_modifier_list type_specifier
 	{
-	   CONCAT($1.lineno (), $1 << " " << $2, $$);
+	   $1.add_lstr ($2);
+	   $$ = $1;
 	}
 	;
 
@@ -553,14 +557,14 @@ declaration_specifiers: type_modifier_list type_specifier
  * new rule to eliminate s/r conflicts
  */
 type_modifier:  type_qualifier
-	| T_SIGNED		{ $$ = "signed"; }
-	| T_UNSIGNED		{ $$ = "unsigned"; }
+	| T_SIGNED		{ $$ = type_modifier_t ("signed"); }
+	| T_UNSIGNED		{ $$ = type_modifier_t ("unsigned"); }
 	;
 
-type_modifier_list: /* empty */ { $$ = ""; }
+type_modifier_list: /* empty */ { $$ = type_modifier_t (""); }
 	| type_modifier_list type_modifier
 	{
-	  CONCAT ($1.lineno (), $1 << " " << $2, $$);
+	  $$ = $1.concat ($2);
 	}
 	;
 	
@@ -583,20 +587,21 @@ type_specifier: T_VOID		{ $$ = "void" ; }
 /*
  * hack for now -- not real C syntax
  */
-type_qualifier:	T_CONST		{ $$ = "const"; }
-	| T_STRUCT		{ $$ = "struct"; }
-	| T_TYPENAME		{ $$ = "typename"; }
+type_qualifier:	T_CONST	{ $$ = type_modifier_t ("const", CONST_FLAG); }
+	| T_STRUCT	{ $$ = type_modifier_t ("struct"); }
+	| T_TYPENAME	{ $$ = type_modifier_t ("typename"); }
+	| T_HOLDVAR	{ $$ = type_modifier_t (lstr (), HOLDVAR_FLAG); }
 	;
 
 type_qualifier_list: type_qualifier
 	| type_qualifier_list type_qualifier
 	{
-	  CONCAT($1.lineno (), $1 << " " << $2, $$);
+	  $$ = $1.concat ($2);
 	}
 	;
 
-type_qualifier_list_opt: /* empty */ { $$ = ""; }
-	| type_qualifier_list
+type_qualifier_list_opt: /* empty */ { $$ = type_modifier_t (""); }
+	| type_qualifier_list        { $$ = $1; }
 	;
 
 /*
@@ -639,7 +644,7 @@ template_instantiation_list: template_instantiation_arg
 
 template_instantiation_arg: declaration_specifiers pointer_opt
 	{
-	  CONCAT($1.lineno (), $1 << " " << $2, $$);
+	  CONCAT($1.lineno (), $1.to_str () << " " << $2, $$);
 	}
 	;
 
@@ -650,7 +655,7 @@ pointer_opt: /* empty */	{ $$ = ""; }
 pointer: '*'			{ $$ = "*"; }
 	| '*' type_qualifier_list_opt pointer
 	{
-	  CONCAT($2.lineno (), " * " << $2 << $3, $$);
+	  CONCAT($2.lineno (), " * " << $2.to_str () << $3, $$);
 	}
 	;
 
