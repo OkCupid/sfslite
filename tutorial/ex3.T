@@ -5,6 +5,7 @@
 #include "parseopt.h"
 #include "ex_prot.h"
 #include "arpc.h"
+#include "autocb.h"
  
 TAMED static 
 void try_rpc (str h, int port, cbb cv)
@@ -16,6 +17,7 @@ void try_rpc (str h, int port, cbb cv)
     ptr<aclnt> cli;
     vec<int> rv;
     vec<clnt_stat> ev;
+    autocb_t acb (ret, cv);
     int i;
   }
 
@@ -46,8 +48,6 @@ void try_rpc (str h, int port, cbb cv)
       }
     }
   }
-  cv->signal (ret);
-  fd ++;
 }
  
 static void finish (bool rc)

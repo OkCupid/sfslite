@@ -9,7 +9,7 @@
 #include "list.h"
 #include "tame.h"
 
-class lock_t : public virtual refcount {
+class lock_t {
 public:
   lock_t () : _mode (OPEN) {}
 
@@ -31,7 +31,7 @@ public:
   void release ();
   void cancel (waiter_t *w);
 
-private:
+protected:
   list<waiter_t, &waiter_t::_lnk> _waiters;
   mode_t _mode;
   void call (waiter_t *w);

@@ -37,6 +37,7 @@ void
 lock_t::release ()
 {
   assert (_mode != OPEN);
+  _mode = OPEN;
   waiter_t *w;
   while ((w = _waiters.first) && w->_mode == SHARED) {
     _mode = SHARED;
