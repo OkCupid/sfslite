@@ -5,7 +5,7 @@ sfslib_LTLIBRARIES = libtame.la
 
 libtame_la_SOURCES = pipeline.C lock.C
 
-sfslib_HEADERS = pipeline.h lock.h
+sfsinclude_HEADERS = pipeline.h lock.h
 
 SUFFIXES = .C .T .h
 
