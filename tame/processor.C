@@ -32,7 +32,7 @@ void generic_mk_cv_declare (u_int a, u_int b)
 //-----------------------------------------------------------------------
 
 
-var_t::var_t (const type_modifier_t &t, ptr<declarator_t> d, vartyp_t a)
+var_t::var_t (const type_qualifier_t &t, ptr<declarator_t> d, vartyp_t a)
   : _type (t.to_str (), d->pointer ()), _name (d->name ()), _asc (a), 
     _initializer (d->initializer ()), _flags (t.flags ()) {}
 
@@ -1292,8 +1292,8 @@ parse_state_t::loc (u_int l) const
   return b;
 }
 
-type_modifier_t &
-type_modifier_t::concat (const type_modifier_t &m)
+type_qualifier_t &
+type_qualifier_t::concat (const type_qualifier_t &m)
 {
   _flags |= (m._flags);
   for (size_t i = 0; i < m._v.size (); i++) {
@@ -1303,7 +1303,7 @@ type_modifier_t::concat (const type_modifier_t &m)
 }
 
 str
-type_modifier_t::to_str () const
+type_qualifier_t::to_str () const
 {
   strbuf _b;
   for (size_t i = 0; i < _v.size (); i++) {

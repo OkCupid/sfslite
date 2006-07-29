@@ -557,11 +557,11 @@ declaration_specifiers: type_modifier_list type_specifier
  * new rule to eliminate s/r conflicts
  */
 type_modifier:  type_qualifier
-	| T_SIGNED		{ $$ = type_modifier_t ("signed"); }
-	| T_UNSIGNED		{ $$ = type_modifier_t ("unsigned"); }
+	| T_SIGNED		{ $$ = type_qualifier_t ("signed"); }
+	| T_UNSIGNED		{ $$ = type_qualifier_t ("unsigned"); }
 	;
 
-type_modifier_list: /* empty */ { $$ = type_modifier_t (""); }
+type_modifier_list: /* empty */ { $$ = type_qualifier_t (""); }
 	| type_modifier_list type_modifier
 	{
 	  $$ = $1.concat ($2);
@@ -587,10 +587,10 @@ type_specifier: T_VOID		{ $$ = "void" ; }
 /*
  * hack for now -- not real C syntax
  */
-type_qualifier:	T_CONST	{ $$ = type_modifier_t ("const", CONST_FLAG); }
-	| T_STRUCT	{ $$ = type_modifier_t ("struct"); }
-	| T_TYPENAME	{ $$ = type_modifier_t ("typename"); }
-	| T_HOLDVAR	{ $$ = type_modifier_t (lstr (), HOLDVAR_FLAG); }
+type_qualifier:	T_CONST	{ $$ = type_qualifier_t ("const", CONST_FLAG); }
+	| T_STRUCT	{ $$ = type_qualifier_t ("struct"); }
+	| T_TYPENAME	{ $$ = type_qualifier_t ("typename"); }
+	| T_HOLDVAR	{ $$ = type_qualifier_t (lstr (), HOLDVAR_FLAG); }
 	;
 
 type_qualifier_list: type_qualifier
@@ -600,7 +600,7 @@ type_qualifier_list: type_qualifier
 	}
 	;
 
-type_qualifier_list_opt: /* empty */ { $$ = type_modifier_t (""); }
+type_qualifier_list_opt: /* empty */ { $$ = type_qualifier_t (""); }
 	| type_qualifier_list        { $$ = $1; }
 	;
 

@@ -99,18 +99,18 @@ private:
  * never be output, that are internal to tame. Examples include
  * 'holdvar'.
  */
-struct type_modifier_t {
-  type_modifier_t () : _flags (0) {}
-  type_modifier_t (const type_modifier_t &t) 
+struct type_qualifier_t {
+  type_qualifier_t () : _flags (0) {}
+  type_qualifier_t (const type_qualifier_t &t) 
     : _lineno (t._lineno), _v (t._v), _flags (t._flags) {}
-  type_modifier_t (const lstr &s, u_int f = 0) 
+  type_qualifier_t (const lstr &s, u_int f = 0) 
     : _flags (f) { if (s) add_lstr (s); }
 
   void add_str (const str &s) { _v.push_back (s); }
   void add_lstr (const lstr &s) { add_str (s); _lineno = s.lineno (); }
   void add_flag (u_int f) { _flags = _flags | HOLDVAR_FLAG; }
 
-  type_modifier_t &concat (const type_modifier_t &m);
+  type_qualifier_t &concat (const type_qualifier_t &m);
 
   str to_str () const;
   u_int flags () const { return _flags; }
@@ -256,7 +256,7 @@ class var_t {
 public:
   var_t () {}
   var_t (const str &n, vartyp_t a = NONE) : _name (n), _asc (a), _flags (0) {}
-  var_t (const type_modifier_t &m, ptr<declarator_t> d, vartyp_t a = NONE);
+  var_t (const type_qualifier_t &m, ptr<declarator_t> d, vartyp_t a = NONE);
   var_t (const str &t, const str &p, const str &n, vartyp_t a = NONE) : 
     _type (t, p), _name (n), _asc (a), _flags (0) {}
   var_t (const type_t &t, const str &n, vartyp_t a = NONE)
@@ -641,8 +641,8 @@ public:
   vartab_t *class_vars_tmp () { return _fn ? _fn->class_vars_tmp () : NULL ; }
   vartab_t *args () { return _fn ? _fn->args () : NULL; }
 
-  void set_decl_specifier (const type_modifier_t &m) { _decl_specifier = m; }
-  const type_modifier_t &decl_specifier () const { return _decl_specifier; }
+  void set_decl_specifier (const type_qualifier_t &m) { _decl_specifier = m; }
+  const type_qualifier_t &decl_specifier () const { return _decl_specifier; }
   tame_fn_t *function () { return _fn; }
   const tame_fn_t &function_const () const { return *_fn; }
 
@@ -667,7 +667,7 @@ public:
   str loc (u_int l) const ;
 
 protected:
-  type_modifier_t _decl_specifier;
+  type_qualifier_t _decl_specifier;
   tame_fn_t *_fn;
   tame_block_t *_block;
   tame_nonblock_t *_nonblock;
@@ -764,7 +764,7 @@ struct YYSTYPE {
   u_int             opts;
   tame_ret_t *       ret;
   fn_specifier_t     fn_spc;
-  type_modifier_t    typ_mod;
+  type_qualifier_t    typ_mod;
 };
 extern YYSTYPE yylval;
 extern str filename;
