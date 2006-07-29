@@ -5,7 +5,7 @@
 #include "arpc.h"
 #include "parseopt.h"
 #include "ex_prot.h"
-
+#include "autocb.h"
 #include "pipeline.h"
 
 TAMED static void
@@ -15,6 +15,7 @@ do_rpc (ptr<aclnt> cli, bool *errp, size_t i, cbb cb)
     int res;
     clnt_stat err;
     bool ok (true);
+    autocb_t<bool> acb (cb, ok);
   }
   BLOCK { cli->call (EX_RANDOM, NULL, &res, @(err)); }
   if (err) {
@@ -24,11 +25,10 @@ do_rpc (ptr<aclnt> cli, bool *errp, size_t i, cbb cb)
   } else {
     warn << "Success(" << i << "): " << res << "\n";
   }
-  cb->signal (ok);
 }
 
-TAMED static 
-bool dostuff (str h, int port, cbb cb)
+TAMED static void 
+dostuff (str h, int port, cbb cb)
 {
   // declare all of your "stack" variables here
   VARS {
@@ -37,10 +37,8 @@ bool dostuff (str h, int port, cbb cb)
     ptr<aclnt> cli;
     bool err (false);
     int n_tot (40), window_sz (5);
-    bool ret (true);
   }
 
-  DEFAULT_RETURN { return ret; } 
 
   // Call tcpconnect, and block until it returns; when it does return,
   // assign the local variable 'fd' to the result.
@@ -59,7 +57,6 @@ bool dostuff (str h, int port, cbb cb)
     warn << "All done...\n";
   }
   cb->signal (!err);
-  return true;
 }
 
 static void finish (bool rc)

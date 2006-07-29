@@ -31,7 +31,7 @@ pipeliner_t::run (cbv done)
   VARS {
     size_t i;
   }
-  for (i = 0; i < keep_going (i) && !_cancelled; i++) {
+  for (i = 0; keep_going (i) && !_cancelled; i++) {
     BLOCK { launch (i, @()); }
   }
   BLOCK { wait_n (0, @()); }
