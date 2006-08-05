@@ -22,7 +22,7 @@ lock.lo: lock.C
 tameclean:
 	rm -f $(srcdir)/pipeline.C $(srcdir)/lock.C
 
-EXTRA_DIST = .cvsignore pipeline.T lock.T
+EXTRA_DIST = pipeline.T lock.T .svnignore
 CLEANFILES = core *.core *~ *.rpo
 
 MAINTAINERCLEANFILES = Makefile.in config.guess config.h.in config.sub \

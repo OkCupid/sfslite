@@ -17,7 +17,7 @@ void try_rpc (str h, int port, cbb cv)
     ptr<aclnt> cli;
     vec<int> rv;
     vec<clnt_stat> ev;
-    autocb_t<bool> acb (cv, ret);
+    holdvar autocb_t<bool> acb (cv, ret);
     int i;
   }
 
