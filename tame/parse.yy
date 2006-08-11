@@ -66,7 +66,7 @@ int vars_lineno;
 
 %token T_2DOLLAR
 
-%type <str> pointer pointer_opt template_instantiation_arg
+%type <str> pointer pointer_opt template_instantiation_arg pointer_or_ref
 %type <str> template_instantiation_list template_instantiation
 %type <str> template_instantiation_opt typedef_name_single
 %type <str> template_instantiation_list_opt identifier
@@ -652,10 +652,14 @@ pointer_opt: /* empty */	{ $$ = ""; }
 	| pointer
 	;
 
-pointer: '*'			{ $$ = "*"; }
-	| '*' type_qualifier_list_opt pointer
+pointer_or_ref:	'*'		{ $$ = "*"; }
+	| '&'			{ $$ = "&"; }
+	;
+
+pointer: pointer_or_ref		{ $$ = $1; }
+	| pointer_or_ref type_qualifier_list_opt pointer
 	{
-	  CONCAT($2.lineno (), " * " << $2.to_str () << $3, $$);
+	  CONCAT($2.lineno (), " " << $1 << " " << $2.to_str () << $3, $$);
 	}
 	;
 

@@ -108,7 +108,7 @@ template	{ yy_push_state (TEMPLATE_ENTER); return T_TEMPLATE; }
 
 [}]		{ yy_pop_state (); return yytext[0]; }
 
-[<>;,:*]	{ return yytext[0]; }
+[<>;,:*&]	{ return yytext[0]; }
 "::"		{ return T_2COLON; }
 }
 

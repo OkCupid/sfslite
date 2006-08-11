@@ -166,7 +166,9 @@ str
 var_t::ref_decl () const
 {
   strbuf b;
-  b << _type.to_str () << "&" << _name;
+  b << _type.to_str ();
+  if (!_type.is_ref ()) b << "&";
+  b << _name;
   return b;
 }
 

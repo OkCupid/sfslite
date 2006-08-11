@@ -7,7 +7,7 @@
 #include "ex_prot.h"
 
 TAMED static 
-bool dostuff (str h, int port, cbb cb)
+bool dostuff (const str &h, int port, cbb cb)
 {
   // declare all of your "stack" variables here
   VARS {

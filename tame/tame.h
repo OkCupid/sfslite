@@ -55,6 +55,7 @@
 #include "qhash.h"
 #include "list.h"
 #include "ihash.h"
+#include <string.h>
 
 extern int yylex ();
 extern int yyparse ();
@@ -247,6 +248,7 @@ public:
   bool is_complete () const { return _base_type; }
   bool is_void () const 
   { return (_base_type == "void" && (!_pointer || _pointer.len () == 0)); } 
+  bool is_ref () const { return _pointer && strchr (_pointer.cstr (), '&'); }
 private:
   str _base_type, _pointer, _template_args;
 };
