@@ -22,6 +22,7 @@ usage ()
 	<< "    -o  specify output file\n"
 	<< "    -c  compile mode; infer output file name from input file "
 	<< "name\n"
+	<< "    -b  basename mode; strip off dirs from input file name\n"
 	<< "\n"
 	<< "  If no input or output files are specified, then standard in\n"
 	<< "  and out are assumed, respectively.\n"
@@ -46,6 +47,15 @@ ifn2ofn (const str &s)
   return b;
 }
 
+static str
+basename (const str &s)
+{
+  static rxx x ("([^/]*)$");
+  if (!x.search (s))
+    return NULL;
+  return x[1];
+}
+
 
 int
 main (int argc, char *argv[])
@@ -59,12 +69,13 @@ main (int argc, char *argv[])
   bool horiz_mode = true;
   str ifn;
   outputter_t *o;
+  bool c_mode (false), b_mode (false);
   
   make_sync (0);
   make_sync (1);
   make_sync (2);
 
-  while ((ch = getopt (argc, argv, "hnLvdo:c:")) != -1)
+  while ((ch = getopt (argc, argv, "bhnLvdo:c:")) != -1)
     switch (ch) {
     case 'h':
       usage ();
@@ -78,6 +89,10 @@ main (int argc, char *argv[])
 	warn << "-c expects an input file with the .T suffix\n";
 	usage ();
       }
+      c_mode = true;
+      break;
+    case 'b':
+      b_mode = true;
       break;
     case 'L':
       no_line_numbers = true;
@@ -98,6 +113,18 @@ main (int argc, char *argv[])
       usage ();
       break;
     }
+
+  if (b_mode) {
+    if (!c_mode) {
+      warn << "-b only works when -c is specified\n";
+      usage ();
+    } else {
+      if (!(outfile = basename (outfile)) || outfile.len () == 0) {
+	warn << "canont formulate an output file name\n";
+	usage ();
+      }
+    }
+  }
 
   if (getenv ("TAME_DEBUG_SOURCE")) {
     no_line_numbers = true;

@@ -100,13 +100,15 @@ bldclean:
 	rm -f $(CLEANFILES)
 rpcclean:
 	rm -f $(RPC_AUTOGEN_FILES)
+tameclean:
+	rm -f tame_clean
 
 CLEANFILES = core *.core $(RPC_AUTOGEN_FILES) tame_clean 
 
 dist-hook:
 	cd $(distdir) && rm -f $(CLEANFILES) 
 
-EXTRA_DIST = Makefile.am.m4 .cvsignore tame_dist ex_prot.x
+EXTRA_DIST = Makefile.am.m4 .cvsignore 
 MAINTAINERCLEANFILES = Makefile.in Makefile.am
 
 $(srcdir)/Makefile.am: $(srcdir)/Makefile.am.m4
