@@ -95,7 +95,7 @@ ex_prot.h: ex_prot.x
 ex_prot.o: ex_prot.h
 ex_prot.lo: ex_prot.h
 
-.PHONY: bldclean rpclean
+.PHONY: bldclean rpclean tameclean
 bldclean:
 	rm -f $(CLEANFILES)
 rpcclean:
