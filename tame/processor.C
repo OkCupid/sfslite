@@ -1276,11 +1276,14 @@ tame_fn_return_t::output (outputter_t *o)
   my_strbuf_t b;
   output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL);
 
+  b << "  do {\n";
+
   b << "  " << TAME_CLOSURE_NAME << "->end_of_scope_checks (" 
     << _line_number << ");\n";
   b << "  ";
   b.mycat (_fn->return_expr ());
   b << ";\n";
+  b << "  } while (0);\n";
   o->output_str (b);
   o->switch_to_mode (om);
 }
