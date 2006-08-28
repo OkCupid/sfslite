@@ -1224,18 +1224,19 @@ tame_ret_t::output (outputter_t *o)
   my_strbuf_t b;
 
   // always do end of scope checks
-  b << "  " << TAME_CLOSURE_NAME << "->end_of_scope_checks (" 
+  b << "  do { " << TAME_CLOSURE_NAME << "->end_of_scope_checks (" 
     << _line_number << ");\n";
   o->output_str (b);
   b.tosuio ()->clear ();
 
   o->switch_to_mode (OUTPUT_PASSTHROUGH, _line_number);
   
-  b << "return ";
+  b << "    return ";
   if (_params)
     b << _params;
-
+  b << ";  } while (0)";
   o->output_str (b);
+
   tame_env_t::output (o);
   o->switch_to_mode (om);
 
