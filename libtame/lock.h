@@ -11,13 +11,14 @@
 
 class lock_t {
 public:
-  lock_t (mode_t m = OPEN) : _mode (m) {}
 
   enum mode_t {
     OPEN = 0,
     SHARED = 1,
     EXCLUSIVE = 2
   };
+
+  lock_t (mode_t m = OPEN) : _mode (m) {}
 
   struct waiter_t {
     waiter_t (mode_t m, cbv c) : _mode (m), _cb (c) {}
