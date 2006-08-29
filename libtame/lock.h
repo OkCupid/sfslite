@@ -11,7 +11,7 @@
 
 class lock_t {
 public:
-  lock_t () : _mode (OPEN) {}
+  lock_t (mode_t m = OPEN) : _mode (m) {}
 
   enum mode_t {
     OPEN = 0,
