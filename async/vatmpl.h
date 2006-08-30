@@ -37,7 +37,7 @@ eval 'exec perl -w -S $0 ${1+"$@"}'
 use strict;
 use vars qw(@a);
 
-my $NA = 10;
+my $NA = 15;
 
 seek DATA, 0, 0;
 while (<DATA>) {
@@ -148,6 +148,27 @@ fn (const A1 &a1, const A2 &a2, const A3 &a3, const A4 &a4, const A5 &a5, const 
 								\
 template<class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9, class A10> \
 fn (const A1 &a1, const A2 &a2, const A3 &a3, const A4 &a4, const A5 &a5, const A6 &a6, const A7 &a7, const A8 &a8, const A9 &a9, const A10 &a10) \
-  start (a1, a2, a3, a4, a5, a6, a7, a8, a9, a10) end
+  start (a1, a2, a3, a4, a5, a6, a7, a8, a9, a10) end		\
+								\
+template<class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9, class A10, class A11> \
+fn (const A1 &a1, const A2 &a2, const A3 &a3, const A4 &a4, const A5 &a5, const A6 &a6, const A7 &a7, const A8 &a8, const A9 &a9, const A10 &a10, const A11 &a11) \
+  start (a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11) end	\
+								\
+template<class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9, class A10, class A11, class A12> \
+fn (const A1 &a1, const A2 &a2, const A3 &a3, const A4 &a4, const A5 &a5, const A6 &a6, const A7 &a7, const A8 &a8, const A9 &a9, const A10 &a10, const A11 &a11, const A12 &a12) \
+  start (a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12) end	\
+								\
+template<class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9, class A10, class A11, class A12, class A13> \
+fn (const A1 &a1, const A2 &a2, const A3 &a3, const A4 &a4, const A5 &a5, const A6 &a6, const A7 &a7, const A8 &a8, const A9 &a9, const A10 &a10, const A11 &a11, const A12 &a12, const A13 &a13) \
+  start (a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13) end \
+								\
+template<class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9, class A10, class A11, class A12, class A13, class A14> \
+fn (const A1 &a1, const A2 &a2, const A3 &a3, const A4 &a4, const A5 &a5, const A6 &a6, const A7 &a7, const A8 &a8, const A9 &a9, const A10 &a10, const A11 &a11, const A12 &a12, const A13 &a13, const A14 &a14) \
+  start (a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14) end \
+								\
+template<class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9, class A10, class A11, class A12, class A13, class A14, class A15> \
+fn (const A1 &a1, const A2 &a2, const A3 &a3, const A4 &a4, const A5 &a5, const A6 &a6, const A7 &a7, const A8 &a8, const A9 &a9, const A10 &a10, const A11 &a11, const A12 &a12, const A13 &a13, const A14 &a14, const A15 &a15) \
+  start (a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15) end
+
 
 #endif /* !_VATMPL_H_INCLUDED_ */
