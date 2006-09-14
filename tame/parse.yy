@@ -75,7 +75,7 @@ int vars_lineno;
 %type <str> passthrough expr
 %type <typ_mod> type_modifier type_modifier_list declaration_specifiers 
 %type <typ_mod> type_qualifier_list_opt type_qualifier_list type_qualifier 
-%type <str> cpp_initializer_opt
+%type <initializer> cpp_initializer_opt
 
 %type <decl> init_declarator declarator direct_declarator 
 %type <decl> declarator_cpp direct_declarator_cpp
@@ -474,8 +474,8 @@ init_declarator_list:  init_declarator			{}
  */
 init_declarator: declarator_cpp cpp_initializer_opt
 	{
-	  if ($2 && $2.len () > 0) 
-	    $1->set_initializer ($2);
+	  assert ($2);
+	  $1->set_initializer ($2);
 
 	  vartab_t *t = state.stack_vars ();
 
@@ -510,10 +510,17 @@ declarator_cpp: pointer_opt direct_declarator_cpp
 	}
 	;
 
-cpp_initializer_opt:	/* empty */ { $$ = lstr (get_yy_lineno (), NULL); }
+cpp_initializer_opt: /* empty */ 
+	{ 
+	  $$ = New refcounted<initializer_t> (); 
+	}
 	| '(' passthrough ')'
 	{
-	  $$ = $2;
+	  $$ = New refcounted<cpp_initializer_t> ($2); 
+	}
+	| '[' passthrough ']'
+	{
+	  $$ = New refcounted<array_initializer_t> ($2);
 	}
 	;
 

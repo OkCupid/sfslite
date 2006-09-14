@@ -143,7 +143,7 @@ template	{ yy_push_state (TEMPLATE_ENTER); return T_TEMPLATE; }
 }
 
 <HALF_PARSE>{
-[(]		{ yy_push_state (PP_BASE); return yytext[0]; }
+[([]		{ yy_push_state (PP_BASE); return yytext[0]; }
 }
 
 <FULL_PARSE>{
@@ -163,13 +163,13 @@ template	{ yy_push_state (TEMPLATE_ENTER); return T_TEMPLATE; }
 }
 
 <PP_BASE>{
-[)]		{ yy_pop_state (); return yytext[0]; } 
+[)\]]		{ yy_pop_state (); return yytext[0]; } 
 }
 
 <PP,PP_BASE>{
-\n		{ ++lineno; }
-[^()\n/_]+|[/_]	{ return std_ret (T_PASSTHROUGH); }
-[(]		{ yy_push_state (PP); return std_ret (T_PASSTHROUGH); }
+\n			{ ++lineno; }
+[^()\]\n/_]+|[/_]	{ return std_ret (T_PASSTHROUGH); }
+[(]			{ yy_push_state (PP); return std_ret (T_PASSTHROUGH); }
 }
 
 <PP,PP_BASE,TAME,TAME_BASE,EXPECT_CB_BASE,EXPECT_CB>{

@@ -140,6 +140,9 @@ var_t::decl () const
 {
   strbuf b;
   b << _type.to_str_w_template_args () << _name;
+  if (_initializer) {
+    b << _initializer->output_in_declaration ();
+  }
   return b;
 }
 
@@ -165,11 +168,41 @@ var_t::decl (const str &p) const
 str
 var_t::ref_decl () const
 {
-  strbuf b;
-  b << _type.to_str ();
-  if (!_type.is_ref ()) b << "&";
+  my_strbuf_t b;
+  b.mycat (_type.to_str ());
+  if (!_type.is_ref ()) {
+    if (_initializer) {
+      b.mycat (_initializer->ref_prefix ());
+    } else {
+      b << "&";
+    }
+  }
   b << _name;
   return b;
+}
+
+str
+initializer_t::ref_prefix () const 
+{
+  return "&";
+}
+
+str
+array_initializer_t::ref_prefix () const
+{
+  /*
+   * useful for when we can handle 2-dim++ arrays, but not really 
+   * worthwhile for now.
+   *
+  strbuf b;
+  const char *cp = _value.cstr ();
+  while (*cp && (cp = strchr (cp, '['))) {
+    b << "*";
+    cp ++;
+  }
+  return b;
+  */
+  return "*";
 }
 
 str
@@ -282,6 +315,22 @@ tame_fn_t::add_env (tame_env_t *e)
     e->set_id (++_n_labels);
 }
 
+str
+cpp_initializer_t::output_in_constructor () const
+{
+  strbuf b;
+  b << "(" << _value << ")";
+  return b;
+}
+
+str
+array_initializer_t::output_in_declaration () const 
+{
+  strbuf b;
+  b << "[" << _value << "]";
+  return b;
+}
+
 
 //-----------------------------------------------------------------------
 // Output utility routines
@@ -349,17 +398,19 @@ void
 vartab_t::initialize (strbuf &b, bool self) const
 {
   bool first = true;
+  ptr<initializer_t> init;
   for (u_int i = 0; i < size (); i++) {
-    if (self || _vars[i].initializer ()) {
+    if (self || 
+	((init = _vars[i].initializer ()) && 
+	 init->do_constructor_output ())) {
+      
       if (!first) b << ", ";
       first = false;
-      b << _vars[i].name () << " (";
-      if (self) {
-	b << _vars[i].name ();
-      } else {
-	b << _vars[i].initializer ();
-      }
-      b << ")";
+      b << _vars[i].name () << " ";
+      
+      if (self)  b << "(" <<  _vars[i].name () << ")"; 
+      else       b << init->output_in_constructor (); 
+
     }
   }
 }
@@ -1321,3 +1372,5 @@ type_qualifier_t::to_str () const
 
 //
 //-----------------------------------------------------------------------
+
+

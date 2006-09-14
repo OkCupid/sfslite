@@ -21,7 +21,11 @@ bool dostuff (const str &h, int port, cbb cb)
     coordgroup_t<int> rpcback;
     bool ret (true);
     int return_id;
+    int fds[2];
   }
+
+  fds[0] = 1;
+  fds[1] = 2;
 
   DEFAULT_RETURN { return ret; } 
 

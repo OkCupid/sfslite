@@ -253,6 +253,33 @@ private:
   str _base_type, _pointer, _template_args;
 };
 
+class initializer_t {
+public:
+  initializer_t () : _value (0, NULL) {}
+  initializer_t (const lstr &v) : _value (v) {}
+  virtual ~initializer_t () {}
+  virtual str output_in_constructor () const { return ""; }
+  virtual str output_in_declaration () const { return ""; }
+  virtual bool do_constructor_output () const { return false; }
+  virtual str ref_prefix () const;
+protected:
+  lstr _value;
+};
+
+class cpp_initializer_t : public initializer_t {
+public:
+  cpp_initializer_t (const lstr &v) : initializer_t (v) {}
+  str output_in_constructor () const;
+  bool do_constructor_output () const { return true; }
+};
+
+class array_initializer_t : public initializer_t {
+public:
+  array_initializer_t (const lstr &v) : initializer_t (v) {}
+  str output_in_declaration () const;
+  str ref_prefix () const;
+};
+
 class declarator_t;
 class var_t {
 public:
@@ -280,7 +307,7 @@ public:
   vartyp_t get_asc () const { return _asc; }
 
   void set_type (const type_t &t) { _type = t; }
-  str initializer () const { return _initializer; }
+  ptr<initializer_t> initializer () const { return _initializer; }
   bool do_output () const;
 
   str decl () const;
@@ -291,7 +318,7 @@ public:
 
 protected:
   vartyp_t _asc;
-  str _initializer;
+  ptr<initializer_t> _initializer;
   u_int _flags;
 };
 
@@ -394,14 +421,14 @@ public:
   str name () const { return _name; }
   ptr<vartab_t> params () { return _params; }
   void set_params (ptr<vartab_t> v) { _params = v; }
-  void set_initializer (const str &s) { _initializer = s; }
+  void set_initializer (ptr<initializer_t> i) { _initializer = i; }
   void dump () const ;
-  str initializer () const { return _initializer; }
+  ptr<initializer_t> initializer () const { return _initializer; }
 private:
   const str _name;
   str _pointer;
   ptr<vartab_t> _params;
-  str _initializer;
+  ptr<initializer_t> _initializer;
 };
 
 // Convert:
@@ -767,6 +794,7 @@ struct YYSTYPE {
   tame_ret_t *       ret;
   fn_specifier_t     fn_spc;
   type_qualifier_t    typ_mod;
+  ptr<initializer_t> initializer;
 };
 extern YYSTYPE yylval;
 extern str filename;
