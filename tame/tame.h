@@ -352,6 +352,7 @@ public:
 class tame_block_t;
 class tame_nonblock_t;
 class tame_join_t;
+class tame_fork_t;
 
 class tame_callback_t : public tame_env_t {
 public:
@@ -684,6 +685,9 @@ public:
 
   void new_join (tame_join_t *j);
   tame_join_t *join () { return _join; }
+  
+  void new_fork (tame_fork_t *f);
+  tame_fork_t *fork () { return _fork; }
 
   void output (outputter_t *o);
 
@@ -701,6 +705,7 @@ protected:
   tame_block_t *_block;
   tame_nonblock_t *_nonblock;
   tame_join_t *_join;
+  tame_fork_t *_fork;
   bool _sym_bit;
 
   // lists of elements (to reflect nested structure)
@@ -760,6 +765,22 @@ public:
   { assert (_args->size () > 0); return _args->size () - 1; }
 protected:
   void output_blocked (my_strbuf_t &b, const str &jgn);
+  tame_fn_t *_fn;
+  ptr<expr_list_t> _args;
+  int _id;
+};
+
+class tame_fork_t : public tame_env_t {
+public:
+  tame_fork_t (tame_fn_t *f, ptr<expr_list_t> l) : _fn (f), _args (l) {}
+  bool is_jumpto () const { return false; }
+  void set_id (int i) { _id = i; }
+  int id () const { return _id; }
+  var_t join_group () const { return (*_args)[0]; }
+  var_t arg (u_int i) const { return (*_args)[i+1]; }
+  size_t n_args () const 
+  { assert (_args->size () > 0); return _args->size () - 1; }
+protected:
   tame_fn_t *_fn;
   ptr<expr_list_t> _args;
   int _id;

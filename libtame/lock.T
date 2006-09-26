@@ -49,7 +49,7 @@ lock_t::release ()
   }
 }
 
-TAMED void
+tamed void
 lock_t::timed_acquire (lock_t::mode_t m, u_int s, u_int ms, cbb cb)
 {
   VARS {
@@ -60,7 +60,7 @@ lock_t::timed_acquire (lock_t::mode_t m, u_int s, u_int ms, cbb cb)
   }
   tcb = delaycb (s, ms, @[G,false] ());
   w = acquire (m, @[G,true]() );
-  WAIT (G, ok);
+  tamewait (G, ok);
   if (!ok) cancel (w);
   else timecb_remove (tcb);
   SIGNAL (cb, ok);

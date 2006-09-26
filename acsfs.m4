@@ -2110,4 +2110,105 @@ if test "${enable_callback2+set}" = "set" -o \
 	AC_DEFINE(SFS_HAVE_CALLBACK2, 1, Toggle callback2.h with CB signaling)
 fi
 ])
+dnl
+dnl Find pth
+dnl
+AC_DEFUN([SFS_FIND_PTH],
+[AC_ARG_WITH(pth,
+--with-pth=DIR		  Specify location of GNU Pth library)
+if test "$with_pth" != "no"
+then
+	ac_save_CFLAGS=$CFLAGS
+	ac_save_LIBS=$LIBS
+	dirs0="${with_pth} ${with_pth}/include"
+	if test "${prefix}" != "NONE"; then
+		dirs0="$dirs0 ${prefix} ${prefix}/pth"
+	fi
+
+	dirs1="$dirs0 /usr/local/include/pth /usr/local/include "
+	dirs2=""
+
+	dnl
+	dnl only consider those directories that actually have a pth.h
+	dnl in them; otherwise, we'll get false positives.
+	dnl
+	for dir in $dirs1
+	do
+	    if test -r ${dir}/pth.h ; then
+		dirs2="$dirs2 $dir"
+	    fi
+	done
+
+	AC_CACHE_CHECK(for pth.h, sfs_cv_pth_h,
+	[for dir in $dirs2 " " ; do
+		case $dir in 
+			" ") iflags=" " ;;
+			*) iflags="-I${dir}" ;;
+		esac
+		CFLAGS="${ac_save_CFLAGS} $iflags"
+		AC_TRY_COMPILE([#include <pth.h>], [
+#if !defined(PTH_SYSCALL_HARD) || PTH_SYSCALL_HARD == 0
+#error "HARD SYSTEM CALLS ARE REQUIRED"
+#endif
+#if PTH_SYSCALL_SOFT
+#error "SOFT SYSTEM CALLS WILL BREAK LIBASYNC"
+#endif
+		],
+	 	sfs_cv_pth_h="${iflags}"; break)
+	done
+	if test "$sfs_cv_pth_h" = " "; then
+		sfs_cv_pth_h="yes"
+	fi
+	])
+	if test "$sfs_cv_pth_h" = "yes"; then
+		sfs_cv_pth_h=" "
+	fi
+	if test "${sfs_cv_pth_h+set}"; then
+		dnl
+		dnl only check the include directory that corresponds
+		dnl to the library directory;  there might be multiple
+		dnl versions of the library around.
+		dnl
+		dirs=`echo $sfs_cv_pth_h | sed 's/include/lib/' `
+		dirs=`echo $dirs | sed 's/^-I//' `
+		AC_CACHE_CHECK(for libpth, sfs_cv_libpth,
+		[for dir in " " $dirs; do
+			case $dir in
+				" ") lflags="-lpth" ;;
+				*) lflags="-L${dir} -lpth" ;;
+			esac
+			LIBS="$ac_save_LIBS $lflags"
+			AC_TRY_LINK([#include <pth.h>],
+				pth_init ();, 
+				sfs_cv_libpth=$lflags; break)
+
+			dnl
+			dnl Linux seems to require linking against -ldl in
+			dnl certain cases.  May as well give it a try
+			dnl
+			lflags="$lflags -ldl";
+			LIBS="$ac_save_LIBS $lflags"
+			AC_TRY_LINK([#include <pth.h>],
+				pth_init ();, 
+				sfs_cv_libpth=$lflags; break)
+
+		done
+		if test -z ${sfs_cv_libpth+set}; then
+			sfs_cv_libpth="no"
+		fi
+	])
+	fi
+	if test "${sfs_cv_libpth+set}" && test "$sfs_cv_libpth" != "no"; then
+		CPPFLAGS="$CPPFLAGS $sfs_cv_pth_h"
+		AC_DEFINE(HAVE_PTH, 1, Allow libamt to use the GNU Pth library)
+		sfs_have_threads=yes
+		LDADD_THR=$sfs_cv_libpth
+	else
+		AC_MSG_ERROR("Pth failed. To disable Pth use --without-pth")
+	fi
+	LIBS=$ac_save_LIBS
+	CFLAGS=$ac_save_CFLAGS
+fi
+AC_SUBST(LDADD_THR)
+])
 

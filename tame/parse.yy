@@ -63,6 +63,7 @@ int vars_lineno;
 %token T_JOIN
 %token T_WAIT
 %token T_DEFAULT_RETURN
+%token T_FORK
 
 %token T_2DOLLAR
 
@@ -90,7 +91,7 @@ int vars_lineno;
 
 %type <var>  parameter_declaration
 
-%type <el>   fn_tame vars block nonblock join return_statement wait
+%type <el>   fn_tame vars block nonblock join return_statement wait fork
 %type <el>   default_return floating_callback
 %type <cb>   callback
 
@@ -349,6 +350,23 @@ join: T_JOIN '(' join_list ')' '{'
 	  state.pop_list ();
 	  state.passthrough (lstr (get_yy_lineno (), "}"));
 	  $$ = state.join ();
+	}
+	;
+
+fork: T_FORK '(' expr_list ')' '{'
+	{
+	  tame_fn_t *fn = state.function ();
+	  tame_fork_t *frk = New tame_fork_t (fn, $3);
+	  state.new_fork (frk);
+	  fn->add_enf (frk);
+	  state.passthrough (lstr (get_yy_lineno ()), "{"));
+	  state.push_list (frk);
+	}
+	fn_statements '}'
+	{
+	  state.pop_list ();
+	  state.passthrough (lstr (get_yy_lineno (), "}"));
+	  $$ = state.fork ();
 	}
 	;
 

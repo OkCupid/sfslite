@@ -319,11 +319,13 @@ return/[ \t\n(;] { return yyerror ("cannot return from within a BLOCK or "
 [{]		{ yylval.str = yytext; yy_push_state (TAME); 
 		  return T_PASSTHROUGH; }
 
-VARS/[ \t\n{/]	    { return tame_ret (VARS_ENTER, T_VARS); }
-BLOCK/[ \t\n{/]	    { return tame_ret (BLOCK_ENTER, T_BLOCK); }
+[Vv][Aa][Rr][Ss]/[ \t\n{/]	    { return tame_ret (VARS_ENTER, T_VARS); }
+[Bb][Ll][Oo][Cc][Kk]/[ \t\n{/]	    { return tame_ret (BLOCK_ENTER, T_BLOCK); }
+[Tt][Aa][Mm][Ee][Ff][Oo][Rr][Kk]    { return tame_ret (JOIN_ENTER, T_FORK); }
 NONBLOCK/[ \t\n(/]  { return tame_ret (NONBLOCK_ENTER, T_NONBLOCK); }
 JOIN/[ \t\n(/]	    { return tame_ret (JOIN_ENTER, T_JOIN); }
 WAIT/[ \t\n(/]	    { return tame_ret (JOIN_ENTER, T_WAIT); }
+tamewait/[ \t\n(/]  { return tame_ret (JOIN_ENTER, T_WAIT); }
 DEFAULT_RETURN	    { return tame_ret (DEFRET_ENTER, T_DEFAULT_RETURN); }
 
 return/[ \t\n(/;]   { yy_push_state (RETURN_PARAMS); return T_RETURN; }
@@ -355,7 +357,7 @@ return/[ \t\n(/;]   { yy_push_state (RETURN_PARAMS); return T_RETURN; }
 }
 
 <INITIAL>{
-TAMED/[ \t\n/]  { return tame_ret (SIG_PARSE, T_TAMED); }
+[Tt][Aa][Mm][Ee][Dd]/[ \t\n/]  { return tame_ret (SIG_PARSE, T_TAMED); }
 TAME/[ \t\n(/] 	{ return tame_ret (FN_ENTER, T_TAME); }
 [^Tt\n"/]+|[Tt/]	{ yylval.str = yytext; return T_PASSTHROUGH ; }
 \n		{ ++lineno; yylval.str = yytext; return T_PASSTHROUGH; }

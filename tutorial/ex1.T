@@ -4,11 +4,11 @@
 #include "tame.h"
 #include "parseopt.h"
  
-TAMED static 
+tamed static 
 void try_connect (str h, int port)
 {
-  VARS { int fd; }
-  BLOCK { tcpconnect (h, port, @(fd)); }
+  vars { int fd; }
+  block { tcpconnect (h, port, mkcv(fd)); }
   if (fd >= 0) {
     warn << "Connection succeeded!\n";
     exit (0);

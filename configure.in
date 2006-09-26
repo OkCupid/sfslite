@@ -91,6 +91,9 @@ SFS_PATH_PROG(logger)
 dnl Path for pathinfo
 SFS_PATH_DF
 
+dnl Find PTH threads
+SFS_FIND_PTH
+
 dnl Paths for random number generator
 SFS_DEV_RANDOM
 SFS_PATH_PROG(dmesg)
@@ -272,7 +275,7 @@ LIBSFSMISC='$(top_builddir)/sfsmisc/libsfsmisc.la'
 AC_SUBST(LIBTAME)
 LIBTAME='$(top_builddir)/libtame/libtame.la'
 LDADD='$(LIBTAME) $(LIBSFSMISC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC) $(LIBGMP)'
-LDADD="$LDADD "'$(LIBPY)'
+LDADD="$LDADD "'$(LIBPY) $(LDADD_PTH)'
 
 if test "$enable_shared" = yes; then
     LDEPS=

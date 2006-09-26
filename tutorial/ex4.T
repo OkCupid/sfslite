@@ -6,7 +6,7 @@
 #include "parseopt.h"
 #include "ex_prot.h"
 
-TAMED static 
+tamed static 
 bool dostuff (const str &h, int port, cbb cb)
 {
   // declare all of your "stack" variables here
@@ -47,7 +47,7 @@ bool dostuff (const str &h, int port, cbb cb)
       // launch an asychronous function call, but don't
       // block on its return. Associate the call with the 
       // join group 'window' and the index value 'i'
-      cli->call (EX_RANDOM, NULL, &res[i], @[rpcback,i](errs[i]));
+      cli->call (EX_RANDOM, NULL, &res[i], mkcv<1> (rpcback, i, errs[i]));
     }
 
     // a join is needed for every call that returns
@@ -56,7 +56,7 @@ bool dostuff (const str &h, int port, cbb cb)
       // Block until a call has returned; when it has, get
       // the index variable associated with the call, and assign
       // it to 'return_id'.
-      WAIT(rpcback, return_id);
+      cgwait (rpcback, return_id);
       if (errs[return_id]) {
 	err_occurred = true;
 	warn << "RPC error: " << errs[return_id] << "\n";

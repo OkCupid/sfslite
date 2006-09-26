@@ -50,6 +50,7 @@
 #include "keyfunc.h"
 #include "coordvar.h"
 #include "list.h"
+#include <pth.h>
 
 
 /*
@@ -450,6 +451,10 @@ INIT(tame_init);
 
 void collect_join_group (mortal_ref_t r, void *p);
 
+typedef enum { JOIN_NONE = 0,
+	       JOIN_EVENTS = 1,
+	       JOIN_THREADS = 2 } join_method_t;
+
 /**
  * Holds the important information associated with a join group,
  * such as how many calls are oustanding, and who is waiting to join.
@@ -465,7 +470,13 @@ public:
   join_group_pointer_t (const char *f, int l) : 
     weak_refcounted_t<join_group_pointer_t<T1,T2,T3,T4> > (this),
     _n_out (0), _file (f), _lineno (l),
-    _must_deallocate (New refcounted<must_deallocate_t> ()) {}
+    _must_deallocate (New refcounted<must_deallocate_t> ()),
+    _join_method (JOIN_NONE) 
+  {
+    pth_mutex_init (&_mutex);
+    pth_cond_init (&_cond);
+  }
+
 
   virtual ~join_group_pointer_t () { mark_dead (); }
 
@@ -493,7 +504,8 @@ public:
       delaycb (0, 0, wrap (_must_deallocate, &must_deallocate_t::check));
   }
 
-  void set_join_cb (cbv::ptr c) { _join_cb = c; }
+  void set_join_cb (cbv::ptr c) 
+  { set_join_method (JOIN_EVENTS); _join_cb = c; }
 
   void collect_myself (void *jgwp) 
   { collect_join_group (mortal_t::make_mortal_ref (), jgwp); }
@@ -510,11 +522,36 @@ public:
   {
     _n_out --;
     _pending.push_back (v);
-    if (_join_cb) {
+    if (_join_method == JOIN_EVENTS) {
+      assert (_join_cb);
       cbv cb = _join_cb;
       _join_cb = NULL;
       (*cb) ();
+    } else if (_join_method == JOIN_THREADS) {
+      pth_cond_notify (&_cond, 0);
     }
+  }
+
+
+  void threadjoin ()
+  {
+    set_join_method (JOIN_THREADS);
+    await ();
+    clear_join_method ();
+  }
+
+  void set_join_method (join_method_t jm)
+  {
+    assert (_join_method == JOIN_NONE);
+    _join_method = jm;
+  }
+
+  void clear_join_method () 
+  { 
+    if (_join_method == JOIN_EVENTS) {
+      _join_cb = NULL;
+    }
+    _join_method = JOIN_NONE; 
   }
 
   ptr<must_deallocate_t> must_deallocate () { return _must_deallocate; }
@@ -549,6 +586,13 @@ public:
   }
 
 private:
+
+  void await ()
+  {
+    pth_mutex_acquire (&_mutex, 0, NULL);
+    pth_cond_await (&_cond, &_mutex, NULL);
+  }
+
   // number of calls out that haven't yet completed
   u_int _n_out; 
 
@@ -563,6 +607,11 @@ private:
   int _lineno;
 
   ptr<must_deallocate_t> _must_deallocate;
+
+  // for threads
+  join_method_t _join_method;
+  pth_cond_t _cond;
+  pth_mutex_t _mutex;
 };
 
 /**
@@ -824,6 +873,37 @@ public:
 
   bool next_var () { return join_group_t<T1,T2,T3,T4>::pending (); }
   bool next_signal () { return next_var (); }
+
+
+  void wait (T1 &r1, T2 &r2, T3 &r3, T4 &r4)
+  {
+    this->pointer ()->threadjoin ();
+    assert (next_var (r1, r2, r3, r4));
+  }
+
+  void wait (T1 &r1, T2 &r2, T3 &r3)
+  {
+    this->pointer ()->threadjoin ();
+    assert (next_var (r1, r2, r3));
+  }
+
+  void wait (T1 &r1, T2 &r2)
+  {
+    this->pointer ()->threadjoin ();
+    assert (next_var (r1, r2));
+  }
+
+  void wait (T1 &r1)
+  {
+    this->pointer ()->threadjoin ();
+    assert (next_var (r1));
+  }
+
+  void wait ()
+  {
+    this->pointer ()->threadjoin ();
+    assert (next_var ());
+  }
 
 };
 
