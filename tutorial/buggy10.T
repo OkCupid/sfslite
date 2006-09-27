@@ -59,7 +59,7 @@ void state_t::launch (cbb cv)
       cli->call (EX_RANDOM, NULL, &res[i], @[window,i](errs[i]));
     }
 
-    delaycb (10, 0, wrap (foofoo, @[window](xx)));
+    delaycb (10, 0, wrap (foofoo, @[window, -1](xx)));
   }
   cv->signal (ret);
 }
@@ -89,7 +89,7 @@ void state_t::relaunch (cbb cv)
       // another should be launched. but don't bother launching
       // more if an error occurred.
       if (i < n_tot && !err_occurred) {
-	cli->call (EX_RANDOM, NULL, &res[i], @[window,i](errs[i]));
+	cli->call (EX_RANDOM, NULL, &res[i], @[window, i](errs[i]));
 	i++;
       }
     }

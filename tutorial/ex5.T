@@ -15,7 +15,7 @@
 class remote_host_t {
 public:
   remote_host_t (const str &n) : _name (n) {}
-  void dostuff (int port, coordvar_t<bool>::t cb) 
+  void dostuff (int port, event_bool_t cb) 
   { dostuff_private (port, cb); }
 private:
   void dostuff_private (int port, cbb cv, CLOSURE);

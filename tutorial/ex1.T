@@ -8,7 +8,7 @@ tamed static
 void try_connect (str h, int port)
 {
   vars { int fd; }
-  block { tcpconnect (h, port, mkcv(fd)); }
+  block { tcpconnect (h, port, @(fd)); }
   if (fd >= 0) {
     warn << "Connection succeeded!\n";
     exit (0);
