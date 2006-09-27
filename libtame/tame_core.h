@@ -750,6 +750,8 @@ public:
       (_pointer, loc, _pointer->must_deallocate ()); 
   }
 
+  void clear_join_method () { _pointer->clear_join_method (); }
+
   //
   //-----------------------------------------------------------------------
 

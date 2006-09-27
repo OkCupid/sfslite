@@ -1258,16 +1258,18 @@ tame_wait_t::output (outputter_t *o)
   my_strbuf_t b;
   b.mycat (_fn->label (_id)) << ":\n";
   b << "do {\n"
-    << "   if (!" << jgn << ".next_var (";
+    << "  if (!" << jgn << ".next_var (";
   for (size_t i = 0; i < n_args (); i++) {
     if (i > 0) b << ", ";
     b << "" << arg (i).name () << "";
   }
   b << ")) {\n";
   output_blocked (b, jgn);
-  b << "  }\n"
+  b << "  } else {\n"
+    << "    " << jgn << ".clear_join_method ();\n"
+    << "  }\n"
     << "} while (0);\n";
-
+  
   o->output_str (b);
   o->switch_to_mode (om);
 }
