@@ -71,11 +71,15 @@ sub do_mkevent_generic_cb ($$)
 		    ),
 	   ")\n"
 	   );
-		
-    print "{\n";
-    print "  rs.assign (" . arglist (["t%", $t]) . ");\n";
-    print "  j->join (w);\n";
-    print "}\n\n";
+    
+    if ($t > 0 || $w > 0) {
+	print "{\n";
+	print "  rs.assign (" . arglist (["t%", $t]) . ");\n";
+	print "  j->join (w);\n";
+	print "}\n\n";
+    } else {
+	print ";\n\n";
+    }
 }
 
 sub do_mkevent_generic ($$)
@@ -96,21 +100,25 @@ sub do_mkevent_generic ($$)
 		    ),
 	   ")\n"
 	   );
-    print "{\n";
-    print "  rv.launch_one (c);\n";
-    my $tl = "";
-    my @args = ("${name}_cb_${w}_${t}" .
-		template_arglist (["W%", $w], ["T%", $t]) ,
-		"c",
-		"rv.make_joiner (loc)",
-		"refset_t<" . arglist (["T%", $t]) . ">" 
-		. " (" . arglist (["t%", $t]) . ")" ,
-		"value_set_t<" . arglist (["W%", $w]) . ">"
-		. " (" . arglist (["w%", $w]) . ")");
-    print "  return wrap (" . join (",\n               ", @args). ");\n";
-    print "}\n\n";
+    if ($t > 0 || $w > 0) {
+	print "{\n";
+	print "  rv.launch_one (c);\n";
+	my $tl = "";
+	my @args = ("${name}_cb_${w}_${t}" .
+		    template_arglist (["W%", $w], ["T%", $t]) ,
+		    "c",
+		    "rv.make_joiner (loc)",
+		    "refset_t<" . arglist (["T%", $t]) . ">" 
+		    . " (" . arglist (["t%", $t]) . ")" ,
+		    "value_set_t<" . arglist (["W%", $w]) . ">"
+		    . " (" . arglist (["w%", $w]) . ")");
+	print "  return wrap (" . join (",\n               ", @args). ");\n";
+	print "}\n\n";
+    } else {
+	print ";\n\n";
+    }
 }
-
+    
 sub do_generic ($$)
 {
     my ($t, $w) = @_;
@@ -132,16 +140,20 @@ sub do_mkevent_block ($)
 		    "const char *loc",
 		    [ "T% &t%", $t ]),
 	   ")\n");
-    print "{\n";
-    my $tl = template_arglist (["T%", $t]);
-    print ("  return wrap (",
-	   arglist ( "${name}_cb_${t}${tl}",
-		     "c.closure ()->make_wrapper (loc)",
-		     "refset_t<" . arglist (["T%", $t]) 
-		     ."> (" . arglist (["t%", $t]) . ")"
-		     ),
-	   ");\n");
-    print "}\n\n";
+    if ($t > 0) {
+	print "{\n";
+	my $tl = template_arglist (["T%", $t]);
+	print ("  return wrap (",
+	       arglist ( "${name}_cb_${t}${tl}",
+			 "c.closure ()->make_wrapper (loc)",
+			 "refset_t<" . arglist (["T%", $t]) 
+			 ."> (" . arglist (["t%", $t]) . ")"
+			 ),
+	       ");\n");
+	print "}\n\n";
+    } else {
+	print ";\n\n";
+    }
 }
 
 sub do_mkevent_block_cb ($)
@@ -157,10 +169,14 @@ sub do_mkevent_block_cb ($)
 		    ["T% t%", $t]
 		    ),
 	   ")\n");
-    print "{\n";
-    print "  rs.assign (" . arglist (["t%", $t]) . ");\n";
-    print "  c->maybe_reenter ();\n";
-    print "}\n\n";
+    if ($t > 0) {
+	print "{\n";
+	print "  rs.assign (" . arglist (["t%", $t]) . ");\n";
+	print "  c->maybe_reenter ();\n";
+	print "}\n\n";
+    } else {
+	print ";\n\n";
+    }
 }
 
 sub do_block ($)

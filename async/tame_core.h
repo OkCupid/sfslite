@@ -23,12 +23,12 @@
  *
  */
 
-#ifndef _ASYNC_TAME_H
-#define _ASYNC_TAME_H
+#ifndef _ASYNC_TAME_CORE_H_
+#define _ASYNC_TAME_CORE_H_
 
 
 /*
- * async/tame.h
+ * async/tame_core.h
  *
  *   Runtime classes, constants, and MACROs for libasync files that have
  *   been 'tame'd by the tame utility.  That is, all files that have been
@@ -357,7 +357,9 @@ public:
 
 class implicit_rendezvous_t {
 public:
-  implicit_rendezvous_t (ptr<closure_t> c) : _cls (c) {}
+  // We don't want to be able to say something like
+  // implicit_rendezvous_t x = __cls_g, so add the dummy.
+  implicit_rendezvous_t (int dummy_XXX, ptr<closure_t> c) : _cls (c) {}
   ptr<closure_t> closure () { return _cls; }
 private:
   ptr<closure_t> _cls;
@@ -900,7 +902,6 @@ typedef ref<callback<void, int> > event_int_t;
 typedef ref<callback<void, void> > event_void_t;
 typedef ref<callback<void, str> > event_str_t;
 
-
 #define TAME_GLOBAL_INT      tame_global_int
 #define CLOSURE              ptr<closure_t> __frame = NULL
 #define TAME_OPTIONS         "TAME_OPTIONS"
@@ -910,49 +911,6 @@ extern int TAME_GLOBAL_INT;
 
 void start_join_group_collection ();
 
-
-/**
- * A helper class useful for canceling an TAME'd function midstream.
- */
-class canceller_t {
-public:
-  canceller_t () 
-    : _toolate (false), _queued_cancel (false), _cancelled (false) {}
-
-  // the cancelable function calls this 
-  void wait (cbv b) 
-  { 
-    if (_queued_cancel) {
-      SIGNAL (b);
-    } else {
-      _cb = b; 
-    }
-  }
-
-  bool cancelled () const { return _cancelled; }
-
-  // the canceller calls this to cancel the cancelable function
-  void cancel ()
-  {
-    _cancelled = true;
-    if (_cb) {
-      cbv::ptr t = _cb;
-      _cb = NULL;
-      SIGNAL (t);
-    } else if (!_toolate) {
-      _queued_cancel = true;
-    }
-  }
-
-  // the cancelable function can call this if it deems that it is too
-  // late to cancel.
-  void toolate () { _toolate = true; clear (); }
-  void clear () { _cb = NULL; }
-private:
-  cbv::ptr _cb;
-  bool _toolate, _queued_cancel, _cancelled;
-};
-
 #define LOC(f,l) f ":" #l
 #define mkevent(...) \
   _mkevent (__cls_g, LOC(__FILE__, __LINE__), __VA_ARGS__)
@@ -960,8 +918,4 @@ private:
   _mkevent (__cls_g, LOC(__FILE__, __LINE__) )
 #define rendezvous_t coordgroup_t
 
-
-
-
-
-#endif /* _ASYNC_TAME_H */
+#endif /* _ASYNC_TAME_CORE_H_ */

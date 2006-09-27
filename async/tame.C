@@ -2,7 +2,7 @@
 // -*-c++-*-
 /* $Id$ */
 
-#include "tame.h"
+#include "tame_core.h"
 
 int tame_options;
 
