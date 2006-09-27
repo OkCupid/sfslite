@@ -417,9 +417,9 @@ public:
 
   str loc () const { return _cls->loc (_lineno); }
   const char *must_dealloc_typ () const { return "coordination variable"; }
+  ptr<closure_t> closure () { return _cls; }
 
-protected:
-  void maybe_reenter ();
+  void maybe_reenter () { _cls->maybe_reenter (_lineno); }
 
 private:
   ptr<closure_t> _cls;
@@ -1015,8 +1015,8 @@ private:
 };
 
 #define LOC(f,l) f ":" #l
-#define mkevent(c, ...) \
-  _mkevent (__cls_g, LOC(__FILE__, __LINE__), c, __VA_ARGS__)
+#define mkevent(...) \
+  _mkevent (__cls_g, LOC(__FILE__, __LINE__), __VA_ARGS__)
 #define rendezvous_t coordgroup_t
 
 

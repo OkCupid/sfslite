@@ -44,7 +44,17 @@ sub arglist (@)
     return commafy (mklist_multi (@_));
 }
 
-sub do_mkevent_cb ($$)
+sub template_arglist (@)
+{
+    my $al = arglist (@_);
+    if (length ($al) > 0) {
+	return "<" . $al . ">";
+    } else {
+	return "";
+    }
+}
+
+sub do_mkevent_generic_cb ($$)
 {
     my ($t, $w) = @_;
     if ($t > 0 || $w > 0) {
@@ -68,7 +78,7 @@ sub do_mkevent_cb ($$)
     print "}\n\n";
 }
 
-sub do_mkevent ($$)
+sub do_mkevent_generic ($$)
 {
     my ($t, $w) = @_;
     if ($t > 0 || $w > 0) {
@@ -90,8 +100,7 @@ sub do_mkevent ($$)
     print "  rv.launch_one (c);\n";
     my $tl = "";
     my @args = ("${name}_cb_${w}_${t}" .
-		(($w > 0 || $t > 0) ? 
-		 ("<" . arglist (["W%", $w], ["T%", $t]) . ">") : ""),
+		template_arglist (["W%", $w], ["T%", $t]) ,
 		"c",
 		"rv.make_joiner (loc)",
 		"refset_t<" . arglist (["T%", $t]) . ">" 
@@ -102,13 +111,64 @@ sub do_mkevent ($$)
     print "}\n\n";
 }
 
-sub dodump ($$)
+sub do_generic ($$)
 {
     my ($t, $w) = @_;
-    do_mkevent_cb ($t, $w);
-    do_mkevent ($t, $w);
+    do_mkevent_generic_cb ($t, $w);
+    do_mkevent_generic ($t, $w);
 }
 
+
+sub do_mkevent_block ($)
+{
+    my ($t) = @_;
+    if ($t > 0) {
+	print "template<" . arglist (["class T%", $t]) . ">\n";
+	print "typename ";
+    }
+    print "callback<" . arglist ("void", ["T%", $t]) . ">::ref\n";
+    print ("${name} (" ,
+	   arglist ("ptr<closure_t> c",
+		    "int lineno",
+		    "int blockid",
+		    [ "T% &t%", $t ]),
+	   ")\n");
+    print "{\n";
+    my $tl = template_arglist (["T%", $t]);
+    print ("  return wrap (",
+	   arglist ( "${name}_cb_${t}${tl}",
+		     "c->make_wrapper (blockid, lineno)",
+		     "refset_t${tl} (" . arglist (["t%", $t]) . ")"
+		     ),
+	   ");\n");
+    print "}\n\n";
+}
+
+sub do_mkevent_block_cb ($)
+{
+    my ($t) = @_;
+    if ($t > 0) {
+	print "template<" . arglist (["class T%", $t]) . ">\n";
+    }
+    print "void\n";
+    print ("${name}_cb_${t} (",
+	   arglist ("ptr<closure_wrapper_t> c",
+		    "refset_t<" . arglist (["T%", $t]). "> rs",
+		    ["T% t%", $t]
+		    ),
+	   ")\n");
+    print "{\n";
+    print "  rs.assign (" . arglist (["t%", $t]) . ");\n";
+    print "  c->maybe_reenter ();\n";
+    print "}\n\n";
+}
+
+sub do_block ($)
+{
+    my ($t) = @_;
+    do_mkevent_block_cb ($t);
+    do_mkevent_block ($t);
+}
 
 print <<EOF;
 // -*-c++-*-
@@ -125,11 +185,13 @@ print <<EOF;
 EOF
 
 
-for (my $i = 0; $i <= $N_tv; $i++) {
-    for (my $j = 0; $j <= $N_wv; $j++) {
-	dodump ($i, $j);
+for (my $t = 0; $t <= $N_tv; $t++) {
+    do_block ($t);
+    for (my $w = 0; $w <= $N_wv; $w++) {
+	do_generic ($t, $w);
     }
 }
+
 
 print <<EOF;
 #endif // _ASYNC_MKEVENT_H_ 
