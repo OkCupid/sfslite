@@ -294,9 +294,9 @@ parse_state_t::new_block (tame_block_t *g)
 }
 
 void
-parse_state_t::new_join (tame_join_t *j)
+parse_state_t::new_fork (tame_fork_t *j)
 {
-  _join = j;
+  _fork = j;
   push (j);
 }
 
@@ -713,7 +713,7 @@ tame_fn_t::output_closure (outputter_t *o)
     _args->paramlist (b, DECLARATIONS);
   }
 
-  b << ") : closure_t (\"" << state.infile_name () << "\", \"" 
+  b << ") : closure_t (\"" << state->infile_name () << "\", \"" 
     << _name << "\"), "
     ;
 
@@ -890,7 +890,7 @@ void
 tame_fn_t::output_fn (outputter_t *o)
 {
   my_strbuf_t b;
-  state.set_fn (this);
+  state->set_fn (this);
 
   output_mode_t om = o->switch_to_mode (OUTPUT_PASSTHROUGH);
   b << signature (false, TAME_PREFIX)  << "\n"
@@ -1160,7 +1160,7 @@ tame_nonblock_callback_t::output (outputter_t *o)
   output_mode_t om = o->switch_to_mode (OUTPUT_PASSTHROUGH);
 
   str jgn = join_group ().name ();
-  str loc = state.loc (_line_number);
+  str loc = state->loc (_line_number);
 
   b.mycat (mk_cv_name ());
   b << "(" << CLOSURE_GENERIC << ", \"";
@@ -1299,7 +1299,7 @@ tame_unblock_t::output (outputter_t *o)
   const str tmp ("__cb_tmp");
   my_strbuf_t b;
   output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL);
-  str loc = state.loc (_line_number);
+  str loc = state->loc (_line_number);
   b << "  do {\n";
   
   str n = macro_name ();

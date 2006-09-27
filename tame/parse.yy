@@ -91,7 +91,7 @@ int vars_lineno;
 
 %type <var>  parameter_declaration
 
-%type <el>   fn_tame vars block nonblock join return_statement wait fork
+%type <el>   fn_tame vars block nonblock return_statement wait fork
 %type <el>   default_return floating_callback
 %type <cb>   callback
 
@@ -101,8 +101,8 @@ int vars_lineno;
 %%
 
 
-file:  passthrough 			{ state.passthrough ($1); }
-	| file fn passthrough       	{ state.passthrough ($3); }
+file:  passthrough 			{ state->passthrough ($1); }
+	| file fn passthrough       	{ state->passthrough ($3); }
 	;
 
 passthrough: /* empty */	    { $$ = lstr (get_yy_lineno ()); }
@@ -129,20 +129,20 @@ tame_decl: T_TAME '(' fn_declaration ')'   { $$ = $3; }
 
 fn:	tame_decl '{'
 	{
-	  state.new_fn ($1);
-	  state.push_list ($1);
+	  state->new_fn ($1);
+	  state->push_list ($1);
 	  $1->set_lbrace_lineno (get_yy_lineno ());
 	}
 	fn_statements '}'
 	{
-	  if (!state.function ()->check_return_type ()) {
+	  if (!state->function ()->check_return_type ()) {
 	    yyerror ("Function has non-void return type but no "
 	    	     "DEFAULT_RETURN specified");
  	  }
-	  state.push (New tame_fn_return_t (get_yy_lineno (), 
-				            state.function ()));
-	  state.passthrough (lstr (get_yy_lineno (), "}"));
-	  state.pop_list ();
+	  state->push (New tame_fn_return_t (get_yy_lineno (), 
+				            state->function ()));
+	  state->passthrough (lstr (get_yy_lineno (), "}"));
+	  state->pop_list ();
 	}
 	;
 
@@ -175,19 +175,19 @@ const_opt: /* empty */		{ $$ = false; }
 
 fn_statements: passthrough			
 	{
-	  state.passthrough ($1);
+	  state->passthrough ($1);
 	}
 	| fn_statements fn_tame passthrough
 	{
-   	  if ($2) state.push ($2);
-	  state.passthrough ($3);
+   	  if ($2) state->push ($2);
+	  state->passthrough ($3);
 	}
 	;
 
 fn_tame: vars
 	| block
 	| nonblock
-	| join
+	| fork
 	| wait
 	| return_statement
 	| default_return
@@ -208,7 +208,7 @@ default_return: T_DEFAULT_RETURN '{' passthrough '}'
 	  // this thing will not be output anywhere near where
 	  // it's being input, so don't associate it in the 
 	  // element list as usual.
-	  if (!state.function ()->set_default_return ($3)) {
+	  if (!state->function ()->set_default_return ($3)) {
 	    yyerror ("DEFAULT_RETURN specified more than once");
 	  }
 	  $$ = NULL;
@@ -221,14 +221,14 @@ vars:	T_VARS
 	} 
 	'{' declaration_list_opt '}'
 	{
-	  tame_vars_t *v = New tame_vars_t (state.function (), vars_lineno);
-	  if (state.function ()->get_vars ()) {
+	  tame_vars_t *v = New tame_vars_t (state->function (), vars_lineno);
+	  if (state->function ()->get_vars ()) {
 	    strbuf b;
 	    b << "VARS{} section specified twice (before on line " 
-	      << state.function ()->get_vars ()->lineno () << ")\n";
+	      << state->function ()->get_vars ()->lineno () << ")\n";
 	    yyerror (b);
 	  }
-	  if (!state.function ()->set_vars (v)) {
+	  if (!state->function ()->set_vars (v)) {
 	    yyerror ("The VARS{} section must come before any BLOCK, "
 	             " WAIT or NONBLOCK section");
 	  }
@@ -239,7 +239,7 @@ vars:	T_VARS
 return_statement: T_RETURN passthrough ';'
 	{
 	   tame_ret_t *r = New tame_ret_t (get_yy_lineno (), 
-			  	    state.function ());	
+			  	    state->function ());	
 	   if ($2)
 	     r->add_params ($2);
  	   r->passthrough (lstr (get_yy_lineno (), ";"));
@@ -249,18 +249,18 @@ return_statement: T_RETURN passthrough ';'
 
 block: T_BLOCK '{' 
 	{
-	  tame_fn_t *fn = state.function ();
+	  tame_fn_t *fn = state->function ();
  	  tame_block_t *bl = New tame_block_t (fn, get_yy_lineno ());
-	  state.new_block (bl);
+	  state->new_block (bl);
 	  fn->add_env (bl);
 	  fn->hit_tame_block ();
-	  state.push_list (bl);
+	  state->push_list (bl);
 	}
 	callbacks_and_passthrough '}'
 	{
- 	  state.pop_list ();
-	  $$ = state.block ();
-	  state.clear_block ();
+ 	  state->pop_list ();
+	  $$ = state->block ();
+	  state->clear_block ();
 	}
 	;
 
@@ -312,72 +312,55 @@ expr_list: expr
 
 nonblock: T_NONBLOCK '(' expr_list ')' '{'
 	{
-	  tame_fn_t *fn = state.function ();
+	  tame_fn_t *fn = state->function ();
  	  tame_nonblock_t *c = New tame_nonblock_t ($3);
-	  state.new_nonblock (c);
+	  state->new_nonblock (c);
 	  fn->add_env (c);
-	  state.push_list (c);
-	  state.passthrough (lstr (get_yy_lineno (), "{"));
+	  state->push_list (c);
+	  state->passthrough (lstr (get_yy_lineno (), "{"));
 	} 
 	callbacks_and_passthrough '}'
 	{
-	  state.passthrough (lstr (get_yy_lineno (), "}"));
-	  state.pop_list ();
-	  $$ = state.nonblock ();
+	  state->passthrough (lstr (get_yy_lineno (), "}"));
+	  state->pop_list ();
+	  $$ = state->nonblock ();
 	}
 	;
 
 wait: T_WAIT '(' join_list ')' ';'
 	{
-	  tame_fn_t *fn = state.function ();
+	  tame_fn_t *fn = state->function ();
 	  tame_wait_t *w = New tame_wait_t (fn, $3, get_yy_lineno ());
 	  fn->add_env (w);
 	  $$ = w;
 	}
 	;
 
-join: T_JOIN '(' join_list ')' '{' 
-	{
-	  tame_fn_t *fn = state.function ();
-	  tame_join_t *jn = New tame_join_t (fn, $3);
-	  state.new_join (jn);
-	  fn->add_env (jn);
-	  state.passthrough (lstr (get_yy_lineno (), "{"));
-	  state.push_list (jn);
-	}
-	fn_statements '}'
-	{
-	  state.pop_list ();
-	  state.passthrough (lstr (get_yy_lineno (), "}"));
-	  $$ = state.join ();
-	}
-	;
-
 fork: T_FORK '(' expr_list ')' '{'
 	{
-	  tame_fn_t *fn = state.function ();
+	  tame_fn_t *fn = state->function ();
 	  tame_fork_t *frk = New tame_fork_t (fn, $3);
-	  state.new_fork (frk);
-	  fn->add_enf (frk);
-	  state.passthrough (lstr (get_yy_lineno ()), "{"));
-	  state.push_list (frk);
+	  state->new_fork (frk);
+	  fn->add_env (frk);
+	  state->passthrough (lstr (get_yy_lineno (), "{"));
+	  state->push_list (frk);
 	}
 	fn_statements '}'
 	{
-	  state.pop_list ();
-	  state.passthrough (lstr (get_yy_lineno (), "}"));
-	  $$ = state.fork ();
+	  state->pop_list ();
+	  state->passthrough (lstr (get_yy_lineno (), "}"));
+	  $$ = state->fork ();
 	}
 	;
 
 callbacks_and_passthrough: passthrough		
 	{ 
-	  state.passthrough ($1); 
+	  state->passthrough ($1); 
 	}
 	| callbacks_and_passthrough callback passthrough
 	{
-	  state.push ($2);
-	  state.passthrough ($3);
+	  state->push ($2);
+	  state->passthrough ($3);
 	}
 	;
 
@@ -393,23 +376,23 @@ bracket_list_opt: /* empty */ 		{ $$ = NULL; }
 
 callback: '@' bracket_list_opt '(' expr_list_opt ')'
 	{
-  	  tame_fn_t *fn = state.function ();
-	  if (state.block ()) {
+  	  tame_fn_t *fn = state->function ();
+	  if (state->block ()) {
  	    // Callbacks are labeled serially within a function; the 
 	    // constructor sets this ID.
 	    if ($2) {
 	      yyerror ("Cannot give '[..]' args to callback within BLOCK");
 	    }
 	    $$ = New tame_block_callback_t (get_yy_lineno (), 
-				            fn, state.block (), $4);
+				            fn, state->block (), $4);
 	  } else {
-	    if (!state.nonblock () && ! $2) {
+	    if (!state->nonblock () && ! $2) {
 	      yyerror ("Nonblocking callbacks must be associated with a "
 	 	       "join_group_t");
 	    }
 	    tame_nonblock_callback_t *cb = 
               New tame_nonblock_callback_t (get_yy_lineno (), 
-				            state.nonblock (), $4, $2);
+				            state->nonblock (), $4, $2);
 	    fn->add_nonblock_callback (cb);
 	    $$ = cb;
 	  }
@@ -475,7 +458,7 @@ parameter_declaration: declaration_specifiers declarator
 
 declaration: declaration_specifiers 
 	{
-	  state.set_decl_specifier ($1);
+	  state->set_decl_specifier ($1);
 	}
 	init_declarator_list_opt ';'
 	;
@@ -495,11 +478,11 @@ init_declarator: declarator_cpp cpp_initializer_opt
 	  assert ($2);
 	  $1->set_initializer ($2);
 
-	  vartab_t *t = state.stack_vars ();
+	  vartab_t *t = state->stack_vars ();
 
-	  var_t v (state.decl_specifier (), $1, STACK);
-	  if (state.args () &&
-              state.args ()->exists (v.name ())) {
+	  var_t v (state->decl_specifier (), $1, STACK);
+	  if (state->args () &&
+              state->args ()->exists (v.name ())) {
 	    strbuf b;
 	    b << "stack variable '" << v.name () << "' shadows a parameter";
 	    yyerror (b);

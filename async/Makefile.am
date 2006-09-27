@@ -43,8 +43,8 @@ mmcd_SOURCES = mmcd.c
 mmcd_LDADD = 
 mmcd_DEPENDENCIES = 
 
-mkevent.h: mkevent.pl
-	perl mkevent.pl > mkevent.h
+mkevent.h: $(srcdir)/mkevent.pl
+	perl $< > $@
 
 #
 # end sfslite changes

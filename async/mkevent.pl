@@ -8,6 +8,7 @@ use strict;
 
 my $N_tv = 3;
 my $N_wv = 3;
+my $name = "_mkevent";
 
 sub mklist ($$)
 {
@@ -46,9 +47,12 @@ sub arglist (@)
 sub do_mkevent_cb ($$)
 {
     my ($t, $w) = @_;
-    print "template<" , arglist (["class W%", $w], ["class T%", $t]) , "> ";
+    if ($t > 0 || $w > 0) {
+	print ("template<" , arglist (["class W%", $w], ["class T%", $t]) , 
+	       "> ");
+    }
     print "void\n";
-    print ("_mkevent_cb_${w}_${t} (",
+    print ("${name}_cb_${w}_${t} (",
 	   arglist ("ptr<closure_t> hold",
 		    "ptr<joiner_t<" . arglist (["W%", $w]) . "> > j",
 		    "refset_t<" . arglist (["T%", $t]) . "> rs",
@@ -67,28 +71,34 @@ sub do_mkevent_cb ($$)
 sub do_mkevent ($$)
 {
     my ($t, $w) = @_;
-    print "template<" , arglist (["class W%", $w], ["class T%", $t]) , ">\n";
-    print "typename callback<", arglist ("void", ["T%", $t])  , ">::ref\n";
-    print ("_mkevent (" , 
+    if ($t > 0 || $w > 0) {
+	print ("template<" , arglist (["class W%", $w], ["class T%", $t]) , 
+	       ">\n");
+	print "typename ";
+    } 
+    print "callback<", arglist ("void", ["T%", $t])  , ">::ref\n";
+    print ("${name} (" , 
 	   arglist ("ptr<closure_t> c",
 		    "const char *loc",
-		    "rendezvous_t<" . arglist (["W%", $w]) . ">",
+		    "rendezvous_t<" . arglist (["W%", $w]) . "> rv",
 		    ["const W% &w%", $w],
 		    ["T% &t%", $t]
 		    ),
 	   ")\n"
 	   );
     print "{\n";
-    print "  g.launch_one (c);\n";
-    my @args = ("_mkevent_cb_${w}_${t}<" . arglist (["W%", $w], ["T%", $t])
-		. ">",
+    print "  rv.launch_one (c);\n";
+    my $tl = "";
+    my @args = ("${name}_cb_${w}_${t}" .
+		(($w > 0 || $t > 0) ? 
+		 ("<" . arglist (["W%", $w], ["T%", $t]) . ">") : ""),
 		"c",
-		"g.make_joiner (loc)",
+		"rv.make_joiner (loc)",
 		"refset_t<" . arglist (["T%", $t]) . ">" 
 		. " (" . arglist (["t%", $t]) . ")" ,
 		"value_set_t<" . arglist (["W%", $w]) . ">"
 		. " (" . arglist (["w%", $w]) . ")");
-    print "  return wrap (" . join (",\n               ", @args). ")\n";
+    print "  return wrap (" . join (",\n               ", @args). ");\n";
     print "}\n\n";
 }
 
@@ -108,7 +118,10 @@ print <<EOF;
 
 #ifndef _ASYNC_MKEVENT_H_
 #define _ASYNC_MKEVENT_H_
+
 #include "tame.h"
+
+
 EOF
 
 

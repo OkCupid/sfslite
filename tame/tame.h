@@ -683,9 +683,6 @@ public:
   void new_nonblock (tame_nonblock_t *s);
   tame_nonblock_t *nonblock () { return _nonblock; }
 
-  void new_join (tame_join_t *j);
-  tame_join_t *join () { return _join; }
-  
   void new_fork (tame_fork_t *f);
   tame_fork_t *fork () { return _fork; }
 
@@ -704,7 +701,6 @@ protected:
   tame_fn_t *_fn;
   tame_block_t *_block;
   tame_nonblock_t *_nonblock;
-  tame_join_t *_join;
   tame_fork_t *_fork;
   bool _sym_bit;
 
@@ -795,7 +791,7 @@ private:
   int _lineno;
 };
 
-extern parse_state_t state;
+extern parse_state_t *state;
 extern str infile_name;
 
 struct YYSTYPE {

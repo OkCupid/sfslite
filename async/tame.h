@@ -63,6 +63,7 @@
 extern int tame_options;
 inline bool tame_check_leaks () { return tame_options & TAME_CHECK_LEAKS ; }
 
+struct nil_t {};
 
 /**
  * not in use, but perhaps useful for "zero"ing out callback::ref's,
@@ -79,17 +80,19 @@ private:
 
 
 // A set of references
-template<class T1=int, class T2=int, class T3=int, class T4=int>
+template<class T1=nil_t, class T2=nil_t, class T3=nil_t, class T4=nil_t>
 class refset_t {
 public:
   refset_t (T1 &r1, T2 &r2, T3 &r3, T4 &r4) 
-    : _dummy (0), _r1 (r1), _r2 (r2), _r3 (r3), _r4 (r4) {}
+    :  _r1 (r1), _r2 (r2), _r3 (r3), _r4 (r4) {}
   refset_t (T1 &r1, T2 &r2, T3 &r3)
-    : _dummy (0), _r1 (r1), _r2 (r2), _r3 (r3), _r4 (_dummy) {}
+    : _r1 (r1), _r2 (r2), _r3 (r3), _r4 (_dummy) {}
   refset_t (T1 &r1, T2 &r2)
-    : _dummy (0), _r1 (r1), _r2 (r2), _r3 (_dummy), _r4 (_dummy) {}
+    : _r1 (r1), _r2 (r2), _r3 (_dummy), _r4 (_dummy) {}
   refset_t (T1 &r1)
-    : _dummy (0), _r1 (r1), _r2 (_dummy), _r3 (_dummy), _r4 (_dummy) {}
+    : _r1 (r1), _r2 (_dummy), _r3 (_dummy), _r4 (_dummy) {}
+  refset_t ()
+    : _r1 (_dummy), _r2 (_dummy), _r3 (_dummy), _r4 (_dummy) {}
 
   void assign (const T1 &v1, const T2 &v2, const T3 &v3, const T4 &v4) 
   { _r1 = v1; _r2 = v2; _r3 = v3; _r4 = v4; }
@@ -97,9 +100,10 @@ public:
   { _r1 = v1; _r2 = v2; _r3 = v3; }
   void assign (const T1 &v1, const T2 &v2) { _r1 = v1; _r2 = v2; }
   void assign (const T1 &v1) { _r1 = v1; }
+  void assign () {}
 
 private:
-  int _dummy;
+  nil_t _dummy;
 
   T1 &_r1;
   T2 &_r2;
@@ -426,7 +430,7 @@ public:
 };
 
 
-template<class T1 = int, class T2 = int, class T3 = int, class T4 = int>
+template<class T1 = nil_t, class T2 = nil_t, class T3 = nil_t, class T4 = nil_t>
 struct value_set_t {
   value_set_t () {}
   value_set_t (T1 v1) : v1 (v1) {}
@@ -455,13 +459,14 @@ typedef enum { JOIN_NONE = 0,
 	       JOIN_EVENTS = 1,
 	       JOIN_THREADS = 2 } join_method_t;
 
+
 /**
  * Holds the important information associated with a join group,
  * such as how many calls are oustanding, and who is waiting to join.
  * Therefore has the callbacks to match joiners up with those waiting
  * to join.
  */
-template<class T1 = int, class T2 = int, class T3 = int, class T4 = int>
+template<class T1 = nil_t, class T2 = nil_t, class T3 = nil_t, class T4 = nil_t>
 class join_group_pointer_t 
   : public virtual refcount ,
     public weak_refcounted_t<join_group_pointer_t<T1,T2,T3,T4> >
@@ -622,7 +627,7 @@ private:
  * went out of strong scope before we had a choice to join, there was
  * definitely a problem, and we report it.
  */
-template<class T1 = int, class T2 = int, class T3 = int, class T4 = int>
+template<class T1 = nil_t, class T2 = nil_t, class T3 = nil_t, class T4 = nil_t>
 class joiner_t : public virtual refcount,
 		 public must_deallocate_obj_t {
 public:
@@ -681,7 +686,7 @@ private:
 /**
  * @brief A wrapper class around a join group pointer for tighter code
  */
-template<class T1 = int, class T2 = int, class T3 = int, class T4 = int>
+template<class T1 = nil_t, class T2 = nil_t, class T3 = nil_t, class T4 = nil_t>
 class join_group_t {
 public:
   join_group_t (const char *f = NULL, int l = 0) 
@@ -781,7 +786,7 @@ private:
  * gets the message, and processes it accordingly. 
  * 
  */
-template<class T1 = int, class T2 = int, class T3 = int, class T4 = int>
+template<class T1 = nil_t, class T2 = nil_t, class T3 = nil_t, class T4 = nil_t>
 class coordgroup_t : public join_group_t<T1,T2,T3,T4>
 {
 public:
@@ -917,7 +922,7 @@ typedef callback<void, bool>::ptr coordvar_bool_t;
 typedef callback<void, str>::ptr coordvar_str_t;
 typedef callback<void>::ptr coordvar_void_t;
 
-template<class T1 = void, class T2 = void, class T3 = void> 
+template<class T1 = nil_t, class T2 = nil_t, class T3 = nil_t> 
 struct coordvar_t {
   typedef ptr<callback<void,T1,T2,T3> > t;
 };
@@ -1014,7 +1019,10 @@ private:
   bool _toolate, _queued_cancel, _cancelled;
 };
 
-#define mkevent(...) _mkevent (__cls_g, __FILE__ ":" #__LINE__, __VA_ARGS__)
+#define LOC(f,l) f ":" #l
+#define mkevent(c, ...) \
+  _mkevent (__cls_g, LOC(__FILE__, __LINE__), c, __VA_ARGS__)
+#define rendezvous_t coordgroup_t
 
 
 #endif /* _ASYNC_TAME_H */

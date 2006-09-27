@@ -4,7 +4,7 @@
 #include "tame.h"
 #include "rxx.h"
 
-parse_state_t state;
+parse_state_t *state;
 
 static void
 usage ()
@@ -161,7 +161,9 @@ main (int argc, char *argv[])
     yyin = ifh;
   }
 
-  state.set_infile_name (ifn);
+  state = New parse_state_t ();
+
+  state->set_infile_name (ifn);
   bool fl = (ifn && ifn != "-" && !no_line_numbers);
   if (horiz_mode) {
     o = New outputter_H_t (ifn, outfile, fl);
@@ -180,7 +182,7 @@ main (int argc, char *argv[])
     fclose (ifh);
   }
 
-  state.output (o);
+  state->output (o);
 
   // calls close on the outputter fd
   delete o;
