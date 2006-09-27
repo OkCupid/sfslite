@@ -5,6 +5,7 @@
 #include "arpc.h"
 #include "parseopt.h"
 #include "ex_prot.h"
+#include "mkevent.h"
 
 tamed static 
 bool dostuff (const str &h, int port, cbb cb)
@@ -31,7 +32,7 @@ bool dostuff (const str &h, int port, cbb cb)
 
   // Call tcpconnect, and block until it returns; when it does return,
   // assign the local variable 'fd' to the result.
-  BLOCK { tcpconnect (h, port, @(fd)); }
+  block { tcpconnect (h, port, @(fd)); }
 
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", h.cstr(), port);
@@ -47,7 +48,7 @@ bool dostuff (const str &h, int port, cbb cb)
       // launch an asychronous function call, but don't
       // block on its return. Associate the call with the 
       // join group 'window' and the index value 'i'
-      cli->call (EX_RANDOM, NULL, &res[i], mkcv<1> (rpcback, i, errs[i]));
+      cli->call (EX_RANDOM, NULL, &res[i], mkevent (rpcback, i, errs[i]));
     }
 
     // a join is needed for every call that returns
@@ -56,7 +57,7 @@ bool dostuff (const str &h, int port, cbb cb)
       // Block until a call has returned; when it has, get
       // the index variable associated with the call, and assign
       // it to 'return_id'.
-      cgwait (rpcback, return_id);
+      tamewait (rpcback, return_id);
       if (errs[return_id]) {
 	err_occurred = true;
 	warn << "RPC error: " << errs[return_id] << "\n";
@@ -67,7 +68,7 @@ bool dostuff (const str &h, int port, cbb cb)
 	// another should be launched. but don't bother launching
 	// more if an error occurred.
 	if (i < n_tot && !err_occurred) {
-	  cli->call (EX_RANDOM, NULL, &res[i], @[rpcback,i](errs[i]));
+	  cli->call (EX_RANDOM, NULL, &res[i], mkevent (rpcback, i, errs[i]));
 	  i++;
 	}
       }

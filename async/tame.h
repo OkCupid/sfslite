@@ -1014,5 +1014,7 @@ private:
   bool _toolate, _queued_cancel, _cancelled;
 };
 
+#define mkevent(...) _mkevent (__cls_g, __FILE__ ":" #__LINE__, __VA_ARGS__)
+
 
 #endif /* _ASYNC_TAME_H */

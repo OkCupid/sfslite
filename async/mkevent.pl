@@ -108,6 +108,7 @@ print <<EOF;
 
 #ifndef _ASYNC_MKEVENT_H_
 #define _ASYNC_MKEVENT_H_
+#include "tame.h"
 EOF
 
 
