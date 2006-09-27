@@ -128,11 +128,10 @@ closure_t::init_block (int blockid, int lineno)
 }
 
 ptr<closure_wrapper_t>
-closure_t::make_wrapper (int blockid, int lineno)
+closure_t::make_wrapper (const char *loc)
 {
-  assert (blockid == _block._id);
   ptr<closure_wrapper_t> ret = 
-    New refcounted<closure_wrapper_t> (mkref (this), lineno);
+    New refcounted<closure_wrapper_t> (mkref (this), loc);
   _block._count ++;
   return ret;
 }
@@ -193,8 +192,8 @@ closure_t::collect_join_groups ()
 // carry around.  We're waiting for all of these interfaces to disappear,
 // which will prove that the closure reference was flushed, too.
 //
-closure_wrapper_t::closure_wrapper_t (ptr<closure_t> c, int l)
-  : _cls (c), _lineno (l) 
+closure_wrapper_t::closure_wrapper_t (ptr<closure_t> c, const char *l)
+  : _cls (c), _loc (l) 
 {
   _cls->must_deallocate ()->add (this);
 }
@@ -206,18 +205,18 @@ closure_wrapper_t::~closure_wrapper_t ()
 
 
 void
-closure_t::maybe_reenter (int lineno)
+closure_t::maybe_reenter (const char *loc)
 {
-  if (block_dec_count (lineno))
+  if (block_dec_count (loc))
     reenter ();
 }
 
 bool
-closure_t::block_dec_count (int lineno)
+closure_t::block_dec_count (const char *loc)
 {
   bool ret = false;
   if (_block._count <= 0) {
-    error (lineno, "too many signals for BLOCK environment.");
+    tame_error (loc, "too many signals for BLOCK environment.");
   } else if (--_block._count == 0) {
     ret = true;
   }

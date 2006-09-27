@@ -1010,9 +1010,20 @@ tame_block_t::output (outputter_t *o)
 
   output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL);
 
+  // 
+  // We're playing a little game here.  The mkevent macro in async/tame.h
+  // always feeds the symbol __cls_g as the first argument to _mkref,
+  // but we don't want to be able to call mkevent() without a rendezvous
+  // outside of a block {} environment.  Thus, the _mkevent() signatures
+  // that use an implicit rendezvous have special signatures to that effect,
+  // and the mkevent() macro will only do the right thing is an 
+  // implicit_rendezvous_t named __cls_g is accessible.  This will only
+  // happen within a block {} environment.
+  //
   b << "  do {\n"
     << "    " << TAME_CLOSURE_NAME << "->init_block (" 
     << _id << ", " << _lineno << ");\n"
+    << "    implicit_rendezvous_t  __cls_g (mkref (__cls));\n"
     ;
 
   _fn->jump_out (b, _id);
@@ -1030,8 +1041,8 @@ tame_block_t::output (outputter_t *o)
 
   om = o->switch_to_mode (OUTPUT_TREADMILL);
   b << "\n"
-    << "    if (!" << TAME_CLOSURE_NAME << "->block_dec_count (" 
-    << _lineno << "))\n"
+    << "    if (!" << TAME_CLOSURE_NAME 
+    << "->block_dec_count (LOC(__FILE__, __LINE)))\n"
     << "      ";
 
   b.mycat (_fn->return_expr ());

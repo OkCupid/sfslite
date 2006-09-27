@@ -311,7 +311,7 @@ public:
   // Make a new closure wrapper. A closure wrapper is something that 
   // hold onto the closure, but also registers itself with the closure
   // internally, so that per-callback accounting can be performed.
-  ptr<closure_wrapper_t> make_wrapper (int blockid, int lineno);
+  ptr<closure_wrapper_t> make_wrapper (const char *loc);
 
   u_int _jumpto;
 
@@ -326,11 +326,11 @@ public:
   virtual void reenter () = 0;
 
   // If the block count is appropriate, then reenter the function.
-  void maybe_reenter (int lineno);
+  void maybe_reenter (const char *loc);
 
   // Decremenet the block count; return TRUE if it goes down to 0, signifying
   // contuination inside the function.
-  bool block_dec_count (int lineno);
+  bool block_dec_count (const char *loc);
 
 protected:
 
@@ -355,9 +355,18 @@ public:
 
 };
 
+class implicit_rendezvous_t {
+public:
+  implicit_rendezvous_t (ptr<closure_t> c) : _cls (c) {}
+  ptr<closure_t> closure () { return _cls; }
+private:
+  ptr<closure_t> _cls;
+};
+
+
 struct must_deallocate_obj_t {
   virtual ~must_deallocate_obj_t () {}
-  virtual str loc () const = 0;
+  virtual const char *loc () const = 0;
   virtual const char *must_dealloc_typ () const = 0;
   list_entry<must_deallocate_obj_t> _lnk;
 };
@@ -382,48 +391,16 @@ class closure_wrapper_t : public virtual refcount,
 			  public must_deallocate_obj_t {
 public:
 
-  closure_wrapper_t (ptr<closure_t> c, int l);
+  closure_wrapper_t (ptr<closure_t> c, const char *loc);
   ~closure_wrapper_t ();
-  int lineno () const { return _lineno; }
 
-  inline void block_cb0 () { _cls->maybe_reenter (_lineno); }
-  
-  template<class T1>
-  void block_cb1 (refset_t<T1> rs, T1 v1)
-  {
-    rs.assign (v1);
-    _cls->maybe_reenter (_lineno);
-  }
-
-  template<class T1, class T2>
-  void block_cb2 (refset_t<T1,T2> rs, T1 v1, T2 v2)
-  {
-    rs.assign (v1, v2);
-    _cls->maybe_reenter (_lineno);
-  }
-  template<class T1, class T2, class T3>
-  void block_cb3 (refset_t<T1,T2,T3> rs, T1 v1, T2 v2, T3 v3)
-  {
-    rs.assign (v1, v2, v3);
-    _cls->maybe_reenter (_lineno);
-  }
-  
-  template<class T1, class T2, class T3, class T4>
-  void block_cb4 ( refset_t<T1,T2,T3,T4> rs, T1 v1, T2 v2, T3 v3, T4 v4)
-  {
-    rs.assign (v1, v2, v3, v4);
-    _cls->maybe_reenter (_lineno);
-  }
-
-  str loc () const { return _cls->loc (_lineno); }
+  const char *loc () const { return _loc; }
   const char *must_dealloc_typ () const { return "coordination variable"; }
-  ptr<closure_t> closure () { return _cls; }
-
-  void maybe_reenter () { _cls->maybe_reenter (_lineno); }
+  void maybe_reenter () { _cls->maybe_reenter (_loc); }
 
 private:
   ptr<closure_t> _cls;
-  int _lineno;
+  const char *_loc;
 
 public:
   list_entry<closure_wrapper_t> _lnk;
@@ -656,7 +633,7 @@ public:
     delaycb (0, 0, wrap (mkref (this), &joiner_t<T1,T2,T3,T4>::join_cb, w));
   }
 
-  str loc () const { return _loc; }
+  const char *loc () const { return _loc; }
   const char *must_dealloc_typ () const 
   { return "non-block coordination variable"; }
   
@@ -934,44 +911,6 @@ extern int TAME_GLOBAL_INT;
 void start_join_group_collection ();
 
 
-/*
- * Expand  @(b1,b2,b3,b4) using the make_cvX functions...
- */
-inline cbv 
-make_cv0 (ptr<closure_t> c, int blockid, int lineno)
-{
-  return wrap (c->make_wrapper (blockid, lineno), 
-	       &closure_wrapper_t::block_cb0);
-}
-
-template<class B1> 
-typename callback<void, B1>::ref
-make_cv1 (ptr<closure_t> c, int blockid, int lineno, B1 &b1)
-{
-  return wrap (c->make_wrapper (blockid, lineno),
-	       &closure_wrapper_t::block_cb1<B1>,
-	       refset_t<B1> (b1));
-}
-
-template<class B1, class B2> 
-typename callback<void, B1, B2>::ref
-make_cv2 (ptr<closure_t> c, int blockid, int lineno, B1 &b1, B2 &b2)
-{
-  return wrap (c->make_wrapper (blockid, lineno),
-	       &closure_wrapper_t::block_cb2<B1,B2>,
-	       refset_t<B1,B2> (b1,b2));
-}
-
-template<class B1, class B2, class B3>
-typename callback<void, B1, B2, B3>::ref
-make_cv3 (ptr<closure_t> c, int blockid, int lineno, B1 &b1, B2 &b2, B3 &b3)
-{
-  return wrap (c->make_wrapper (blockid, lineno),
-	       &closure_wrapper_t::block_cb3<B1,B2,B3>,
-	       refset_t<B1,B2,B3> (b1,b2,b3));
-}
-
-
 /**
  * A helper class useful for canceling an TAME'd function midstream.
  */
@@ -1017,7 +956,12 @@ private:
 #define LOC(f,l) f ":" #l
 #define mkevent(...) \
   _mkevent (__cls_g, LOC(__FILE__, __LINE__), __VA_ARGS__)
+#define mkevent0() \
+  _mkevent (__cls_g, LOC(__FILE__, __LINE__) )
 #define rendezvous_t coordgroup_t
+
+
+
 
 
 #endif /* _ASYNC_TAME_H */

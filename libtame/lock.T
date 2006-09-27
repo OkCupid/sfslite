@@ -58,8 +58,8 @@ lock_t::timed_acquire (lock_t::mode_t m, u_int s, u_int ms, cbb cb)
     bool ok;
     timecb_t *tcb;
   }
-  tcb = delaycb (s, ms, @[G,false] ());
-  w = acquire (m, @[G,true]() );
+  tcb = delaycb (s, ms, mkevent (G,false));
+  w = acquire (m, mkevent (G,true) );
   tamewait (G, ok);
   if (!ok) cancel (w);
   else timecb_remove (tcb);

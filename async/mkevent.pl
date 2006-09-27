@@ -128,17 +128,17 @@ sub do_mkevent_block ($)
     }
     print "callback<" . arglist ("void", ["T%", $t]) . ">::ref\n";
     print ("${name} (" ,
-	   arglist ("ptr<closure_t> c",
-		    "int lineno",
-		    "int blockid",
+	   arglist ("implicit_rendezvous_t c",
+		    "const char *loc",
 		    [ "T% &t%", $t ]),
 	   ")\n");
     print "{\n";
     my $tl = template_arglist (["T%", $t]);
     print ("  return wrap (",
 	   arglist ( "${name}_cb_${t}${tl}",
-		     "c->make_wrapper (blockid, lineno)",
-		     "refset_t${tl} (" . arglist (["t%", $t]) . ")"
+		     "c.closure ()->make_wrapper (loc)",
+		     "refset_t<" . arglist (["T%", $t]) 
+		     ."> (" . arglist (["t%", $t]) . ")"
 		     ),
 	   ");\n");
     print "}\n\n";

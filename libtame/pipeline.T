@@ -3,6 +3,7 @@
 /* $Id: tame.h 2077 2006-07-07 18:24:23Z max $ */
 
 #include "pipeline.h"
+#include "mkevent.h"
 
 pipeliner_t::pipeliner_t (size_t w) : 
   _wsz (w), _cg (__FILE__, __LINE__), _cancelled (false)
@@ -20,8 +21,8 @@ pipeliner_t::wait_n (size_t n, cbv done)
 TAMED void
 pipeliner_t::launch (size_t i, cbv done)
 {
-  BLOCK { wait_n (_wsz - 1, @()); }
-  pipeline_op (i, @[_cg]() );
+  BLOCK { wait_n (_wsz - 1, mkevent0 () ); }
+  pipeline_op (i, mkevent (_cg) );
   SIGNAL (done);
 }
 
@@ -32,9 +33,9 @@ pipeliner_t::run (cbv done)
     size_t i;
   }
   for (i = 0; keep_going (i) && !_cancelled; i++) {
-    BLOCK { launch (i, @()); }
+    BLOCK { launch (i, mkevent0 () ); }
   }
-  BLOCK { wait_n (0, @()); }
+  BLOCK { wait_n (0, mkevent0 () ); }
   SIGNAL (done);
 }
 
@@ -59,7 +60,7 @@ pipeliner_cb_t::pipeline_op (size_t i, cbv cb)
   VARS {
     bool ok;
   }
-  BLOCK { (*_op) (i, @(ok), NULL); }
+  BLOCK { (*_op) (i, mkevent (ok), NULL); }
   if (!ok) cancel ();
   SIGNAL (cb);
 }
@@ -70,6 +71,6 @@ do_pipeline (size_t w, size_t n, pipeline_op_t op, cbv done)
   VARS {
     pipeliner_cb_t ppl (w, n, op);
   }
-  BLOCK { ppl.run (@()); }
+  BLOCK { ppl.run (mkevent0 ()); }
   SIGNAL (done);
 }
