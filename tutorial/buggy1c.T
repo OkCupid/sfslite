@@ -30,8 +30,8 @@ buggy1c (cbb cv)
     int i;
   }
 
-  delaycb (1, 0, @[JG]());
-  delaycb (2, 0, @[JG]());
+  delaycb (1, 0, mkevent (JG));
+  delaycb (2, 0, mkevent (JG));
 
 
   for (i = 0; i < (fix_bug ? 2 : 1); i++) {

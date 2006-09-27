@@ -1,6 +1,9 @@
 
-#ifndef _COORDVAR_H_INCLUDED
-#define _COORDVAR_H_INCLUDED 1
+// -*-c++-*-
+/* $Id$ */
+
+#ifndef _ASYNC_TAME_EVENT_H_
+#define _ASYNC_TAME_EVENT_H_
 
 #include "refcnt.h"
 #include "vec.h"
@@ -93,4 +96,4 @@ extern bool coordvar_strict_mode;
 
 void coordvar_second_signal (const char *file, const char *line);
 
-#endif /* _COORDVAR_H_INCLUDED */
+#endif /* _ASYNC_TAME_EVENT_H_ */

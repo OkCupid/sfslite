@@ -27,7 +27,7 @@ TAMED static void main_T (int argc, char **argv)
     bool b;
     str s;
   }
-  BLOCK { callee3 (@(i,b,s)); }
+  BLOCK { callee3 (mkevent(i,b,s)); }
   exit (0);
 }
 

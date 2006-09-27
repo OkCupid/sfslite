@@ -17,7 +17,7 @@ do_rpc (ptr<aclnt> cli, bool *errp, size_t i, cbb cb)
     bool ok (true);
     holdvar autocb_t<bool> acb (cb, ok);
   }
-  BLOCK { cli->call (EX_RANDOM, NULL, &res, @(err)); }
+  BLOCK { cli->call (EX_RANDOM, NULL, &res, mkevent(err)); }
   if (err) {
     warn << "RPC Failure in call " << i << ": " << err << "\n";
     *errp = true;
@@ -42,7 +42,7 @@ dostuff (str h, int port, cbb cb)
 
   // Call tcpconnect, and block until it returns; when it does return,
   // assign the local variable 'fd' to the result.
-  BLOCK { tcpconnect (h, port, @(fd)); }
+  BLOCK { tcpconnect (h, port, mkevent(fd)); }
 
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", h.cstr(), port);
@@ -52,7 +52,7 @@ dostuff (str h, int port, cbb cb)
     cli = aclnt::alloc (x, ex_prog_1);
 
     BLOCK { do_pipeline (window_sz, n_tot, 
-			 wrap (do_rpc, cli, &err), @()); }
+			 wrap (do_rpc, cli, &err), mkevent0()); }
 
     warn << "All done...\n";
   }

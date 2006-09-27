@@ -27,7 +27,7 @@ connect (vec<str> hosts, int port, cbi done)
 
   for (i = 0; i < hosts.size (); i++) {
     fd = New refcounted<int> (-1);
-    tcpconnect (hosts[i], port, @[CG,i,fd](*fd));
+    tcpconnect (hosts[i], port, mkevent (CG,i,fd,*fd));
   }
   
   while (CG.need_join ()) {
@@ -72,7 +72,7 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
   //
   // get the fastest connection, and dump the result into 'fd'
   //
-  BLOCK { connect (hosts, port, @(fd)); }
+  BLOCK { connect (hosts, port, mkevent(fd)); }
 
   //
   // A dirt simple HTTP 1.0 request
@@ -92,7 +92,7 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
   // times.  That is, fdcb will call us back every time the socket
   // 'fd' is available for writing.
   //
-  fdcb (fd, selwrite, @[write_cg]());
+  fdcb (fd, selwrite, mkevent (write_cg));
   
   while (true) {
     WAIT (write_cg);
@@ -138,7 +138,7 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
   // 
   // As before, but now we need to schedule a callback for reading
   //
-  fdcb (fd, selread, @[read_cg]()); 
+  fdcb (fd, selread, mkevent (read_cg) ); 
 
   //
   // The details of the reading loop are almost identical to the

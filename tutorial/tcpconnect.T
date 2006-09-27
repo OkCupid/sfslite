@@ -57,8 +57,8 @@ connect_to_in_addr (in_addr a, int port, cbi cv)
     if (connect (fd, (sockaddr *) &sin, sizeof (sin)) >= 0 || 
 	errno == EINPROGRESS) {
 
-      ret->wait (@[cg, false]());
-      fdcb (fd, selwrite, @[cg,true] ());
+      ret->wait (mkevent(cg, false));
+      fdcb (fd, selwrite, mkevent (cg,true));
       
       WAIT (cg, completed);
       fdcb (fd, selwrite, NULL);
@@ -116,8 +116,8 @@ my_tcpconnect (str hostname, u_int16_t port, cbi cv,
 
   // launch 2 parallel calls that will race: the DNS requester
   // and the canceller.
-  canceller->wait (@[cg,false]());
-  dnsp = dns_hostbyname (hostname, @[cg,true](h, err), dnssearch); 
+  canceller->wait (mkevent (cg,false));
+  dnsp = dns_hostbyname (hostname, mkevent (cg, true, h, err), dnssearch); 
 
   WAIT (cg, completed);
   if (!completed) {
@@ -141,7 +141,7 @@ my_tcpconnect (str hostname, u_int16_t port, cbi cv,
 	*namep = h->h_name;
       
       cancel_connect = connect_to_in_addr (*(in_addr *) h->h_addr, 
-					   port, @[cg,true](fd)); 
+					   port, mkevent (cg,true,fd)); 
       WAIT (cg, completed);
       if (completed) {
 	canceller->toolate ();
@@ -173,8 +173,8 @@ run (str s, int p)
     bool succeeded, dummy;
   }
   warn << "connect on " << s << ":" << p << "\n";
-  c = my_tcpconnect (s, p, @[cg, true](fd), false, NULL);
-  delaycb (4, 0, @[cg, false]());
+  c = my_tcpconnect (s, p, mkevent (cg, true, fd), false, NULL);
+  delaycb (4, 0, mkevent (cg, false));
   WAIT (cg, succeeded);
   if (succeeded) {
     warn << "Succeeded; fd=" << fd << "\n";
@@ -183,7 +183,7 @@ run (str s, int p)
     c->cancel ();
   }
   WAIT (cg, dummy);
-  BLOCK { delaycb (10, 0, @()); }
+  BLOCK { delaycb (10, 0, mkevent0()); }
   exit (0);
 }
 

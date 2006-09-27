@@ -22,7 +22,7 @@ try_rpc (str h, int port, cbb cb)
     clnt_stat e1, e2, e3;
   }
 
-  BLOCK { tcpconnect (h, port, @(fd)); }
+  BLOCK { tcpconnect (h, port, mkevent(fd)); }
  
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", h.cstr(), port);
@@ -32,9 +32,9 @@ try_rpc (str h, int port, cbb cb)
     a2 = "go hang a salami i'm a lasagna hog";
     
     BLOCK {
-      cli->call (EX_RANDOM, NULL, &r1, @(e1));
-      cli->call (EX_REVERSE, &a2, &r2, @(e2));
-      cli->call (EX_STRUCT, NULL, &r3, @(e3));
+      cli->call (EX_RANDOM, NULL, &r1, mkevent(e1));
+      cli->call (EX_REVERSE, &a2, &r2, mkevent(e2));
+      cli->call (EX_STRUCT, NULL, &r3, mkevent(e3));
     }
     if (e1 || e2 || e3) {
       warn << "at least 1 RPC failed!\n";

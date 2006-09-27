@@ -589,7 +589,7 @@ print <<'EOF';
 #define _CALLBACK2_H_INCLUDED_ 1
 
 #include "refcnt.h"
-#include "coordvar.h"
+#include "tame_event.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -692,7 +692,7 @@ __END__
 #define _CALLBACK2_H_INCLUDED_ 1
 
 #include "refcnt.h"
-#include "coordvar.h"
+#include "tame_event.h"
 #include <stdio.h>
 #include <stdlib.h>
 

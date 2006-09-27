@@ -17,7 +17,7 @@ void dostuff (vec<str> hosts, int port, cbi done)
 
   for (i = 0; i < hosts.size (); i++) {
     fd = New refcounted<int> ();
-    tcpconnect (hosts[i], port, @[CG,i,fd](*fd)); 
+    tcpconnect (hosts[i], port, mkevent (CG,i,fd,*fd) ); 
   }
   
   while (CG.need_join () && fd < 0) {

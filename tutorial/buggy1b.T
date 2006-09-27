@@ -32,8 +32,8 @@ static void finish (bool rc)
 TAMED static void 
 part1 (cb_hog_t *hog, coordgroup_t<> *JG, cbv cb)
 {
-  delaycb (1, 0, @[*JG]());
-  hog->call_me (@[*JG]());
+  delaycb (1, 0, mkevent (*JG));
+  hog->call_me (mkevent (*JG));
   cb->signal ();
 }
 
@@ -54,8 +54,8 @@ TAMED static void buggy1b (cbb cb)
     cb_hog_t *hog (New cb_hog_t ());
   }
 
-  BLOCK { part1 (hog, &JG, @()); }
-  BLOCK { part2 (&JG, @()); }
+  BLOCK { part1 (hog, &JG, mkevent0()); }
+  BLOCK { part2 (&JG, mkevent0()); }
 
   if (fix_bug)
     delete hog;

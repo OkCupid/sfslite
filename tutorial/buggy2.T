@@ -18,7 +18,7 @@ TAMED static
 void leaky_callee (cbv cb)
 {
   holding_area.push_back (cb);
-  BLOCK { delaycb (1, 0, @()); }
+  BLOCK { delaycb (1, 0, mkevent ()); }
   if (fix_bug)
     cb->signal ();
   else
@@ -30,7 +30,7 @@ TAMED static
 void block_with_cb_hog (cbv cb)
 {
   warn << "block_with_cb_hog...\n";
-  BLOCK { leaky_callee (@()); }
+  BLOCK { leaky_callee (mkevent ()); }
   cb->signal ();
 }
 
@@ -41,7 +41,7 @@ void nonblock_with_cb_hog (cbv cb)
     coordgroup_t<> G (__FILE__, __LINE__);
   }
   warn << "nonblock_with_cb_hog...\n";
-  leaky_callee (@[G] ());
+  leaky_callee (mkevent (G));
   WAIT (G);
   cb->signal ();
 }
@@ -53,7 +53,7 @@ void nonblock_with_unwaited_cvs (cbv cb)
     coordgroup_t<> G (__FILE__, __LINE__);
   }
   warn << "nonblock_with_unwaited_cvs...\n";
-  delaycb (1, 0, @[G]() );
+  delaycb (1, 0, mkevent (G) );
   if (fix_bug) {
     WAIT (G); 
   }
@@ -74,8 +74,8 @@ void main_T ()
 			    NULL };
 
   for ( p = fns; *p; p++) {
-    BLOCK { (*p) ( @(), NULL ); }
-    BLOCK { delaycb (2, 0, @() ); }
+    BLOCK { (*p) ( mkevent (), NULL ); }
+    BLOCK { delaycb (2, 0, mkevent () ); }
   }
   warn << "delaying for 2 seconds, then exiting..\n";
   delaycb (2, 0, wrap (exit, 0));

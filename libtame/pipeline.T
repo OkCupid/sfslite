@@ -3,7 +3,6 @@
 /* $Id: tame.h 2077 2006-07-07 18:24:23Z max $ */
 
 #include "pipeline.h"
-#include "mkevent.h"
 
 pipeliner_t::pipeliner_t (size_t w) : 
   _wsz (w), _cg (__FILE__, __LINE__), _cancelled (false)

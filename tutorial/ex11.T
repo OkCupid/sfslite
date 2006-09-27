@@ -17,7 +17,7 @@ TAMED static void
 launch_call (coordgroup_t<ptr<rpc_t> > *jg, u_int i, ptr<aclnt> cli)
 {
   ptr<rpc_t> r = New refcounted<rpc_t> (i);
-  cli->call (EX_RANDOM2, &r->input, &r->output, @[*jg, r](r->err));
+  cli->call (EX_RANDOM2, &r->input, &r->output, mkevent(*jg, r, r->err));
 }
 
 TAMED static 
@@ -40,7 +40,7 @@ bool dostuff (str h, int port, cbb cb)
 
   // Call tcpconnect, and block until it returns; when it does return,
   // assign the local variable 'fd' to the result.
-  BLOCK { tcpconnect (h, port, @(fd)); }
+  BLOCK { tcpconnect (h, port, mkevent(fd)); }
 
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", h.cstr(), port);

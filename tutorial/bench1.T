@@ -192,7 +192,7 @@ bench1_block (int niter, cbv done)
 {
   VARS { int i; }
   for (i = 0; i < niter; i++) {
-    BLOCK { delaycb (0, 0, @()); }
+    BLOCK { delaycb (0, 0, mkevent0()); }
   }
   (*done) ();
 }
@@ -261,7 +261,7 @@ bench1_nonblock (int niter, cbv done)
     coordgroup_t<> G;
   }
   for (i = 0; i < niter; i++) {
-    delaycb (0, 0, @[G]() );
+    delaycb (0, 0, mkevent (G) );
     WAIT (G);
   }
   (*done) ();
@@ -299,13 +299,13 @@ harness ()
       BLOCK { 
 	switch (mode) {
 	case SFS_MODE:
-	  bench1_sfs (niter, @());
+	  bench1_sfs (niter, mkevent0());
 	  break;
 	case BLOCK_MODE:
-	  bench1_block (niter, @());
+	  bench1_block (niter, mkevent0());
 	  break;
 	case NONBLOCK_MODE:
-	  bench1_nonblock (niter, @());
+	  bench1_nonblock (niter, mkevent0());
 	  break;
 	default:
 	  panic ("unknown mode");

@@ -48,7 +48,7 @@
 #include "async.h"
 #include "qhash.h"
 #include "keyfunc.h"
-#include "coordvar.h"
+#include "tame_event.h"
 #include "list.h"
 #include <pth.h>
 
@@ -913,9 +913,7 @@ void start_join_group_collection ();
 
 #define LOC(f,l) f ":" #l
 #define mkevent(...) \
-  _mkevent (__cls_g, LOC(__FILE__, __LINE__), __VA_ARGS__)
-#define mkevent0() \
-  _mkevent (__cls_g, LOC(__FILE__, __LINE__) )
+  _mkevent (__cls_g, LOC(__FILE__, __LINE__), ## __VA_ARGS__)
 #define rendezvous_t coordgroup_t
 
 #endif /* _ASYNC_TAME_CORE_H_ */

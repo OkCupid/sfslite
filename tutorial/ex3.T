@@ -21,7 +21,7 @@ void try_rpc (str h, int port, cbb cv)
     int i;
   }
 
-  BLOCK { tcpconnect (h, port, @(fd)); }
+  BLOCK { tcpconnect (h, port, mkevent(fd)); }
  
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", h.cstr(), port);
@@ -34,7 +34,7 @@ void try_rpc (str h, int port, cbb cv)
  
     BLOCK {
       for (i = 0; i < n; i++) {
-        cli->call (EX_RANDOM, NULL, &rv[i], @(ev[i]) );
+        cli->call (EX_RANDOM, NULL, &rv[i], mkevent(ev[i]) );
       }
     }
     ret = true;

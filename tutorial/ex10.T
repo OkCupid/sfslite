@@ -39,7 +39,7 @@ my_host_t<T,X>::try_it (cbb cv)
     */
   }
 
-  BLOCK { tcpconnect (h, port, @(fd)); }
+  BLOCK { tcpconnect (h, port, mkevent(fd)); }
  
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", h.cstr(), port);
@@ -52,7 +52,7 @@ my_host_t<T,X>::try_it (cbb cv)
  
     BLOCK {
       for (i = 0; i < n; i++) {
-        cli->call (EX_RANDOM, NULL, &rv[i], @(ev[i]) );
+        cli->call (EX_RANDOM, NULL, &rv[i], mkevent(ev[i]) );
       }
     }
     ret = true;

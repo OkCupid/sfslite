@@ -5,7 +5,6 @@
 #include "arpc.h"
 #include "parseopt.h"
 #include "ex_prot.h"
-#include "mkevent.h"
 
 tamed static 
 bool dostuff (const str &h, int port, cbb cb)
@@ -32,7 +31,7 @@ bool dostuff (const str &h, int port, cbb cb)
 
   // Call tcpconnect, and block until it returns; when it does return,
   // assign the local variable 'fd' to the result.
-  block { tcpconnect (h, port, @(fd)); }
+  block { tcpconnect (h, port, mkevent(fd)); }
 
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", h.cstr(), port);

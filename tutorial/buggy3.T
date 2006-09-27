@@ -20,8 +20,8 @@ static void fn2 (cbv cb)
 TAMED static void
 main_T ()
 {
-  BLOCK { fn1 (@()); }
-  BLOCK { fn2 (@()); }
+  BLOCK { fn1 (mkevent0()); }
+  BLOCK { fn2 (mkevent0()); }
   exit (0);
 }
 

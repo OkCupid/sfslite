@@ -27,7 +27,7 @@ void get_web_page (str host, int port, strbuf *resp, cbb done)
   //
   // get the fastest connection, and dump the result into 'fd'
   //
-  BLOCK { tcpconnect (host, port, @(fd)); }
+  BLOCK { tcpconnect (host, port, mkevent (fd)); }
   if (fd < 0) {
     warn << host << ":" << port << ": connection failed\n";
     (*done) (false);
@@ -53,7 +53,7 @@ void get_web_page (str host, int port, strbuf *resp, cbb done)
   // times.  That is, fdcb will call us back every time the socket
   // 'fd' is available for writing.
   //
-  fdcb (fd, selwrite, @[write_cg]());
+  fdcb (fd, selwrite, mkevent (write_cg));
   
   while (true) {
     WAIT (write_cg);
@@ -100,7 +100,7 @@ void get_web_page (str host, int port, strbuf *resp, cbb done)
   // 
   // As before, but now we need to schedule a callback for reading
   //
-  fdcb (fd, selread, @[read_cg]());
+  fdcb (fd, selread, mkevent (read_cg));
   
   //
   // The details of the reading loop are almost identical to the
@@ -155,7 +155,7 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
   
   for (i = 0; i < hosts.size (); i++) {
     res = New refcounted<bool> ();
-    get_web_page (hosts[i], port, &responses[i], @[CG,i,res](*res));
+    get_web_page (hosts[i], port, &responses[i], mkevent (CG,i,res, *res));
   }
   
   while (CG.need_wait ()) {

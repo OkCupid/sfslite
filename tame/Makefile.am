@@ -8,7 +8,7 @@ sfsbin_PROGRAMS = tame
 noinst_HEADERS = tame.h parse.h
 
 tame_SOURCES = tame.C parse.yy scan.ll processor.C const.C output.C
-tame_LDADD = $(LDADD)
+tame_LDADD = $(LDADD) $(LDADD_THR)
 tame_DEPENDENCIES = $(LIBASYNC)
 
 YYFLAGS = -d

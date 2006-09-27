@@ -19,7 +19,7 @@ void try_rpc (str h, int port, cbb cb)
     coordgroup_t<> CG;
   }
   
-  BLOCK { tcpconnect (h, port, @(fd)); }
+  BLOCK { tcpconnect (h, port, mkevent(fd)); }
  
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", h.cstr(), port);
@@ -32,7 +32,7 @@ void try_rpc (str h, int port, cbb cb)
  
     
     for (i = 0; i < n; i++) {
-      cli->call (EX_RANDOM, NULL, &rv[i], @[CG](ev[i]) );
+      cli->call (EX_RANDOM, NULL, &rv[i], mkevent(CG,ev[i]) );
     }
     while (CG.n_signals_left ()) {
       WAIT(CG);

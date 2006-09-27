@@ -43,8 +43,8 @@ timing_SOURCES =  timing.C
 
 #if STATIC
 # MK: see comments in async/Makefile.am
-tst_LDADD = $(LDADD)
-tst_DEPENDENCIES = $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC)
+tst_LDADD = $(LDADD) $(LDADD_THR)
+tst_DEPENDENCIES = $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC) 
 #else
 #tst_LDADD = $(LDADD)
 #tst_DEPENDENCIES = 

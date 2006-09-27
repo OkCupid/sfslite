@@ -40,7 +40,7 @@ void state_t::launch (cbb cv)
 
   // Call tcpconnect, and block until it returns; when it does return,
   // assign the local variable 'fd' to the result.
-  BLOCK { tcpconnect (host, port, @(fd)); }
+  BLOCK { tcpconnect (host, port, mkevent(fd)); }
 
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", host.cstr(), port);
@@ -56,10 +56,10 @@ void state_t::launch (cbb cv)
       // launch an asychronous function call, but don't
       // block on its return. Associate the call with the 
       // join group 'window' and the index value 'i'
-      cli->call (EX_RANDOM, NULL, &res[i], @[window,i](errs[i]));
+      cli->call (EX_RANDOM, NULL, &res[i], mkevent(window,i,errs[i]));
     }
 
-    delaycb (10, 0, wrap (foofoo, @[window, -1](xx)));
+    delaycb (10, 0, wrap (foofoo, mkevent (window, -1, xx)));
   }
   cv->signal (ret);
 }

@@ -66,7 +66,7 @@ remote_host_t::dostuff_private (int port, cbb cv)
 
   // Call tcpconnect, and block until it returns; when it does return,
   // assign the local variable 'fd' to the result.
-  BLOCK { tcpconnect (_name, port, @(fd)); }
+  BLOCK { tcpconnect (_name, port, mkevent(fd)); }
 
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", _name.cstr(), port);
@@ -82,7 +82,7 @@ remote_host_t::dostuff_private (int port, cbb cv)
       // launch an asychronous function call, but don't
       // block on its return. Associate the call with the 
       // join group 'window' and the index value 'i'
-      cli->call (EX_RANDOM, NULL, &res[i], @[window,i](errs[i]));
+      cli->call (EX_RANDOM, NULL, &res[i], mkevent(window,i,errs[i]) );
     }
 
     // a join is needed for every call that returns
@@ -102,7 +102,7 @@ remote_host_t::dostuff_private (int port, cbb cv)
 	// another should be launched. but don't bother launching
 	// more if an error occurred.
 	if (i < n_tot && !err_occurred) {
-	  cli->call (EX_RANDOM, NULL, &res[i], @[window,i](errs[i]));
+	  cli->call (EX_RANDOM, NULL, &res[i], mkevent (window,i, errs[i]));
 	  i++;
 	}
       }
