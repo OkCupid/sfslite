@@ -32,7 +32,7 @@ aiod.h aiod_prot.h aios.h amisc.h arena.h array.h async.h backoff.h	\
 bbuddy.h bitvec.h callback.h cbuf.h dns.h dnsimpl.h dnsparse.h err.h	\
 fdlim.h ihash.h init.h itree.h keyfunc.h list.h msb.h opnew.h		\
 parseopt.h pcre.h qhash.h refcnt.h rxx.h serial.h stllike.h str.h	\
-suio++.h sysconf.h union.h vatmpl.h vec.h rwfd.h litetime.h tame.h      \
+suio++.h sysconf.h union.h vatmpl.h vec.h rwfd.h litetime.h       	\
 corebench.h tame_event.h callback1.h callback2.h qtailq.h
 
 #

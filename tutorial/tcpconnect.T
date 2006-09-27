@@ -183,7 +183,7 @@ run (str s, int p)
     c->cancel ();
   }
   WAIT (cg, dummy);
-  BLOCK { delaycb (10, 0, mkevent0()); }
+  BLOCK { delaycb (10, 0, mkevent()); }
   exit (0);
 }
 

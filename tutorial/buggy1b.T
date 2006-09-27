@@ -54,8 +54,8 @@ TAMED static void buggy1b (cbb cb)
     cb_hog_t *hog (New cb_hog_t ());
   }
 
-  BLOCK { part1 (hog, &JG, mkevent0()); }
-  BLOCK { part2 (&JG, mkevent0()); }
+  BLOCK { part1 (hog, &JG, mkevent()); }
+  BLOCK { part2 (&JG, mkevent()); }
 
   if (fix_bug)
     delete hog;

@@ -1,6 +1,6 @@
 
 // -*-c++-*-
-#include "lock.h"
+#include "tame_lock.h"
 
 lock_t::waiter_t *
 lock_t::acquire (lock_t::mode_t m, cbv cb)

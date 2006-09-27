@@ -5,8 +5,8 @@
 #include "arpc.h"
 #include "parseopt.h"
 #include "ex_prot.h"
-#include "autocb.h"
-#include "pipeline.h"
+#include "tame_autocb.h"
+#include "tame_pipeline.h"
 
 TAMED static void
 do_rpc (ptr<aclnt> cli, bool *errp, size_t i, cbb cb)
@@ -52,7 +52,7 @@ dostuff (str h, int port, cbb cb)
     cli = aclnt::alloc (x, ex_prog_1);
 
     BLOCK { do_pipeline (window_sz, n_tot, 
-			 wrap (do_rpc, cli, &err), mkevent0()); }
+			 wrap (do_rpc, cli, &err), mkevent()); }
 
     warn << "All done...\n";
   }

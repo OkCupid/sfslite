@@ -5,7 +5,7 @@
 #include "parseopt.h"
 #include "ex_prot.h"
 #include "arpc.h"
-#include "autocb.h"
+#include "tame_autocb.h"
  
 TAMED static 
 void try_rpc (str h, int port, cbb cv)

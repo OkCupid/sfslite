@@ -37,11 +37,11 @@ void buggy1a (cbb cv)
     cb_hog_t *hog (New cb_hog_t ());
   }
   BLOCK {
-    delaycb (1, 0, mkevent0()); 
-    hog->call_me (mkevent0());
+    delaycb (1, 0, mkevent()); 
+    hog->call_me (mkevent());
   }
   cv->signal (true);
-  BLOCK { delaycb (1, 0, mkevent0()); }
+  BLOCK { delaycb (1, 0, mkevent()); }
 
   if (fix_bug)
     delete hog;
