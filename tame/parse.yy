@@ -59,7 +59,6 @@ int vars_lineno;
 %token T_TAMED
 %token T_VARS
 %token T_BLOCK
-%token T_NONBLOCK
 %token T_JOIN
 %token T_WAIT
 %token T_DEFAULT_RETURN
@@ -83,17 +82,15 @@ int vars_lineno;
 
 
 %type <vars> parameter_type_list_opt parameter_type_list parameter_list
-%type <exprs> expr_list join_list id_list_opt id_list expr_list_opt
-%type <exprs> bracket_list bracket_list_opt
+%type <exprs> expr_list join_list id_list_opt id_list 
 
 %type <opt>  const_opt
 %type <fn>   fn_declaration tame_decl
 
 %type <var>  parameter_declaration
 
-%type <el>   fn_tame vars block nonblock return_statement wait fork
-%type <el>   default_return floating_callback
-%type <cb>   callback
+%type <el>   fn_tame vars block return_statement wait fork
+%type <el>   default_return
 
 %type <opts> static_opt
 %type <fn_spc> fn_specifiers template_decl
@@ -186,21 +183,10 @@ fn_statements: passthrough
 
 fn_tame: vars
 	| block
-	| nonblock
 	| fork
 	| wait
 	| return_statement
 	| default_return
-	| floating_callback
-	;
-
-floating_callback: callback
-	{
-	  tame_nonblock_t *c = New tame_nonblock_t (NULL);
-	  $1->set_nonblock (c);
-	  c->push ($1);
-	  $$ = c;
-	}
 	;
 
 default_return: T_DEFAULT_RETURN '{' passthrough '}'
@@ -256,7 +242,7 @@ block: T_BLOCK '{'
 	  fn->hit_tame_block ();
 	  state->push_list (bl);
 	}
-	callbacks_and_passthrough '}'
+	fn_statements '}'
 	{
  	  state->pop_list ();
 	  $$ = state->block ();
@@ -293,10 +279,6 @@ join_list: passthrough id_list_opt
 	}
 	;
 
-expr_list_opt:	/* empty */	{ $$ = New refcounted<expr_list_t> (); }
-	| expr_list
-	;
-
 expr_list: expr
 	{
 	  $$ = New refcounted<expr_list_t> ();
@@ -307,23 +289,6 @@ expr_list: expr
 	{
 	  $1->push_back (var_t ($3, EXPR));
 	  $$ = $1;
-	}
-	;
-
-nonblock: T_NONBLOCK '(' expr_list ')' '{'
-	{
-	  tame_fn_t *fn = state->function ();
- 	  tame_nonblock_t *c = New tame_nonblock_t ($3);
-	  state->new_nonblock (c);
-	  fn->add_env (c);
-	  state->push_list (c);
-	  state->passthrough (lstr (get_yy_lineno (), "{"));
-	} 
-	callbacks_and_passthrough '}'
-	{
-	  state->passthrough (lstr (get_yy_lineno (), "}"));
-	  state->pop_list ();
-	  $$ = state->nonblock ();
 	}
 	;
 
@@ -350,52 +315,6 @@ fork: T_FORK '(' expr_list ')' '{'
 	  state->pop_list ();
 	  state->passthrough (lstr (get_yy_lineno (), "}"));
 	  $$ = state->fork ();
-	}
-	;
-
-callbacks_and_passthrough: passthrough		
-	{ 
-	  state->passthrough ($1); 
-	}
-	| callbacks_and_passthrough callback passthrough
-	{
-	  state->push ($2);
-	  state->passthrough ($3);
-	}
-	;
-
-bracket_list: '[' expr_list ']'
-	{
-	  $$ = $2;
-	}
-	;
-
-bracket_list_opt: /* empty */ 		{ $$ = NULL; }
-	| bracket_list 			{ $$ = $1; }
-	;
-
-callback: '@' bracket_list_opt '(' expr_list_opt ')'
-	{
-  	  tame_fn_t *fn = state->function ();
-	  if (state->block ()) {
- 	    // Callbacks are labeled serially within a function; the 
-	    // constructor sets this ID.
-	    if ($2) {
-	      yyerror ("Cannot give '[..]' args to callback within BLOCK");
-	    }
-	    $$ = New tame_block_callback_t (get_yy_lineno (), 
-				            fn, state->block (), $4);
-	  } else {
-	    if (!state->nonblock () && ! $2) {
-	      yyerror ("Nonblocking callbacks must be associated with a "
-	 	       "join_group_t");
-	    }
-	    tame_nonblock_callback_t *cb = 
-              New tame_nonblock_callback_t (get_yy_lineno (), 
-				            state->nonblock (), $4, $2);
-	    fn->add_nonblock_callback (cb);
-	    $$ = cb;
-	  }
 	}
 	;
 

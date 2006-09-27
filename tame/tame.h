@@ -354,60 +354,6 @@ class tame_nonblock_t;
 class tame_join_t;
 class tame_fork_t;
 
-class tame_callback_t : public tame_env_t {
-public:
-  tame_callback_t (u_int ln, ptr<expr_list_t> l) 
-    : _line_number (ln), _call_with (l) {}
-
-  virtual void output (outputter_t *o) { tame_env_t::output (o); }
-  virtual void output_generic (my_strbuf_t &b) = 0;
-  virtual void set_nonblock (tame_nonblock_t *n) {}
-  
-  ptr<expr_list_t> call_with () { return _call_with; }
-protected:
-  u_int _line_number;
-  ptr<expr_list_t> _call_with;
-};
-
-class tame_block_callback_t : public tame_callback_t {
-public:
-  tame_block_callback_t (u_int ln, tame_fn_t *fn, tame_block_t *b, 
-			   ptr<expr_list_t> l);
-  ~tame_block_callback_t () {}
-  void output (outputter_t *o);
-  void output_generic (my_strbuf_t &b) {}
-  int global_cb_ind () const { return _cb_ind; }
-private:
-  tame_fn_t *_parent_fn;
-  tame_block_t *_block;
-  int _cb_ind;   // global CB id
-};
-
-class tame_nonblock_callback_t : public tame_callback_t {
-public:
-  tame_nonblock_callback_t (u_int ln, tame_nonblock_t *n, ptr<expr_list_t> l,
-			    ptr<expr_list_t> wi)
-    : tame_callback_t (ln, l), _nonblock (n), _wrap_in (wi) {}
-  void output (outputter_t *o);
-  void output_generic (my_strbuf_t &b);
-  void output_generic_mk_cv (my_strbuf_t &b);
-  void set_wrap_in (ptr<expr_list_t> l) { _wrap_in = l; }
-  void set_nonblock (tame_nonblock_t *n) { _nonblock = n; }
-  str cb_name () const;
-  str mk_cv_name () const;
-
-  var_t join_group () const;
-  bool output_vars (strbuf &b, bool first,
-		    const str &prfx, const str &sffx) const ;
-  size_t n_args () const;
-  var_t arg (u_int i) const;
-protected:
-  void combine_lists () const;
-  tame_nonblock_t *_nonblock;
-  ptr<expr_list_t> _wrap_in;
-  mutable ptr<expr_list_t> _wrap_in_combined;
-};
-
 /*
  * corresponds to the yacc rule for parsing C declarators -- either for
  * variables or for function definitions
@@ -528,12 +474,6 @@ public:
 
   void output (outputter_t *o);
 
-  int add_callback (tame_block_callback_t *c) 
-  { _cbs.push_back (c); return _cbs.size (); }
-
-  void add_nonblock_callback (tame_nonblock_callback_t *c)
-  { _nbcbs.push_back (c); }
-
   void add_env (tame_env_t *g) ;
 
   str fn_prefix () const { return _name_mangled; }
@@ -548,8 +488,6 @@ public:
   str closure_nm () const { return _closure.name (); }
   str reenter_fn  () const ;
   str frozen_arg (const str &i) const ;
-
-  tame_callback_t *last_callback () { return _cbs.back (); }
 
   str label (str s) const;
   str label (u_int id) const ;
@@ -585,8 +523,6 @@ private:
   ptr<vartab_t> _args;
   vartab_t _stack_vars;
   vartab_t _class_vars_tmp;
-  vec<tame_block_callback_t *> _cbs; 
-  vec<tame_nonblock_callback_t *> _nbcbs;
   vec<tame_env_t *> _envs;
 
   void output_reenter (strbuf &b);
@@ -596,7 +532,6 @@ private:
   void output_stack_vars (strbuf &b);
   void output_arg_references (strbuf &b);
   void output_jump_tab (strbuf &b);
-  void output_generic (outputter_t *o);
   void output_set_method_pointer (my_strbuf_t &b);
   void output_block_cb_switch (strbuf &b);
   
@@ -724,17 +659,10 @@ public:
   void add_class_var (const var_t &v) { _class_vars.add (v); }
   bool needs_counter () const { return true; }
   
-  int add_callback (tame_callback_t *cb) 
-  { 
-    _callbacks.push_back (cb); 
-    return _callbacks.size ();
-  }
-
 protected:
   tame_fn_t *_fn;
   int _id;
   vartab_t _class_vars;
-  vec<tame_callback_t *> _callbacks;
   int _lineno;
 };
   
@@ -754,7 +682,7 @@ public:
   bool is_jumpto () const { return true; }
   void set_id (int i) { _id = i; }
   int id () const { return _id; }
-  virtual void output (outputter_t *o);
+  virtual void output (outputter_t *o) = 0;
   var_t join_group () const { return (*_args)[0]; }
   var_t arg (u_int i) const { return (*_args)[i+1]; }
   size_t n_args () const 
@@ -803,7 +731,6 @@ struct YYSTYPE {
   char              ch;
   tame_fn_t *       fn;
   tame_el_t *       el;
-  tame_callback_t * cb;
   ptr<expr_list_t>  exprs;
   type_t            typ;
   vec<ptr<declarator_t> > decls;

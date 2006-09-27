@@ -55,10 +55,10 @@ SYM	[{}<>;,():*\[\]]
 DNUM 	[+-]?[0-9]+
 XNUM 	[+-]?0x[0-9a-fA-F]
 
-%x FULL_PARSE FN_ENTER VARS_ENTER BLOCK_ENTER CB_ENTER EXPECT_CB
+%x FULL_PARSE FN_ENTER VARS_ENTER BLOCK_ENTER EXPECT_CB
 %x TAME_BASE C_COMMENT CXX_COMMENT TAME
 %x ID_OR_NUM NUM_ONLY EXPECT_CB_BASE HALF_PARSE PP PP_BASE
-%x NONBLOCK_ENTER JOIN_ENTER JOIN_LIST JOIN_LIST_BASE
+%x JOIN_ENTER JOIN_LIST JOIN_LIST_BASE
 %x EXPR_LIST EXPR_LIST_BASE ID_LIST RETURN_PARAMS
 %x EXPR_LIST_BR EXPR_LIST_BR_BASE
 %x DEFRET_ENTER DEFRET_BASE DEFRET
@@ -67,7 +67,7 @@ XNUM 	[+-]?0x[0-9a-fA-F]
 
 %%
 
-<FN_ENTER,FULL_PARSE,SIG_PARSE,CB_ENTER,VARS_ENTER,ID_LIST,ID_OR_NUM,NUM_ONLY,HALF_PARSE,BLOCK_ENTER,NONBLOCK_ENTER,JOIN_ENTER,JOIN_LIST,JOIN_LIST_BASE,EXPR_LIST,EXPR_LIST_BASE,DEFRET_ENTER>{
+<FN_ENTER,FULL_PARSE,SIG_PARSE,VARS_ENTER,ID_LIST,ID_OR_NUM,NUM_ONLY,HALF_PARSE,BLOCK_ENTER,JOIN_ENTER,JOIN_LIST,JOIN_LIST_BASE,EXPR_LIST,EXPR_LIST_BASE,DEFRET_ENTER>{
 \n		++lineno;
 {WSPACE}+	/*discard*/;
 }
@@ -194,13 +194,6 @@ __LOC__         { return loc_return (); }
 				  "and '{'");}
 }
 
-<NONBLOCK_ENTER>{
-[(]		{ yy_push_state (EXPR_LIST_BASE); return yytext[0]; }
-[{]		{ switch_to_state (EXPECT_CB_BASE); return yytext[0]; }
-.		{ return yyerror ("illegal token found between NONBLOCK "
-				  "and '{'");}
-}
-
 <JOIN_ENTER>{
 [(]		{ yy_push_state (JOIN_LIST_BASE); return yytext[0]; }
 [{]		{ switch_to_state (TAME_BASE); return yytext[0]; }
@@ -222,13 +215,6 @@ __LOC__         { return loc_return (); }
 <JOIN_LIST_BASE>{
 [,]		{ switch_to_state (ID_LIST); return yytext[0]; }
 [)]		{ yy_pop_state (); return yytext[0]; }
-}
-
-
-<CB_ENTER>{
-[(]		{ switch_to_state (EXPR_LIST_BASE); return yytext[0]; }
-[\[]		{ yy_push_state (EXPR_LIST_BR_BASE); return yytext[0]; }
-.		{ return yyerror ("illegal token found between '@' and '('"); }
 }
 
 <DEFRET_ENTER>{
@@ -291,8 +277,7 @@ __LOC__         { return loc_return (); }
 
 <EXPECT_CB_BASE,EXPECT_CB>{
 \n		{ ++lineno; return std_ret (T_PASSTHROUGH); }
-[^ \t@{}\n/]+|[ \t/]	{ return std_ret (T_PASSTHROUGH); }
-@		{ yy_push_state (CB_ENTER); return yytext[0]; }
+[^ \t{}\n/]+|[ \t/]	{ return std_ret (T_PASSTHROUGH); }
 [{]		{ yy_push_state (EXPECT_CB); return std_ret (T_PASSTHROUGH); }
 goto/[ \t\n]	{ return yyerror ("cannot goto from within a BLOCK or "
 				  "NONBLOCK environment"); }
@@ -311,9 +296,8 @@ return/[ \t\n(;] { return yyerror ("cannot return from within a BLOCK or "
 
 <TAME,TAME_BASE>{
 \n		{ yylval.str = yytext; ++lineno; return T_PASSTHROUGH; }
-@	        { return tame_ret (CB_ENTER, '@'); }
 
-[^ \t{}"\n/VvBbTtWD@_]+|[ \t/VvBbTtWD@_] { yylval.str = yytext; 
+[^ \t{}"\n/VvBbTtWD_]+|[ \t/VvBbTtWD_] { yylval.str = yytext; 
 	 			                  return T_PASSTHROUGH; }
 
 [{]		{ yylval.str = yytext; yy_push_state (TAME); 
@@ -388,7 +372,7 @@ TAME_ON		{ tame_on = 1; GOBBLE_RET; }
 }
 
 
-<CB_ENTER,FULL_PARSE,SIG_PARSE,FN_ENTER,VARS_ENTER,HALF_PARSE,PP,PP_BASE,EXPR_LIST,EXPR_LIST_BASE,ID_LIST,BLOCK_ENTER,NONBLOCK_ENTER,JOIN_ENTER,RETURN_PARAMS,EXPR_LIST_BR,EXPR_LIST_BR_BASE,DEFRET_ENTER>{
+<FULL_PARSE,SIG_PARSE,FN_ENTER,VARS_ENTER,HALF_PARSE,PP,PP_BASE,EXPR_LIST,EXPR_LIST_BASE,ID_LIST,BLOCK_ENTER,JOIN_ENTER,RETURN_PARAMS,EXPR_LIST_BR,EXPR_LIST_BR_BASE,DEFRET_ENTER>{
 
 "//"		{ gobble_flag = 1; yy_push_state (CXX_COMMENT); }
 "/*"		{ gobble_flag = 1; yy_push_state (C_COMMENT); }
