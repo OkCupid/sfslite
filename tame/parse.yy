@@ -63,7 +63,7 @@ int vars_lineno;
 %token T_CWAIT
 %token T_WAIT
 %token T_DEFAULT_RETURN
-%token T_FORK
+%token T_CFORK
 
 %token T_2DOLLAR
 
@@ -90,7 +90,7 @@ int vars_lineno;
 
 %type <var>  parameter_declaration
 
-%type <el>   fn_tame vars block return_statement wait fork cwait 
+%type <el>   fn_tame vars block return_statement wait cwait 
 %type <el>   block_body cwait_body wait_body
 %type <el>   default_return
 
@@ -185,7 +185,6 @@ fn_statements: passthrough
 
 fn_tame: vars
 	| block
-	| fork
 	| wait
 	| cwait
 	| return_statement
@@ -317,6 +316,7 @@ cwait_body: wait_body
 	| block_body
 	;
 
+/*
 fork: T_FORK '(' expr_list ')' '{'
 	{
 	  tame_fn_t *fn = state->function ();
@@ -333,6 +333,7 @@ fork: T_FORK '(' expr_list ')' '{'
 	  $$ = state->fork ();
 	}
 	;
+*/
 
 identifier: T_ID
 	;
