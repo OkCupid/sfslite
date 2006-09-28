@@ -59,6 +59,7 @@ XNUM 	[+-]?0x[0-9a-fA-F]
 %x TAME_BASE C_COMMENT CXX_COMMENT TAME
 %x ID_OR_NUM NUM_ONLY EXPECT_CB_BASE HALF_PARSE PP PP_BASE
 %x JOIN_ENTER JOIN_LIST JOIN_LIST_BASE
+%x CWAIT_ENTER CWAIT_BODY CWAIT_BODY_BASE
 %x EXPR_LIST EXPR_LIST_BASE ID_LIST RETURN_PARAMS
 %x EXPR_LIST_BR EXPR_LIST_BR_BASE
 %x DEFRET_ENTER DEFRET_BASE DEFRET
@@ -67,7 +68,7 @@ XNUM 	[+-]?0x[0-9a-fA-F]
 
 %%
 
-<FN_ENTER,FULL_PARSE,SIG_PARSE,VARS_ENTER,ID_LIST,ID_OR_NUM,NUM_ONLY,HALF_PARSE,BLOCK_ENTER,JOIN_ENTER,JOIN_LIST,JOIN_LIST_BASE,EXPR_LIST,EXPR_LIST_BASE,DEFRET_ENTER>{
+<FN_ENTER,FULL_PARSE,SIG_PARSE,VARS_ENTER,ID_LIST,ID_OR_NUM,NUM_ONLY,HALF_PARSE,BLOCK_ENTER,JOIN_ENTER,CWAIT_ENTER,JOIN_LIST,JOIN_LIST_BASE,EXPR_LIST,EXPR_LIST_BASE,DEFRET_ENTER>{
 \n		++lineno;
 {WSPACE}+	/*discard*/;
 }
@@ -202,6 +203,14 @@ __LOC__         { return loc_return (); }
 				  "and '{'");}
 }
 
+<CWAIT_ENTER>{
+[(]		{ yy_push_state (JOIN_LIST_BASE); return yytext[0]; }
+[{]		{ switch_to_state (CWAIT_BODY_BASE); return yytext[0]; }
+[;]		{ yy_pop_state (); return yytext[0]; }
+.		{ return yyerror ("illegal token found after cwait"); }
+
+}
+
 <JOIN_LIST_BASE,JOIN_LIST>{
 [(]		{ yy_push_state (JOIN_LIST); return std_ret (T_PASSTHROUGH); }
 [^(),/\n]+|"/"	{ return std_ret (T_PASSTHROUGH); }
@@ -277,7 +286,7 @@ __LOC__         { return loc_return (); }
 
 <EXPECT_CB_BASE,EXPECT_CB>{
 \n		{ ++lineno; return std_ret (T_PASSTHROUGH); }
-[^ \t{}\n/]+|[ \t/]	{ return std_ret (T_PASSTHROUGH); }
+[^ \t{}\n/gr]+|[ gr\t/]	{ return std_ret (T_PASSTHROUGH); }
 [{]		{ yy_push_state (EXPECT_CB); return std_ret (T_PASSTHROUGH); }
 goto/[ \t\n]	{ return yyerror ("cannot goto from within a BLOCK or "
 				  "NONBLOCK environment"); }
@@ -285,19 +294,27 @@ return/[ \t\n(;] { return yyerror ("cannot return from within a BLOCK or "
 				   "NONBLOCK environment."); }
 }
 
+<CWAIT_BODY_BASE,CWAIT_BODY>{
+\n			{ ++lineno; return std_ret (T_PASSTHROUGH); }
+[^ gr\t{}\n/]+|[ \tgr/]	{ return std_ret (T_PASSTHROUGH); }
+[{]			{ yy_push_state (CWAIT_BODY); 
+			  return std_ret (T_PASSTHROUGH); }
+goto/[ \t\n]		{ return yyerror ("cannot goto within cwait{..}"); }
+return/[ \t\n(;]	{ return yyerror ("cannot return withint cwait{..}"); }
+}
 
-<EXPECT_CB_BASE>{
+<CWAIT_BODY_BASE,EXPECT_CB_BASE>{
 [}]		{ yy_pop_state (); return yytext[0]; }
 }
 
-<EXPECT_CB>{
+<CWAIT_BODY,EXPECT_CB>{
 [}]		{ yy_pop_state (); return std_ret (T_PASSTHROUGH); }
 }
 
 <TAME,TAME_BASE>{
 \n		{ yylval.str = yytext; ++lineno; return T_PASSTHROUGH; }
 
-[^ \t{}"\n/VvBbTtWD_]+|[ \t/VvBbTtWD_] { yylval.str = yytext; 
+[^ \t{}"\n/cVvBbTtWD_]+|[ \t/cVvBbTtWD_] { yylval.str = yytext; 
 	 			                  return T_PASSTHROUGH; }
 
 [{]		{ yylval.str = yytext; yy_push_state (TAME); 
@@ -311,6 +328,8 @@ tamewait/[ \t\n(/]  { return tame_ret (JOIN_ENTER, T_WAIT); }
 DEFAULT_RETURN	    { return tame_ret (DEFRET_ENTER, T_DEFAULT_RETURN); }
 
 return/[ \t\n(/;]   { yy_push_state (RETURN_PARAMS); return T_RETURN; }
+
+cwait/[ \t\n({/]    { return tame_ret (CWAIT_ENTER, T_CWAIT); }
 
 \"		    { yy_push_state (QUOTE); return std_ret (T_PASSTHROUGH); }
 }

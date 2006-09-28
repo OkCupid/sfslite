@@ -60,6 +60,7 @@ int vars_lineno;
 %token T_VARS
 %token T_BLOCK
 %token T_JOIN
+%token T_CWAIT
 %token T_WAIT
 %token T_DEFAULT_RETURN
 %token T_FORK
@@ -89,7 +90,8 @@ int vars_lineno;
 
 %type <var>  parameter_declaration
 
-%type <el>   fn_tame vars block return_statement wait fork
+%type <el>   fn_tame vars block return_statement wait fork cwait 
+%type <el>   block_body cwait_body wait_body
 %type <el>   default_return
 
 %type <opts> static_opt
@@ -185,6 +187,7 @@ fn_tame: vars
 	| block
 	| fork
 	| wait
+	| cwait
 	| return_statement
 	| default_return
 	;
@@ -233,7 +236,10 @@ return_statement: T_RETURN passthrough ';'
 	}
 	;
 
-block: T_BLOCK '{' 
+block: T_BLOCK block_body  { $$ = $2; }
+	;
+
+block_body: '{' 
 	{
 	  tame_fn_t *fn = state->function ();
  	  tame_block_t *bl = New tame_block_t (fn, get_yy_lineno ());
@@ -292,13 +298,23 @@ expr_list: expr
 	}
 	;
 
-wait: T_WAIT '(' join_list ')' ';'
+wait: T_WAIT wait_body { $$ = $2; }
+	;
+
+wait_body: '(' join_list ')' ';'
 	{
 	  tame_fn_t *fn = state->function ();
-	  tame_wait_t *w = New tame_wait_t (fn, $3, get_yy_lineno ());
+	  tame_wait_t *w = New tame_wait_t (fn, $2, get_yy_lineno ());
 	  fn->add_env (w);
 	  $$ = w;
 	}
+	;
+
+cwait: T_CWAIT cwait_body { $$ = $2; }
+	;
+
+cwait_body: wait_body
+	| block_body
 	;
 
 fork: T_FORK '(' expr_list ')' '{'

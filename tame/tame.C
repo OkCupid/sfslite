@@ -174,7 +174,7 @@ main (int argc, char *argv[])
     exit (1);
 
   // only on if YYDEBUG is on :(
-  //yydebug = 1;
+  // yydebug = 1;
 
   yyparse ();
 
