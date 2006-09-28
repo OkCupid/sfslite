@@ -89,7 +89,7 @@ void state_t::relaunch (cbb cv)
       // another should be launched. but don't bother launching
       // more if an error occurred.
       if (i < n_tot && !err_occurred) {
-	cli->call (EX_RANDOM, NULL, &res[i], @[window, i](errs[i]));
+	cli->call (EX_RANDOM, NULL, &res[i], mkevent (window, i, errs[i]));
 	i++;
       }
     }

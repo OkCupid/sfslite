@@ -48,7 +48,7 @@ public:
   virtual void setrcb (recvcb_t) = 0;
   virtual bool ateof () { return false; }
   virtual u_int64_t get_raw_bytes_sent () const { return 0; }
-  virtual int sndbufsize () const { panic ("unimplemented"); }
+  virtual int sndbufsize () const { panic ("unimplemented"); return 0; }
   virtual void poll () = 0;
   virtual int getfd () = 0;
 
