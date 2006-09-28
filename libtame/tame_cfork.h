@@ -37,10 +37,10 @@ public:
   cthread_t (event_void_t e, R &r, typename callback<R, void>::ref a) 
     : _event (e), _result (r), _action (a) {}
 
-  static void run (void *me) 
-  { (reinterpret_cast<cthread_t<R> *> (me))->run (); }
+  static void * run (void *me) 
+  { (reinterpret_cast<cthread_t<R> *> (me))->_run (); return NULL; }
 
-  void run ()
+  void _run ()
   {
     _result = (*_action) ();
     SIGNAL (_event);
@@ -66,10 +66,10 @@ class cthread_t<void> {
 public:
   cthread_t (event_void_t e, cbv a) : _event (e), _action (a) {}
   
-  static void run (void *me)
-  { (reinterpret_cast<cthread_t<void> *> (me))->run (); }
+  static void * run (void *me)
+  { (reinterpret_cast<cthread_t<void> *> (me))->_run (); return NULL; }
 
-  void run ()
+  void _run ()
   {
     (*_action) ();
     SIGNAL (_event);
