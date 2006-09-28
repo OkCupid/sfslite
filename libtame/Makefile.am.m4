@@ -34,8 +34,8 @@ dnl
 dnl
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
 
-mkevent.o:  tame_mkevent.h
-mkevent.lo: tame_mkevent.h
+mkevent.o:  tame_mkevent.h mkevent.C
+mkevent.lo: tame_mkevent.h mkevent.C
 
 tame_mkevent.h: $(srcdir)/mkevent.pl
 	perl $< > $@
