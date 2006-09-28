@@ -849,7 +849,8 @@ tame_block_t::output (outputter_t *o)
   b << "  do {\n"
     << "    " << TAME_CLOSURE_NAME << "->init_block (" 
     << _id << ", " << _lineno << ");\n"
-    << "    implicit_rendezvous_t  __cls_g (0, mkref (__cls));\n"
+    << "    closure_implicit_rendezvous_t _irv (__cls_g);\n"
+    << "    implicit_rendezvous_t *__cls_g = &_irv;\n"
     ;
 
   _fn->jump_out (b, _id);

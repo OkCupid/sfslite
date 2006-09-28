@@ -127,7 +127,7 @@ closure_t::init_block (int blockid, int lineno)
   _block._lineno = lineno;
 }
 
-ptr<closure_reenter_t>
+ptr<reenterer_t>
 closure_t::make_reenter (const char *loc)
 {
   ptr<closure_reenter_t> ret = 
@@ -246,7 +246,7 @@ must_deallocate_t::check ()
 }
 
 closure_reenter_t::closure_reenter_t (ptr<closure_t> c, const char *l)
-  : reenterer_t (c->must_deallocate (), loc), _cls (c) {}
+  : reenterer_t (c->must_deallocate (), l), _cls (c) {}
 
 closure_reenter_t::~closure_reenter_t () {}
 
@@ -258,11 +258,11 @@ reenterer_t::reenterer_t (ptr<must_deallocate_t> m, const char *l)
 
 reenterer_t::~reenterer_t ()
 {
-  if (_md) _md->remove (this);
+  if (_md) _md->rem (this);
 }
 
 stack_reenter_t::stack_reenter_t (ptr<must_deallocate_t> snt,
-				  const char *l, join_group_t<> jg)
-  : reenter_interface_t (snt, l), _joiner (jg.make_joiner (loc)) {}
+				  const char *l, coordgroup_t<> jg)
+  : reenterer_t (snt, l), _joiner (jg.make_joiner (l)) {}
 
 stack_reenter_t::~stack_reenter_t () {}

@@ -164,7 +164,7 @@ sub do_mkevent_block_cb ($)
     }
     print "void\n";
     print ("${name}_cb_${t} (",
-	   arglist ("ptr<closure_wrapper_t> c",
+	   arglist ("ptr<reenterer_t> c",
 		    "refset_t<" . arglist (["T%", $t]). "> rs",
 		    ["T% t%", $t]
 		    ),

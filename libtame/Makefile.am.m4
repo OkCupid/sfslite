@@ -34,10 +34,15 @@ dnl
 dnl
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
 
+mkevent.o:  tame_mkevent.h
+mkevent.lo: tame_mkevent.h
+
 tame_mkevent.h: $(srcdir)/mkevent.pl
 	perl $< > $@
 
-libtame_la_SOURCES = tame_out mkevent.C core.C
+
+
+libtame_la_SOURCES = mkevent.C core.C tame_out 
 
 .PHONY: tameclean
 
