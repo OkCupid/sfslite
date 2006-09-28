@@ -5,7 +5,7 @@ sfslib_LTLIBRARIES = libtame.la
 
 sfsinclude_HEADERS = tame_pipeline.h tame_lock.h tame_autocb.h \
 	tame.h tame_core.h tame_cancel.h tame_mkevent.h \
-	tame_mkfork.h tame_mkfork_ag.h tame_thread.h
+	tame_cfork.h tame_cfork_ag.h tame_thread.h
 
 SUFFIXES = .C .T .h
 .T.C:
