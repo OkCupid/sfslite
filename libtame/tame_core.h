@@ -355,23 +355,6 @@ public:
 
 };
 
-class implicit_rendezvous_t {
-public:
-  // We don't want to be able to say something like
-  // implicit_rendezvous_t x = __cls_g, so add the dummy.
-  implicit_rendezvous_t (int dummy_XXX, ptr<closure_t> c) : _cls (c) {}
-  ptr<closure_t> closure () { return _cls; }
-private:
-  ptr<closure_t> _cls;
-};
-
-
-struct must_deallocate_obj_t {
-  virtual ~must_deallocate_obj_t () {}
-  virtual const char *loc () const = 0;
-  virtual const char *must_dealloc_typ () const = 0;
-  list_entry<must_deallocate_obj_t> _lnk;
-};
 
 class must_deallocate_t {
 public:
@@ -383,31 +366,52 @@ private:
   list<must_deallocate_obj_t, &must_deallocate_obj_t::_lnk> _objs;
 };
 
+
+//
+// An interface used for reentering a function from within a 
+// cwait {} block with an implicit rendezvous.
+//
+class reenter_interface_t : public virtual refcount,
+			    public must_deallocate_obj_t {
+public:
+  reenterer_t (ptr<must_deallocate_t> md, const char *loc);
+  virtual ~reenter_interface_t ();
+  virtual void maybe_reenter () = 0;
+  const char *loc () const { return _loc; }
+public:
+  list_entry<must_deallocate_obj_t> _lnk;
+protected:
+  ptr<must_deallocate_t> _md;
+  const char *_loc;
+};
+
 //
 // A wrapper around a closure pointer, in turn wrapped into a C.V.
 // If a C.V. never goes out of scope, the wrapper won't go out of
 // scope.  Wrappers left in scope after closure semi-deallocation
 // trigger warnings.
 //
-class closure_wrapper_t : public virtual refcount,
-			  public must_deallocate_obj_t {
+class closure_wrapper_t : public reenterer_t {
 public:
-
   closure_wrapper_t (ptr<closure_t> c, const char *loc);
   ~closure_wrapper_t ();
 
-  const char *loc () const { return _loc; }
   const char *must_dealloc_typ () const { return "coordination variable"; }
   void maybe_reenter () { _cls->maybe_reenter (_loc); }
 
 private:
   ptr<closure_t> _cls;
-  const char *_loc;
-
-public:
-  list_entry<closure_wrapper_t> _lnk;
 };
 
+class stack_reenter_t : public reenter_interface_t {
+public:
+  stack_reenter_t (ptr<must_deallocate_t> sentinel, 
+		   const char *l, join_group_t<> jg);
+  ~stack_reenter_t ();
+  void maybe_reenter () { _joiner->join (); }
+private:
+  ptr<joiner_t<> > _joiner;
+};
 
 template<class T1 = nil_t, class T2 = nil_t, class T3 = nil_t, class T4 = nil_t>
 struct value_set_t {
@@ -891,6 +895,44 @@ public:
     assert (next_var ());
   }
 
+  void waitall () { while (need_wait ()) wait (); }
+
+};
+
+class implicit_rendezvous_t {
+public:
+  virtual ~implicit_rendezvous_t () {}
+  virtual ptr<reenterer_t> make_reenter (const char *loc) = 0;
+};
+
+class closure_implicit_rendezvous_t : public implicit_rendezvous_t {
+public:
+  closure_implicit_rendezvous_t (ptr<closure_t> c) : _cls (c) {}
+  ptr<reenterer_t> make_reenter (const char *loc)
+  { return _cls->make_reenter (loc); }
+private:
+  ptr<closure_t> _cls;
+};
+
+class threaded_implicit_rendezvous_t : public implicit_rendezvous_t {
+public:
+  threaded_implicit_rendezvous_t (const char *f, int l) 
+    : _md (New refcounted<must_deallocate_t> ()),
+      _jg (f, l) {}
+  ~threaded_implicit_rendezvous_t () { _jg.waitall (); }
+
+  ptr<reenter_interface_t> make_reenterer (const char *loc)
+  { return New refcounted<stack_reenter_t> (_md, loc, jg); }
+private:
+  ptr<must_deallocate_t> _md;
+  join_group_t<> _jg;
+};
+
+struct must_deallocate_obj_t {
+  virtual ~must_deallocate_obj_t () {}
+  virtual const char *loc () const = 0;
+  virtual const char *must_dealloc_typ () const = 0;
+  list_entry<must_deallocate_obj_t> _lnk;
 };
 
 template<class T> void use_reference (T &i) {}

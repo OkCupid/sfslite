@@ -127,11 +127,11 @@ closure_t::init_block (int blockid, int lineno)
   _block._lineno = lineno;
 }
 
-ptr<closure_wrapper_t>
-closure_t::make_wrapper (const char *loc)
+ptr<closure_reenter_t>
+closure_t::make_reenter (const char *loc)
 {
-  ptr<closure_wrapper_t> ret = 
-    New refcounted<closure_wrapper_t> (mkref (this), loc);
+  ptr<closure_reenter_t> ret = 
+    New refcounted<closure_reenter_t> (mkref (this), loc);
   _block._count ++;
   return ret;
 }
@@ -188,21 +188,10 @@ closure_t::collect_join_groups ()
 //-----------------------------------------------------------------------
 
 //-----------------------------------------------------------------------
-// Closure wrappers are interfaces between closures and CVs that the CVs
+// Closure reenterers are interfaces between closures and CVs that the CVs
 // carry around.  We're waiting for all of these interfaces to disappear,
 // which will prove that the closure reference was flushed, too.
 //
-closure_wrapper_t::closure_wrapper_t (ptr<closure_t> c, const char *l)
-  : _cls (c), _loc (l) 
-{
-  _cls->must_deallocate ()->add (this);
-}
-
-closure_wrapper_t::~closure_wrapper_t () 
-{
-  _cls->must_deallocate ()->rem (this);
-}
-
 
 void
 closure_t::maybe_reenter (const char *loc)
@@ -255,3 +244,25 @@ must_deallocate_t::check ()
   if (lst.size () > 0 && (tame_options & TAME_ERROR_FATAL))
     panic ("abort on TAME failure\n");
 }
+
+closure_reenter_t::closure_reenter_t (ptr<closure_t> c, const char *l)
+  : reenterer_t (c->must_deallocate (), loc), _cls (c) {}
+
+closure_reenter_t::~closure_reenter_t () {}
+
+reenterer_t::reenterer_t (ptr<must_deallocate_t> m, const char *l)
+  : _md (m), _loc (l)
+{
+  if (_md) _md->add (this);
+}
+
+reenterer_t::~reenterer_t ()
+{
+  if (_md) _md->remove (this);
+}
+
+stack_reenter_t::stack_reenter_t (ptr<must_deallocate_t> snt,
+				  const char *l, join_group_t<> jg)
+  : reenter_interface_t (snt, l), _joiner (jg.make_joiner (loc)) {}
+
+stack_reenter_t::~stack_reenter_t () {}

@@ -3,7 +3,8 @@ $(PROGRAMS): $(LDEPS)
 
 sfslib_LTLIBRARIES = libtame.la
 
-sfsinclude_HEADERS = pipeline.h lock.h autocb.h
+sfsinclude_HEADERS = tame_pipeline.h tame_lock.h tame_autocb.h \
+	tame.h tame_core.h tame_cancel.h tame_mkevent.h
 
 SUFFIXES = .C .T .h
 .T.C:
@@ -33,7 +34,10 @@ dnl
 dnl
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
 
-libtame_la_SOURCES = tame_out
+tame_mkevent.h: $(srcdir)/mkevent.pl
+	perl $< > $@
+
+libtame_la_SOURCES = tame_out mkevent.C core.C
 
 .PHONY: tameclean
 
@@ -44,7 +48,7 @@ dist-hook:
 	cd $(distdir) && rm -f tame_out
 
 EXTRA_DIST = .svnignore tame_in Makefile.am.m4
-CLEANFILES = core *.core *~ *.rpo tame_out
+CLEANFILES = core *.core *~ *.rpo tame_mkevent.h tame_out
 MAINTAINERCLEANFILES = Makefile.in Makefile.am
 
 $(srcdir)/Makefile.am: $(srcdir)/Makefile.am.m4

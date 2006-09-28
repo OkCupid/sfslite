@@ -136,7 +136,7 @@ sub do_mkevent_block ($)
     }
     print "callback<" . arglist ("void", ["T%", $t]) . ">::ref\n";
     print ("${name} (" ,
-	   arglist ("implicit_rendezvous_t c",
+	   arglist ("implicit_rendezvous_t *r",
 		    "const char *loc",
 		    [ "T% &t%", $t ]),
 	   ")\n");
@@ -145,7 +145,7 @@ sub do_mkevent_block ($)
 	my $tl = template_arglist (["T%", $t]);
 	print ("  return wrap (",
 	       arglist ( "${name}_cb_${t}${tl}",
-			 "c.closure ()->make_wrapper (loc)",
+			 "r->make_reenter (loc)",
 			 "refset_t<" . arglist (["T%", $t]) 
 			 ."> (" . arglist (["t%", $t]) . ")"
 			 ),
