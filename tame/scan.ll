@@ -60,7 +60,6 @@ XNUM 	[+-]?0x[0-9a-fA-F]
 %x ID_OR_NUM NUM_ONLY EXPECT_CB_BASE HALF_PARSE PP PP_BASE
 %x JOIN_ENTER JOIN_LIST JOIN_LIST_BASE
 %x CWAIT_ENTER CWAIT_BODY CWAIT_BODY_BASE
-%x CFORK_ENTER CFORK_BODY
 %x EXPR_LIST EXPR_LIST_BASE ID_LIST RETURN_PARAMS
 %x EXPR_LIST_BR EXPR_LIST_BR_BASE
 %x DEFRET_ENTER DEFRET_BASE DEFRET
@@ -69,7 +68,7 @@ XNUM 	[+-]?0x[0-9a-fA-F]
 
 %%
 
-<FN_ENTER,FULL_PARSE,SIG_PARSE,VARS_ENTER,ID_LIST,ID_OR_NUM,NUM_ONLY,HALF_PARSE,BLOCK_ENTER,JOIN_ENTER,CWAIT_ENTER,CFORK_ENTER,JOIN_LIST,JOIN_LIST_BASE,EXPR_LIST,EXPR_LIST_BASE,DEFRET_ENTER>{
+<FN_ENTER,FULL_PARSE,SIG_PARSE,VARS_ENTER,ID_LIST,ID_OR_NUM,NUM_ONLY,HALF_PARSE,BLOCK_ENTER,JOIN_ENTER,CWAIT_ENTER,JOIN_LIST,JOIN_LIST_BASE,EXPR_LIST,EXPR_LIST_BASE,DEFRET_ENTER>{
 \n		++lineno;
 {WSPACE}+	/*discard*/;
 }
@@ -212,12 +211,6 @@ __LOC__         { return loc_return (); }
 
 }
 
-<CFORK_ENTER>{
-[(]		{ yy_push_state (HALF_PARSE); return yytext[0]; }
-[{]		{ switch_to_state (CFORK_BODY); return yytext[0]; }
-.		{ return yyerror ("illegal token found after cfork"); }
-}
-
 <JOIN_LIST_BASE,JOIN_LIST>{
 [(]		{ yy_push_state (JOIN_LIST); return std_ret (T_PASSTHROUGH); }
 [^(),/\n]+|"/"	{ return std_ret (T_PASSTHROUGH); }
@@ -303,7 +296,7 @@ return/[ \t\n(;] { return yyerror ("cannot return from within a BLOCK or "
 
 <CWAIT_BODY_BASE,CWAIT_BODY>{
 \n			{ ++lineno; return std_ret (T_PASSTHROUGH); }
-[^ grc\t{}\n/]+|[ \tgcr/]	{ return std_ret (T_PASSTHROUGH); }
+[^ gr\t{}\n/]+|[ \tgr/]	{ return std_ret (T_PASSTHROUGH); }
 [{]			{ yy_push_state (CWAIT_BODY); 
 			  return std_ret (T_PASSTHROUGH); }
 goto/[ \t\n]		{ return yyerror ("cannot goto within cwait{..}"); }
@@ -338,10 +331,6 @@ return/[ \t\n(/;]   { yy_push_state (RETURN_PARAMS); return T_RETURN; }
 cwait/[ \t\n({/]    { return tame_ret (CWAIT_ENTER, T_CWAIT); }
 
 \"		    { yy_push_state (QUOTE); return std_ret (T_PASSTHROUGH); }
-}
-
-<TAME,TAME_BASE,CWAIT_BODY,CWAIT_BODY_BASE>{
-cfork/[ \t\n({/]    { return tame_ret (CFORK_ENTER, T_CFORK); }
 }
 
 <QUOTE>{
@@ -401,7 +390,7 @@ TAME_ON		{ tame_on = 1; GOBBLE_RET; }
 }
 
 
-<FULL_PARSE,SIG_PARSE,FN_ENTER,VARS_ENTER,HALF_PARSE,PP,PP_BASE,EXPR_LIST,EXPR_LIST_BASE,ID_LIST,BLOCK_ENTER,JOIN_ENTER,RETURN_PARAMS,EXPR_LIST_BR,EXPR_LIST_BR_BASE,DEFRET_ENTER>{
+<FULL_PARSE,SIG_PARSE,FN_ENTER,VARS_ENTER,HALF_PARSE,PP,PP_BASE,EXPR_LIST,EXPR_LIST_BASE,ID_LIST,BLOCK_ENTER,JOIN_ENTER,RETURN_PARAMS,EXPR_LIST_BR,EXPR_LIST_BR_BASE,DEFRET_ENTER,CWAIT_BODY,CWAIT_BODY_ENTER>{
 
 "//"		{ gobble_flag = 1; yy_push_state (CXX_COMMENT); }
 "/*"		{ gobble_flag = 1; yy_push_state (C_COMMENT); }

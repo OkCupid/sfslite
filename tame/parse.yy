@@ -63,7 +63,6 @@ int vars_lineno;
 %token T_CWAIT
 %token T_WAIT
 %token T_DEFAULT_RETURN
-%token T_CFORK
 
 %token T_2DOLLAR
 
@@ -315,25 +314,6 @@ cwait: T_CWAIT cwait_body { $$ = $2; }
 cwait_body: wait_body
 	| block_body
 	;
-
-/*
-fork: T_FORK '(' expr_list ')' '{'
-	{
-	  tame_fn_t *fn = state->function ();
-	  tame_fork_t *frk = New tame_fork_t (fn, $3);
-	  state->new_fork (frk);
-	  fn->add_env (frk);
-	  state->passthrough (lstr (get_yy_lineno (), "{"));
-	  state->push_list (frk);
-	}
-	fn_statements '}'
-	{
-	  state->pop_list ();
-	  state->passthrough (lstr (get_yy_lineno (), "}"));
-	  $$ = state->fork ();
-	}
-	;
-*/
 
 identifier: T_ID
 	;
