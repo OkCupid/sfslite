@@ -946,7 +946,7 @@ typedef ref<callback<void, str> > event_str_t;
 
 template<class T1 = void, class T2 = void, class T3 = void>
 struct event {
-  typedef callback<void, T1, T2, T3>::ref t;
+  typedef ref<callback<void, T1, T2, T3> > t;
 };
 
 #define TAME_GLOBAL_INT      tame_global_int

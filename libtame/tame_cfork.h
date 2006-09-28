@@ -29,11 +29,12 @@
 #include "tame_thread.h"
 #include "tame_core.h"
 #include "tame_mkevent.h"
+#include "async.h"
 
 template<class R>
 class cthread_t {
 public:
-  cthread_t (event_void_t e, R &r, callback<R,void>::ref a) 
+  cthread_t (event_void_t e, R &r, typename callback<R, void>::ref a) 
     : _event (e), _result (r), _action (a) {}
 
   static void run (void *me) 
@@ -50,7 +51,7 @@ public:
 private:
   event_void_t _event;
   R &_result;
-  callback<R, void>::ref _action;
+  typename callback<R, void>::ref _action;
 };
 
 template<class R>

@@ -53,7 +53,8 @@ sub do_cfork ($$) {
 		    "rendezvous_t<" . arglist (["W%", $w]) . "> rv",
 		    ["const W% &w", $w],
 		    ["R% &r%", $r],
-		    "callback<" . arglist (["R%", $r], "void"). ">::ref a"
+		    "typename callback<" . 
+		    arglist (["R%", $r], "void"). ">::ref a"
 		    ),
 	   ")\n",
 	   "{\n",

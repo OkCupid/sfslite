@@ -72,7 +72,7 @@ int vars_lineno;
 %type <str> template_instantiation_list_opt identifier
 %type <str> typedef_name
 %type <str> type_specifier 
-%type <str> passthrough expr
+%type <str> passthrough 
 %type <typ_mod> type_modifier type_modifier_list declaration_specifiers 
 %type <typ_mod> type_qualifier_list_opt type_qualifier_list type_qualifier 
 %type <initializer> cpp_initializer_opt
@@ -82,7 +82,7 @@ int vars_lineno;
 
 
 %type <vars> parameter_type_list_opt parameter_type_list parameter_list
-%type <exprs> expr_list join_list id_list_opt id_list 
+%type <exprs> join_list id_list_opt id_list 
 
 %type <opt>  const_opt
 %type <fn>   fn_declaration tame_decl
@@ -105,15 +105,6 @@ file:  passthrough 			{ state->passthrough ($1); }
 
 passthrough: /* empty */	    { $$ = lstr (get_yy_lineno ()); }
 	| passthrough T_PASSTHROUGH 
-	{
-	   strbuf b ($1);
-	   b << $2;
-	   $$ = lstr ($1.lineno (), b);
-	}
-	;
-
-expr:	T_PASSTHROUGH		   { $$ = lstr (get_yy_lineno (), $1); }
-	| expr T_PASSTHROUGH
 	{
 	   strbuf b ($1);
 	   b << $2;
@@ -280,19 +271,6 @@ join_list: passthrough id_list_opt
 	    $$ = New refcounted<expr_list_t> ();
 	    $$->push_back (var_t ($1, EXPR));
 	  }
-	}
-	;
-
-expr_list: expr
-	{
-	  $$ = New refcounted<expr_list_t> ();
-	  $$->push_back (var_t ($1, EXPR));
-	}
-	|
-	expr_list ',' expr
-	{
-	  $1->push_back (var_t ($3, EXPR));
-	  $$ = $1;
 	}
 	;
 

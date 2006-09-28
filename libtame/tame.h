@@ -8,5 +8,7 @@
 #include "tame_core.h"
 #include "tame_cancel.h"
 #include "tame_mkevent.h"
+#include "tame_thread.h"
+#include "tame_cfork.h"
 
 #endif /* _ASYNC_TAME_H_ */
