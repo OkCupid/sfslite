@@ -4,7 +4,8 @@ $(PROGRAMS): $(LDEPS)
 sfslib_LTLIBRARIES = libtame.la
 
 sfsinclude_HEADERS = tame_pipeline.h tame_lock.h tame_autocb.h \
-	tame.h tame_core.h tame_cancel.h tame_mkevent.h
+	tame.h tame_core.h tame_cancel.h tame_mkevent.h \
+	tame_mkfork.h tame_mkfork_ag.h
 
 SUFFIXES = .C .T .h
 .T.C:
@@ -37,12 +38,17 @@ dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
 mkevent.o:  tame_mkevent.h mkevent.C
 mkevent.lo: tame_mkevent.h mkevent.C
 
+cfork.o:    tame_mkevent.h tame_cfork_ag.h cfork.C
+cfork.lo:   tame_mkevent.h tame_cfork_ag.h cfork.C
+
 tame_mkevent.h: $(srcdir)/mkevent.pl
 	perl $< > $@
 
+tame_cfork_ag.h: $(srcdir)/mkcfork_ag.pl
+	perl $< > $@
 
 
-libtame_la_SOURCES = mkevent.C core.C tame_out 
+libtame_la_SOURCES = mkevent.C cfork.C core.C tame_out 
 
 .PHONY: tameclean
 

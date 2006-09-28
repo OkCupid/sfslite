@@ -939,11 +939,15 @@ template<class T> void use_reference (T &i) {}
 // make shortcuts to the most common callbacks, but while using
 // ptr's, and not ref's.
 
-#define event_t callback
 typedef ref<callback<void, bool> > event_bool_t;
 typedef ref<callback<void, int> > event_int_t;
 typedef ref<callback<void, void> > event_void_t;
 typedef ref<callback<void, str> > event_str_t;
+
+template<class T1 = void, class T2 = void, class T3 = void>
+struct event {
+  typedef callback<void, T1, T2, T3>::ref t;
+};
 
 #define TAME_GLOBAL_INT      tame_global_int
 #define CLOSURE              ptr<closure_t> __frame = NULL
@@ -955,8 +959,9 @@ extern int TAME_GLOBAL_INT;
 void start_join_group_collection ();
 
 #define LOC(f,l) f ":" #l
-#define mkevent(...) \
-  _mkevent (__cls_g, LOC(__FILE__, __LINE__), ## __VA_ARGS__)
+#define HERE LOC(__FILE__, __LINE__)
+#define mkevent(...) _mkevent (__cls_g, HERE, ## __VA_ARGS__)
+
 #define rendezvous_t coordgroup_t
 
 #endif /* _ASYNC_TAME_CORE_H_ */
