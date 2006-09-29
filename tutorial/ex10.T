@@ -19,10 +19,10 @@ public:
   size_t XX;
 };
  
-TAMED template<class T, size_t X> void
+tamed template<class T, size_t X> void
 my_host_t<T,X>::try_it (cbb cv)
 {
-  VARS {
+  cvars {
     bool ret (false);
     int fd, n (3);
     ptr<axprt_stream> x;
@@ -39,7 +39,7 @@ my_host_t<T,X>::try_it (cbb cv)
     */
   }
 
-  BLOCK { tcpconnect (h, port, mkevent(fd)); }
+  cwait { tcpconnect (h, port, mkevent(fd)); }
  
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", h.cstr(), port);
@@ -50,7 +50,7 @@ my_host_t<T,X>::try_it (cbb cv)
     ev.setsize (n);
     rv.setsize (n);
  
-    BLOCK {
+    cwait {
       for (i = 0; i < n; i++) {
         cli->call (EX_RANDOM, NULL, &rv[i], mkevent(ev[i]) );
       }

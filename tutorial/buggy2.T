@@ -14,11 +14,11 @@ static void usage ()
 
 vec<cbv::ptr> holding_area;
 
-TAMED static
+tamed static
 void leaky_callee (cbv cb)
 {
   holding_area.push_back (cb);
-  BLOCK { delaycb (1, 0, mkevent ()); }
+  cwait { delaycb (1, 0, mkevent ()); }
   if (fix_bug)
     cb->signal ();
   else
@@ -26,46 +26,46 @@ void leaky_callee (cbv cb)
 }
 
 
-TAMED static
+tamed static
 void block_with_cb_hog (cbv cb)
 {
   warn << "block_with_cb_hog...\n";
-  BLOCK { leaky_callee (mkevent ()); }
+  cwait { leaky_callee (mkevent ()); }
   cb->signal ();
 }
 
-TAMED static
+tamed static
 void nonblock_with_cb_hog (cbv cb)
 {
-  VARS {
+  cvars {
     coordgroup_t<> G (__FILE__, __LINE__);
   }
   warn << "nonblock_with_cb_hog...\n";
   leaky_callee (mkevent (G));
-  WAIT (G);
+  cwait (G);
   cb->signal ();
 }
 
-TAMED static
+tamed static
 void nonblock_with_unwaited_cvs (cbv cb)
 {
-  VARS {
+  cvars {
     coordgroup_t<> G (__FILE__, __LINE__);
   }
   warn << "nonblock_with_unwaited_cvs...\n";
   delaycb (1, 0, mkevent (G) );
   if (fix_bug) {
-    WAIT (G); 
+    cwait (G); 
   }
   cb->signal ();
 }
 
 typedef void (* run_me_t) (cbv, ptr<closure_t>);
 
-TAMED static 
+tamed static 
 void main_T ()
 {
-  VARS { 
+  cvars { 
     run_me_t *p (NULL); 
   }
   static run_me_t fns[] = { block_with_cb_hog,
@@ -74,8 +74,8 @@ void main_T ()
 			    NULL };
 
   for ( p = fns; *p; p++) {
-    BLOCK { (*p) ( mkevent (), NULL ); }
-    BLOCK { delaycb (2, 0, mkevent () ); }
+    cwait { (*p) ( mkevent (), NULL ); }
+    cwait { delaycb (2, 0, mkevent () ); }
   }
   warn << "delaying for 2 seconds, then exiting..\n";
   delaycb (2, 0, wrap (exit, 0));

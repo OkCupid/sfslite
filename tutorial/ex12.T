@@ -13,21 +13,21 @@
 
 typedef ptr<callback<void,int,bool,str> > cb3_t ;
 
-TAMED static void callee3 (cb3_t cv)
+tamed static void callee3 (cb3_t cv)
 {
   str s = "hello";
   cv->signal (10, true, s);
 }
 
 
-TAMED static void main_T (int argc, char **argv)
+tamed static void main_T (int argc, char **argv)
 {
-  VARS {
+  cvars {
     int i;
     bool b;
     str s;
   }
-  BLOCK { callee3 (mkevent(i,b,s)); }
+  cwait { callee3 (mkevent(i,b,s)); }
   exit (0);
 }
 

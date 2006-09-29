@@ -29,18 +29,18 @@ static void foofoo (cbi cb)
   cb (40);
 }
 
-TAMED
-void state_t::launch (cbb cv)
+tamed void 
+state_t::launch (cbb cv)
 {
   // declare all of your "stack" variables here
-  VARS {
+  cvars {
     int fd, xx;
     bool ret (true);
   }
 
   // Call tcpconnect, and block until it returns; when it does return,
   // assign the local variable 'fd' to the result.
-  BLOCK { tcpconnect (host, port, mkevent(fd)); }
+  cwait { tcpconnect (host, port, mkevent(fd)); }
 
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", host.cstr(), port);
@@ -64,10 +64,10 @@ void state_t::launch (cbb cv)
   cv->signal (ret);
 }
 
-TAMED
-void state_t::relaunch (cbb cv)
+tamed void 
+state_t::relaunch (cbb cv)
 {
-  VARS {
+  cvars {
     bool err_occurred (false);
     int j;
     int return_id;
@@ -78,7 +78,7 @@ void state_t::relaunch (cbb cv)
     // Block until a call has returned; when it has, get
     // the index variable associated with the call, and assign
     // it to 'return_id' for the scope of the JOIN block.
-    WAIT (window, return_id);
+    cwait (window, return_id);
     if (errs[return_id]) {
       err_occurred = true;
       warn << "RPC error: " << errs[return_id] << "\n";

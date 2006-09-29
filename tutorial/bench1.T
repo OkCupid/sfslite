@@ -10,7 +10,7 @@
 #include <math.h>
 #include "litetime.h"
 
-typedef enum { SFS_MODE = 0, BLOCK_MODE = 1, NONBLOCK_MODE = 2,
+typedef enum { SFS_MODE = 0, cwait_MODE = 1, NONBLOCK_MODE = 2,
 	       CHECK_CPUSPEED_MODE = 3,
 	       BENCHMARK_WRAP_MODE = 4,
 	       BENCHMARK_FUNCTOR_MODE = 5,
@@ -179,7 +179,7 @@ static void benchmark_functor ()
   report (end - start);
 }
 
-TAMED static void foo () {}
+tamed static void foo () {}
 
 static void bar ()
 {
@@ -187,20 +187,20 @@ static void bar ()
   delaycb (0, 0, wrap (foo, c));
 }
 
-TAMED static void
-bench1_block (int niter, cbv done)
+tamed static void
+bench1_cwait (int niter, cbv done)
 {
-  VARS { int i; }
+  cvars { int i; }
   for (i = 0; i < niter; i++) {
-    BLOCK { delaycb (0, 0, mkevent()); }
+    cwait { delaycb (0, 0, mkevent()); }
   }
   (*done) ();
 }
 
-TAMED static void
+tamed static void
 bench1_nulltame ()
 {
-  VARS { int i (0); }
+  cvars { int i (0); }
   i++;
 }
 
@@ -253,16 +253,16 @@ static void bench1_null (bool alloc)
   });
 }
 
-TAMED static void
-bench1_nonblock (int niter, cbv done)
+tamed static void
+bench1_noncwait (int niter, cbv done)
 {
-  VARS {
+  cvars {
     int i ;
     coordgroup_t<> G;
   }
   for (i = 0; i < niter; i++) {
     delaycb (0, 0, mkevent (G) );
-    WAIT (G);
+    cwait (G);
   }
   (*done) ();
 }
@@ -285,10 +285,10 @@ bench1_sfs (int niter, cbv done)
   bench1_sfs2 (i, done);
 }
 
-TAMED static void
+tamed static void
 harness ()
 {
-  VARS {
+  cvars {
     int i (0), j (0);
     u_int64_t start, stop, d, tot (0);
     statobj_t so;
@@ -296,16 +296,16 @@ harness ()
   for (j = 0; j < 2; j++) {
     for (i = 0; i < (j == 0 ? 1 : ntimes); i++) {
       start = corebench_get_time ();
-      BLOCK { 
+      cwait { 
 	switch (mode) {
 	case SFS_MODE:
 	  bench1_sfs (niter, mkevent());
 	  break;
-	case BLOCK_MODE:
-	  bench1_block (niter, mkevent());
+	case cwait_MODE:
+	  bench1_cwait (niter, mkevent());
 	  break;
 	case NONBLOCK_MODE:
-	  bench1_nonblock (niter, mkevent());
+	  bench1_noncwait (niter, mkevent());
 	  break;
 	default:
 	  panic ("unknown mode");
@@ -377,7 +377,7 @@ int main (int argc, char *argv[])
     case 'b':
       if (mode != SFS_MODE) 
 	usage ();
-      mode = BLOCK_MODE;
+      mode = cwait_MODE;
       break;
     case 'n':
       if (mode != SFS_MODE)
@@ -433,16 +433,16 @@ int main (int argc, char *argv[])
     }
     break;
   case NONBLOCK_MODE:
-    warn << "using NONBLOCK mode for full test...\n";
+    warn << "using NONcwait mode for full test...\n";
     break;
-  case BLOCK_MODE:
+  case cwait_MODE:
     if (null_test) {
       mode = TAME_NULL;
       warn << "doing a TAME NULL call test...\n";
       bench1_null (do_alloc);
       exit (0);
     } else {
-      warn << "using BLOCK mode for full test...\n";
+      warn << "using cwait mode for full test...\n";
     }
     break;
   default:

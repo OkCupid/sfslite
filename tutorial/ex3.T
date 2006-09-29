@@ -7,10 +7,10 @@
 #include "arpc.h"
 #include "tame_autocb.h"
  
-TAMED static 
+tamed static 
 void try_rpc (str h, int port, cbb cv)
 {
-  VARS {
+  cvars {
     bool ret (false);
     int fd, n (5);
     ptr<axprt_stream> x;
@@ -21,7 +21,7 @@ void try_rpc (str h, int port, cbb cv)
     int i;
   }
 
-  BLOCK { tcpconnect (h, port, mkevent(fd)); }
+  cwait { tcpconnect (h, port, mkevent(fd)); }
  
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", h.cstr(), port);
@@ -32,7 +32,7 @@ void try_rpc (str h, int port, cbb cv)
     ev.setsize (n);
     rv.setsize (n);
  
-    BLOCK {
+    cwait {
       for (i = 0; i < n; i++) {
         cli->call (EX_RANDOM, NULL, &rv[i], mkevent(ev[i]) );
       }

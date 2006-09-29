@@ -8,33 +8,33 @@ pipeliner_t::pipeliner_t (size_t w) :
   _wsz (w), _cg (__FILE__, __LINE__), _cancelled (false)
 { assert (_wsz > 0); }
 
-TAMED void
+tamed void
 pipeliner_t::wait_n (size_t n, cbv done)
 {
   while (_cg.n_signals_left () > n) {
-    WAIT (_cg);
+    cwait (_cg);
   }
   SIGNAL (done);
 }
 
-TAMED void
+tamed void
 pipeliner_t::launch (size_t i, cbv done)
 {
-  BLOCK { wait_n (_wsz - 1, mkevent () ); }
+  cwait { wait_n (_wsz - 1, mkevent () ); }
   pipeline_op (i, mkevent (_cg) );
   SIGNAL (done);
 }
 
-TAMED void
+tamed void
 pipeliner_t::run (cbv done)
 {
-  VARS {
+  cvars {
     size_t i;
   }
   for (i = 0; keep_going (i) && !_cancelled; i++) {
-    BLOCK { launch (i, mkevent () ); }
+    cwait { launch (i, mkevent () ); }
   }
-  BLOCK { wait_n (0, mkevent () ); }
+  cwait { wait_n (0, mkevent () ); }
   SIGNAL (done);
 }
 
@@ -53,23 +53,23 @@ private:
 
 };
 
-TAMED void
+tamed void
 pipeliner_cb_t::pipeline_op (size_t i, cbv cb)
 {
-  VARS {
+  cvars {
     bool ok;
   }
-  BLOCK { (*_op) (i, mkevent (ok), NULL); }
+  cwait { (*_op) (i, mkevent (ok), NULL); }
   if (!ok) cancel ();
   SIGNAL (cb);
 }
 
-TAMED void
+tamed void
 do_pipeline (size_t w, size_t n, pipeline_op_t op, cbv done)
 {
-  VARS {
+  cvars {
     pipeliner_cb_t ppl (w, n, op);
   }
-  BLOCK { ppl.run (mkevent ()); }
+  cwait { ppl.run (mkevent ()); }
   SIGNAL (done);
 }

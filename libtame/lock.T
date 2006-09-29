@@ -52,7 +52,7 @@ lock_t::release ()
 tamed void
 lock_t::timed_acquire (lock_t::mode_t m, u_int s, u_int ms, cbb cb)
 {
-  VARS {
+  cvars {
     coordgroup_t<bool> G (__FILE__, __LINE__);
     lock_t::waiter_t *w;
     bool ok;
@@ -60,7 +60,7 @@ lock_t::timed_acquire (lock_t::mode_t m, u_int s, u_int ms, cbb cb)
   }
   tcb = delaycb (s, ms, mkevent (G,false));
   w = acquire (m, mkevent (G,true) );
-  tamewait (G, ok);
+  cwait (G, ok);
   if (!ok) cancel (w);
   else timecb_remove (tcb);
   SIGNAL (cb, ok);

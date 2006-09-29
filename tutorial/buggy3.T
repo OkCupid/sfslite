@@ -17,11 +17,11 @@ static void fn2 (cbv cb)
   (*cb) ();
 }
 
-TAMED static void
+tamed static void
 main_T ()
 {
-  BLOCK { fn1 (mkevent()); }
-  BLOCK { fn2 (mkevent()); }
+  cwait { fn1 (mkevent()); }
+  cwait { fn2 (mkevent()); }
   exit (0);
 }
 

@@ -15,10 +15,10 @@
  * @param port the port to try on
  * @param done the callback to call when the first has returned.
  */
-TAMED static void 
+tamed static void 
 connect (vec<str> hosts, int port, cbi done)
 {
-  VARS {
+  cvars {
     u_int i;
     coordgroup_t<u_int, ptr<int> > CG;
     bool got_one (false);
@@ -31,7 +31,7 @@ connect (vec<str> hosts, int port, cbi done)
   }
   
   while (CG.need_join ()) {
-    WAIT (CG, i, fd);
+    cwait (CG, i, fd);
     warn << hosts[i]  << ":" << port << ": ";
     if (*fd >= 0) {
       warnx << "connection succeeded";
@@ -60,10 +60,10 @@ connect (vec<str> hosts, int port, cbi done)
  * @param port the port to try on
  * @param done the callback to call when done
  */
-TAMED static 
+tamed static 
 void get_fastest_web_page (vec<str> hosts, int port, cbb done)
 {
-  VARS {
+  cvars {
     int fd, rc;
     strbuf req, resp;
     coordgroup_t<> read_cg, write_cg;
@@ -72,7 +72,7 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
   //
   // get the fastest connection, and dump the result into 'fd'
   //
-  BLOCK { connect (hosts, port, mkevent(fd)); }
+  cwait { connect (hosts, port, mkevent(fd)); }
 
   //
   // A dirt simple HTTP 1.0 request
@@ -95,7 +95,7 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
   fdcb (fd, selwrite, mkevent (write_cg));
   
   while (true) {
-    WAIT (write_cg);
+    cwait (write_cg);
 
     //
     // Use this syntax to output the results of the string buffer
@@ -145,7 +145,7 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
   // writing loop above.
   //
   while (true) {
-    WAIT (read_cg);
+    cwait (read_cg);
     if ((rc = resp.tosuio ()->input (fd)) < 0 && errno != EAGAIN) {
       warn << "read failed...\n";
       fdcb (fd, selread, NULL);

@@ -6,10 +6,10 @@
 #include "parseopt.h"
 #include "ex_prot.h"
 
-TAMED static 
+tamed static 
 void dostuff (vec<str> hosts, int port, cbi done)
 {
-  VARS {
+  cvars {
     ptr<int> fd;
     u_int i;
     coordgroup_t<u_int, ptr<int> > CG (__FILE__, __LINE__);
@@ -21,7 +21,7 @@ void dostuff (vec<str> hosts, int port, cbi done)
   }
   
   while (CG.need_join () && fd < 0) {
-    WAIT (CG, i, fd);
+    cwait (CG, i, fd);
     warn << hosts[i]  << ":" << port << ": ";
     if (*fd > 0) {
       warnx << "connection succeeded\n";

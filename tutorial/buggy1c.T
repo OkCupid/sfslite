@@ -22,10 +22,10 @@ static void finish (bool rc)
   delaycb (2, 0, wrap (exit, rc ? 0 : -1));
 }
 
-TAMED static void 
+tamed static void 
 buggy1c (cbb cv)
 {
-  VARS { 
+  cvars { 
     coordgroup_t<> JG (__FILE__, __LINE__); 
     int i;
   }
@@ -35,7 +35,7 @@ buggy1c (cbb cv)
 
 
   for (i = 0; i < (fix_bug ? 2 : 1); i++) {
-    WAIT (JG);
+    cwait (JG);
     if (i == 0) 
       cv->signal (true);
   }

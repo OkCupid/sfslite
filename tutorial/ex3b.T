@@ -6,10 +6,10 @@
 #include "ex_prot.h"
 #include "arpc.h"
  
-TAMED static 
+tamed static 
 void try_rpc (str h, int port, cbb cb)
 {
-  VARS {
+  cvars {
     bool ret (false);
     int fd, n (5), i;
     ptr<axprt_stream> x;
@@ -19,7 +19,7 @@ void try_rpc (str h, int port, cbb cb)
     coordgroup_t<> CG;
   }
   
-  BLOCK { tcpconnect (h, port, mkevent(fd)); }
+  cwait { tcpconnect (h, port, mkevent(fd)); }
  
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", h.cstr(), port);
@@ -35,7 +35,7 @@ void try_rpc (str h, int port, cbb cb)
       cli->call (EX_RANDOM, NULL, &rv[i], mkevent(CG,ev[i]) );
     }
     while (CG.n_signals_left ()) {
-      WAIT(CG);
+      cwait (CG);
     }
 
     ret = true;

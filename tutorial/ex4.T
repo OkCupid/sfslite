@@ -10,7 +10,7 @@ tamed static
 bool dostuff (const str &h, int port, cbb cb)
 {
   // declare all of your "stack" variables here
-  VARS {
+  cvars {
     int fd (99999);
     ptr<axprt_stream> x;
     ptr<aclnt> cli;

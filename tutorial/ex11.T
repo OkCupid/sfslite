@@ -13,18 +13,18 @@ struct rpc_t {
   clnt_stat err;
 };
 
-TAMED static void 
+tamed static void 
 launch_call (coordgroup_t<ptr<rpc_t> > *jg, u_int i, ptr<aclnt> cli)
 {
   ptr<rpc_t> r = New refcounted<rpc_t> (i);
   cli->call (EX_RANDOM2, &r->input, &r->output, mkevent(*jg, r, r->err));
 }
 
-TAMED static 
+tamed static 
 bool dostuff (str h, int port, cbb cb)
 {
   // declare all of your "stack" variables here
-  VARS {
+  cvars {
     int fd;
     ptr<axprt_stream> x;
     ptr<aclnt> cli;
@@ -40,7 +40,7 @@ bool dostuff (str h, int port, cbb cb)
 
   // Call tcpconnect, and block until it returns; when it does return,
   // assign the local variable 'fd' to the result.
-  BLOCK { tcpconnect (h, port, mkevent(fd)); }
+  cwait { tcpconnect (h, port, mkevent(fd)); }
 
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", h.cstr(), port);
@@ -59,7 +59,7 @@ bool dostuff (str h, int port, cbb cb)
       // Block until a call has returned; when it has, get
       // the index variable associated with the call, and assign
       // it to 'return_id' for the scope of the JOIN block.
-      WAIT (window, return_rpc);
+      cwait (window, return_rpc);
       if (return_rpc->err) {
 	warn << "RPC error " << return_rpc->err 
 	     << " occurred on input " << return_rpc->input << "\n";

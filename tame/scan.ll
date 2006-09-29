@@ -314,16 +314,13 @@ return/[ \t\n(;]	{ return yyerror ("cannot return withint cwait{..}"); }
 <TAME,TAME_BASE>{
 \n		{ yylval.str = yytext; ++lineno; return T_PASSTHROUGH; }
 
-[^ \t{}"\n/cVvBbTtWD_]+|[ \t/cVvBbTtWD_] { yylval.str = yytext; 
+[^ \t{}"\n/ctrD_]+|[ \t/ctrD_] { yylval.str = yytext; 
 	 			                  return T_PASSTHROUGH; }
 
 [{]		{ yylval.str = yytext; yy_push_state (TAME); 
 		  return T_PASSTHROUGH; }
 
-[Vv][Aa][Rr][Ss]/[ \t\n{/]	    { return tame_ret (VARS_ENTER, T_VARS); }
-[Bb][Ll][Oo][Cc][Kk]/[ \t\n{/]	    { return tame_ret (BLOCK_ENTER, T_BLOCK); }
-WAIT/[ \t\n(/]	    { return tame_ret (JOIN_ENTER, T_WAIT); }
-tamewait/[ \t\n(/]  { return tame_ret (JOIN_ENTER, T_WAIT); }
+cvars/[ \t\n{/]	    { return tame_ret (VARS_ENTER, T_VARS); }
 DEFAULT_RETURN	    { return tame_ret (DEFRET_ENTER, T_DEFAULT_RETURN); }
 
 return/[ \t\n(/;]   { yy_push_state (RETURN_PARAMS); return T_RETURN; }
@@ -357,9 +354,8 @@ cwait/[ \t\n({/]    { return tame_ret (CWAIT_ENTER, T_CWAIT); }
 }
 
 <INITIAL>{
-[Tt][Aa][Mm][Ee][Dd]/[ \t\n/]  { return tame_ret (SIG_PARSE, T_TAMED); }
-TAME/[ \t\n(/] 	{ return tame_ret (FN_ENTER, T_TAME); }
-[^Tt\n"/]+|[Tt/]	{ yylval.str = yytext; return T_PASSTHROUGH ; }
+tamed/[ \t\n/]  { return tame_ret (SIG_PARSE, T_TAMED); }
+[^t\n"/]+|[t/]	{ yylval.str = yytext; return T_PASSTHROUGH ; }
 \n		{ ++lineno; yylval.str = yytext; return T_PASSTHROUGH; }
 \"		{ yy_push_state (QUOTE); return std_ret (T_PASSTHROUGH); }
 }
@@ -390,7 +386,7 @@ TAME_ON		{ tame_on = 1; GOBBLE_RET; }
 }
 
 
-<FULL_PARSE,SIG_PARSE,FN_ENTER,VARS_ENTER,HALF_PARSE,PP,PP_BASE,EXPR_LIST,EXPR_LIST_BASE,ID_LIST,BLOCK_ENTER,JOIN_ENTER,RETURN_PARAMS,EXPR_LIST_BR,EXPR_LIST_BR_BASE,DEFRET_ENTER,CWAIT_BODY,CWAIT_BODY_ENTER>{
+<FULL_PARSE,SIG_PARSE,FN_ENTER,VARS_ENTER,HALF_PARSE,PP,PP_BASE,EXPR_LIST,EXPR_LIST_BASE,ID_LIST,BLOCK_ENTER,JOIN_ENTER,RETURN_PARAMS,EXPR_LIST_BR,EXPR_LIST_BR_BASE,DEFRET_ENTER,CWAIT_BODY,CWAIT_BODY_BASE>{
 
 "//"		{ gobble_flag = 1; yy_push_state (CXX_COMMENT); }
 "/*"		{ gobble_flag = 1; yy_push_state (C_COMMENT); }

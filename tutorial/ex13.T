@@ -8,16 +8,16 @@
 #include "tame_autocb.h"
 #include "tame_pipeline.h"
 
-TAMED static void
+tamed static void
 do_rpc (ptr<aclnt> cli, bool *errp, size_t i, cbb cb)
 {
-  VARS {
+  cvars {
     int res;
     clnt_stat err;
     bool ok (true);
     holdvar autocb_t<bool> acb (cb, ok);
   }
-  BLOCK { cli->call (EX_RANDOM, NULL, &res, mkevent(err)); }
+  cwait { cli->call (EX_RANDOM, NULL, &res, mkevent(err)); }
   if (err) {
     warn << "RPC Failure in call " << i << ": " << err << "\n";
     *errp = true;
@@ -27,11 +27,11 @@ do_rpc (ptr<aclnt> cli, bool *errp, size_t i, cbb cb)
   }
 }
 
-TAMED static void 
+tamed static void 
 dostuff (str h, int port, cbb cb)
 {
   // declare all of your "stack" variables here
-  VARS {
+  cvars {
     int fd (99999);
     ptr<axprt_stream> x;
     ptr<aclnt> cli;
@@ -40,9 +40,9 @@ dostuff (str h, int port, cbb cb)
   }
 
 
-  // Call tcpconnect, and block until it returns; when it does return,
+  // Call tcpconnect, and cwait until it returns; when it does return,
   // assign the local variable 'fd' to the result.
-  BLOCK { tcpconnect (h, port, mkevent(fd)); }
+  cwait { tcpconnect (h, port, mkevent(fd)); }
 
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", h.cstr(), port);
@@ -51,7 +51,7 @@ dostuff (str h, int port, cbb cb)
     x = axprt_stream::alloc (fd);
     cli = aclnt::alloc (x, ex_prog_1);
 
-    BLOCK { do_pipeline (window_sz, n_tot, 
+    cwait { do_pipeline (window_sz, n_tot, 
 			 wrap (do_rpc, cli, &err), mkevent()); }
 
     warn << "All done...\n";

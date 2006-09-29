@@ -13,7 +13,7 @@ bool fix_bug;
  *
  *   A test program that should complain about Bug #1a -- a closure
  *   leaked past the end of a function's control flow, from a function
- *   that only uses BLOCK {...} (i.e., no NONBLOCK/JOIN).
+ *   that only uses cwait {...} (i.e., no NONcwait/JOIN).
  */
 
 class cb_hog_t {
@@ -30,18 +30,18 @@ static void finish (bool rc)
   delaycb (2, 0, wrap (exit, rc ? 0 : -1));
 }
 
-TAMED static 
+tamed static 
 void buggy1a (cbb cv)
 {
-  VARS {
+  cvars {
     cb_hog_t *hog (New cb_hog_t ());
   }
-  BLOCK {
+  cwait {
     delaycb (1, 0, mkevent()); 
     hog->call_me (mkevent());
   }
   cv->signal (true);
-  BLOCK { delaycb (1, 0, mkevent()); }
+  cwait { delaycb (1, 0, mkevent()); }
 
   if (fix_bug)
     delete hog;

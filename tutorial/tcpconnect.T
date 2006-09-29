@@ -31,10 +31,10 @@
  * Given a UNIX in_addr structure and a port, make a new TCP connect
  * and test that it succeeded by selecting for write on the new socket.
  */
-TAMED static ptr<canceller_t>
+tamed static ptr<canceller_t>
 connect_to_in_addr (in_addr a, int port, cbi cv)
 {
-  VARS {
+  cvars {
     sockaddr_in sin;
     socklen_t sn;
     int err;
@@ -60,7 +60,7 @@ connect_to_in_addr (in_addr a, int port, cbi cv)
       ret->wait (mkevent(cg, false));
       fdcb (fd, selwrite, mkevent (cg,true));
       
-      WAIT (cg, completed);
+      cwait (cg, completed);
       fdcb (fd, selwrite, NULL);
       warn << "return from function\n";
 
@@ -98,11 +98,11 @@ connect_to_in_addr (in_addr a, int port, cbi cv)
  * @param namep the name of this host as gotten from DNS
  * @return an object that can be used to cancel this computation midstream.
  */
-TAMED static ptr<canceller_t> 
+tamed static ptr<canceller_t> 
 my_tcpconnect (str hostname, u_int16_t port, cbi cv,
 	       bool dnssearch, str *namep)
 {
-  VARS {
+  cvars {
     dnsreq_t *dnsp (NULL);
     ptr<hostent> h;
     int err;
@@ -119,7 +119,7 @@ my_tcpconnect (str hostname, u_int16_t port, cbi cv,
   canceller->wait (mkevent (cg,false));
   dnsp = dns_hostbyname (hostname, mkevent (cg, true, h, err), dnssearch); 
 
-  WAIT (cg, completed);
+  cwait (cg, completed);
   if (!completed) {
     warn << "DNS lookup cancelled!\n";
     dnsreq_cancel (dnsp);
@@ -142,7 +142,7 @@ my_tcpconnect (str hostname, u_int16_t port, cbi cv,
       
       cancel_connect = connect_to_in_addr (*(in_addr *) h->h_addr, 
 					   port, mkevent (cg,true,fd)); 
-      WAIT (cg, completed);
+      cwait (cg, completed);
       if (completed) {
 	canceller->toolate ();
 	cg.remove_join ();
@@ -153,7 +153,7 @@ my_tcpconnect (str hostname, u_int16_t port, cbi cv,
       
       // wait on the call to connect_to_inaddr if we've timed out.
       if (cg.n_vars_left ()) 
-	WAIT (cg, dummy);
+	cwait (cg, dummy);
     }
   }
 }
@@ -163,10 +163,10 @@ static void usage ()
   fatal << "usage: " << progname << " <hostname> <port>\n";
 }
 
-TAMED static void 
+tamed static void 
 run (str s, int p)
 {
-  VARS {
+  cvars {
     ptr<canceller_t> c;
     coordgroup_t<bool> cg (__FILE__, __LINE__);
     int fd;
@@ -175,15 +175,15 @@ run (str s, int p)
   warn << "connect on " << s << ":" << p << "\n";
   c = my_tcpconnect (s, p, mkevent (cg, true, fd), false, NULL);
   delaycb (4, 0, mkevent (cg, false));
-  WAIT (cg, succeeded);
+  cwait (cg, succeeded);
   if (succeeded) {
     warn << "Succeeded; fd=" << fd << "\n";
   } else {
     warn << "Had to cancel!\n";
     c->cancel ();
   }
-  WAIT (cg, dummy);
-  BLOCK { delaycb (10, 0, mkevent()); }
+  cwait (cg, dummy);
+  cwait { delaycb (10, 0, mkevent()); }
   exit (0);
 }
 

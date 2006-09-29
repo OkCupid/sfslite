@@ -13,7 +13,7 @@ bool fix_bug;
  *
  *   A test program that should complain about Bug #1b -- a closure
  *   leaked past the end of a function's control flow, from a function
- *   that uses nonblocking control...
+ *   that uses noncwaiting control...
  */
 
 class cb_hog_t {
@@ -29,7 +29,7 @@ static void finish (bool rc)
   delaycb (2, 0, wrap (exit, rc ? 0 : -1));
 }
 
-TAMED static void 
+tamed static void 
 part1 (cb_hog_t *hog, coordgroup_t<> *JG, cbv cb)
 {
   delaycb (1, 0, mkevent (*JG));
@@ -37,25 +37,25 @@ part1 (cb_hog_t *hog, coordgroup_t<> *JG, cbv cb)
   cb->signal ();
 }
 
-TAMED static void part2 (coordgroup_t<> *JG, cbv cb)
+tamed static void part2 (coordgroup_t<> *JG, cbv cb)
 {
-  VARS { int i; }
+  cvars { int i; }
   for (i = 0; i < 2; i++) {
-    WAIT (*JG);
+    cwait (*JG);
   }
   cb->signal ();
 }
 
 
-TAMED static void buggy1b (cbb cb)
+tamed static void buggy1b (cbb cb)
 {
-  VARS { 
+  cvars { 
     coordgroup_t<> JG; 
     cb_hog_t *hog (New cb_hog_t ());
   }
 
-  BLOCK { part1 (hog, &JG, mkevent()); }
-  BLOCK { part2 (&JG, mkevent()); }
+  cwait { part1 (hog, &JG, mkevent()); }
+  cwait { part2 (&JG, mkevent()); }
 
   if (fix_bug)
     delete hog;
