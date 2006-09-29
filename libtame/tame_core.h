@@ -955,6 +955,7 @@ struct event {
 #define __CLS                 __cls     
 
 extern int TAME_GLOBAL_INT;
+extern ptr<closure_t> __cls_g;
 
 void start_join_group_collection ();
 

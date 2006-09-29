@@ -9,6 +9,7 @@ int tame_options;
 int tame_global_int;
 u_int64_t closure_serial_number;
 bool tame_collect_jg_flag;
+ptr<closure_t> __cls_g;
 
 int tame_init::count;
 
@@ -23,6 +24,7 @@ tame_init::start ()
   tame_options = 0;
   closure_serial_number = 0;
   tame_collect_jg_flag = false;
+  __cls_g = NULL;
 
   char *e = safegetenv (TAME_OPTIONS);
   for (char *cp = e; cp && *cp; cp++) {

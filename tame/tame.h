@@ -593,6 +593,7 @@ public:
   void new_fn (tame_fn_t *f) { new_el (f); _fn = f; }
   void new_el (tame_el_t *e) { _fn = NULL; push (e); }
   void set_fn (tame_fn_t *f) { _fn = f; }
+  void clear_fn () { set_fn (NULL); }
 
   void passthrough (const lstr &l) { top_list ()->passthrough (l); }
   void push (tame_el_t *e) { top_list ()->push (e); }

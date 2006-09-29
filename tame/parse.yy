@@ -130,6 +130,7 @@ fn:	tame_decl '{'
 				            state->function ()));
 	  state->passthrough (lstr (get_yy_lineno (), "}"));
 	  state->pop_list ();
+	  state->clear_fn ();
 	}
 	;
 
