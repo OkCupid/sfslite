@@ -98,7 +98,11 @@ int vars_lineno;
 
 
 file:  passthrough 			{ state->passthrough ($1); }
-	| file fn passthrough       	{ state->passthrough ($3); }
+	| file fn_or_cwait passthrough 	{ state->passthrough ($3); }
+	;
+
+fn_or_cwait: fn			
+	| cwait				{ state->new_el ($1); }
 	;
 
 passthrough: /* empty */	    { $$ = lstr (get_yy_lineno ()); }
@@ -225,11 +229,16 @@ return_statement: T_RETURN passthrough ';'
 block_body: '{' 
 	{
 	  tame_fn_t *fn = state->function ();
- 	  tame_block_t *bl = New tame_block_t (fn, get_yy_lineno ());
-	  state->new_block (bl);
-	  fn->add_env (bl);
-	  fn->hit_tame_block ();
-	  state->push_list (bl);
+	  tame_block_t *bb;
+	  if (fn) {
+ 	    bb = New tame_block_ev_t (fn, get_yy_lineno ());
+	    fn->add_env (bb);
+	    fn->hit_tame_block ();
+	  } else {
+	    bb = New tame_block_thr_t (get_yy_lineno ());
+	  }
+	  state->new_block (bb);
+	  state->push_list (bb);
 	}
 	fn_statements '}'
 	{

@@ -76,6 +76,7 @@ str template_args (str s);
 class my_strbuf_t : public strbuf {
 public:
   strbuf & mycat (const str &s) { cat (s.cstr (), true); return (*this); }
+  void clear () { tosuio ()->clear (); }
 };
 
 
@@ -594,6 +595,7 @@ public:
   void new_el (tame_el_t *e) { _fn = NULL; push (e); }
   void set_fn (tame_fn_t *f) { _fn = f; }
   void clear_fn () { set_fn (NULL); }
+  tame_fn_t *fn () { return _fn; }
 
   void passthrough (const lstr &l) { top_list ()->passthrough (l); }
   void push (tame_el_t *e) { top_list ()->push (e); }
@@ -650,8 +652,23 @@ protected:
 
 class tame_block_t : public tame_env_t {
 public:
-  tame_block_t (tame_fn_t *f, int l) : _fn (f), _id (0), _lineno (l) {}
-  ~tame_block_t () {}
+  tame_block_t (int l) : _lineno (l) {}
+  virtual ~tame_block_t () {}
+protected:
+  int _lineno;
+};
+
+class tame_block_thr_t : public tame_block_t {
+public:
+  tame_block_thr_t (int l) : tame_block_t (l) {}
+  void output (outputter_t *o);
+};
+
+class tame_block_ev_t : public tame_block_t {
+public:
+  tame_block_ev_t (tame_fn_t *f, int l) 
+    : tame_block_t (l), _fn (f), _id (0) {}
+  ~tame_block_ev_t () {}
   
   void output (outputter_t *o);
   bool is_jumpto () const { return true; }
@@ -664,8 +681,9 @@ protected:
   tame_fn_t *_fn;
   int _id;
   vartab_t _class_vars;
-  int _lineno;
 };
+
+
   
 class tame_nonblock_t : public tame_env_t {
 public:

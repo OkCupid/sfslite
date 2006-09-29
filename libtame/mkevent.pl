@@ -102,12 +102,11 @@ sub do_mkevent_generic ($$)
 	   );
     if ($t > 0 || $w > 0) {
 	print "{\n";
-	print "  rv.launch_one (c);\n";
 	my $tl = "";
 	my @args = ("${name}_cb_${w}_${t}" .
 		    template_arglist (["W%", $w], ["T%", $t]) ,
 		    "c",
-		    "rv.make_joiner (loc)",
+		    "rv.make_joiner (loc, c)",
 		    "refset_t<" . arglist (["T%", $t]) . ">" 
 		    . " (" . arglist (["t%", $t]) . ")" ,
 		    "value_set_t<" . arglist (["W%", $w]) . ">"

@@ -829,7 +829,7 @@ tame_fn_t::jump_out (strbuf &b, int id)
 }
 
 void 
-tame_block_t::output (outputter_t *o)
+tame_block_ev_t::output (outputter_t *o)
 {
   my_strbuf_t b;
   str tmp;
@@ -884,6 +884,34 @@ tame_block_t::output (outputter_t *o)
   o->output_str (b);
   o->switch_to_mode (om);
 }
+
+void
+tame_block_thr_t::output (outputter_t *o)
+{
+  my_strbuf_t b;
+
+  output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL);
+
+  b << "  do {\n"
+    << "      threaded_implicit_rendezvous_t _irv (__FILE__, __LINE__);\n"
+    << "      implicit_rendezvous_t *__cls_g = &_irv;\n"
+    ;
+
+  o->output_str (b);
+  b.clear ();
+  o->switch_to_mode (om);
+
+  for (tame_el_t *el = _lst.first; el; el = _lst.next (el)) {
+    el->output (o);
+  }
+
+  om = o->switch_to_mode (OUTPUT_TREADMILL);
+  b << "  } while (0);\n";
+  
+  o->output_str (b);
+  o->switch_to_mode (om);
+}
+
 
 str
 tame_fn_t::return_expr () const

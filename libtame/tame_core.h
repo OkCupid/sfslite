@@ -512,6 +512,8 @@ public:
       (*cb) ();
     } else if (_join_method == JOIN_THREADS) {
       pth_cond_notify (&_cond, 0);
+    } else {
+      panic ("join without a join method\n");
     }
   }
 
@@ -574,6 +576,7 @@ private:
   {
     pth_mutex_acquire (&_mutex, 0, NULL);
     pth_cond_await (&_cond, &_mutex, NULL);
+    pth_mutex_release (&_mutex);
   }
 
   // number of calls out that haven't yet completed
@@ -736,15 +739,15 @@ public:
   // by the tame rewriter; they should not be called directly by 
   // programmers.
   void set_join_cb (cbv::ptr c) { _pointer->set_join_cb (c); }
-  void launch_one (ptr<closure_t> c = NULL) 
-  { _pointer->launch_one (c); }
 
   ptr<join_group_pointer_t<T1,T2,T3,T4> > pointer () { return _pointer; }
   static value_set_t<T1,T2,T3,T4> to_vs () 
   { return value_set_t<T1,T2,T3,T4> (); }
 
-  ptr<joiner_t<T1,T2,T3,T4> > make_joiner (const char *loc)
+  ptr<joiner_t<T1,T2,T3,T4> > 
+  make_joiner (const char *loc, ptr<closure_t> c = NULL)
   { 
+    launch_one (c);
     return New refcounted<joiner_t<T1,T2,T3,T4> > 
       (_pointer, loc, _pointer->must_deallocate ()); 
   }
@@ -756,6 +759,8 @@ public:
 
 private:
   ptr<join_group_pointer_t<T1,T2,T3,T4> > _pointer;
+  void launch_one (ptr<closure_t> c = NULL) 
+  { _pointer->launch_one (c); }
 };
 
 /**
@@ -927,7 +932,7 @@ public:
       _jg (f, l) {}
   ~threaded_implicit_rendezvous_t () { _jg.waitall (); }
 
-  ptr<reenterer_t> make_reenterer (const char *loc)
+  ptr<reenterer_t> make_reenter (const char *loc)
   { return New refcounted<stack_reenter_t> (_md, loc, _jg); }
 private:
   ptr<must_deallocate_t> _md;
@@ -956,6 +961,7 @@ struct event {
 
 extern int TAME_GLOBAL_INT;
 extern ptr<closure_t> __cls_g;
+extern ptr<closure_t> null_closure;
 
 void start_join_group_collection ();
 

@@ -94,7 +94,7 @@ void _cfork (implicit_rendezvous_t *i, const char *loc, R &r, cbv a)
 
 #include "tame_cfork_ag.h"
 
-#define cfork(...) _cfork (__cls_g, HERE, ##__VA_ARGS__)
+#define cfork(...) _cfork (__cls_g, __FL__, ##__VA_ARGS__)
 
 
 

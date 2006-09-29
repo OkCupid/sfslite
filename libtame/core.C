@@ -10,6 +10,7 @@ int tame_global_int;
 u_int64_t closure_serial_number;
 bool tame_collect_jg_flag;
 ptr<closure_t> __cls_g;
+ptr<closure_t> null_closure;
 
 int tame_init::count;
 
@@ -25,6 +26,7 @@ tame_init::start ()
   closure_serial_number = 0;
   tame_collect_jg_flag = false;
   __cls_g = NULL;
+  null_closure = NULL;
 
   char *e = safegetenv (TAME_OPTIONS);
   for (char *cp = e; cp && *cp; cp++) {
@@ -265,6 +267,6 @@ reenterer_t::~reenterer_t ()
 
 stack_reenter_t::stack_reenter_t (ptr<must_deallocate_t> snt,
 				  const char *l, coordgroup_t<> jg)
-  : reenterer_t (snt, l), _joiner (jg.make_joiner (l)) {}
+  : reenterer_t (snt, l), _joiner (jg.make_joiner (l, NULL)) {}
 
 stack_reenter_t::~stack_reenter_t () {}
