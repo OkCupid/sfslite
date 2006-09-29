@@ -37,6 +37,8 @@ int fd_set_bytes;		// Size in bytes of a [wide] fd_set
 int maxfd;
 bool amain_panic;
 static int nselfd;
+cbv::ptr yield_cb;
+int sfs_core_select;
 
 // initialize this in case we access tsnow before calling amain()
 timespec tsnow;
@@ -158,6 +160,7 @@ chldcb_check ()
 timecb_t *
 timecb (const timespec &ts, cbv cb)
 {
+  //warn ("insert into timecbs: %p\n", &timecbs);
   timecb_t *to = New timecb_t (ts, cb);
   timecbs.insert (to);
   // timecbs_altered = true;
@@ -197,6 +200,8 @@ timecb_check ()
 {
   my_clock_gettime (&tsnow);
   timecb_t *tp, *ntp;
+
+  // warn ("Check timecbs: %p\n", &timecbs);
 
   for (tp = timecbs.first (); tp && tp->ts <= tsnow;
        tp = timecbs_altered ? timecbs.first () : ntp) {
@@ -253,7 +258,22 @@ fdcb_check (void)
 {
   for (int i = 0; i < fdsn; i++)
     memcpy (fdspt[i], fdsp[i], fd_set_bytes);
+
+  warn ("in select s=%ld; us=%ld; nselfd=%d; yield_cb=%p\n",
+	selwait.tv_sec, selwait.tv_usec, nselfd, (callback<void> *)yield_cb);
+  
+  /*
+  if (selwait.tv_sec == 86400 && yield_cb) {
+    //warn << "yielding .. not going into select loop....\n";
+    (*yield_cb) ();
+    //warn << "return from yield ? ?!?!?!? \n";
+    return;
+  } 
+  */
+  sfs_core_select = 1;
   int n = select (nselfd, fdspt[0], fdspt[1], NULL, &selwait);
+  sfs_core_select = 0;
+  warn << "select exit rc=" << n << "\n";
   if (n < 0 && errno != EINTR)
     panic ("select: %m\n");
   my_clock_gettime (&tsnow);
@@ -421,6 +441,7 @@ static inline void
 _acheck ()
 {
   START_ACHECK_TIMER();
+  // warn << "in acheck...\n";
   if (amain_panic)
     panic ("child process returned from afork ()\n");
   lazycb_check ();

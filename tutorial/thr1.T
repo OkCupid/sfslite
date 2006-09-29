@@ -17,7 +17,7 @@ static void
 sleeper_thr ()
 {
   warn << "++ sleeper_thr: to sleep!\n"; 
-  sleep (2);
+  sleep (4);
   warn << "-- sleeper_thr: woke up!\n";
 }
 
@@ -26,7 +26,8 @@ run_thr ()
 {
   warn << "+ run_thr\n";
   cwait {
-    cfork (wrap (sleeper_ev, mkevent (), null_closure));
+    sleeper_ev (mkevent ());
+    //cfork (wrap (sleeper_ev, mkevent (), null_closure));
     cfork (wrap (sleeper_thr));
   }
   warn << "- run_thr\n";
@@ -51,6 +52,7 @@ run ()
   cwait { run_ev (mkevent ()); }
   cwait { cfork (wrap (run_thr)); }
   cwait { run_ev (mkevent ()); }
+  cwait { cfork (wrap (run_thr)); }
   exit (0);
 }
 

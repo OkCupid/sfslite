@@ -3,6 +3,7 @@
 /* $Id$ */
 
 #include "tame_core.h"
+#include "tame_thread.h"
 
 int tame_options;
 
@@ -27,6 +28,8 @@ tame_init::start ()
   tame_collect_jg_flag = false;
   __cls_g = NULL;
   null_closure = NULL;
+
+  tame_thread_init ();
 
   char *e = safegetenv (TAME_OPTIONS);
   for (char *cp = e; cp && *cp; cp++) {
