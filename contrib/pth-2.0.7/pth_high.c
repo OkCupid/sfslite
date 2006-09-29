@@ -280,40 +280,39 @@ int pth_system(const char *cmd)
 int pth_select(int nfds, fd_set *rfds, fd_set *wfds,
                fd_set *efds, struct timeval *timeout)
 {
-	pth_event_t ev = NULL;
-	pth_t tid = NULL;
-	static pth_key_t ev_key = PTH_KEY_INIT;
-
-	extern int sfs_core_select;
-	int do_join = sfs_core_select;
-
-	if (do_join) { 
-		while (pth_ctrl (PTH_CTRL_GETTHREADS) != 1 &&
-			   (tid = pth_pqueue_head (&pth_DQ)) &&
-			   tid->state == PTH_STATE_DEAD) {
-			   pth_pqueue_delete (&pth_DQ, tid);
-		}
-
-		if (pth_ctrl (PTH_CTRL_GETTHREADS) != 1) {
-			ev = pth_event (PTH_EVENT_TID|PTH_UNTIL_TID_DEAD|PTH_MODE_STATIC,
-						    &ev_key, tid);
-		}
-	}
-
-
-	printf ("pth_select_ev w/ ev=%x; tid=%x\n", ev, tid);
-    int ret = pth_select_ev(nfds, rfds, wfds, efds, timeout, ev);
-	if (ev != NULL && pth_event_status (ev) == PTH_STATUS_OCCURRED) {
-		if (tid == NULL)
-			tid = pth_pqueue_head (&pth_DQ);
-
-		if (tid == NULL || (tid != NULL && tid->state != PTH_STATE_DEAD))
-		        (void )pth_error(FALSE, EIO);
-	    pth_pqueue_delete(&pth_DQ, tid);
-	    pth_tcb_free(tid);
-	}
-	return ret;
-
+  pth_event_t ev = NULL;
+  pth_t tid = NULL;
+  static pth_key_t ev_key = PTH_KEY_INIT;
+  
+  extern int sfs_core_select;
+  int do_join = sfs_core_select;
+  
+  if (do_join) { 
+    while (pth_ctrl (PTH_CTRL_GETTHREADS) != 1 &&
+	   (tid = pth_pqueue_head (&pth_DQ)) &&
+	   tid->state == PTH_STATE_DEAD) {
+      pth_pqueue_delete (&pth_DQ, tid);
+    }
+    
+    if (pth_ctrl (PTH_CTRL_GETTHREADS) != 1) {
+      ev = pth_event (PTH_EVENT_TID|PTH_UNTIL_TID_DEAD|PTH_MODE_STATIC,
+		      &ev_key, tid);
+    }
+  }
+  
+  
+  int ret = pth_select_ev(nfds, rfds, wfds, efds, timeout, ev);
+  if (ev != NULL && pth_event_status (ev) == PTH_STATUS_OCCURRED) {
+    if (tid == NULL)
+      tid = pth_pqueue_head (&pth_DQ);
+    
+    if (tid == NULL || (tid != NULL && tid->state != PTH_STATE_DEAD))
+      (void )pth_error(FALSE, EIO);
+    pth_pqueue_delete(&pth_DQ, tid);
+    pth_tcb_free(tid);
+  }
+  return ret;
+  
 }
 
 /* Pth variant of select(2) with extra events */
