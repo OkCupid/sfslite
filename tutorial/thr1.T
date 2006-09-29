@@ -5,44 +5,48 @@
 #include "tame.h"
 
 tamed static void
-sleeper_ev (cbv cb)
+sleeper_ev (cbi cb)
 {
   warn << "++ sleeper_ev: to sleep!\n";
   cwait { delaycb (3, 0, mkevent ()); }
   warn << "-- sleeper_ev: woke up!\n";
-  cb->signal ();
+  cb->signal (40);
 }
 
-static void
+static int
 sleeper_thr ()
 {
   warn << "++ sleeper_thr: to sleep!\n"; 
   sleep (4);
   warn << "-- sleeper_thr: woke up!\n";
+  return 10;
 }
 
 static void
 run_thr ()
 {
+  int r1,r2;
   warn << "+ run_thr\n";
   cwait {
-    sleeper_ev (mkevent ());
-    //cfork (wrap (sleeper_ev, mkevent (), null_closure));
-    cfork (wrap (sleeper_thr));
+    sleeper_ev (mkevent (r1));
+    cfork (r2, wrap (sleeper_thr));
   }
-  warn << "- run_thr\n";
+  warn << "- run_thr (" << r1 << "," << r2 << ")\n";
 
 }
 
 tamed static void
 run_ev (cbv cb)
 {
+  cvars {
+    int r1, r2;
+  }
   warn << "+ run_ev\n";
   cwait {
-    sleeper_ev (mkevent ());
-    cfork (wrap (sleeper_thr));
+    sleeper_ev (mkevent (r1));
+    cfork (r2, wrap (sleeper_thr));
   }
-  warn << "- run_ev\n";
+  warn << "- run_ev (" << r1 << "," << r2 << ")\n";
   cb->signal ();
 }
 

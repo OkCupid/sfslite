@@ -55,7 +55,8 @@ private:
 };
 
 template<class R>
-void __cfork (const char *loc, event_void_t e, R &r, cbv a)
+void __cfork (const char *loc, event_void_t e, R &r, 
+	      typename callback<R,void>::ref a)
 {
   cthread_t<R> *t = New cthread_t<R> (e, r, a);
   tame_thread_spawn (loc, cthread_t<R>::run, static_cast<void *> (t)); 
@@ -87,7 +88,8 @@ void _cfork (implicit_rendezvous_t *i, const char *loc, cbv a);
 void _cfork (ptr<closure_t> c, const char *loc, rendezvous_t<> rv, cbv a);
 
 template<class R>
-void _cfork (implicit_rendezvous_t *i, const char *loc, R &r, cbv a)
+void _cfork (implicit_rendezvous_t *i, const char *loc, R &r, 
+	     typename callback<R,void>::ref a)
 {
   __cfork (loc, _mkevent (i, loc), r, a);
 }

@@ -865,37 +865,37 @@ public:
   bool next_signal () { return next_var (); }
 
 
-  void cwait (T1 &r1, T2 &r2, T3 &r3, T4 &r4)
+  void wait (T1 &r1, T2 &r2, T3 &r3, T4 &r4)
   {
     this->pointer ()->threadjoin ();
     assert (next_var (r1, r2, r3, r4));
   }
 
-  void cwait (T1 &r1, T2 &r2, T3 &r3)
+  void wait (T1 &r1, T2 &r2, T3 &r3)
   {
     this->pointer ()->threadjoin ();
     assert (next_var (r1, r2, r3));
   }
 
-  void cwait (T1 &r1, T2 &r2)
+  void wait (T1 &r1, T2 &r2)
   {
     this->pointer ()->threadjoin ();
     assert (next_var (r1, r2));
   }
 
-  void cwait (T1 &r1)
+  void wait (T1 &r1)
   {
     this->pointer ()->threadjoin ();
     assert (next_var (r1));
   }
 
-  void cwait ()
+  void wait ()
   {
     this->pointer ()->threadjoin ();
     assert (next_var ());
   }
 
-  void waitall () { while (need_wait ()) cwait (); }
+  void waitall () { while (need_wait ()) wait (); }
 };
 
 class stack_reenter_t : public reenterer_t {

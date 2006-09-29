@@ -5,20 +5,21 @@
 #include "tame.h"
 
 tamed static void
-sleeper_ev (cbv cb)
+sleeper_ev (cbi cb)
 {
   warn << "++ sleeper_ev: to sleep!\n";
   cwait { delaycb (3, 0, mkevent ()); }
   warn << "-- sleeper_ev: woke up!\n";
-  cb->signal ();
+  cb->signal (33);
 }
 
-static void
+static int
 sleeper_thr ()
 {
   warn << "++ sleeper_thr: to sleep!\n"; 
-  sleep (4);
+  sleep (8);
   warn << "-- sleeper_thr: woke up!\n";
+  return 12;
 }
 
 static void
@@ -26,17 +27,18 @@ run_thr ()
 {
   rendezvous_t<int> rv;
   int i;
+  int r1, r2;
   warn << "+ run_thr\n";
 
-  sleeper_ev (mkevent (rv, 0));
-  cfork (rv, 1, wrap (sleeper_thr));
+  sleeper_ev (mkevent (rv, 0, r1));
+  cfork (rv, 1, r2, wrap (sleeper_thr));
 
-  rv.cwait (i);
+  rv.wait (i);
   warn << "oo event return: " << i << "\n";
-  rv.cwait (i);
+  rv.wait (i);
   warn << "oo event return: " << i << "\n";
 
-  warn << "- run_thr\n";
+  warn << "- run_thr (" << r1 << "," << r2 << ")\n";
 }
 
 tamed static void
@@ -45,18 +47,19 @@ run_ev (cbv cb)
   cvars {
     rendezvous_t<int> rv;
     int i;
+    int r1, r2;
   }
   warn << "+ run_ev\n";
 
-  sleeper_ev (mkevent (rv, 0));
-  cfork (rv, 1, wrap (sleeper_thr));
+  sleeper_ev (mkevent (rv, 0, r1));
+  cfork (rv, 1, r2, wrap (sleeper_thr));
 
   cwait (rv, i);
   warn << "oo event return: " << i << "\n";
   cwait (rv, i);
   warn << "oo event return: " << i << "\n";
 
-  warn << "- run_ev\n";
+  warn << "- run_ev (" << r1 << "," << r2 << ")\n";
   cb->signal ();
 }
 

@@ -45,6 +45,7 @@ static pth_key_t  readline_key;
 static pth_once_t readline_once_ctrl = PTH_ONCE_INIT;
 
 int sfs_core_select = 0;
+int sfs_cb_ins = 0;
 
 typedef struct {
     int   rl_cnt;

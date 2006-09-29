@@ -38,6 +38,7 @@ int maxfd;
 bool amain_panic;
 static int nselfd;
 int sfs_core_select;
+int sfs_cb_ins;
 
 // initialize this in case we access tsnow before calling amain()
 timespec tsnow;
@@ -160,6 +161,7 @@ timecb_t *
 timecb (const timespec &ts, cbv cb)
 {
   //warn ("insert into timecbs: %p\n", &timecbs);
+  sfs_cb_ins = 1;
   timecb_t *to = New timecb_t (ts, cb);
   timecbs.insert (to);
   // timecbs_altered = true;
@@ -244,6 +246,7 @@ fdcb (int fd, selop op, cbv::ptr cb)
   assert (fd < maxfd);
   fdcbs[op][fd] = cb;
   if (cb) {
+    sfs_cb_ins = 1;
     if (fd >= nselfd)
       nselfd = fd + 1;
     FD_SET (fd, fdsp[op]);
@@ -274,7 +277,7 @@ fdcb_check (void)
   sfs_core_select = 1;
   int n = select (nselfd, fdspt[0], fdspt[1], NULL, &selwait);
   sfs_core_select = 0;
-  warn << "select exit rc=" << n << "\n";
+  // warn << "select exit rc=" << n << "\n";
   if (n < 0 && errno != EINTR)
     panic ("select: %m\n");
   my_clock_gettime (&tsnow);
@@ -317,6 +320,7 @@ cbv::ptr
 sigcb (int sig, cbv::ptr cb, int flags)
 {
   sigset_t set;
+  sfs_cb_ins = 1;
   if (!sigemptyset (&set) && !sigaddset (&set, sig))
     sigprocmask (SIG_UNBLOCK, &set, NULL);
 

@@ -101,7 +101,8 @@ file:  passthrough 			{ state->passthrough ($1); }
 	| file fn_or_cwait passthrough 	{ state->passthrough ($3); }
 	;
 
-fn_or_cwait: fn			
+fn_or_cwait: fn	
+	| cwait				{ state->new_el ($1); }
 	;
 
 passthrough: /* empty */	    { $$ = lstr (get_yy_lineno ()); }
@@ -281,6 +282,10 @@ wait_body: '(' join_list ')' ';'
 	  tame_fn_t *fn = state->function ();
 	  tame_wait_t *w = New tame_wait_t (fn, $2, get_yy_lineno ());
 	  if (fn) fn->add_env (w);
+	  else {
+	    yyerror ("Cannot have a cwait() statement outside of a "
+	 	     "tamed function body.");
+	  }
 	  $$ = w;
 	}
 	;
