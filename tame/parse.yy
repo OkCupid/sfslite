@@ -102,7 +102,6 @@ file:  passthrough 			{ state->passthrough ($1); }
 	;
 
 fn_or_cwait: fn			
-	| cwait				{ state->new_el ($1); }
 	;
 
 passthrough: /* empty */	    { $$ = lstr (get_yy_lineno ()); }
@@ -281,7 +280,7 @@ wait_body: '(' join_list ')' ';'
 	{
 	  tame_fn_t *fn = state->function ();
 	  tame_wait_t *w = New tame_wait_t (fn, $2, get_yy_lineno ());
-	  fn->add_env (w);
+	  if (fn) fn->add_env (w);
 	  $$ = w;
 	}
 	;

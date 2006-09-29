@@ -328,7 +328,7 @@ return/[ \t\n(/;]   { yy_push_state (RETURN_PARAMS); return T_RETURN; }
 \"		    { yy_push_state (QUOTE); return std_ret (T_PASSTHROUGH); }
 }
 
-<TAME,TAME_BASE,INITIAL>{
+<TAME,TAME_BASE>{
 cwait/[ \t\n({/]    { return tame_ret (CWAIT_ENTER, T_CWAIT); }
 }
 
@@ -357,7 +357,7 @@ cwait/[ \t\n({/]    { return tame_ret (CWAIT_ENTER, T_CWAIT); }
 
 <INITIAL>{
 tamed/[ \t\n/]  { return tame_ret (SIG_PARSE, T_TAMED); }
-[^tc\n"/]+|[tc/]	{ yylval.str = yytext; return T_PASSTHROUGH ; }
+[^t\n"/]+|[t/]	{ yylval.str = yytext; return T_PASSTHROUGH ; }
 \n		{ ++lineno; yylval.str = yytext; return T_PASSTHROUGH; }
 \"		{ yy_push_state (QUOTE); return std_ret (T_PASSTHROUGH); }
 }
