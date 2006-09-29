@@ -958,9 +958,7 @@ extern int TAME_GLOBAL_INT;
 
 void start_join_group_collection ();
 
-#define LOC(f,l) f ":" #l
-#define HERE LOC(__FILE__, __LINE__)
-#define mkevent(...) _mkevent (__cls_g, HERE, ## __VA_ARGS__)
+#define mkevent(...) _mkevent (__cls_g, __FL__, ## __VA_ARGS__)
 
 #define rendezvous_t coordgroup_t
 

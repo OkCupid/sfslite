@@ -869,7 +869,7 @@ tame_block_t::output (outputter_t *o)
   om = o->switch_to_mode (OUTPUT_TREADMILL);
   b << "\n"
     << "    if (!" << TAME_CLOSURE_NAME 
-    << "->block_dec_count (LOC(__FILE__, __LINE)))\n"
+    << "->block_dec_count (__FL__))\n"
     << "      ";
 
   b.mycat (_fn->return_expr ());
