@@ -58,10 +58,8 @@ int vars_lineno;
 %token T_TAME
 %token T_TAMED
 %token T_VARS
-%token T_BLOCK
 %token T_JOIN
 %token T_CWAIT
-%token T_WAIT
 %token T_DEFAULT_RETURN
 
 %token T_2DOLLAR
@@ -89,7 +87,7 @@ int vars_lineno;
 
 %type <var>  parameter_declaration
 
-%type <el>   fn_tame vars block return_statement wait cwait 
+%type <el>   fn_tame vars return_statement cwait 
 %type <el>   block_body cwait_body wait_body
 %type <el>   default_return
 
@@ -174,8 +172,6 @@ fn_statements: passthrough
 	;
 
 fn_tame: vars
-	| block
-	| wait
 	| cwait
 	| return_statement
 	| default_return
@@ -225,9 +221,6 @@ return_statement: T_RETURN passthrough ';'
 	}
 	;
 
-block: T_BLOCK block_body  { $$ = $2; }
-	;
-
 block_body: '{' 
 	{
 	  tame_fn_t *fn = state->function ();
@@ -272,9 +265,6 @@ join_list: passthrough id_list_opt
 	    $$->push_back (var_t ($1, EXPR));
 	  }
 	}
-	;
-
-wait: T_WAIT wait_body { $$ = $2; }
 	;
 
 wait_body: '(' join_list ')' ';'
