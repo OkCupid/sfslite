@@ -37,7 +37,6 @@ int fd_set_bytes;		// Size in bytes of a [wide] fd_set
 int maxfd;
 bool amain_panic;
 static int nselfd;
-cbv::ptr yield_cb;
 int sfs_core_select;
 
 // initialize this in case we access tsnow before calling amain()
@@ -259,8 +258,10 @@ fdcb_check (void)
   for (int i = 0; i < fdsn; i++)
     memcpy (fdspt[i], fdsp[i], fd_set_bytes);
 
+  /*
   warn ("in select s=%ld; us=%ld; nselfd=%d; yield_cb=%p\n",
 	selwait.tv_sec, selwait.tv_usec, nselfd, (callback<void> *)yield_cb);
+  */
   
   /*
   if (selwait.tv_sec == 86400 && yield_cb) {
