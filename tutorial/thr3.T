@@ -24,7 +24,7 @@ struct worker_t {
 
 struct server_t {
 public:
-  server_t (size_t n) : _n_threads (n) { init (); }
+  server_t (size_t n) : _n_threads (n), _rv (__FILE__, __LINE__) { init (); }
   void run (cbv cb, CLOSURE);
   void shutdown (cbv cb, CLOSURE);
   void serve (int i, cbi cb, CLOSURE);
@@ -104,10 +104,8 @@ worker_t::serve ()
       _ev = NULL;
     }
     if (_req) {
-      warn << "w> action (" << _req->_param << ")...\n";
       int i = action (_req->_param);
-      warn << "w> action (" << _req->_param << ") signalling...\n";
-      _req->_done->signal (i);
+      dtrigger (_req->_done, i);
       _req = NULL;
     }
   }
@@ -118,7 +116,7 @@ int
 worker_t::action (int i)
 {
   int s = rand () % 10 + 1;
-  warn << _index << ": server req=" << i <<  "; "
+  warn << "a> " << _index << ": server req=" << i <<  "; "
        << "sleep=" << s << "\n";
   sleep (s);
   warn << _index << ": wake up\n";
@@ -149,11 +147,12 @@ server_t::serve (int i, cbi cb)
       cwait { 
 	r = New req_t (i, mkevent (res));
 	w->_req = r;
-	if (w->_ev) 
+	if (w->_ev) {
 	  w->_ev->signal ();
+	}
       }
-      warn ("Delete r=%p\n", r);
       delete r;
+      ready_thread (w);
     }
   }
   cb->signal (res);
@@ -163,7 +162,7 @@ tamed static void
 run_server (server_t **sp, cbv cb) 
 {
   cvars {
-    server_t *s (New server_t (4));
+    server_t *s (New server_t (6));
   }
   *sp = s;
 
@@ -175,7 +174,7 @@ run_server (server_t **sp, cbv cb)
   cb->signal ();
 }
 
-#define N_CALLS 100
+#define N_CALLS 30
 
 tamed static void
 run_client (server_t *s, cbv cb)
@@ -183,13 +182,13 @@ run_client (server_t *s, cbv cb)
   cvars {
     int res[N_CALLS];
     int i;
-    rendezvous_t<int> rv;
+    rendezvous_t<int> rv (__FILE__, __LINE__);
     int sdres;
   }
 
   for (i = 0; i < N_CALLS; i++) {
     s->serve (i+1, mkevent (rv, i, res[i]));
-    cwait { delaycb (2, 0, mkevent ()); }
+    cwait { delaycb (1, 0, mkevent ()); }
   }
   while (rv.n_out ()) {
     cwait (rv, i);
@@ -212,11 +211,14 @@ void main2 ()
     run_server (&s, mkevent ());
     run_client (s, mkevent ());
   }
+
+  exit (0);
 }
 
 
 int main (int argc, char *argv[])
 {
+  coordvar_strict_mode = true;
   pth_init ();
   main2 ();
   amain ();

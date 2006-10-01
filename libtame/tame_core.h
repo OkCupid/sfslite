@@ -513,7 +513,7 @@ public:
     } else if (_join_method == JOIN_THREADS) {
       pth_cond_notify (&_cond, 0);
     } else {
-      panic ("join without a join method\n");
+      /* called join before a waiter; we can just queue */
     }
   }
 
@@ -867,32 +867,32 @@ public:
 
   void wait (T1 &r1, T2 &r2, T3 &r3, T4 &r4)
   {
-    this->pointer ()->threadjoin ();
-    assert (next_var (r1, r2, r3, r4));
+    while (!next_var (r1, r2, r3, r4))
+      this->pointer ()->threadjoin ();
   }
 
   void wait (T1 &r1, T2 &r2, T3 &r3)
   {
-    this->pointer ()->threadjoin ();
-    assert (next_var (r1, r2, r3));
+    while (!next_var (r1, r2, r3))
+      this->pointer ()->threadjoin ();
   }
 
   void wait (T1 &r1, T2 &r2)
   {
-    this->pointer ()->threadjoin ();
-    assert (next_var (r1, r2));
+    while (!next_var (r1, r2))
+      this->pointer ()->threadjoin ();
   }
 
   void wait (T1 &r1)
   {
-    this->pointer ()->threadjoin ();
-    assert (next_var (r1));
+    while (!next_var (r1))
+      this->pointer ()->threadjoin ();
   }
 
   void wait ()
   {
-    this->pointer ()->threadjoin ();
-    assert (next_var ());
+    while (!next_var ())
+      this->pointer ()->threadjoin ();
   }
 
   void waitall () { while (need_wait ()) wait (); }

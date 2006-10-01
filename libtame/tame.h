@@ -10,5 +10,6 @@
 #include "tame_mkevent.h"
 #include "tame_thread.h"
 #include "tame_cfork.h"
+#include "tame_trigger.h"
 
 #endif /* _ASYNC_TAME_H_ */
