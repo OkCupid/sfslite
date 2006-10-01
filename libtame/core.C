@@ -23,6 +23,8 @@ tame_init::start ()
     panic ("tame_init called twice\n");
   initialized = true;
 
+  pth_init ();
+
   tame_options = 0;
   closure_serial_number = 0;
   tame_collect_jg_flag = false;

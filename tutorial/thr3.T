@@ -236,7 +236,6 @@ void main2 ()
 int main (int argc, char *argv[])
 {
   coordvar_strict_mode = true;
-  pth_init ();
   main2 ();
   amain ();
 }
