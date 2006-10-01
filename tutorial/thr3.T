@@ -1,159 +1,213 @@
 // -*-c++-*-
 /* $Id: ex1.T 2236 2006-09-29 00:00:22Z max $ */
 
+#include "async.h"
 #include "tame.h"
 #include <list.h>
 
 struct req_t {
-  req_t (int t, cbv::ptr d) : _time (t), _done (d); {}
-  int _time;
-  cbv::ptr _done;
+  req_t (int p, cbi::ptr d) : _param (p), _done (d) {}
+  int _param;
+  cbi::ptr _done;
 };
 
 struct worker_t {
+  worker_t () : _req (NULL) {}
+  void serve ();
+  int action (int i);
   int _index;
-  rendezvous_t<req_t> _rv;
   list_entry<worker_t> _rlnk;
-  bool _dead;
+  cbv::ptr _ev;
+  bool _shutdown;
+  req_t *_req;
 };
 
-class action_t;
-
-struct app_state_t {
-  app_state_t () 
-  {
-    _workers.setsize (10);
-    _n_alive  = _workers.size ();
-  }
-    
+struct server_t {
+public:
+  server_t (size_t n) : _n_threads (n) { init (); }
+  void run (cbv cb, CLOSURE);
+  void shutdown (cbv cb, CLOSURE);
+  void serve (int i, cbi cb, CLOSURE);
+private:
+  void init ();
+  void ready_thread (worker_t *w);
+  size_t _n_threads;
   vec<worker_t> _workers;
-  list<worker_t, &worker_t::_rlink> _ready;
-  bool _client_alive;
+  list<worker_t, &worker_t::_rlnk> _ready;
   size_t _n_alive;
-  vec<int> _pending;
-  rendezvous_t<ptr<action_t> > _rv;
+  vec<cbv> _waiters;
+  rendezvous_t<size_t> _rv;
+  cbv::ptr _shutdown_cb;
+  bool _shutdown;
 };
 
-struct action_t {
-public:
-  virtual void perform (app_state_t *s) = 0;
-};
-
-struct thread_exit_action_t {
-public:
-  thread_exit_action_t () {}
-  void perform (app_state_t *s) { s->_n_alive --; } 
-};
-
-struct client_exit_action_t {
-public:
-  client_exit_action_t () {}
-  void perform (app_state_t *s) { s->_client_alive = false; }
-}; 
-
-struct client_req_action_t {
-public:
-  client_req_action_t (req_t r) {}
-  void perform (app_state_t *s) 
-  {
-    worker_t *w;
-    if ((w = s->_ready.first)) {
-      s->_ready.remove (w);
-      cbv::ptr cb = r._done;
-      r._done = mkevent (s->_rv, 
-			 New refcounted<thread_done_action_t> (w, cb));
-      mkevent (w->_rv, r)->signal ();
-    } else {
-      s->pending_
-
-    }
-  }
-
-};
-
-static void serve (int i, rendezvous_t<req_t> r)
+void
+server_t::init ()
 {
-  while (true) {
-    req_t q;
-    r.wait (q);
-    if (q._time == 0) {
-      return;
-    } else {
-      warn << i << ": serving request: " << q._time << "\n";
-      sleep (q._time);
-      warn << i << ": done serving.\n";
-      r._done->signal ();
-    }
+  _workers.setsize (_n_threads);
+
+  for (size_t i = 0; i < _workers.size (); i++) {
+    worker_t *w = &_workers[i];
+    w->_index = i;
+    cfork (_rv, i, wrap (w, &worker_t::serve));
+    ready_thread (w);
   }
 }
 
-static void make_reqs (rendezvous_t<action_t, worker_t *, int> rv)
+void
+server_t::ready_thread (worker_t *w)
 {
-  for (int i = 0; i < 100; i++) {
-    
-
+  _ready.insert_head (w);
+  if (_waiters.size ()) {
+    cbv cb = _waiters.pop_front ();
+    cb->signal ();
   }
 }
 
-static void main2 ()
+tamed void
+server_t::run (cbv cb)
 {
+  cwait { _shutdown_cb = mkevent (); }
+  cb->signal ();
+}
 
-
-  for (size_t i = 0; i < workers.size (); i++) {
-    workers[i]._index = i;
-
-    cfork (G, 
-	   New refcounted<thread_exit_action_t> (&n_alive), 
-	   wrap (&workers[i], serve));
-
-    _ready.insert_head (&workers[i]);
+tamed void
+server_t::shutdown (cbv cb)
+{
+  cvars {
+    size_t i;
   }
-  
-  cfork (G, New refcounted<client_exit_action_t> (&client_alive), 
-	 wrap (make_reqs, G));
-  
+  warn << "s> shutdown started...\n";
+  _shutdown = true;
+  for (i = 0; i < _workers.size (); i++) {
+    worker_t *w = &_workers[i];
+    w->_shutdown = true;
+    if (w->_ev) w->_ev->signal ();
+  }
+  while (_rv.n_out ()) {
+    cwait (_rv, i);
+    warn << "s> thread " << i << " exitted\n";
+  }
+  warn << "s> shutdown finished...\n";
+  cb->signal ();
+}
 
-  while (go) {
-    action_t s;
+void
+worker_t::serve ()
+{
+  bool go = true;
+  int res;
+  warn << "w> " << _index << " starting up...\n";
+  while (!_shutdown) {
+    if (!_req) {
+      cwait { _ev = mkevent (); }
+      _ev = NULL;
+    }
+    if (_req) {
+      int i = action (_req->_param);
+      _req->_done->signal (i);
+      _req = NULL;
+    }
+  }
+  warn << "w> " << _index << " shutting down...\n";
+}
+
+int
+worker_t::action (int i)
+{
+  int s = rand () % 10 + 1;
+  warn << _index << ": server req=" << i <<  "; "
+       << "sleep=" << s << "\n";
+  sleep (s);
+  warn << _index << ": wake up\n";
+  return s;
+}
+
+tamed void
+server_t::serve (int i, cbi cb)
+{
+  cvars {
     worker_t *w;
-    int r;
-    G.wait (s, w, r);
-    switch (s) {
-    case REQ_READY:
-      if ((w = _ready.first)) {
-	_ready.remove (w);
-	mkevent (w->_rv, 
-		 req_t (r, mkevent (G, THREAD_READY, w, 0)))->signal ();
-      } else {
-	pending.push_back (r);
+    int res (-1);
+    req_t *r;
+  }
+  if (i == 0) {
+    if (_shutdown_cb) {
+      cbv c = _shutdown_cb;
+      _shutdown_cb = NULL;
+      c->signal ();
+    }
+  } else if (!_shutdown) {
+    while (!(w = _ready.first)) {
+      cwait { _waiters.push_back (mkevent ()); }
+    }
+    _ready.remove (w);
+    if (!w->_shutdown) {
+      cwait { 
+	r = New req_t (i, mkevent (res));
+	w->_req = r;
+	if (w->_ev) 
+	  w->_ev->signal ();
       }
-      break;
-    case THREAD_READY: 
-      _ready.insert_head (w);
-      break;
-    case CLIENT_DONE:
-      warn << "Got shutdown signal from client.\n";
-      go = false;
-      break;
-    case THREAD_EXIT:
-      panic ("thread exitted unexpected\n");
-      break;
+      delete r;
     }
   }
-  
-  for (size_t i = 0; i < workers.size (); i++) {
-    mkevent (workers[i]._rv, req_t (0, NULL))->signal ();
+  cb->signal (res);
+}
+
+tamed static void
+run_server (server_t **sp, cbv cb) 
+{
+  cvars {
+    server_t *s (New server_t (4));
+  }
+  *sp = s;
+
+  cwait { s->run (mkevent ()); }
+  warn << "m> server done running...\n";
+  cwait { s->shutdown (mkevent ()); }
+  warn << "m> server done shutting down ...\n";
+  delete s;
+  cb->signal ();
+}
+
+#define N_CALLS 100
+
+tamed static void
+run_client (server_t *s, cbv cb)
+{
+  cvars {
+    int res[N_CALLS];
+    int i;
+    rendezvous_t<int> rv;
+    int sdres;
   }
 
-  for (size_t i = 0; i < workers.size (); i++) {
-    action_t s;
-    worker_t *w;
-    int r;
-    G.wait (s, w, r);
-    assert (s == THREAD_EXIT);
+  for (i = 0; i < N_CALLS; i++) {
+    s->serve (i, mkevent (rv, i, res[i]));
+    cwait { delaycb (2, 0, mkevent ()); }
   }
-  warn << "All done; shut down.\n";
-  exit (0);
+  while (rv.n_out ()) {
+    cwait (rv, i);
+    warn << "c> thread " << i << " returned: " << res[i] << "\n";
+  }
+  warn << "c> shutdown signal\n";
+  cwait { s->serve (0, mkevent (sdres)); }
+  cb->signal ();
+}
+
+#undef N_CALLS
+  
+tamed static 
+void main2 ()
+{
+  cvars {
+    server_t *s;
+  }
+  cwait {
+    run_server (&s, mkevent ());
+    run_client (s, mkevent ());
+  }
 }
 
 

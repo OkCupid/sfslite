@@ -82,6 +82,7 @@ tame_standalone(buggy2)
 tame_standalone(buggy3)
 tame_standalone(thr1)
 tame_standalone(thr2)
+tame_standalone(thr3)
 
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
