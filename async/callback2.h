@@ -198,7 +198,7 @@ $endnotdebug
     ref_flag_ptr_t cf = _cleared_flag;
     if (!second_signal ()) {
       (void )(*this)($cbargs3);
-      clear (cf);
+      if (!*cf) clear (cf);
     }
   }
   virtual ~callback () {}

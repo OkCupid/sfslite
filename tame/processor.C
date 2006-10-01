@@ -1011,7 +1011,8 @@ tame_block_t::output (outputter_t *o)
   output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL);
 
   b << "  do {\n"
-    << "    " << TAME_CLOSURE_NAME << "->init_block (" 
+    << "    do {\n"
+    << "      " << TAME_CLOSURE_NAME << "->init_block (" 
     << _id << ", " << _lineno << ");\n"
     ;
 
@@ -1030,16 +1031,17 @@ tame_block_t::output (outputter_t *o)
 
   om = o->switch_to_mode (OUTPUT_TREADMILL);
   b << "\n"
-    << "    if (!" << TAME_CLOSURE_NAME << "->block_dec_count (" 
+    << "      if (!" << TAME_CLOSURE_NAME << "->block_dec_count (" 
     << _lineno << "))\n"
-    << "      ";
+    << "        ";
 
   b.mycat (_fn->return_expr ());
 
   b << ";\n"
+    << "    } while (0);\n"
+    << "   " << _fn->label (_id) << ":\n"
+    << "      ;\n"
     << "  } while (0);\n"
-    << " " << _fn->label (_id) << ":\n"
-    << "    ;\n"
     ;
 
 
