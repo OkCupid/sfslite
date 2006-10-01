@@ -14,7 +14,7 @@ struct req_t {
 struct worker_t {
   worker_t () : _req (NULL) {}
   void serve ();
-  int action (int i);
+  int blocking_action (int i);
   int _index;
   list_entry<worker_t> _rlnk;
   cbv::ptr _ev;
@@ -31,6 +31,7 @@ public:
 private:
   void init ();
   void ready_thread (worker_t *w);
+  void get_thread (callback<void, worker_t *>::ref, CLOSURE);
   size_t _n_threads;
   vec<worker_t> _workers;
   list<worker_t, &worker_t::_rlnk> _ready;
@@ -104,8 +105,15 @@ worker_t::serve ()
       _ev = NULL;
     }
     if (_req) {
-      int i = action (_req->_param);
+
+      int i = blocking_action (_req->_param);
+
+      // 'dtrigger' calls the given callback, with the given parameter,
+      // but only after this thread yields.  Calling req->_done directly
+      // here makes for a nasty race condition between the server and
+      // the worker thread.
       dtrigger (_req->_done, i);
+
       _req = NULL;
     }
   }
@@ -113,14 +121,26 @@ worker_t::serve ()
 }
 
 int
-worker_t::action (int i)
+worker_t::blocking_action (int i)
 {
   int s = rand () % 10 + 1;
   warn << "a> " << _index << ": server req=" << i <<  "; "
        << "sleep=" << s << "\n";
   sleep (s);
-  warn << _index << ": wake up\n";
+  warn << "a> " << _index << ": wake up\n";
   return s;
+}
+
+tamed void
+server_t::get_thread (callback<void, worker_t *>::ref cb)
+{
+  cvars {
+    worker_t *w (NULL);
+  }
+  while (!_shutdown && !(w = _ready.first)) 
+    cwait { _waiters.push_back (mkevent ()); }
+  if (w) _ready.remove (w);
+  cb->signal (w);
 }
 
 tamed void
@@ -138,12 +158,9 @@ server_t::serve (int i, cbi cb)
       _shutdown_cb = NULL;
       c->signal ();
     }
-  } else if (!_shutdown) {
-    while (!(w = _ready.first)) {
-      cwait { _waiters.push_back (mkevent ()); }
-    }
-    _ready.remove (w);
-    if (!w->_shutdown) {
+  } else {
+    cwait { get_thread (mkevent (w)); }
+    if (w && !w->_shutdown) {
       cwait { 
 	r = New req_t (i, mkevent (res));
 	w->_req = r;
@@ -186,13 +203,13 @@ run_client (server_t *s, cbv cb)
     int sdres;
   }
 
-  for (i = 0; i < N_CALLS; i++) {
-    s->serve (i+1, mkevent (rv, i, res[i]));
+  for (i = 1; i < N_CALLS; i++) {
+    s->serve (i, mkevent (rv, i, res[i]));
     cwait { delaycb (1, 0, mkevent ()); }
   }
   while (rv.n_out ()) {
     cwait (rv, i);
-    warn << "c> thread " << i << " returned: " << res[i] << "\n";
+    warn << "c> request " << i << " returned: " << res[i] << "\n";
   }
   warn << "c> shutdown signal\n";
   cwait { s->serve (0, mkevent (sdres)); }

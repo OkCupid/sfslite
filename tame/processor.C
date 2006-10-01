@@ -846,11 +846,12 @@ tame_block_ev_t::output (outputter_t *o)
   // implicit_rendezvous_t named __cls_g is accessible.  This will only
   // happen within a block {} environment.
   //
-  b << "  do {\n"
+  b << "  do {\n";
+  b << "    do {\n"
     << "    " << TAME_CLOSURE_NAME << "->init_block (" 
     << _id << ", " << _lineno << ");\n"
-    << "    closure_implicit_rendezvous_t _irv (__cls_g);\n"
-    << "    implicit_rendezvous_t *__cls_g = &_irv;\n"
+    << "      closure_implicit_rendezvous_t _irv (__cls_g);\n"
+    << "      implicit_rendezvous_t *__cls_g = &_irv;\n"
     ;
 
   _fn->jump_out (b, _id);
@@ -868,16 +869,17 @@ tame_block_ev_t::output (outputter_t *o)
 
   om = o->switch_to_mode (OUTPUT_TREADMILL);
   b << "\n"
-    << "    if (!" << TAME_CLOSURE_NAME 
+    << "      if (!" << TAME_CLOSURE_NAME 
     << "->block_dec_count (__FL__))\n"
     << "      ";
 
   b.mycat (_fn->return_expr ());
 
   b << ";\n"
-    << "  } while (0);\n"
+    << "    } while (0);\n"
     << " " << _fn->label (_id) << ":\n"
-    << "    ;\n"
+    << "      ;\n"
+    << "  } while (0);\n"
     ;
 
 
