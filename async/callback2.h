@@ -198,7 +198,7 @@ $endnotdebug
     ref_flag_ptr_t cf = _cleared_flag;
     if (!second_signal ()) {
       (void )(*this)($cbargs3);
-      clear (cf);
+      if (!*cf) clear (cf);
     }
   }
   virtual ~callback () {}
@@ -774,7 +774,7 @@ public:
     ref_flag_ptr_t cf = _cleared_flag;
     if (!second_signal ()) {
       (void )(*this)();
-      clear (cf);
+      if (!*cf) clear (cf);
     }
   }
   virtual ~callback () {}
@@ -1945,7 +1945,7 @@ public:
     ref_flag_ptr_t cf = _cleared_flag;
     if (!second_signal ()) {
       (void )(*this)(b1);
-      clear (cf);
+      if (!*cf) clear (cf);
     }
   }
   virtual ~callback () {}
@@ -3116,7 +3116,7 @@ public:
     ref_flag_ptr_t cf = _cleared_flag;
     if (!second_signal ()) {
       (void )(*this)(b1, b2);
-      clear (cf);
+      if (!*cf) clear (cf);
     }
   }
   virtual ~callback () {}
@@ -4287,7 +4287,7 @@ public:
     ref_flag_ptr_t cf = _cleared_flag;
     if (!second_signal ()) {
       (void )(*this)(b1, b2, b3);
-      clear (cf);
+      if (!*cf) clear (cf);
     }
   }
   virtual ~callback () {}

@@ -104,7 +104,9 @@ worker_t::serve ()
       _ev = NULL;
     }
     if (_req) {
+      warn << "w> action (" << _req->_param << ")...\n";
       int i = action (_req->_param);
+      warn << "w> action (" << _req->_param << ") signalling...\n";
       _req->_done->signal (i);
       _req = NULL;
     }
@@ -133,6 +135,7 @@ server_t::serve (int i, cbi cb)
   }
   if (i == 0) {
     if (_shutdown_cb) {
+      warn << "s> invoking shutdown_cb ...\n";
       cbv c = _shutdown_cb;
       _shutdown_cb = NULL;
       c->signal ();
@@ -149,6 +152,7 @@ server_t::serve (int i, cbi cb)
 	if (w->_ev) 
 	  w->_ev->signal ();
       }
+      warn ("Delete r=%p\n", r);
       delete r;
     }
   }
@@ -184,7 +188,7 @@ run_client (server_t *s, cbv cb)
   }
 
   for (i = 0; i < N_CALLS; i++) {
-    s->serve (i, mkevent (rv, i, res[i]));
+    s->serve (i+1, mkevent (rv, i, res[i]));
     cwait { delaycb (2, 0, mkevent ()); }
   }
   while (rv.n_out ()) {
@@ -213,6 +217,7 @@ void main2 ()
 
 int main (int argc, char *argv[])
 {
+  pth_init ();
   main2 ();
   amain ();
 }
