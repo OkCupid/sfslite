@@ -50,7 +50,10 @@
 #include "keyfunc.h"
 #include "tame_event.h"
 #include "list.h"
-#include <pth.h>
+
+#ifdef HAVE_PTH
+# include <pth.h>
+#endif /* HAVE_PTH */
 
 
 /*
@@ -456,8 +459,10 @@ public:
     _must_deallocate (New refcounted<must_deallocate_t> ()),
     _join_method (JOIN_NONE) 
   {
+#ifdef HAVE_PTH
     pth_mutex_init (&_mutex);
     pth_cond_init (&_cond);
+#endif /* HAVE_PTH */
   }
 
 
@@ -511,7 +516,11 @@ public:
       _join_cb = NULL;
       (*cb) ();
     } else if (_join_method == JOIN_THREADS) {
+#ifdef HAVE_PTH
       pth_cond_notify (&_cond, 0);
+#else
+      panic ("no PTH available\n");
+#endif
     } else {
       /* called join before a waiter; we can just queue */
     }
@@ -574,9 +583,13 @@ private:
 
   void await ()
   {
+#ifdef HAVE_PTH
     pth_mutex_acquire (&_mutex, 0, NULL);
     pth_cond_await (&_cond, &_mutex, NULL);
     pth_mutex_release (&_mutex);
+#else
+    panic ("no PTH available...\n");
+#endif
   }
 
   // number of calls out that haven't yet completed
@@ -596,8 +609,11 @@ private:
 
   // for threads
   join_method_t _join_method;
+
+#ifdef HAVE_PATH
   pth_cond_t _cond;
   pth_mutex_t _mutex;
+#endif /* HAVE_PTH */
 };
 
 /**
