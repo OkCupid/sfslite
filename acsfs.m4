@@ -2178,7 +2178,9 @@ then
 				*) lflags="-L${dir} -lpth" ;;
 			esac
 			LIBS="$ac_save_LIBS $lflags"
-			AC_TRY_LINK([#include <pth.h>],
+			AC_TRY_LINK([#include <pth.h>
+				int sfs_core_select;
+				int sfs_cb_ins;],
 				pth_init ();, 
 				sfs_cv_libpth=$lflags; break)
 

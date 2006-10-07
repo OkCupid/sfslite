@@ -8,15 +8,6 @@
 
 int threads_out;
 
-static void tame_thread_yield ()
-{
-#ifdef HAVE_PTH
-  pth_yield (NULL);
-#else 
-  panic ("no PTH package available\n");
-#endif /* HAVE_PTH */
-}
-
 void
 tame_thread_spawn (const char *loc, void * (*fn) (void *), void *arg)
 {
@@ -27,8 +18,8 @@ tame_thread_spawn (const char *loc, void * (*fn) (void *), void *arg)
   pth_attr_set (attr, PTH_ATTR_NAME, loc); 
   pth_attr_set (attr, PTH_ATTR_STACK_SIZE, 0x10000);
 
-  // Must be joinable to work with our scheduling hacks.
-  pth_attr_set (attr, PTH_ATTR_JOINABLE, TRUE);
+  // Must not be joinable ; no one will join....
+  pth_attr_set (attr, PTH_ATTR_JOINABLE, FALSE);
 
   threads_out ++;
     
@@ -57,6 +48,7 @@ void
 tame_thread_init ()
 {
 #ifdef HAVE_PTH
+  pth_init ();
   threads_out = 0;
 #endif /* HAVE_PTH */
 }

@@ -96,8 +96,6 @@ server_t::shutdown (cbv cb)
 void
 worker_t::serve ()
 {
-  bool go = true;
-  int res;
   warn << "w> " << _index << " starting up...\n";
   while (!_shutdown) {
     if (!_req) {

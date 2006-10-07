@@ -10,12 +10,13 @@
 #include <math.h>
 #include "litetime.h"
 
-typedef enum { SFS_MODE = 0, cwait_MODE = 1, NONBLOCK_MODE = 2,
+typedef enum { SFS_MODE = 0, IMPLICIT_MODE = 1, EXPLICIT_MODE = 2,
 	       CHECK_CPUSPEED_MODE = 3,
 	       BENCHMARK_WRAP_MODE = 4,
 	       BENCHMARK_FUNCTOR_MODE = 5,
 	       SFS_NULL =6 ,TAME_NULL =7,
-	       BENCHMARK_SYSCALL = 8 } bmode_t;
+	       BENCHMARK_SYSCALL = 8,
+	       THR_IMPL_MODE = 9, THR_EXPL_MODE = 10 } bmode_t;
 
 int niter = 10000;
 int ntimes = 10;
@@ -188,13 +189,44 @@ static void bar ()
 }
 
 tamed static void
-bench1_cwait (int niter, cbv done)
+bench1_cwait_implicit (int niter, cbv done)
 {
   cvars { int i; }
   for (i = 0; i < niter; i++) {
     cwait { delaycb (0, 0, mkevent()); }
   }
   (*done) ();
+}
+
+static void noop () {}
+
+static void
+bench1_cwait_thr_implicit (int niter)
+{
+#ifdef HAVE_PTH
+  for (int i = 0; i < niter; i++) {
+    cwait { cfork (wrap (noop)); }
+  }
+#else
+  panic ("Cannot run testcase without PTH support");
+#endif
+  return;
+}
+
+static void
+bench1_cwait_thr_explicit (int niter)
+{
+#ifdef HAVE_PTH
+  rendezvous_t<> r;
+  for (int i = 0; i < niter; i++) {
+    cfork (r, wrap (noop));
+    r.wait ();
+  }
+#else
+  panic ("Cannot run testcase without PTH support");
+#endif
+
+  return;
 }
 
 tamed static void
@@ -254,11 +286,11 @@ static void bench1_null (bool alloc)
 }
 
 tamed static void
-bench1_noncwait (int niter, cbv done)
+bench1_cwait_explicit (int niter, cbv done)
 {
   cvars {
     int i ;
-    coordgroup_t<> G;
+    rendezvous_t<> G;
   }
   for (i = 0; i < niter; i++) {
     delaycb (0, 0, mkevent (G) );
@@ -293,22 +325,36 @@ harness ()
     u_int64_t start, stop, d, tot (0);
     statobj_t so;
   }
+  // make sure we're being called from the select loop...
+  cwait { delaycb (0, 0, mkevent ()); }
+
   for (j = 0; j < 2; j++) {
     for (i = 0; i < (j == 0 ? 1 : ntimes); i++) {
       start = corebench_get_time ();
-      cwait { 
-	switch (mode) {
-	case SFS_MODE:
-	  bench1_sfs (niter, mkevent());
-	  break;
-	case cwait_MODE:
-	  bench1_cwait (niter, mkevent());
-	  break;
-	case NONBLOCK_MODE:
-	  bench1_noncwait (niter, mkevent());
-	  break;
-	default:
-	  panic ("unknown mode");
+      switch (mode) {
+      case THR_IMPL_MODE:
+	cwait { cfork (wrap (bench1_cwait_thr_implicit, niter)); }
+	break;
+      case THR_EXPL_MODE:
+	cwait { cfork (wrap (bench1_cwait_thr_explicit, niter)); }
+	break;
+      default:
+	{
+	  cwait { 
+	    switch (mode) {
+	    case SFS_MODE:
+	      bench1_sfs (niter, mkevent());
+	      break;
+	    case IMPLICIT_MODE:
+	      bench1_cwait_implicit (niter, mkevent());
+	      break;
+	    case EXPLICIT_MODE:
+	      bench1_cwait_explicit (niter, mkevent());
+	      break;
+	    default:
+	      panic ("unknown mode");
+	    }
+	  }
 	}
       }
       stop = corebench_get_time ();
@@ -318,6 +364,7 @@ harness ()
 	so.raw_result (d/niter);
 	so.add_result_set (d / (double)niter);
       }
+      cwait { delaycb (0, 1000, mkevent ()); }
     }
   }
   so.report ();
@@ -334,10 +381,9 @@ int main (int argc, char *argv[])
   bool null_test (false);
   bool do_alloc = false;
 
-
   toggle_corebench (true);
 
-  while ((ch = getopt (argc, argv, "Nfwdcnbi:t:sa")) != -1) {
+  while ((ch = getopt (argc, argv, "Nfwdcnbi:t:saIE")) != -1) {
     switch (ch) {
     case 'a':
       do_alloc = true;
@@ -377,12 +423,22 @@ int main (int argc, char *argv[])
     case 'b':
       if (mode != SFS_MODE) 
 	usage ();
-      mode = cwait_MODE;
+      mode = IMPLICIT_MODE;
       break;
     case 'n':
       if (mode != SFS_MODE)
 	usage ();
-      mode = NONBLOCK_MODE;
+      mode = EXPLICIT_MODE;
+      break;
+    case 'I':
+      if (mode != SFS_MODE)
+	usage ();
+      mode = THR_IMPL_MODE;
+      break;
+    case 'E':
+      if (mode != SFS_MODE)
+	usage ();
+      mode = THR_EXPL_MODE;
       break;
     default:
       usage ();
@@ -432,23 +488,29 @@ int main (int argc, char *argv[])
       warn << "using SFS code for full test...\n";
     }
     break;
-  case NONBLOCK_MODE:
-    warn << "using NONcwait mode for full test...\n";
+  case IMPLICIT_MODE:
+    warn << "using implicit rendezvous mode for full test...\n";
     break;
-  case cwait_MODE:
+  case EXPLICIT_MODE:
     if (null_test) {
       mode = TAME_NULL;
       warn << "doing a TAME NULL call test...\n";
       bench1_null (do_alloc);
       exit (0);
     } else {
-      warn << "using cwait mode for full test...\n";
+      warn << "using explicit rendezvous mode for full test...\n";
     }
+    break;
+  case THR_IMPL_MODE:
+    warn << "using THREADED implicit rendezous mode for full test...\n";
+    break;
+  case THR_EXPL_MODE:
+    warn << "using THREADED explicit rendezvous mode for full test...\n";
     break;
   default:
     break;
   }
-    
+
   harness ();
   amain ();
   bar ();

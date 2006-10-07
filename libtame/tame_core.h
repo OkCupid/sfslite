@@ -610,7 +610,7 @@ private:
   // for threads
   join_method_t _join_method;
 
-#ifdef HAVE_PATH
+#ifdef HAVE_PTH
   pth_cond_t _cond;
   pth_mutex_t _mutex;
 #endif /* HAVE_PTH */
