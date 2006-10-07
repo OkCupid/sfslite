@@ -198,7 +198,9 @@ bench1_cwait_implicit (int niter, cbv done)
   (*done) ();
 }
 
+#ifdef HAVE_PTH
 static void noop () {}
+#endif
 
 static void
 bench1_cwait_thr_implicit (int niter)
@@ -364,7 +366,11 @@ harness ()
 	so.raw_result (d/niter);
 	so.add_result_set (d / (double)niter);
       }
+      
+      STOP_ACHECK_TIMER ();
+      toggle_corebench (false);
       cwait { delaycb (0, 1000, mkevent ()); }
+      toggle_corebench (true);
     }
   }
   so.report ();

@@ -650,7 +650,8 @@ public:
 
     // Need at least one return to the bottom event loop between
     // a call into the callback and a join.
-    delaycb (0, 0, wrap (mkref (this), &joiner_t<T1,T2,T3,T4>::join_cb, w));
+    join_cb (w);
+    //delaycb (0, 0, wrap (mkref (this), &joiner_t<T1,T2,T3,T4>::join_cb, w));
   }
 
   const char *loc () const { return _loc; }
