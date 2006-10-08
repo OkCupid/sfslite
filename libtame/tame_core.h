@@ -368,6 +368,7 @@ struct must_deallocate_obj_t {
 class must_deallocate_t {
 public:
   must_deallocate_t () {}
+  static ptr<must_deallocate_t> alloc ();
   void check ();
   void add (must_deallocate_obj_t *o) { _objs.insert_head (o); }
   void rem (must_deallocate_obj_t *o) { _objs.remove (o); }
@@ -487,7 +488,7 @@ public:
       tame_error (s1.cstr (), s2.cstr ());
     }
 
-    if (tame_check_leaks ())
+    if (tame_check_leaks () && _must_deallocate)
       // Check for any leaked coordination variables
       delaycb (0, 0, wrap (_must_deallocate, &must_deallocate_t::check));
   }
@@ -944,8 +945,8 @@ private:
 
 class threaded_implicit_rendezvous_t : public implicit_rendezvous_t {
 public:
-  threaded_implicit_rendezvous_t (const char *f, int l) 
-    : _md (New refcounted<must_deallocate_t> ()),
+  threaded_implicit_rendezvous_t (const char *f, int l)
+    : _md (must_deallocate_t::alloc ()),
       _jg (f, l) {}
   ~threaded_implicit_rendezvous_t () { _jg.waitall (); }
 

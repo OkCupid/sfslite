@@ -86,7 +86,7 @@ closure_t::closure_t (const char *file, const char *fun)
     _id (++closure_serial_number),
     _filename (file),
     _funcname (fun),
-    _must_deallocate (New refcounted<must_deallocate_t> ())
+    _must_deallocate (must_deallocate_t::alloc ()) 
   {}
 
 void
@@ -103,7 +103,8 @@ closure_t::end_of_scope_checks (int line)
 
     // After everything unwinds, we can check that everything has
     // been deallocated.
-    delaycb (0, 0, wrap (_must_deallocate, &must_deallocate_t::check));
+    if (_must_deallocate) 
+      delaycb (0, 0, wrap (_must_deallocate, &must_deallocate_t::check));
   }
 }
 
@@ -277,3 +278,10 @@ stack_reenter_t::stack_reenter_t (ptr<must_deallocate_t> snt,
   : reenterer_t (snt, l), _joiner (jg.make_joiner (l, NULL)) {}
 
 stack_reenter_t::~stack_reenter_t () {}
+
+
+ptr<must_deallocate_t>
+must_deallocate_t::alloc ()
+{
+  return tame_check_leaks () ? New refcounted<must_deallocate_t> () : NULL;
+}

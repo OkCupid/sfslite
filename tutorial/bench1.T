@@ -67,7 +67,7 @@ public:
 	     m, sd, sd / m * 100, min);
 
     for (size_t s = 0; s < raw_results.size (); s++) {
-      printf ("%lld\n", raw_results[s] );
+      //printf ("%lld\n", raw_results[s] );
     }
   }
   vec<double> results;
