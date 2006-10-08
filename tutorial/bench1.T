@@ -16,7 +16,8 @@ typedef enum { SFS_MODE = 0, IMPLICIT_MODE = 1, EXPLICIT_MODE = 2,
 	       BENCHMARK_FUNCTOR_MODE = 5,
 	       SFS_NULL =6 ,TAME_NULL =7,
 	       BENCHMARK_SYSCALL = 8,
-	       THR_IMPL_MODE = 9, THR_EXPL_MODE = 10 } bmode_t;
+	       THR_IMPL_MODE = 9, THR_EXPL_MODE = 10,
+	       TAME_NULL_THR = 11  } bmode_t;
 
 int niter = 10000;
 int ntimes = 10;
@@ -238,6 +239,31 @@ bench1_nulltame ()
   i++;
 }
 
+#ifdef HAVE_PTH
+static void *
+nullthreadfn (void *in)
+{
+  tame_thread_exit ();
+  return NULL;
+}
+#endif
+
+static void
+bench1_nullthr ()
+{
+#ifdef HAVE_PTH
+
+  pth_attr_t attr = pth_attr_new ();
+  pth_attr_set (attr, PTH_ATTR_NAME, __FL__);
+  pth_attr_set (attr, PTH_ATTR_STACK_SIZE, 0x10000);
+  pth_attr_set (attr, PTH_ATTR_JOINABLE, TRUE);
+  
+  pth_t t = pth_spawn (attr, nullthreadfn, NULL);
+  pth_join (t, NULL);
+  pth_attr_destroy (attr);
+#endif
+}
+
 static void
 bench1_nullsfs_alloc ()
 {
@@ -275,6 +301,11 @@ static void bench1_null (bool alloc)
       case TAME_NULL:
 	b = corebench_get_time ();
 	bench1_nulltame ();
+	e = corebench_get_time ();
+	break;
+      case TAME_NULL_THR:
+	b = corebench_get_time ();
+	bench1_nullthr ();
 	e = corebench_get_time ();
 	break;
       default:
@@ -385,12 +416,16 @@ int main (int argc, char *argv[])
   setprogname (argv[0]);
   bool dealloc (false);
   bool null_test (false);
+  bool thr_test (false);
   bool do_alloc = false;
 
   toggle_corebench (true);
 
-  while ((ch = getopt (argc, argv, "Nfwdcnbi:t:saIE")) != -1) {
+  while ((ch = getopt (argc, argv, "Nfwdcnbi:t:saIET")) != -1) {
     switch (ch) {
+    case 'T':
+      thr_test = true;
+      break;
     case 'a':
       do_alloc = true;
       break;
@@ -499,7 +534,7 @@ int main (int argc, char *argv[])
     break;
   case EXPLICIT_MODE:
     if (null_test) {
-      mode = TAME_NULL;
+      mode = thr_test ? TAME_NULL_THR : TAME_NULL;
       warn << "doing a TAME NULL call test...\n";
       bench1_null (do_alloc);
       exit (0);
