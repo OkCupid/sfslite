@@ -26,18 +26,18 @@ tamed static void
 buggy1c (cbb cv)
 {
   cvars { 
-    coordgroup_t<> JG (__FILE__, __LINE__); 
+    rendezvous_t<> rv (__FILE__, __LINE__); 
     int i;
   }
 
-  delaycb (1, 0, mkevent (JG));
-  delaycb (2, 0, mkevent (JG));
+  delaycb (1, 0, mkevent (rv));
+  delaycb (2, 0, mkevent (rv));
 
 
   for (i = 0; i < (fix_bug ? 2 : 1); i++) {
-    cwait (JG);
+    cwait (rv);
     if (i == 0) 
-      cv->signal (true);
+      cv->trigger (true);
   }
   warn << "leaving buggy1c\n";
 }

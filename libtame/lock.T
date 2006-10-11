@@ -13,7 +13,7 @@ lock_t::acquire (lock_t::mode_t m, cbv cb)
     ret = New lock_t::waiter_t (m, cb);
     _waiters.insert_head (ret);
   }
-  if (!ret) SIGNAL (cb);
+  if (!ret) TRIGGER (cb);
   return ret;
 }
 
@@ -53,15 +53,15 @@ tamed void
 lock_t::timed_acquire (lock_t::mode_t m, u_int s, u_int ms, cbb cb)
 {
   cvars {
-    coordgroup_t<bool> G (__FILE__, __LINE__);
+    rendezvous_t<bool> rv  (__FILE__, __LINE__);
     lock_t::waiter_t *w;
     bool ok;
     timecb_t *tcb;
   }
-  tcb = delaycb (s, ms, mkevent (G,false));
-  w = acquire (m, mkevent (G,true) );
-  cwait (G, ok);
+  tcb = delaycb (s, ms, mkevent (rv,false));
+  w = acquire (m, mkevent (rv,true) );
+  cwait (rv, ok);
   if (!ok) cancel (w);
   else timecb_remove (tcb);
-  SIGNAL (cb, ok);
+  TRIGGER (cb, ok);
 }

@@ -11,7 +11,7 @@ struct state_t {
 
   str host;
   int port;
-  coordgroup_t<int> window;
+  rendezvous_t<int> window;
   vec<int> res;
   vec<clnt_stat> errs;
   ptr<axprt_stream> x;
@@ -61,7 +61,7 @@ state_t::launch (cbb cv)
 
     delaycb (10, 0, wrap (foofoo, mkevent (window, -1, xx)));
   }
-  cv->signal (ret);
+  cv->trigger (ret);
 }
 
 tamed void 
@@ -95,7 +95,7 @@ state_t::relaunch (cbb cv)
     }
   }
   warn << "All done...\n";
-  cv->signal (!err_occurred);
+  cv->trigger (!err_occurred);
 }
 
 state_t *s;

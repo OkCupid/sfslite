@@ -11,7 +11,7 @@ struct state_t {
 
   str host;
   int port;
-  coordgroup_t<int> window;
+  rendezvous_t<int> window;
   vec<int> res;
   vec<clnt_stat> errs;
   ptr<axprt_stream> x;
@@ -53,7 +53,7 @@ state_t::launch (cbb cv)
       cli->call (EX_RANDOM, NULL, &res[i], mkevent(window,i,errs[i]) );
     }
   }
-  cv->signal (ret);
+  TRIGGER(cv,ret);
 }
 
 tamed void 
@@ -86,7 +86,7 @@ state_t::relaunch (cbb cv)
     }
   }
   warn << "All done...\n";
-  cv->signal (!err_occurred);
+  TRIGGER(cv, !err_occurred);
 }
 
 tamed static 

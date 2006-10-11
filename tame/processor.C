@@ -767,7 +767,7 @@ tame_fn_t::output_vars (outputter_t *o, int ln)
     << "  if (!" << closure_generic ().name() << ") {\n"
     ;
 
-  b << "    if (tame_check_leaks ()) start_join_group_collection ();\n"
+  b << "    if (tame_check_leaks ()) start_rendezvous_collection ();\n"
     << "    " << CLOSURE_RFCNT << " = New refcounted<"
     << _closure.type().type_without_pointer() << "> (";
 
@@ -782,7 +782,7 @@ tame_fn_t::output_vars (outputter_t *o, int ln)
 
   b << ");\n"
     << "    if (tame_check_leaks ()) " 
-    << CLOSURE_RFCNT << "->collect_join_groups ();\n"
+    << CLOSURE_RFCNT << "->collect_rendezvous ();\n"
     << "    " << TAME_CLOSURE_NAME << " = " << CLOSURE_RFCNT << ";\n"
     << "    " << CLOSURE_GENERIC << " = " << CLOSURE_RFCNT << ";\n";
 
@@ -973,7 +973,7 @@ tame_wait_t::output (outputter_t *o)
   my_strbuf_t b;
   b.mycat (_fn->label (_id)) << ":\n";
   b << "do {\n"
-    << "  if (!" << jgn << ".next_var (";
+    << "  if (!" << jgn << ".next_trigger (";
   for (size_t i = 0; i < n_args (); i++) {
     if (i > 0) b << ", ";
     b << "" << arg (i).name () << "";

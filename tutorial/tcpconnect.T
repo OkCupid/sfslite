@@ -39,7 +39,7 @@ connect_to_in_addr (in_addr a, int port, cbi cv)
     socklen_t sn;
     int err;
     int fd (-1);
-    coordgroup_t<bool> cg;
+    rendezvous_t<bool> cg;
     bool completed;
     ptr<canceller_t> ret (New refcounted<canceller_t> ());
   }
@@ -75,7 +75,7 @@ connect_to_in_addr (in_addr a, int port, cbi cv)
 	}
 	ret->toolate ();
       }
-      cg.remove_var ();
+      cg.remove_join ();
     } else {
       fd = -errno;
     }
@@ -83,7 +83,7 @@ connect_to_in_addr (in_addr a, int port, cbi cv)
 
   // calls (*callercv)(fd); also enforces that this
   // callback is called exactly once.
-  cv->signal (fd);
+  TRIGGER(cv,fd);
 }
 
 /**
@@ -109,7 +109,7 @@ my_tcpconnect (str hostname, u_int16_t port, cbi cv,
     int fd (-1);
     ptr<canceller_t> canceller (New refcounted<canceller_t> ());
     ptr<canceller_t> cancel_connect;
-    coordgroup_t<bool> cg (__FILE__, __LINE__);
+    rendezvous_t<bool> cg (__FILE__, __LINE__);
     bool completed, dummy;
   }
   DEFAULT_RETURN { return canceller; }
@@ -124,7 +124,7 @@ my_tcpconnect (str hostname, u_int16_t port, cbi cv,
     warn << "DNS lookup cancelled!\n";
     dnsreq_cancel (dnsp);
     cg.remove_join ();
-    cv->signal (fd);
+    TRIGGER(cv, fd);
   } else {
     // if we keep going, note that the canceller is still outstanding,
     // and might still cancel us.
@@ -133,9 +133,9 @@ my_tcpconnect (str hostname, u_int16_t port, cbi cv,
       canceller->toolate ();
       cg.remove_join ();
       if (dns_tmperr (err))
-	cv->signal (-EAGAIN);
+	TRIGGER(cv, -EAGAIN);
       else
-	cv->signal (-ENOENT);
+	TRIGGER(cv, -ENOENT);
     } else {
       if (namep)
 	*namep = h->h_name;
@@ -149,10 +149,10 @@ my_tcpconnect (str hostname, u_int16_t port, cbi cv,
       } else {
 	cancel_connect->cancel ();
       }
-      cv->signal (fd); 
+      TRIGGER(cv,fd);
       
       // wait on the call to connect_to_inaddr if we've timed out.
-      if (cg.n_vars_left ()) 
+      if (cg.n_joins_left ()) 
 	cwait (cg, dummy);
     }
   }
@@ -168,7 +168,7 @@ run (str s, int p)
 {
   cvars {
     ptr<canceller_t> c;
-    coordgroup_t<bool> cg (__FILE__, __LINE__);
+    rendezvous_t<bool> cg (__FILE__, __LINE__);
     int fd;
     bool succeeded, dummy;
   }

@@ -43,7 +43,7 @@ public:
   void _run ()
   {
     _result = (*_action) ();
-    SIGNAL (_event);
+    TRIGGER (_event);
     delete this;
     tame_thread_exit ();
   }
@@ -73,7 +73,7 @@ public:
   void _run ()
   {
     (*_action) ();
-    SIGNAL (_event);
+    TRIGGER (_event);
     delete this;
     tame_thread_exit ();
   }

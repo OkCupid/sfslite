@@ -16,7 +16,7 @@ class autocb_t<> {
 public:
   autocb_t (callback<void>::ref cb) : _cb (cb), _cancelled (false) {}
 
-  ~autocb_t () { if (!_cancelled) SIGNAL (_cb); }
+  ~autocb_t () { if (!_cancelled) TRIGGER (_cb); }
   void cancel () { _cancelled = true; }
 private:
   callback<void>::ref _cb;
@@ -29,7 +29,7 @@ public:
   autocb_t (ref<callback<void, B1> > cb, B1 &b1) 
     : _cb (cb), _b1 (b1), _cancelled (false) {}
 
-  ~autocb_t () { if (!_cancelled) SIGNAL (_cb, _b1); }
+  ~autocb_t () { if (!_cancelled) TRIGGER (_cb, _b1); }
   void cancel () { _cancelled = true; }
 private:
   ref<callback<void, B1> > _cb;
@@ -43,7 +43,7 @@ public:
   autocb_t (ref<callback<void, B1, B2> > cb, B1 &b1, B2 &b2) 
     : _cb (cb), _b1 (b1), _b2 (b2), _cancelled (false) {}
 
-  ~autocb_t () { if (!_cancelled) SIGNAL (_cb, _b1, _b2); }
+  ~autocb_t () { if (!_cancelled) TRIGGER (_cb, _b1, _b2); }
   void cancel () { _cancelled = true; }
 private:
   ref<callback<void, B1, B2> > _cb;
@@ -58,7 +58,7 @@ public:
   autocb_t (ref<callback<void, B1, B2, B3> > cb, B1 &b1, B2 &b2, B3 &b3) 
     : _cb (cb), _b1 (b1), _b2 (b2), _b3 (b3), _cancelled (false) {}
 
-  ~autocb_t () { if (!_cancelled) SIGNAL (_cb, _b1, _b2, _b3); }
+  ~autocb_t () { if (!_cancelled) TRIGGER (_cb, _b1, _b2, _b3); }
   void cancel () { _cancelled = true; }
 private:
   ref<callback<void, B1, B2, B3> > _cb;

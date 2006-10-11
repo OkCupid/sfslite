@@ -44,7 +44,7 @@ try_rpc (str h, int port, cbb cb)
       ret = true;
     }
   }
-  cb->signal (true);
+  TRIGGER (cb, true);
 }
  
 static void finish (bool rc)

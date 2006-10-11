@@ -9,7 +9,7 @@ int tame_options;
 
 int tame_global_int;
 u_int64_t closure_serial_number;
-bool tame_collect_jg_flag;
+bool tame_collect_rv_flag;
 ptr<closure_t> __cls_g;
 ptr<closure_t> null_closure;
 
@@ -29,7 +29,7 @@ tame_init::start ()
 
   tame_options = 0;
   closure_serial_number = 0;
-  tame_collect_jg_flag = false;
+  tame_collect_rv_flag = false;
   __cls_g = NULL;
   null_closure = NULL;
 
@@ -102,7 +102,7 @@ closure_t::end_of_scope_checks (int line)
 
     // Mark all coordination groups automatically allocated in
     // VARS {..} as semi-deallocated.
-    semi_deallocate_coordgroups ();
+    semi_deallocate_rendezvous ();
 
     // After everything unwinds, we can check that everything has
     // been deallocated.
@@ -112,18 +112,18 @@ closure_t::end_of_scope_checks (int line)
 }
 
 void
-closure_t::associate_join_group (mortal_ref_t mr, const void *jgwp)
+closure_t::associate_rendezvous (mortal_ref_t mr, const void *jgwp)
 {
   if (is_onstack (jgwp)) {
-    _join_groups.push_back (mr);
+    _rendezvous.push_back (mr);
   }
 }
 
 void
-closure_t::semi_deallocate_coordgroups ()
+closure_t::semi_deallocate_rendezvous ()
 {
-  for (size_t i = 0; i < _join_groups.size (); i++) {
-    _join_groups[i].mark_dead ();
+  for (size_t i = 0; i < _rendezvous.size (); i++) {
+    _rendezvous[i].mark_dead ();
   }
 }
 
@@ -165,38 +165,38 @@ mortal_ref_t::mark_dead ()
 // Mechanism for collecting all allocated join groups, and associating
 // them with a closure that's just being allocated
 
-struct collected_join_group_t {
-  collected_join_group_t (mortal_ref_t m, const void *p) 
+struct collected_rendezvous_t {
+  collected_rendezvous_t (mortal_ref_t m, const void *p) 
     : _mref (m), _void_p (p) {}
   mortal_ref_t _mref;
   const void  *_void_p;
 };
 
-vec<collected_join_group_t> tame_collect_jg_vec;
+vec<collected_rendezvous_t> tame_collect_rv_vec;
 
 void
-start_join_group_collection ()
+start_rendezvous_collection ()
 {
-  tame_collect_jg_flag = true;
-  tame_collect_jg_vec.clear ();
+  tame_collect_rv_flag = true;
+  tame_collect_rv_vec.clear ();
 }
 
 void
-collect_join_group (mortal_ref_t r, void *p)
+collect_rendezvous (mortal_ref_t r, void *p)
 {
-  if (tame_collect_jg_flag) 
-    tame_collect_jg_vec.push_back (collected_join_group_t (r, p)); 
+  if (tame_collect_rv_flag) 
+    tame_collect_rv_vec.push_back (collected_rendezvous_t (r, p)); 
 }
 
 void
-closure_t::collect_join_groups ()
+closure_t::collect_rendezvous ()
 {
-  for (u_int i = 0; i < tame_collect_jg_vec.size (); i++) {
-    const collected_join_group_t &jg = tame_collect_jg_vec[i];
-    associate_join_group (jg._mref, jg._void_p);
+  for (u_int i = 0; i < tame_collect_rv_vec.size (); i++) {
+    const collected_rendezvous_t &rv = tame_collect_rv_vec[i];
+    associate_rendezvous (rv._mref, rv._void_p);
   }
-  tame_collect_jg_flag = false;
-  tame_collect_jg_vec.clear ();
+  tame_collect_rv_flag = false;
+  tame_collect_rv_vec.clear ();
 }
 
 //
@@ -220,7 +220,7 @@ closure_t::block_dec_count (const char *loc)
 {
   bool ret = false;
   if (_block._count <= 0) {
-    tame_error (loc, "too many signals for BLOCK environment.");
+    tame_error (loc, "too many trigger for wait environment.");
   } else if (--_block._count == 0) {
     ret = true;
   }
@@ -277,7 +277,7 @@ reenterer_t::~reenterer_t ()
 }
 
 stack_reenter_t::stack_reenter_t (ptr<must_deallocate_t> snt,
-				  const char *l, coordgroup_t<> jg)
+				  const char *l, rendezvous_t<> jg)
   : reenterer_t (snt, l), _joiner (jg.make_joiner (l, NULL)) {}
 
 stack_reenter_t::~stack_reenter_t () {}

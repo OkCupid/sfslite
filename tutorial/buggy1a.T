@@ -40,7 +40,7 @@ void buggy1a (cbb cv)
     delaycb (1, 0, mkevent()); 
     hog->call_me (mkevent());
   }
-  cv->signal (true);
+  cv->trigger (true);
   cwait { delaycb (1, 0, mkevent()); }
 
   if (fix_bug)

@@ -60,7 +60,7 @@ remote_host_t::dostuff_private (int port, cbb cv)
     vec<clnt_stat> errs;
     int n_tot (40), window_sz (5), i;
     bool err_occurred (false);
-    coordgroup_t<int> window;
+    rendezvous_t<int> window;
     int return_id;
   }
 
@@ -86,7 +86,7 @@ remote_host_t::dostuff_private (int port, cbb cv)
     }
 
     // a join is needed for every call that returns
-    while (window.n_signals_left ()) {
+    while (window.n_triggers_left()) {
 
       // Block until a call has returned; when it has, get
       // the index variable associated with the call, and assign
@@ -109,7 +109,7 @@ remote_host_t::dostuff_private (int port, cbb cv)
     }
   }
   warn << "All done...\n";
-  cv->signal (!err_occurred);
+  TRIGGER (cv, !err_occurred);
 }
 
 static void finish (bool rc)

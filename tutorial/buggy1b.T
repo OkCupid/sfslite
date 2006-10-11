@@ -30,37 +30,37 @@ static void finish (bool rc)
 }
 
 tamed static void 
-part1 (cb_hog_t *hog, coordgroup_t<> *JG, cbv cb)
+part1 (cb_hog_t *hog, rendezvous_t<> *rv, cbv cb)
 {
-  delaycb (1, 0, mkevent (*JG));
-  hog->call_me (mkevent (*JG));
-  cb->signal ();
+  delaycb (1, 0, mkevent (*rv));
+  hog->call_me (mkevent (*rv));
+  cb->trigger ();
 }
 
-tamed static void part2 (coordgroup_t<> *JG, cbv cb)
+tamed static void part2 (rendezvous_t<> *rv, cbv cb)
 {
   cvars { int i; }
   for (i = 0; i < 2; i++) {
-    cwait (*JG);
+    cwait (*rv);
   }
-  cb->signal ();
+  cb->trigger ();
 }
 
 
 tamed static void buggy1b (cbb cb)
 {
   cvars { 
-    coordgroup_t<> JG; 
+    rendezvous_t<> rv; 
     cb_hog_t *hog (New cb_hog_t ());
   }
 
-  cwait { part1 (hog, &JG, mkevent()); }
-  cwait { part2 (&JG, mkevent()); }
+  cwait { part1 (hog, &rv, mkevent()); }
+  cwait { part2 (&rv, mkevent()); }
 
   if (fix_bug)
     delete hog;
 
-  cb->signal (true);
+  cb->trigger (true);
 }
 
 static void usage ()

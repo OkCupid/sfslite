@@ -7,13 +7,13 @@
 
 static void fn1 (cbv cb)
 {
-  cb->signal ();
-  cb->signal ();
+  cb->trigger ();
+  cb->trigger ();
 }
 
 static void fn2 (cbv cb)
 {
-  cb->signal ();
+  cb->trigger ();
   (*cb) ();
 }
 

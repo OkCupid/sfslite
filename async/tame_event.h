@@ -92,8 +92,8 @@ private:
 typedef ptr<ref_flag_t> ref_flag_ptr_t;
 
 // In strict mode, panic on a second signal.
-extern bool coordvar_strict_mode;
+extern bool callback_strict_mode;
 
-void coordvar_second_signal (const char *file, const char *line);
+void callback_second_trigger (const char *file, const char *line);
 
 #endif /* _ASYNC_TAME_EVENT_H_ */

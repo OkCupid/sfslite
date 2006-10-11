@@ -5,24 +5,24 @@
 #include "tame_pipeline.h"
 
 pipeliner_t::pipeliner_t (size_t w) : 
-  _wsz (w), _cg (__FILE__, __LINE__), _cancelled (false)
+  _wsz (w), _rv (__FILE__, __LINE__), _cancelled (false)
 { assert (_wsz > 0); }
 
 tamed void
 pipeliner_t::wait_n (size_t n, cbv done)
 {
-  while (_cg.n_signals_left () > n) {
-    cwait (_cg);
+  while (_rv.n_triggers_left () > n) {
+    cwait (_rv);
   }
-  SIGNAL (done);
+  TRIGGER (done);
 }
 
 tamed void
 pipeliner_t::launch (size_t i, cbv done)
 {
   cwait { wait_n (_wsz - 1, mkevent () ); }
-  pipeline_op (i, mkevent (_cg) );
-  SIGNAL (done);
+  pipeline_op (i, mkevent (_rv) );
+  TRIGGER (done);
 }
 
 tamed void
@@ -35,7 +35,7 @@ pipeliner_t::run (cbv done)
     cwait { launch (i, mkevent () ); }
   }
   cwait { wait_n (0, mkevent () ); }
-  SIGNAL (done);
+  TRIGGER (done);
 }
 
 class pipeliner_cb_t : public pipeliner_t {
@@ -61,7 +61,7 @@ pipeliner_cb_t::pipeline_op (size_t i, cbv cb)
   }
   cwait { (*_op) (i, mkevent (ok), NULL); }
   if (!ok) cancel ();
-  SIGNAL (cb);
+  TRIGGER (cb);
 }
 
 tamed void
@@ -71,5 +71,5 @@ do_pipeline (size_t w, size_t n, pipeline_op_t op, cbv done)
     pipeliner_cb_t ppl (w, n, op);
   }
   cwait { ppl.run (mkevent ()); }
-  SIGNAL (done);
+  TRIGGER (done);
 }

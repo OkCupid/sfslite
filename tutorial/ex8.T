@@ -21,7 +21,7 @@ void get_web_page (str host, int port, strbuf *resp, cbb done)
   cvars {
     int fd, rc;
     strbuf req;
-    coordgroup_t<> read_cg, write_cg;
+    rendezvous_t<> read_rv, write_rv;
   }
 
   //
@@ -53,10 +53,10 @@ void get_web_page (str host, int port, strbuf *resp, cbb done)
   // times.  That is, fdcb will call us back every time the socket
   // 'fd' is available for writing.
   //
-  fdcb (fd, selwrite, mkevent (write_cg));
+  fdcb (fd, selwrite, mkevent (write_rv));
   
   while (true) {
-    cwait (write_cg);
+    cwait (write_rv);
 
     //
     // Use this syntax to output the results of the string buffer
@@ -84,7 +84,7 @@ void get_web_page (str host, int port, strbuf *resp, cbb done)
     // variable for this coordination group.
     //
     if (req.tosuio ()->resid ()) {
-      write_cg.add_var ();
+      write_rv.add_join ();
     }
     
     // 
@@ -100,23 +100,23 @@ void get_web_page (str host, int port, strbuf *resp, cbb done)
   // 
   // As before, but now we need to schedule a callback for reading
   //
-  fdcb (fd, selread, mkevent (read_cg));
+  fdcb (fd, selread, mkevent (read_rv));
   
   //
   // The details of the reading loop are almost identical to the
   // writing loop above.
   //
   while (true) {
-    cwait (read_cg);
+    cwait (read_rv);
     if ((rc = resp->tosuio ()->input (fd)) < 0 && errno != EAGAIN) {
       warn << "read failed...\n";
       fdcb (fd, selread, NULL);
       close (fd);
-      (*done) (false);
+      TRIGGER (done, false);
       return;
     }
     if (rc != 0) {
-      read_cg.add_var ();
+      read_rv.add_join ();
     } else {
       fdcb (fd, selread, NULL);
       break;
@@ -128,7 +128,7 @@ void get_web_page (str host, int port, strbuf *resp, cbb done)
   // 
   // success!
   //
-  (*done) (true);
+  TRIGGER (done, true);
 }
 
 /**
@@ -145,7 +145,7 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
 {
   cvars {
     u_int i;
-    coordgroup_t<u_int, ptr<bool> > CG;
+    rendezvous_t<u_int, ptr<bool> > rv;
     bool got_one (false);
     vec<strbuf> responses;
     ptr<bool> res;
@@ -155,11 +155,11 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
   
   for (i = 0; i < hosts.size (); i++) {
     res = New refcounted<bool> ();
-    get_web_page (hosts[i], port, &responses[i], mkevent (CG,i,res, *res));
+    get_web_page (hosts[i], port, &responses[i], mkevent (rv,i,res, *res));
   }
   
-  while (CG.need_wait ()) {
-    cwait (CG, i, res);
+  while (rv.need_wait ()) {
+    cwait (rv, i, res);
     warn << hosts[i]  << ":" << port << ": ";
     if (*res) {
       warnx << "connection succeeded";

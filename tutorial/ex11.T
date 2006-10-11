@@ -14,10 +14,10 @@ struct rpc_t {
 };
 
 tamed static void 
-launch_call (coordgroup_t<ptr<rpc_t> > *jg, u_int i, ptr<aclnt> cli)
+launch_call (rendezvous_t<ptr<rpc_t> > *rv, u_int i, ptr<aclnt> cli)
 {
   ptr<rpc_t> r = New refcounted<rpc_t> (i);
-  cli->call (EX_RANDOM2, &r->input, &r->output, mkevent(*jg, r, r->err));
+  cli->call (EX_RANDOM2, &r->input, &r->output, mkevent(*rv, r, r->err));
 }
 
 tamed static 
@@ -30,7 +30,7 @@ bool dostuff (str h, int port, cbb cb)
     ptr<aclnt> cli;
     int n_tot (100), window_sz (20), i;
     bool err_occurred (false);
-    coordgroup_t<ptr<rpc_t> > window;
+    rendezvous_t<ptr<rpc_t> > window;
     bool ret (true);
     vec<ptr<rpc_t> > bad_rpcs;
     ptr<rpc_t> return_rpc;
@@ -74,7 +74,7 @@ bool dostuff (str h, int port, cbb cb)
     warn << "All done...\n";
     warn << bad_rpcs.size () << " bad RPCs, total\n";
   }
-  cb->signal (!err_occurred);
+  TRIGGER(cb, !err_occurred);
 }
 
 static void finish (bool rc)

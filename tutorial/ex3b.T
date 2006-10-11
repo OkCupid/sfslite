@@ -16,7 +16,7 @@ void try_rpc (str h, int port, cbb cb)
     ptr<aclnt> cli;
     vec<int> rv;
     vec<clnt_stat> ev;
-    coordgroup_t<> CG;
+    rendezvous_t<> rzv;
   }
   
   cwait { tcpconnect (h, port, mkevent(fd)); }
@@ -32,10 +32,10 @@ void try_rpc (str h, int port, cbb cb)
  
     
     for (i = 0; i < n; i++) {
-      cli->call (EX_RANDOM, NULL, &rv[i], mkevent(CG,ev[i]) );
+      cli->call (EX_RANDOM, NULL, &rv[i], mkevent(rzv,ev[i]) );
     }
-    while (CG.n_signals_left ()) {
-      cwait (CG);
+    while (rzv.n_triggers_left ()) {
+      cwait (rzv);
     }
 
     ret = true;
@@ -49,7 +49,7 @@ void try_rpc (str h, int port, cbb cb)
       }
     }
   }
-  cb->signal (ret);
+  TRIGGER (cb, ret);
 }
  
 static void finish (bool rc)

@@ -18,7 +18,7 @@ bool dostuff (const str &h, int port, cbb cb)
     vec<clnt_stat> errs;
     int n_tot (40), window_sz (5), i;
     bool err_occurred (false);
-    coordgroup_t<int> rpcback;
+    rendezvous_t<int> rpcback;
     bool ret (true);
     int return_id;
     int fds[2];
@@ -82,7 +82,7 @@ bool dostuff (const str &h, int port, cbb cb)
     }
     warn << "All done...\n";
   }
-  cb->signal (!err_occurred);
+  TRIGGER (cb, !err_occurred);
   return true;
 }
 

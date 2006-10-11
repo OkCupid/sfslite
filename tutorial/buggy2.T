@@ -20,7 +20,7 @@ void leaky_callee (cbv cb)
   holding_area.push_back (cb);
   cwait { delaycb (1, 0, mkevent ()); }
   if (fix_bug)
-    cb->signal ();
+    cb->trigger ();
   else
     (*cb) ();
 }
@@ -31,33 +31,33 @@ void block_with_cb_hog (cbv cb)
 {
   warn << "block_with_cb_hog...\n";
   cwait { leaky_callee (mkevent ()); }
-  cb->signal ();
+  cb->trigger ();
 }
 
 tamed static
 void nonblock_with_cb_hog (cbv cb)
 {
   cvars {
-    coordgroup_t<> G (__FILE__, __LINE__);
+    rendezvous_t<> rv (__FILE__, __LINE__);
   }
   warn << "nonblock_with_cb_hog...\n";
-  leaky_callee (mkevent (G));
-  cwait (G);
-  cb->signal ();
+  leaky_callee (mkevent (rv));
+  cwait (rv);
+  cb->trigger ();
 }
 
 tamed static
 void nonblock_with_unwaited_cvs (cbv cb)
 {
   cvars {
-    coordgroup_t<> G (__FILE__, __LINE__);
+    rendezvous_t<> rv (__FILE__, __LINE__);
   }
   warn << "nonblock_with_unwaited_cvs...\n";
-  delaycb (1, 0, mkevent (G) );
+  delaycb (1, 0, mkevent (rv) );
   if (fix_bug) {
-    cwait (G); 
+    cwait (rv); 
   }
-  cb->signal ();
+  cb->trigger ();
 }
 
 typedef void (* run_me_t) (cbv, ptr<closure_t>);

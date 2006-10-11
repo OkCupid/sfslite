@@ -20,23 +20,23 @@ connect (vec<str> hosts, int port, cbi done)
 {
   cvars {
     u_int i;
-    coordgroup_t<u_int, ptr<int> > CG;
+    rendezvous_t<u_int, ptr<int> > rv;
     bool got_one (false);
     ptr<int> fd;
   }
 
   for (i = 0; i < hosts.size (); i++) {
     fd = New refcounted<int> (-1);
-    tcpconnect (hosts[i], port, mkevent (CG,i,fd,*fd));
+    tcpconnect (hosts[i], port, mkevent (rv,i,fd,*fd));
   }
   
-  while (CG.need_join ()) {
-    cwait (CG, i, fd);
+  while (rv.need_join ()) {
+    cwait (rv, i, fd);
     warn << hosts[i]  << ":" << port << ": ";
     if (*fd >= 0) {
       warnx << "connection succeeded";
       if (!got_one) {
-	(*done) (*fd);
+	TRIGGER (done, *fd);
 	got_one = true;
       } else {
 	warnx << "... but too late!";
@@ -47,8 +47,9 @@ connect (vec<str> hosts, int port, cbi done)
       warnx << "connection failed\n";
     }
   }
-  if (!got_one)
-    (*done) (-1);
+  if (!got_one) {
+    TRIGGER (done, -1);
+  }
 }
 
 /**
@@ -66,7 +67,7 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
   cvars {
     int fd, rc;
     strbuf req, resp;
-    coordgroup_t<> read_cg, write_cg;
+    rendezvous_t<> read_rv, write_rv;
   }
 
   //
@@ -92,10 +93,10 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
   // times.  That is, fdcb will call us back every time the socket
   // 'fd' is available for writing.
   //
-  fdcb (fd, selwrite, mkevent (write_cg));
+  fdcb (fd, selwrite, mkevent (write_rv));
   
   while (true) {
-    cwait (write_cg);
+    cwait (write_rv);
 
     //
     // Use this syntax to output the results of the string buffer
@@ -122,7 +123,7 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
     // this join group.
     //
     if (req.tosuio ()->resid ()) {
-      write_cg.add_join ();
+      write_rv.add_join ();
     }
     
     // 
@@ -138,14 +139,14 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
   // 
   // As before, but now we need to schedule a callback for reading
   //
-  fdcb (fd, selread, mkevent (read_cg) ); 
+  fdcb (fd, selread, mkevent (read_rv) ); 
 
   //
   // The details of the reading loop are almost identical to the
   // writing loop above.
   //
   while (true) {
-    cwait (read_cg);
+    cwait (read_rv);
     if ((rc = resp.tosuio ()->input (fd)) < 0 && errno != EAGAIN) {
       warn << "read failed...\n";
       fdcb (fd, selread, NULL);
@@ -153,7 +154,7 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
       return;
     }
     if (rc != 0) {
-      read_cg.add_join ();
+      read_rv.add_join ();
     } else {
       fdcb (fd, selread, NULL);
       break;

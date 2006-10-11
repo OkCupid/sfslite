@@ -5,10 +5,10 @@
 #include "async.h"
 
 //-----------------------------------------------------------------------
-// Global flags for toggling coordvar behavior
+// Global flags for toggling callback/event behavior
 //
 
-bool coordvar_strict_mode;
+bool callback_strict_mode;
 
 //
 //-----------------------------------------------------------------------
@@ -50,18 +50,18 @@ ref_flag_t::alloc (const bool &b)
 //-----------------------------------------------------------------------
 
 void
-coordvar_second_signal (const char *file, const char *line)
+callback_second_trigger (const char *file, const char *line)
 {
-  warn << "signal after deallocation";
+  warn << "trigger after deallocation";
   if (file && line) {
-    warnx << " (on coordvar allocated from " << file << ":" << line << ")";
+    warnx << " (on callback allocated from " << file << ":" << line << ")";
   } else {
     warnx << " (no further information without debugging build)";
   }
   warnx << "\n";
 
-  if (coordvar_strict_mode) 
-    panic ("Aborting due to coordvar strict mode\n");
+  if (callback_strict_mode) 
+    panic ("Aborting due to callback strict mode\n");
 }
 
 int ref_flag_init::count;

@@ -21,7 +21,7 @@ protected:
   virtual bool keep_going (size_t i) const = 0;
 
   size_t _wsz;
-  coordgroup_t<> _cg;
+  rendezvous_t<> _rv;
   bool _cancelled;
 
 private:

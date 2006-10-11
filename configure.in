@@ -77,8 +77,8 @@ fi
 # XXX - next line seems to be required for some autoconf/-make/libtool versions
 test -z "$target" && target=NONE
 AC_DISABLE_SHARED
-dnl AC_PROG_LIBTOOL
-AM_PROG_LIBTOOL
+AC_PROG_LIBTOOL
+dnl AM_PROG_LIBTOOL
 AM_CONDITIONAL(STATIC, test "$enable_shared" != yes)
 
 AC_SUBST(MALLOCK)

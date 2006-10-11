@@ -61,7 +61,7 @@ server_t::ready_thread (worker_t *w)
   _ready.insert_head (w);
   if (_waiters.size ()) {
     cbv cb = _waiters.pop_front ();
-    cb->signal ();
+    cb->trigger ();
   }
 }
 
@@ -69,7 +69,7 @@ tamed void
 server_t::run (cbv cb)
 {
   cwait { _shutdown_cb = mkevent (); }
-  cb->signal ();
+  cb->trigger ();
 }
 
 tamed void
@@ -83,14 +83,14 @@ server_t::shutdown (cbv cb)
   for (i = 0; i < _workers.size (); i++) {
     worker_t *w = &_workers[i];
     w->_shutdown = true;
-    if (w->_ev) w->_ev->signal ();
+    if (w->_ev) w->_ev->trigger ();
   }
   while (_rv.n_out ()) {
     cwait (_rv, i);
     warn << "s> thread " << i << " exitted\n";
   }
   warn << "s> shutdown finished...\n";
-  cb->signal ();
+  cb->trigger ();
 }
 
 void
@@ -138,7 +138,7 @@ server_t::get_thread (callback<void, worker_t *>::ref cb)
   while (!_shutdown && !(w = _ready.first)) 
     cwait { _waiters.push_back (mkevent ()); }
   if (w) _ready.remove (w);
-  cb->signal (w);
+  cb->trigger (w);
 }
 
 tamed void
@@ -154,7 +154,7 @@ server_t::serve (int i, cbi cb)
       warn << "s> invoking shutdown_cb ...\n";
       cbv c = _shutdown_cb;
       _shutdown_cb = NULL;
-      c->signal ();
+      c->trigger ();
     }
   } else {
     cwait { get_thread (mkevent (w)); }
@@ -163,14 +163,14 @@ server_t::serve (int i, cbi cb)
 	r = New req_t (i, mkevent (res));
 	w->_req = r;
 	if (w->_ev) {
-	  w->_ev->signal ();
+	  w->_ev->trigger ();
 	}
       }
       delete r;
       ready_thread (w);
     }
   }
-  cb->signal (res);
+  cb->trigger (res);
 }
 
 tamed static void
@@ -186,7 +186,7 @@ run_server (server_t **sp, cbv cb)
   cwait { s->shutdown (mkevent ()); }
   warn << "m> server done shutting down ...\n";
   delete s;
-  cb->signal ();
+  cb->trigger ();
 }
 
 #define N_CALLS 30
@@ -209,9 +209,9 @@ run_client (server_t *s, cbv cb)
     cwait (rv, i);
     warn << "c> request " << i << " returned: " << res[i] << "\n";
   }
-  warn << "c> shutdown signal\n";
+  warn << "c> shutdown trigger\n";
   cwait { s->serve (0, mkevent (sdres)); }
-  cb->signal ();
+  cb->trigger ();
 }
 
 #undef N_CALLS
@@ -233,7 +233,7 @@ void main2 ()
 
 int main (int argc, char *argv[])
 {
-  coordvar_strict_mode = true;
+  callback_strict_mode = true;
   main2 ();
   amain ();
 }
