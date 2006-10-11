@@ -17,7 +17,8 @@ typedef enum { SFS_MODE = 0, IMPLICIT_MODE = 1, EXPLICIT_MODE = 2,
 	       SFS_NULL =6 ,TAME_NULL =7,
 	       BENCHMARK_SYSCALL = 8,
 	       THR_IMPL_MODE = 9, THR_EXPL_MODE = 10,
-	       TAME_NULL_THR = 11  } bmode_t;
+	       TAME_NULL_THR = 11,
+	       PTH_FORK = 12} bmode_t;
 
 int niter = 10000;
 int ntimes = 10;
@@ -67,7 +68,7 @@ public:
 	     m, sd, sd / m * 100, min);
 
     for (size_t s = 0; s < raw_results.size (); s++) {
-      //printf ("%lld\n", raw_results[s] );
+      printf ("%lld\n", raw_results[s] );
     }
   }
   vec<double> results;
@@ -246,6 +247,29 @@ nullthreadfn (void *in)
   tame_thread_exit ();
   return NULL;
 }
+
+static void benchmark_fork ()
+{
+  u_int64_t e, b, t;
+  pth_attr_t attr = pth_attr_new ();
+  pth_attr_set (attr, PTH_ATTR_STACK_SIZE, 0x10000);
+  pth_attr_set (attr, PTH_ATTR_JOINABLE, TRUE);
+  double runtime ;
+  t = 0;
+
+  REPORT({
+    for (int i = 0; i < niter; i++) {
+      b = corebench_get_time ();
+      pth_t thr = pth_spawn (attr, nullthreadfn, NULL);
+      e = corebench_get_time ();
+      so.raw_result (e - b);
+      t += (e-b);
+      pth_join (thr, NULL);
+    }
+    runtime = t / (double)niter;
+  });
+  pth_attr_destroy (attr);
+}
 #endif
 
 static void
@@ -421,8 +445,11 @@ int main (int argc, char *argv[])
 
   toggle_corebench (true);
 
-  while ((ch = getopt (argc, argv, "Nfwdcnbi:t:saIET")) != -1) {
+  while ((ch = getopt (argc, argv, "Nfwdcnbi:t:saIETF")) != -1) {
     switch (ch) {
+    case 'F':
+      mode = PTH_FORK;
+      break;
     case 'T':
       thr_test = true;
       break;
@@ -497,6 +524,17 @@ int main (int argc, char *argv[])
   sfs_set_clock (SFS_CLOCK_TIMER);
 
   switch (mode) {
+  case PTH_FORK:
+    warn << "Benchmarking fork....\n";
+
+#ifdef HAVE_PTH
+    benchmark_fork ();
+#else
+    warn << "Failed to benchmark ... no PTH support...\n";
+#endif
+
+    exit (0);
+    break;
   case BENCHMARK_SYSCALL:
     warn << "benchmarking syscall time...\n";
     benchmark_syscall ();

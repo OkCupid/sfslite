@@ -62,9 +62,11 @@
 #define   TAME_ERROR_SILENT      (1 << 0)
 #define   TAME_ERROR_FATAL       (1 << 1)
 #define   TAME_CHECK_LEAKS       (1 << 2)
+#define   TAME_OPTIMIZE          (1 << 3)
 
 extern int tame_options;
 inline bool tame_check_leaks () { return tame_options & TAME_CHECK_LEAKS ; }
+inline bool tame_optimized () { return tame_options & TAME_OPTIMIZE; }
 
 struct nil_t {};
 
@@ -651,8 +653,12 @@ public:
 
     // Need at least one return to the bottom event loop between
     // a call into the callback and a join.
-    join_cb (w);
-    //delaycb (0, 0, wrap (mkref (this), &joiner_t<T1,T2,T3,T4>::join_cb, w));
+
+    if (tame_optimized ()) {
+      join_cb (w);
+    } else {
+      delaycb (0, 0, wrap (mkref (this), &joiner_t<T1,T2,T3,T4>::join_cb, w));
+    }
   }
 
   const char *loc () const { return _loc; }

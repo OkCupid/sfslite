@@ -31,14 +31,13 @@
 #include <typeinfo>
 
 #include "litetime.h"
+#include "select.h"
 
 #define FD_SETSIZE_ROUND (sizeof (long))/* # Bytes to which to round fd_sets */
 int fd_set_bytes;		// Size in bytes of a [wide] fd_set
 int maxfd;
 bool amain_panic;
 static int nselfd;
-int sfs_core_select;
-int sfs_cb_ins;
 
 // initialize this in case we access tsnow before calling amain()
 timespec tsnow;
@@ -160,11 +159,9 @@ chldcb_check ()
 timecb_t *
 timecb (const timespec &ts, cbv cb)
 {
-  //warn ("insert into timecbs: %p\n", &timecbs);
-  sfs_cb_ins = 1;
+  sfs_add_new_cb ();
   timecb_t *to = New timecb_t (ts, cb);
   timecbs.insert (to);
-  // timecbs_altered = true;
   return to;
 }
 
@@ -246,7 +243,7 @@ fdcb (int fd, selop op, cbv::ptr cb)
   assert (fd < maxfd);
   fdcbs[op][fd] = cb;
   if (cb) {
-    sfs_cb_ins = 1;
+    sfs_add_new_cb ();
     if (fd >= nselfd)
       nselfd = fd + 1;
     FD_SET (fd, fdsp[op]);
@@ -261,22 +258,8 @@ fdcb_check (void)
   for (int i = 0; i < fdsn; i++)
     memcpy (fdspt[i], fdsp[i], fd_set_bytes);
 
-  /*
-  warn ("in select s=%ld; us=%ld; nselfd=%d; yield_cb=%p\n",
-	selwait.tv_sec, selwait.tv_usec, nselfd, (callback<void> *)yield_cb);
-  */
-  
-  /*
-  if (selwait.tv_sec == 86400 && yield_cb) {
-    //warn << "yielding .. not going into select loop....\n";
-    (*yield_cb) ();
-    //warn << "return from yield ? ?!?!?!? \n";
-    return;
-  } 
-  */
-  sfs_core_select = 1;
-  int n = select (nselfd, fdspt[0], fdspt[1], NULL, &selwait);
-  sfs_core_select = 0;
+  int n = SFS_SELECT (nselfd, fdspt[0], fdspt[1], NULL, &selwait);
+
   // warn << "select exit rc=" << n << "\n";
   if (n < 0 && errno != EINTR)
     panic ("select: %m\n");
@@ -320,7 +303,8 @@ cbv::ptr
 sigcb (int sig, cbv::ptr cb, int flags)
 {
   sigset_t set;
-  sfs_cb_ins = 1;
+
+  sfs_add_new_cb ();
   if (!sigemptyset (&set) && !sigaddset (&set, sig))
     sigprocmask (SIG_UNBLOCK, &set, NULL);
 

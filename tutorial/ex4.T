@@ -24,14 +24,22 @@ bool dostuff (const str &h, int port, cbb cb)
     int fds[2];
   }
 
+  int strib;
+
   fds[0] = 1;
   fds[1] = 2;
 
+  strib = 10;
+
   DEFAULT_RETURN { return ret; } 
+
 
   // Call tcpconnect, and block until it returns; when it does return,
   // assign the local variable 'fd' to the result.
   cwait { tcpconnect (h, port, mkevent(fd)); }
+
+  strib++;
+
 
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", h.cstr(), port);

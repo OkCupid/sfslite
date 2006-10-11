@@ -47,6 +47,9 @@ tame_init::start ()
     case 'L':
       tame_options |= TAME_CHECK_LEAKS;
       break;
+    case 'O':
+      tame_options |= TAME_OPTIMIZE;
+      break;
     }
   }
 }
