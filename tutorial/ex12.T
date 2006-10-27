@@ -22,12 +22,12 @@ tamed static void callee3 (cb3_t cv)
 
 tamed static void main_T (int argc, char **argv)
 {
-  cvars {
+  tvars {
     int i;
     bool b;
     str s;
   }
-  cwait { callee3 (mkevent(i,b,s)); }
+  twait { callee3 (mkevent(i,b,s)); }
   exit (0);
 }
 

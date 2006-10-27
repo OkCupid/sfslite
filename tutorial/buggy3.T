@@ -20,8 +20,8 @@ static void fn2 (cbv cb)
 tamed static void
 main_T ()
 {
-  cwait { fn1 (mkevent()); }
-  cwait { fn2 (mkevent()); }
+  twait { fn1 (mkevent()); }
+  twait { fn2 (mkevent()); }
   exit (0);
 }
 

@@ -25,7 +25,7 @@ static void finish (bool rc)
 tamed static void 
 buggy1c (cbb cv)
 {
-  cvars { 
+  tvars { 
     rendezvous_t<> rv (__FILE__, __LINE__); 
     int i;
   }
@@ -35,7 +35,7 @@ buggy1c (cbb cv)
 
 
   for (i = 0; i < (fix_bug ? 2 : 1); i++) {
-    cwait (rv);
+    twait (rv);
     if (i == 0) 
       cv->trigger (true);
   }

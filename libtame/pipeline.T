@@ -12,7 +12,7 @@ tamed void
 pipeliner_t::wait_n (size_t n, cbv done)
 {
   while (_rv.n_triggers_left () > n) {
-    cwait (_rv);
+    twait (_rv);
   }
   TRIGGER (done);
 }
@@ -20,7 +20,7 @@ pipeliner_t::wait_n (size_t n, cbv done)
 tamed void
 pipeliner_t::launch (size_t i, cbv done)
 {
-  cwait { wait_n (_wsz - 1, mkevent () ); }
+  twait { wait_n (_wsz - 1, mkevent () ); }
   pipeline_op (i, mkevent (_rv) );
   TRIGGER (done);
 }
@@ -28,13 +28,13 @@ pipeliner_t::launch (size_t i, cbv done)
 tamed void
 pipeliner_t::run (cbv done)
 {
-  cvars {
+  tvars {
     size_t i;
   }
   for (i = 0; keep_going (i) && !_cancelled; i++) {
-    cwait { launch (i, mkevent () ); }
+    twait { launch (i, mkevent () ); }
   }
-  cwait { wait_n (0, mkevent () ); }
+  twait { wait_n (0, mkevent () ); }
   TRIGGER (done);
 }
 
@@ -56,10 +56,10 @@ private:
 tamed void
 pipeliner_cb_t::pipeline_op (size_t i, cbv cb)
 {
-  cvars {
+  tvars {
     bool ok;
   }
-  cwait { (*_op) (i, mkevent (ok), NULL); }
+  twait { (*_op) (i, mkevent (ok), NULL); }
   if (!ok) cancel ();
   TRIGGER (cb);
 }
@@ -67,9 +67,9 @@ pipeliner_cb_t::pipeline_op (size_t i, cbv cb)
 tamed void
 do_pipeline (size_t w, size_t n, pipeline_op_t op, cbv done)
 {
-  cvars {
+  tvars {
     pipeliner_cb_t ppl (w, n, op);
   }
-  cwait { ppl.run (mkevent ()); }
+  twait { ppl.run (mkevent ()); }
   TRIGGER (done);
 }

@@ -24,7 +24,7 @@ tamed static
 bool dostuff (str h, int port, cbb cb)
 {
   // declare all of your "stack" variables here
-  cvars {
+  tvars {
     int fd;
     ptr<axprt_stream> x;
     ptr<aclnt> cli;
@@ -40,7 +40,7 @@ bool dostuff (str h, int port, cbb cb)
 
   // Call tcpconnect, and block until it returns; when it does return,
   // assign the local variable 'fd' to the result.
-  cwait { tcpconnect (h, port, mkevent(fd)); }
+  twait { tcpconnect (h, port, mkevent(fd)); }
 
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", h.cstr(), port);
@@ -59,7 +59,7 @@ bool dostuff (str h, int port, cbb cb)
       // Block until a call has returned; when it has, get
       // the index variable associated with the call, and assign
       // it to 'return_id' for the scope of the JOIN block.
-      cwait (window, return_rpc);
+      twait (window, return_rpc);
       if (return_rpc->err) {
 	warn << "RPC error " << return_rpc->err 
 	     << " occurred on input " << return_rpc->input << "\n";

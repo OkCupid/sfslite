@@ -9,7 +9,7 @@
 tamed static 
 void dostuff (vec<str> hosts, int port, cbi done)
 {
-  cvars {
+  tvars {
     ptr<int> fd;
     u_int i;
     rendezvous_t<u_int, ptr<int> > rv (__FILE__, __LINE__);
@@ -21,7 +21,7 @@ void dostuff (vec<str> hosts, int port, cbi done)
   }
   
   while (rv.need_join () && fd < 0) {
-    cwait (rv, i, fd);
+    twait (rv, i, fd);
     warn << hosts[i]  << ":" << port << ": ";
     if (*fd > 0) {
       warnx << "connection succeeded\n";

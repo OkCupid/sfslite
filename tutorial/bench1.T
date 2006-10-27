@@ -191,11 +191,11 @@ static void bar ()
 }
 
 tamed static void
-bench1_cwait_implicit (int niter, cbv done)
+bench1_twait_implicit (int niter, cbv done)
 {
-  cvars { int i; }
+  tvars { int i; }
   for (i = 0; i < niter; i++) {
-    cwait { delaycb (0, 0, mkevent()); }
+    twait { delaycb (0, 0, mkevent()); }
   }
   (*done) ();
 }
@@ -205,11 +205,11 @@ static void noop () {}
 #endif
 
 static void
-bench1_cwait_thr_implicit (int niter)
+bench1_twait_thr_implicit (int niter)
 {
 #ifdef HAVE_PTH
   for (int i = 0; i < niter; i++) {
-    cwait { cfork (wrap (noop)); }
+    twait { cfork (wrap (noop)); }
   }
 #else
   panic ("Cannot run testcase without PTH support");
@@ -218,7 +218,7 @@ bench1_cwait_thr_implicit (int niter)
 }
 
 static void
-bench1_cwait_thr_explicit (int niter)
+bench1_twait_thr_explicit (int niter)
 {
 #ifdef HAVE_PTH
   rendezvous_t<> r;
@@ -236,7 +236,7 @@ bench1_cwait_thr_explicit (int niter)
 tamed static void
 bench1_nulltame ()
 {
-  cvars { int i (0); }
+  tvars { int i (0); }
   i++;
 }
 
@@ -343,15 +343,15 @@ static void bench1_null (bool alloc)
 }
 
 tamed static void
-bench1_cwait_explicit (int niter, cbv done)
+bench1_twait_explicit (int niter, cbv done)
 {
-  cvars {
+  tvars {
     int i ;
     rendezvous_t<> G;
   }
   for (i = 0; i < niter; i++) {
     delaycb (0, 0, mkevent (G) );
-    cwait (G);
+    twait (G);
   }
   (*done) ();
 }
@@ -377,36 +377,36 @@ bench1_sfs (int niter, cbv done)
 tamed static void
 harness ()
 {
-  cvars {
+  tvars {
     int i (0), j (0);
     u_int64_t start, stop, d, tot (0);
     statobj_t so;
   }
   // make sure we're being called from the select loop...
-  cwait { delaycb (0, 0, mkevent ()); }
+  twait { delaycb (0, 0, mkevent ()); }
 
   for (j = 0; j < 2; j++) {
     for (i = 0; i < (j == 0 ? 1 : ntimes); i++) {
       start = corebench_get_time ();
       switch (mode) {
       case THR_IMPL_MODE:
-	cwait { cfork (wrap (bench1_cwait_thr_implicit, niter)); }
+	twait { cfork (wrap (bench1_twait_thr_implicit, niter)); }
 	break;
       case THR_EXPL_MODE:
-	cwait { cfork (wrap (bench1_cwait_thr_explicit, niter)); }
+	twait { cfork (wrap (bench1_twait_thr_explicit, niter)); }
 	break;
       default:
 	{
-	  cwait { 
+	  twait { 
 	    switch (mode) {
 	    case SFS_MODE:
 	      bench1_sfs (niter, mkevent());
 	      break;
 	    case IMPLICIT_MODE:
-	      bench1_cwait_implicit (niter, mkevent());
+	      bench1_twait_implicit (niter, mkevent());
 	      break;
 	    case EXPLICIT_MODE:
-	      bench1_cwait_explicit (niter, mkevent());
+	      bench1_twait_explicit (niter, mkevent());
 	      break;
 	    default:
 	      panic ("unknown mode");
@@ -424,7 +424,7 @@ harness ()
       
       STOP_ACHECK_TIMER ();
       toggle_corebench (false);
-      cwait { delaycb (0, 1000, mkevent ()); }
+      twait { delaycb (0, 1000, mkevent ()); }
       toggle_corebench (true);
     }
   }

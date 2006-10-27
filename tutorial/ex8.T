@@ -18,7 +18,7 @@
 tamed static 
 void get_web_page (str host, int port, strbuf *resp, cbb done)
 {
-  cvars {
+  tvars {
     int fd, rc;
     strbuf req;
     rendezvous_t<> read_rv, write_rv;
@@ -27,7 +27,7 @@ void get_web_page (str host, int port, strbuf *resp, cbb done)
   //
   // get the fastest connection, and dump the result into 'fd'
   //
-  cwait { tcpconnect (host, port, mkevent (fd)); }
+  twait { tcpconnect (host, port, mkevent (fd)); }
   if (fd < 0) {
     warn << host << ":" << port << ": connection failed\n";
     (*done) (false);
@@ -56,7 +56,7 @@ void get_web_page (str host, int port, strbuf *resp, cbb done)
   fdcb (fd, selwrite, mkevent (write_rv));
   
   while (true) {
-    cwait (write_rv);
+    twait (write_rv);
 
     //
     // Use this syntax to output the results of the string buffer
@@ -107,7 +107,7 @@ void get_web_page (str host, int port, strbuf *resp, cbb done)
   // writing loop above.
   //
   while (true) {
-    cwait (read_rv);
+    twait (read_rv);
     if ((rc = resp->tosuio ()->input (fd)) < 0 && errno != EAGAIN) {
       warn << "read failed...\n";
       fdcb (fd, selread, NULL);
@@ -143,7 +143,7 @@ void get_web_page (str host, int port, strbuf *resp, cbb done)
 tamed static 
 void get_fastest_web_page (vec<str> hosts, int port, cbb done)
 {
-  cvars {
+  tvars {
     u_int i;
     rendezvous_t<u_int, ptr<bool> > rv;
     bool got_one (false);
@@ -159,7 +159,7 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
   }
   
   while (rv.need_wait ()) {
-    cwait (rv, i, res);
+    twait (rv, i, res);
     warn << hosts[i]  << ":" << port << ": ";
     if (*res) {
       warnx << "connection succeeded";

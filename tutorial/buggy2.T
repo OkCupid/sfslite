@@ -18,7 +18,7 @@ tamed static
 void leaky_callee (cbv cb)
 {
   holding_area.push_back (cb);
-  cwait { delaycb (1, 0, mkevent ()); }
+  twait { delaycb (1, 0, mkevent ()); }
   if (fix_bug)
     cb->trigger ();
   else
@@ -30,32 +30,32 @@ tamed static
 void block_with_cb_hog (cbv cb)
 {
   warn << "block_with_cb_hog...\n";
-  cwait { leaky_callee (mkevent ()); }
+  twait { leaky_callee (mkevent ()); }
   cb->trigger ();
 }
 
 tamed static
 void nonblock_with_cb_hog (cbv cb)
 {
-  cvars {
+  tvars {
     rendezvous_t<> rv (__FILE__, __LINE__);
   }
   warn << "nonblock_with_cb_hog...\n";
   leaky_callee (mkevent (rv));
-  cwait (rv);
+  twait (rv);
   cb->trigger ();
 }
 
 tamed static
 void nonblock_with_unwaited_cvs (cbv cb)
 {
-  cvars {
+  tvars {
     rendezvous_t<> rv (__FILE__, __LINE__);
   }
   warn << "nonblock_with_unwaited_cvs...\n";
   delaycb (1, 0, mkevent (rv) );
   if (fix_bug) {
-    cwait (rv); 
+    twait (rv); 
   }
   cb->trigger ();
 }
@@ -65,7 +65,7 @@ typedef void (* run_me_t) (cbv, ptr<closure_t>);
 tamed static 
 void main_T ()
 {
-  cvars { 
+  tvars { 
     run_me_t *p (NULL); 
   }
   static run_me_t fns[] = { block_with_cb_hog,
@@ -74,8 +74,8 @@ void main_T ()
 			    NULL };
 
   for ( p = fns; *p; p++) {
-    cwait { (*p) ( mkevent (), NULL ); }
-    cwait { delaycb (2, 0, mkevent () ); }
+    twait { (*p) ( mkevent (), NULL ); }
+    twait { delaycb (2, 0, mkevent () ); }
   }
   warn << "delaying for 2 seconds, then exiting..\n";
   delaycb (2, 0, wrap (exit, 0));

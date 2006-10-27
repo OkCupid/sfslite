@@ -13,7 +13,7 @@ bool fix_bug;
  *
  *   A test program that should complain about Bug #1b -- a closure
  *   leaked past the end of a function's control flow, from a function
- *   that uses noncwaiting control...
+ *   that uses nontwaiting control...
  */
 
 class cb_hog_t {
@@ -39,9 +39,9 @@ part1 (cb_hog_t *hog, rendezvous_t<> *rv, cbv cb)
 
 tamed static void part2 (rendezvous_t<> *rv, cbv cb)
 {
-  cvars { int i; }
+  tvars { int i; }
   for (i = 0; i < 2; i++) {
-    cwait (*rv);
+    twait (*rv);
   }
   cb->trigger ();
 }
@@ -49,13 +49,13 @@ tamed static void part2 (rendezvous_t<> *rv, cbv cb)
 
 tamed static void buggy1b (cbb cb)
 {
-  cvars { 
+  tvars { 
     rendezvous_t<> rv; 
     cb_hog_t *hog (New cb_hog_t ());
   }
 
-  cwait { part1 (hog, &rv, mkevent()); }
-  cwait { part2 (&rv, mkevent()); }
+  twait { part1 (hog, &rv, mkevent()); }
+  twait { part2 (&rv, mkevent()); }
 
   if (fix_bug)
     delete hog;

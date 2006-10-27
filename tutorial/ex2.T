@@ -9,7 +9,7 @@
 tamed static void 
 try_rpc (str h, int port, cbb cb)
 {
-  cvars {
+  tvars {
     bool ret (false);
     int fd, r1;
     ptr<axprt_stream> x;
@@ -20,7 +20,7 @@ try_rpc (str h, int port, cbb cb)
     clnt_stat e1, e2, e3;
   }
 
-  cwait { tcpconnect (h, port, mkevent(fd)); }
+  twait { tcpconnect (h, port, mkevent(fd)); }
  
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", h.cstr(), port);
@@ -29,7 +29,7 @@ try_rpc (str h, int port, cbb cb)
     cli = aclnt::alloc (x, ex_prog_1);
     a2 = "go hang a salami i'm a lasagna hog";
     
-    cwait {
+    twait {
       cli->call (EX_RANDOM, NULL, &r1, mkevent(e1));
       cli->call (EX_REVERSE, &a2, &r2, mkevent(e2));
       cli->call (EX_STRUCT, NULL, &r3, mkevent(e3));

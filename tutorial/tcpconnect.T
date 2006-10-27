@@ -34,7 +34,7 @@
 tamed static ptr<canceller_t>
 connect_to_in_addr (in_addr a, int port, cbi cv)
 {
-  cvars {
+  tvars {
     sockaddr_in sin;
     socklen_t sn;
     int err;
@@ -60,7 +60,7 @@ connect_to_in_addr (in_addr a, int port, cbi cv)
       ret->wait (mkevent(cg, false));
       fdcb (fd, selwrite, mkevent (cg,true));
       
-      cwait (cg, completed);
+      twait (cg, completed);
       fdcb (fd, selwrite, NULL);
       warn << "return from function\n";
 
@@ -102,7 +102,7 @@ tamed static ptr<canceller_t>
 my_tcpconnect (str hostname, u_int16_t port, cbi cv,
 	       bool dnssearch, str *namep)
 {
-  cvars {
+  tvars {
     dnsreq_t *dnsp (NULL);
     ptr<hostent> h;
     int err;
@@ -119,7 +119,7 @@ my_tcpconnect (str hostname, u_int16_t port, cbi cv,
   canceller->wait (mkevent (cg,false));
   dnsp = dns_hostbyname (hostname, mkevent (cg, true, h, err), dnssearch); 
 
-  cwait (cg, completed);
+  twait (cg, completed);
   if (!completed) {
     warn << "DNS lookup cancelled!\n";
     dnsreq_cancel (dnsp);
@@ -142,7 +142,7 @@ my_tcpconnect (str hostname, u_int16_t port, cbi cv,
       
       cancel_connect = connect_to_in_addr (*(in_addr *) h->h_addr, 
 					   port, mkevent (cg,true,fd)); 
-      cwait (cg, completed);
+      twait (cg, completed);
       if (completed) {
 	canceller->toolate ();
 	cg.remove_join ();
@@ -153,7 +153,7 @@ my_tcpconnect (str hostname, u_int16_t port, cbi cv,
       
       // wait on the call to connect_to_inaddr if we've timed out.
       if (cg.n_joins_left ()) 
-	cwait (cg, dummy);
+	twait (cg, dummy);
     }
   }
 }
@@ -166,7 +166,7 @@ static void usage ()
 tamed static void 
 run (str s, int p)
 {
-  cvars {
+  tvars {
     ptr<canceller_t> c;
     rendezvous_t<bool> cg (__FILE__, __LINE__);
     int fd;
@@ -175,15 +175,15 @@ run (str s, int p)
   warn << "connect on " << s << ":" << p << "\n";
   c = my_tcpconnect (s, p, mkevent (cg, true, fd), false, NULL);
   delaycb (4, 0, mkevent (cg, false));
-  cwait (cg, succeeded);
+  twait (cg, succeeded);
   if (succeeded) {
     warn << "Succeeded; fd=" << fd << "\n";
   } else {
     warn << "Had to cancel!\n";
     c->cancel ();
   }
-  cwait (cg, dummy);
-  cwait { delaycb (10, 0, mkevent()); }
+  twait (cg, dummy);
+  twait { delaycb (10, 0, mkevent()); }
   exit (0);
 }
 

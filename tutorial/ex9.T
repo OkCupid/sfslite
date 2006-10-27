@@ -27,14 +27,14 @@ tamed void
 state_t::launch (cbb cv)
 {
   // declare all of your "stack" variables here
-  cvars {
+  tvars {
     int fd;
     bool ret (true);
   }
 
   // Call tcpconnect, and block until it returns; when it does return,
   // assign the local variable 'fd' to the result.
-  cwait { tcpconnect (host, port, mkevent(fd)); }
+  twait { tcpconnect (host, port, mkevent(fd)); }
 
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", host.cstr(), port);
@@ -59,7 +59,7 @@ state_t::launch (cbb cv)
 tamed void 
 state_t::relaunch (cbb cv)
 {
-  cvars {
+  tvars {
     bool err_occurred (false);
     int return_id;
   }
@@ -69,7 +69,7 @@ state_t::relaunch (cbb cv)
     // Block until a call has returned; when it has, get
     // the index variable associated with the call, and assign
     // it to 'return_id' for the scope of the JOIN block.
-    cwait (window, return_id);
+    twait (window, return_id);
     if (errs[return_id]) {
       err_occurred = true;
       warn << "RPC error: " << errs[return_id] << "\n";
@@ -92,13 +92,13 @@ state_t::relaunch (cbb cv)
 tamed static 
 void go (str h, int p)
 {
-  cvars {
+  tvars {
     state_t s (h, p);
     bool rc;
   }
-  cwait { s.launch (mkevent(rc)); }
+  twait { s.launch (mkevent(rc)); }
   if (rc) {
-    cwait { s.relaunch (mkevent(rc)); }
+    twait { s.relaunch (mkevent(rc)); }
   }
   delaycb (0, 0, wrap (exit, rc ? 0 : -1));
 }

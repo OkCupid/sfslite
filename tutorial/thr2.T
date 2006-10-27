@@ -8,7 +8,7 @@ tamed static void
 sleeper_ev (cbi cb)
 {
   warn << "++ sleeper_ev: to sleep!\n";
-  cwait { delaycb (3, 0, mkevent ()); }
+  twait { delaycb (3, 0, mkevent ()); }
   warn << "-- sleeper_ev: woke up!\n";
   cb->trigger (33);
 }
@@ -44,7 +44,7 @@ run_thr ()
 tamed static void
 run_ev (cbv cb)
 {
-  cvars {
+  tvars {
     rendezvous_t<int> rv;
     int i;
     int r1, r2;
@@ -54,9 +54,9 @@ run_ev (cbv cb)
   sleeper_ev (mkevent (rv, 0, r1));
   cfork (rv, 1, r2, wrap (sleeper_thr));
 
-  cwait (rv, i);
+  twait (rv, i);
   warn << "oo event return: " << i << "\n";
-  cwait (rv, i);
+  twait (rv, i);
   warn << "oo event return: " << i << "\n";
 
   warn << "- run_ev (" << r1 << "," << r2 << ")\n";
@@ -66,10 +66,10 @@ run_ev (cbv cb)
 tamed static void
 run ()
 {
-  cwait { run_ev (mkevent ()); }
-  cwait { cfork (wrap (run_thr)); }
-  cwait { run_ev (mkevent ()); }
-  cwait { cfork (wrap (run_thr)); }
+  twait { run_ev (mkevent ()); }
+  twait { cfork (wrap (run_thr)); }
+  twait { run_ev (mkevent ()); }
+  twait { cfork (wrap (run_thr)); }
   exit (0);
 }
 

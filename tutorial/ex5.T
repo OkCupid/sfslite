@@ -52,7 +52,7 @@ tamed void
 remote_host_t::dostuff_private (int port, cbb cv)
 {
   // declare all of your "stack" variables here
-  cvars {
+  tvars {
     int fd;
     ptr<axprt_stream> x;
     ptr<aclnt> cli;
@@ -66,7 +66,7 @@ remote_host_t::dostuff_private (int port, cbb cv)
 
   // Call tcpconnect, and block until it returns; when it does return,
   // assign the local variable 'fd' to the result.
-  cwait { tcpconnect (_name, port, mkevent(fd)); }
+  twait { tcpconnect (_name, port, mkevent(fd)); }
 
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", _name.cstr(), port);
@@ -91,7 +91,7 @@ remote_host_t::dostuff_private (int port, cbb cv)
       // Block until a call has returned; when it has, get
       // the index variable associated with the call, and assign
       // it to 'return_id' for the scope of the JOIN block.
-      cwait (window, return_id);
+      twait (window, return_id);
       if (errs[return_id]) {
 	err_occurred = true;
 	warn << "RPC error: " << errs[return_id] << "\n";

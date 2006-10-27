@@ -59,7 +59,7 @@ int vars_lineno;
 %token T_TAMED
 %token T_VARS
 %token T_JOIN
-%token T_CWAIT
+%token T_TWAIT
 %token T_DEFAULT_RETURN
 
 %token T_2DOLLAR
@@ -87,8 +87,8 @@ int vars_lineno;
 
 %type <var>  parameter_declaration
 
-%type <el>   fn_tame vars return_statement cwait 
-%type <el>   block_body cwait_body wait_body
+%type <el>   fn_tame vars return_statement twait 
+%type <el>   block_body twait_body wait_body
 %type <el>   default_return
 
 %type <opts> static_opt
@@ -98,11 +98,11 @@ int vars_lineno;
 
 
 file:  passthrough 			{ state->passthrough ($1); }
-	| file fn_or_cwait passthrough 	{ state->passthrough ($3); }
+	| file fn_or_twait passthrough 	{ state->passthrough ($3); }
 	;
 
-fn_or_cwait: fn	
-	| cwait				{ state->new_el ($1); }
+fn_or_twait: fn	
+	| twait				{ state->new_el ($1); }
 	;
 
 passthrough: /* empty */	    { $$ = lstr (get_yy_lineno ()); }
@@ -177,7 +177,7 @@ fn_statements: passthrough
 	;
 
 fn_tame: vars
-	| cwait
+	| twait
 	| return_statement
 	| default_return
 	;
@@ -208,8 +208,8 @@ vars:	T_VARS
 	    yyerror (b);
 	  }
 	  if (!state->function ()->set_vars (v)) {
-	    yyerror ("The VARS{} section must come before any BLOCK, "
-	             " WAIT or NONBLOCK section");
+	    yyerror ("The tvars{} section must come before any twait "
+	             " statement or environment");
 	  }
 	  $$ = v;
 	}
@@ -283,17 +283,17 @@ wait_body: '(' join_list ')' ';'
 	  tame_wait_t *w = New tame_wait_t (fn, $2, get_yy_lineno ());
 	  if (fn) fn->add_env (w);
 	  else {
-	    yyerror ("Cannot have a cwait() statement outside of a "
+	    yyerror ("Cannot have a twait() statement outside of a "
 	 	     "tamed function body.");
 	  }
 	  $$ = w;
 	}
 	;
 
-cwait: T_CWAIT cwait_body { $$ = $2; }
+twait: T_TWAIT twait_body { $$ = $2; }
 	;
 
-cwait_body: wait_body
+twait_body: wait_body
 	| block_body
 	;
 

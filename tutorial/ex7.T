@@ -18,7 +18,7 @@
 tamed static void 
 connect (vec<str> hosts, int port, cbi done)
 {
-  cvars {
+  tvars {
     u_int i;
     rendezvous_t<u_int, ptr<int> > rv;
     bool got_one (false);
@@ -31,7 +31,7 @@ connect (vec<str> hosts, int port, cbi done)
   }
   
   while (rv.need_join ()) {
-    cwait (rv, i, fd);
+    twait (rv, i, fd);
     warn << hosts[i]  << ":" << port << ": ";
     if (*fd >= 0) {
       warnx << "connection succeeded";
@@ -64,7 +64,7 @@ connect (vec<str> hosts, int port, cbi done)
 tamed static 
 void get_fastest_web_page (vec<str> hosts, int port, cbb done)
 {
-  cvars {
+  tvars {
     int fd, rc;
     strbuf req, resp;
     rendezvous_t<> read_rv, write_rv;
@@ -73,7 +73,7 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
   //
   // get the fastest connection, and dump the result into 'fd'
   //
-  cwait { connect (hosts, port, mkevent(fd)); }
+  twait { connect (hosts, port, mkevent(fd)); }
 
   //
   // A dirt simple HTTP 1.0 request
@@ -96,7 +96,7 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
   fdcb (fd, selwrite, mkevent (write_rv));
   
   while (true) {
-    cwait (write_rv);
+    twait (write_rv);
 
     //
     // Use this syntax to output the results of the string buffer
@@ -146,7 +146,7 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
   // writing loop above.
   //
   while (true) {
-    cwait (read_rv);
+    twait (read_rv);
     if ((rc = resp.tosuio ()->input (fd)) < 0 && errno != EAGAIN) {
       warn << "read failed...\n";
       fdcb (fd, selread, NULL);

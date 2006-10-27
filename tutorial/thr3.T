@@ -68,14 +68,14 @@ server_t::ready_thread (worker_t *w)
 tamed void
 server_t::run (cbv cb)
 {
-  cwait { _shutdown_cb = mkevent (); }
+  twait { _shutdown_cb = mkevent (); }
   cb->trigger ();
 }
 
 tamed void
 server_t::shutdown (cbv cb)
 {
-  cvars {
+  tvars {
     size_t i;
   }
   warn << "s> shutdown started...\n";
@@ -86,7 +86,7 @@ server_t::shutdown (cbv cb)
     if (w->_ev) w->_ev->trigger ();
   }
   while (_rv.n_out ()) {
-    cwait (_rv, i);
+    twait (_rv, i);
     warn << "s> thread " << i << " exitted\n";
   }
   warn << "s> shutdown finished...\n";
@@ -99,7 +99,7 @@ worker_t::serve ()
   warn << "w> " << _index << " starting up...\n";
   while (!_shutdown) {
     if (!_req) {
-      cwait { _ev = mkevent (); }
+      twait { _ev = mkevent (); }
       _ev = NULL;
     }
     if (_req) {
@@ -132,11 +132,11 @@ worker_t::blocking_action (int i)
 tamed void
 server_t::get_thread (callback<void, worker_t *>::ref cb)
 {
-  cvars {
+  tvars {
     worker_t *w (NULL);
   }
   while (!_shutdown && !(w = _ready.first)) 
-    cwait { _waiters.push_back (mkevent ()); }
+    twait { _waiters.push_back (mkevent ()); }
   if (w) _ready.remove (w);
   cb->trigger (w);
 }
@@ -144,7 +144,7 @@ server_t::get_thread (callback<void, worker_t *>::ref cb)
 tamed void
 server_t::serve (int i, cbi cb)
 {
-  cvars {
+  tvars {
     worker_t *w;
     int res (-1);
     req_t *r;
@@ -157,9 +157,9 @@ server_t::serve (int i, cbi cb)
       c->trigger ();
     }
   } else {
-    cwait { get_thread (mkevent (w)); }
+    twait { get_thread (mkevent (w)); }
     if (w && !w->_shutdown) {
-      cwait { 
+      twait { 
 	r = New req_t (i, mkevent (res));
 	w->_req = r;
 	if (w->_ev) {
@@ -176,14 +176,14 @@ server_t::serve (int i, cbi cb)
 tamed static void
 run_server (server_t **sp, cbv cb) 
 {
-  cvars {
+  tvars {
     server_t *s (New server_t (6));
   }
   *sp = s;
 
-  cwait { s->run (mkevent ()); }
+  twait { s->run (mkevent ()); }
   warn << "m> server done running...\n";
-  cwait { s->shutdown (mkevent ()); }
+  twait { s->shutdown (mkevent ()); }
   warn << "m> server done shutting down ...\n";
   delete s;
   cb->trigger ();
@@ -194,7 +194,7 @@ run_server (server_t **sp, cbv cb)
 tamed static void
 run_client (server_t *s, cbv cb)
 {
-  cvars {
+  tvars {
     int res[N_CALLS];
     int i;
     rendezvous_t<int> rv (__FILE__, __LINE__);
@@ -203,14 +203,14 @@ run_client (server_t *s, cbv cb)
 
   for (i = 1; i < N_CALLS; i++) {
     s->serve (i, mkevent (rv, i, res[i]));
-    cwait { delaycb (1, 0, mkevent ()); }
+    twait { delaycb (1, 0, mkevent ()); }
   }
   while (rv.n_out ()) {
-    cwait (rv, i);
+    twait (rv, i);
     warn << "c> request " << i << " returned: " << res[i] << "\n";
   }
   warn << "c> shutdown trigger\n";
-  cwait { s->serve (0, mkevent (sdres)); }
+  twait { s->serve (0, mkevent (sdres)); }
   cb->trigger ();
 }
 
@@ -219,10 +219,10 @@ run_client (server_t *s, cbv cb)
 tamed static 
 void main2 ()
 {
-  cvars {
+  tvars {
     server_t *s;
   }
-  cwait {
+  twait {
     run_server (&s, mkevent ());
     run_client (s, mkevent ());
   }

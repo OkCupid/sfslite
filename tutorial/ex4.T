@@ -10,7 +10,7 @@ tamed static
 bool dostuff (const str &h, int port, cbb cb)
 {
   // declare all of your "stack" variables here
-  cvars {
+  tvars {
     int fd (99999);
     ptr<axprt_stream> x;
     ptr<aclnt> cli;
@@ -36,7 +36,7 @@ bool dostuff (const str &h, int port, cbb cb)
 
   // Call tcpconnect, and block until it returns; when it does return,
   // assign the local variable 'fd' to the result.
-  cwait { tcpconnect (h, port, mkevent(fd)); }
+  twait { tcpconnect (h, port, mkevent(fd)); }
 
   strib++;
 
@@ -64,7 +64,7 @@ bool dostuff (const str &h, int port, cbb cb)
       // Block until a call has returned; when it has, get
       // the index variable associated with the call, and assign
       // it to 'return_id'.
-      cwait (rpcback, return_id);
+      twait (rpcback, return_id);
       if (errs[return_id]) {
 	err_occurred = true;
 	warn << "RPC error: " << errs[return_id] << "\n";

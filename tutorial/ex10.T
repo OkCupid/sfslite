@@ -22,7 +22,7 @@ public:
 tamed template<class T, size_t X> void
 my_host_t<T,X>::try_it (cbb cv)
 {
-  cvars {
+  tvars {
     bool ret (false);
     int fd, n (3);
     ptr<axprt_stream> x;
@@ -39,7 +39,7 @@ my_host_t<T,X>::try_it (cbb cv)
     */
   }
 
-  cwait { tcpconnect (h, port, mkevent(fd)); }
+  twait { tcpconnect (h, port, mkevent(fd)); }
  
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", h.cstr(), port);
@@ -50,7 +50,7 @@ my_host_t<T,X>::try_it (cbb cv)
     ev.setsize (n);
     rv.setsize (n);
  
-    cwait {
+    twait {
       for (i = 0; i < n; i++) {
         cli->call (EX_RANDOM, NULL, &rv[i], mkevent(ev[i]) );
       }

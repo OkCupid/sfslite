@@ -13,7 +13,7 @@ bool fix_bug;
  *
  *   A test program that should complain about Bug #1a -- a closure
  *   leaked past the end of a function's control flow, from a function
- *   that only uses cwait {...} (i.e., no NONcwait/JOIN).
+ *   that only uses twait {...} (i.e., no NONtwait/JOIN).
  */
 
 class cb_hog_t {
@@ -33,15 +33,15 @@ static void finish (bool rc)
 tamed static 
 void buggy1a (cbb cv)
 {
-  cvars {
+  tvars {
     cb_hog_t *hog (New cb_hog_t ());
   }
-  cwait {
+  twait {
     delaycb (1, 0, mkevent()); 
     hog->call_me (mkevent());
   }
   cv->trigger (true);
-  cwait { delaycb (1, 0, mkevent()); }
+  twait { delaycb (1, 0, mkevent()); }
 
   if (fix_bug)
     delete hog;

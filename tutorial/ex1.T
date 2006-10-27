@@ -7,8 +7,8 @@
 tamed static 
 void try_connect (str h, int port)
 {
-  cvars { int fd; }
-  cwait { tcpconnect (h, port, mkevent (fd)); }
+  tvars { int fd; }
+  twait { tcpconnect (h, port, mkevent (fd)); }
   if (fd >= 0) {
     warn << "Connection succeeded!\n";
     exit (0);

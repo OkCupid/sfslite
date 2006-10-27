@@ -10,7 +10,7 @@
 tamed static 
 void try_rpc (str h, int port, cbb cv)
 {
-  cvars {
+  tvars {
     bool ret (false);
     int fd, n (5);
     ptr<axprt_stream> x;
@@ -21,7 +21,7 @@ void try_rpc (str h, int port, cbb cv)
     int i;
   }
 
-  cwait { tcpconnect (h, port, mkevent(fd)); }
+  twait { tcpconnect (h, port, mkevent(fd)); }
  
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", h.cstr(), port);
@@ -32,7 +32,7 @@ void try_rpc (str h, int port, cbb cv)
     ev.setsize (n);
     rv.setsize (n);
  
-    cwait {
+    twait {
       for (i = 0; i < n; i++) {
         cli->call (EX_RANDOM, NULL, &rv[i], mkevent(ev[i]) );
       }
