@@ -17,4 +17,4 @@ do
     fi
 done
 
-autoreconf $*
+autoreconf -f -i -s $*
