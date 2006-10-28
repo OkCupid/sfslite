@@ -180,7 +180,8 @@ void sfsconst_init ();
 str sfsconst_etcfile (const char *name);
 str sfsconst_etcfile (const char *name, const char *const *path);
 str sfsconst_etcfile_required (const char *name);
-str sfsconst_etcfile_required (const char *name, const char *const *path);
+str sfsconst_etcfile_required (const char *name, const char *const *path,
+			       bool ftl = true);
 void mksfsdir (str path, mode_t mode,
 	       struct stat *sbp = NULL, uid_t uid = sfs_uid);
 str sfshostname ();

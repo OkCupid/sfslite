@@ -438,7 +438,7 @@ sfsconst_etcfile (const char *name, const char *const *path)
 }
 
 str
-sfsconst_etcfile_required (const char *name, const char *const *path)
+sfsconst_etcfile_required (const char *name, const char *const *path, bool ftl)
 {
   str file = sfsconst_etcfile (name, path);
   if (!file) {
@@ -446,7 +446,12 @@ sfsconst_etcfile_required (const char *name, const char *const *path)
     for (const char *const *d = path; *d; d++) {
       msg << "  " << *d << "/" << name << "\n";
     }
-    fatal ( str (msg));
+    str m = msg;
+    if (ftl) {
+      fatal (m);
+    } else {
+      warn (m);
+    }
   }
   return file;
 }
