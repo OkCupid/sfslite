@@ -1670,7 +1670,7 @@ if test -f ${with_sfs}/Makefile -a -f ${with_sfs}/autoconf.h; then
     LIBSFSCRYPT=${with_sfs}/crypt/libsfscrypt.la
     LIBSFSMISC=${with_sfs}/sfsmisc/libsfsmisc.la
     LIBTAME=${with_sfs}/libtame/libtame.la
-    LIBSFS=${with_sfs}/libsfs/libsfs.la
+    LIBSFS=${with_sfs}/libsfs/libsfs.a
     MALLOCK=${with_sfs}/sfsmisc/mallock.o
     TAME=${with_sfs}/tame/tame
     RPCC=${with_sfs}/rpcc/rpcc
@@ -1691,7 +1691,7 @@ elif test -f ${with_sfs}/include/${sfsprfx}/autoconf.h \
     LIBSFSMISC=${sfslibdir}/libsfsmisc.la
     LIBSVC=${sfslibdir}/libsvc.la
     LIBTAME=${sfslibdir}/libtame.la
-    LIBSFS=${sfslibdir}/libsfs.la
+    LIBSFS=${sfslibdir}/libsfs.a
     MALLOCK=${sfslibdir}/mallock.o
     SFS_PATH_PROG(rpcc, ${sfslibdir})
     if test "$PATH_RPCC" -a -x "$PATH_RPCC" 
