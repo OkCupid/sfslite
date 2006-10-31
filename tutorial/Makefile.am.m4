@@ -9,6 +9,8 @@ dnl
 LDADD =  $(LIBTAME) $(LIBARPC) $(LIBASYNC)  
 $(PROGRAMS): $(LDEPS) $(LIBTAME)
 
+SUBDIRS = doc
+
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
 dnl                                                                 dnl
 dnl                MACROS FOR TAMED FILES                           dnl

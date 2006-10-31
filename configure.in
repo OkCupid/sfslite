@@ -451,7 +451,7 @@ AC_OUTPUT(Makefile async/Makefile rpcc/Makefile arpc/Makefile
 	svc/Makefile libtame/Makefile arpcgen/Makefile libsfs/Makefile)
 
 if test "$with_tutorial" = "yes"; then
-	AC_OUTPUT(tutorial/Makefile)
+	AC_OUTPUT(tutorial/Makefile tutorial/doc/Makefile)
 fi
 dnl
 dnl end SFSlite changes
