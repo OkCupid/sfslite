@@ -20,6 +20,8 @@
 use strict;
 use English;
 
+use File::Temp qw/ :mktemp  /;
+
 
 use IO::File;
 
@@ -101,4 +103,34 @@ sub do_subst ($) {
     return ($pre, $mtch, $post);
 }
 
-do_file (\*STDIN, \*STDOUT);
+sub usage {
+    warn "usage: $0 <file>\n";
+    exit (-1);
+}
+
+if ($#ARGV != 0) {
+    usage ();
+}
+
+my $ifn = $ARGV[0];
+my $ifh = new IO::File ("<$ifn");
+if (!$ifh) {
+    warn ("Cannot open file: $ifn\n");
+    exit (-1);
+}
+
+
+my ($ofh, $ofn) = mkstemp( "tameupgrade.XXXXXX" );
+if (!$ofh) {
+    warn ("Cannot open temp file: $ofn\n");
+    exit (-1);
+
+}
+
+warn ("Rewrite: $ifn -> $ofn\n");
+do_file ($ifh, $ofh);
+
+close ($ofh);
+
+warn ("Rename: $ofn -> $ifn\n");
+rename ($ofn, $ifn);
