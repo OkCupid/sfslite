@@ -19,6 +19,7 @@
 
 use strict;
 use English;
+use File::Copy;
 
 use File::Temp qw/ :mktemp  /;
 
@@ -58,7 +59,7 @@ sub do_subst ($) {
     my $cb = 0;
 
 
-    if ($i =~ /(\b(TAMED|WAIT|BLOCK|VARS|SIGNAL|signal)\b)|(\@|\]\s*\()/ ) {
+    if ($i =~ /(\b(TAMED|WAIT|BLOCK|VARS|SIGNAL|signal|coordgroup_t)\b)|(\@|\]\s*\()/ ) {
 	$pre = $PREMATCH;
 	$post = $POSTMATCH;
 	$mtch = $&;
@@ -71,6 +72,7 @@ sub do_subst ($) {
 		      "BLOCK"   => "twait",
 		      "VARS"    => "tvars",
 		      "signal"  => "trigger",
+		      "coordgroup_t" => "rendezvous_t",
 		      "SIGNAL"  => "TRIGGER" );
 
 	    $mtch = $x{$m};
@@ -119,6 +121,7 @@ if (!$ifh) {
     exit (-1);
 }
 
+copy ($ifn, "$ifn.orig");
 
 my ($ofh, $ofn) = mkstemp( "tameupgrade.XXXXXX" );
 if (!$ofh) {
