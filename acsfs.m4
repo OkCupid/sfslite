@@ -2116,11 +2116,15 @@ dnl
 AC_DEFUN([SFS_FIND_PTH],
 [AC_ARG_WITH(pth,
 --with-pth=DIR		  Specify location of GNU Pth library)
-if test "$with_pth" != "no"
+if test "x$with_pth" != "x" -a "$with_pth" != "no"
 then
 	ac_save_CFLAGS=$CFLAGS
 	ac_save_LIBS=$LIBS
-	dirs0="${with_pth} ${with_pth}/include"
+	if test "$with_pth" != "yes" -a "$with_pth" != "YES"; then
+		dirs0="${with_pth} ${with_pth}/include"
+	else
+		dirs0=""
+	fi
 	if test "${prefix}" != "NONE"; then
 		dirs0="$dirs0 ${prefix} ${prefix}/pth"
 	fi
@@ -2172,7 +2176,7 @@ then
 		dirs=`echo $sfs_cv_pth_h | sed 's/include/lib/' `
 		dirs=`echo $dirs | sed 's/^-I//' `
 		AC_CACHE_CHECK(for libpth, sfs_cv_libpth,
-		[for dir in " " $dirs; do
+		[for dir in $dirs " " ; do
 			case $dir in
 				" ") lflags="-lpth" ;;
 				*) lflags="-L${dir} -lpth" ;;
