@@ -4,7 +4,7 @@ dnl Process this file with autoconf to produce a configure script.
 dnl
 
 AC_INIT(acinclude.m4)
-AM_INIT_AUTOMAKE(sfslite,0.8.9pre4)
+AM_INIT_AUTOMAKE(sfslite,1.0.0pre1)
 dnl AC_INIT(sfs,0.7.2)
 dnl AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER(config.h)
@@ -13,6 +13,7 @@ dnl
 dnl begin SFSLITE change
 dnl
 SFS_TAG
+SFSLITE_LAYOUT_VERSION
 dnl
 dnl End SFSLITE change
 dnl
@@ -329,7 +330,7 @@ SFS_MMAP
 dnl
 dnl Map  X.Y.Z => X.Y
 dnl
-SHORTVERSION=`echo ${VERSION} | awk -F. '{ print $1 "." $2 }' `
+SHORTVERSION=`echo ${layoutversion} | awk -F. '{ print $1 "." $2 }' `
 AC_SUBST(SHORTVERSION)
 if test -z "$sfslibdir"; then
 	sfslibpdir='${pkglibdir}-${SHORTVERSION}'

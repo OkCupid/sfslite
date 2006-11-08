@@ -2217,4 +2217,17 @@ then
 fi
 AC_SUBST(LDADD_THR)
 ])
-
+dnl
+dnl SFSLITE_FAKE_VERSION - allow configuration-time specification of 
+dnl the version that the libdir and includedir refer to.
+dnl
+AC_DEFUN([SFSLITE_LAYOUT_VERSION],
+[AC_ARG_WITH(fake-version,
+--with-fake-version=FAKE	Specify a fake version)
+if test "$with_fake_version"; then
+	layoutversion=$with_fake_version
+else
+	layoutversion=$VERSION
+fi
+AC_SUBST(layoutversion)
+])

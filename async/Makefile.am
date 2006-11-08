@@ -85,6 +85,7 @@ env.mk: Makefile
 	echo "LIBS = $(LIBS)" >> env.mk~
 	echo "LIBGMP = $(LIBGMP)" >> env.mk~
 	echo "LDFLAGS = $(LDFLAGS)" >> env.mk~
+	echo "LDADD_THR = $(LDADD_THR)" >> env.mk~
 	mv -f env.mk~ env.mk
 
 

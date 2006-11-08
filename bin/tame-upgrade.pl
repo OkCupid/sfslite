@@ -40,8 +40,9 @@ sub do_file ($$) {
 sub do_line ($) {
     my ($input) = @_;
     my $output = "";
+    my $cb_on_line = 0;
     while (length ($input) > 0) {
-	my ($pre,$mtch,$post) = do_subst ($input);
+	my ($pre,$mtch,$post) = do_subst ($input, \$cb_in_line);
 	$output .= $pre;
 	$output .= $mtch;
 	$input = $post;
@@ -50,16 +51,15 @@ sub do_line ($) {
 }
 
 sub do_subst ($) {
-    my ($i) = @_;
+    my ($i, $cblr) = @_;
 
     my $pre = "";
     my $mtch = "";
     my $post = "";
     
-    my $cb = 0;
-
-
-    if ($i =~ /(\b(TAMED|WAIT|BLOCK|VARS|SIGNAL|signal|coordgroup_t)\b)|(\@|\]\s*\()/ ) {
+    if ($i =~ /operator/ ) {
+	$mtch = $i;
+    } elsif ($i =~ /(\b(TAMED|WAIT|BLOCK|VARS|SIGNAL|signal|coordgroup_t|n_signals_left|n_vars_left)\b)|(\@|\]\s*\()/ ) {
 	$pre = $PREMATCH;
 	$post = $POSTMATCH;
 	$mtch = $&;
@@ -73,7 +73,9 @@ sub do_subst ($) {
 		      "VARS"    => "tvars",
 		      "signal"  => "trigger",
 		      "coordgroup_t" => "rendezvous_t",
-		      "SIGNAL"  => "TRIGGER" );
+		      "SIGNAL"  => "TRIGGER",
+		      "n_vars_left" => "n_triggers_left",
+		      "n_signals_left" => "n_triggers_left" );
 
 	    $mtch = $x{$m};
 
@@ -84,13 +86,13 @@ sub do_subst ($) {
 	    if ($in =~ /\@[\[\(]/ ) {
 		$mtch = "mkevent (";
 		$post = $POSTMATCH;
-		$cb = 1;
+		$$cblr = 1;
 
-	    } elsif ($in =~ /\]\s*\(\s*\)/  ) {
+	    } elsif ($$cblr && $in =~ /\]\s*\(\s*\)/  ) {
 		$mtch = ")";
 		$post = $POSTMATCH;
 
-	    } elsif ($in =~ /\]\s*\(/ ) {
+	    } elsif ($$cblr && $in =~ /\]\s*\(/ ) {
 		$mtch = ", ";
 		$post = $POSTMATCH;
 	    } else {
