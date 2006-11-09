@@ -42,7 +42,7 @@ sub do_line ($) {
     my $output = "";
     my $cb_on_line = 0;
     while (length ($input) > 0) {
-	my ($pre,$mtch,$post) = do_subst ($input, \$cb_in_line);
+	my ($pre,$mtch,$post) = do_subst ($input, \$cb_on_line);
 	$output .= $pre;
 	$output .= $mtch;
 	$input = $post;
