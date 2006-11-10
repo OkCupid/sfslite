@@ -281,7 +281,7 @@ AC_SUBST(LIBSFSMISC)
 LIBSFSMISC='$(top_builddir)/sfsmisc/libsfsmisc.la'
 AC_SUBST(LIBTAME)
 LIBTAME='$(top_builddir)/libtame/libtame.la'
-LDADD='$(LIBTAME) $(LIBSFSMISC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC) $(LIBGMP)'
+LDADD='$(LIBTAME) $(LIBSVC) $(LIBSFSMISC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC) $(LIBGMP)'
 LDADD="$LDADD "'$(LIBPY) $(LDADD_THR)'
 
 if test "$enable_shared" = yes; then

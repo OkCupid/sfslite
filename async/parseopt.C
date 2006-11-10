@@ -290,8 +290,112 @@ conftab::match (const vec<str> &av, const str &cf, int ln, bool *err)
     warn << cf << ":" << ln << ": " << el->name << " out of range\n";
     *err = true;
   }
-  else 
+  else {
     el->set ();
+    el->mark_set ();
+  }
     
   return true;
+}
+
+void
+conftab::reset ()
+{
+  for (size_t i = 0; i < _v.size (); i++) 
+    _v[i]->reset ();
+}
+
+void
+conftab::apply_defaults ()
+{
+  for (size_t i = 0; i < _v.size (); i++) {
+    conftab_el *el = _v[i];
+    if (!el->was_set ()) {
+      if (el->apply_default ()) {
+	el->mark_set_by_default ();
+	el->mark_set ();
+      }
+    }
+  }
+}
+
+static void spc (strbuf &b, int l)
+{
+  if (l < 0) l = 1;
+  for (int i = 0; i < l ; i++) {
+    b << " ";
+  }
+}
+
+void
+conftab::report (vec<str> *out)
+{
+  size_t mx = 0;
+  for (size_t i = 0; i < _v.size (); i++) {
+    size_t l = _v[i]->get_name ().len ();
+    if (l > mx) mx = l;
+  }
+  mx += 2;
+
+  for (size_t i = 0; i < _v.size (); i++) {
+    strbuf b;
+    conftab_el *el = _v[i];
+    b << "'" << el->get_name () << "'";
+    spc (b, mx - el->get_name ().len ());
+    b << "->  ";
+    if (!el->was_set ()) {
+      b << "(not set)";
+    } else {
+      el->dump (b); 
+      if (el->was_set_by_default ()) {
+	b << " (by default)";
+      }
+    }
+    out->push_back (b);
+  }
+}
+
+void
+conftab::report ()
+{
+  vec<str> tmp;
+  report (&tmp);
+  for (size_t i = 0; i < tmp.size (); i++) {
+    warn << " " << tmp[i] << "\n";
+  }
+}
+
+bool
+conftab::run (const str &file, u_int opts)
+{
+  parseargs pa (file);
+  bool errors = false;
+  vec<str> av;
+  int line;
+
+  if (!file) 
+    return false;
+
+  if (opts & (CONFTAB_APPLY_DEFAULTS|CONFTAB_VERBOSE)) {
+    reset ();
+  }
+
+  if (opts & CONFTAB_VERBOSE) {
+    warn << "Parsing configuration file: " << file << "\n";
+  }
+
+  while (pa.getline (&av, &line)) {
+    if (!match (av, file, line, &errors)) {
+      warn << file << ":" << line << ": unknown config parameter\n";
+      errors = true;
+    }
+  }
+  
+  if (opts & CONFTAB_APPLY_DEFAULTS)
+    apply_defaults ();
+
+  if (opts & CONFTAB_VERBOSE)
+    report ();
+
+  return !errors;
 }
