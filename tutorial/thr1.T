@@ -29,7 +29,7 @@ run_thr ()
   warn << "+ run_thr\n";
   twait {
     sleeper_ev (mkevent (r1));
-    cfork (r2, wrap (sleeper_thr));
+    tfork (r2, wrap (sleeper_thr));
   }
   warn << "- run_thr (" << r1 << "," << r2 << ")\n";
 
@@ -44,7 +44,7 @@ run_ev (cbv cb)
   warn << "+ run_ev\n";
   twait {
     sleeper_ev (mkevent (r1));
-    cfork (r2, wrap (sleeper_thr));
+    tfork (r2, wrap (sleeper_thr));
   }
   warn << "- run_ev (" << r1 << "," << r2 << ")\n";
   cb->trigger ();
@@ -54,9 +54,9 @@ tamed static void
 run ()
 {
   twait { run_ev (mkevent ()); }
-  twait { cfork (wrap (run_thr)); }
+  twait { tfork (wrap (run_thr)); }
   twait { run_ev (mkevent ()); }
-  twait { cfork (wrap (run_thr)); }
+  twait { tfork (wrap (run_thr)); }
   exit (0);
 }
 

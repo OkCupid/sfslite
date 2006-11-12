@@ -55,7 +55,7 @@ private:
 };
 
 template<class R>
-void __cfork (const char *loc, event_void_t e, R &r, 
+void __tfork (const char *loc, event_void_t e, R &r, 
 	      typename callback<R,void>::ref a)
 {
   cthread_t<R> *t = New cthread_t<R> (e, r, a);
@@ -82,21 +82,21 @@ private:
   cbv _action;
 };
 
-void __cfork (const char *loc, event_void_t e, cbv a);
+void __tfork (const char *loc, event_void_t e, cbv a);
 
-void _cfork (implicit_rendezvous_t *i, const char *loc, cbv a);
-void _cfork (ptr<closure_t> c, const char *loc, rendezvous_t<> rv, cbv a);
+void _tfork (implicit_rendezvous_t *i, const char *loc, cbv a);
+void _tfork (ptr<closure_t> c, const char *loc, rendezvous_t<> rv, cbv a);
 
 template<class R>
-void _cfork (implicit_rendezvous_t *i, const char *loc, R &r, 
+void _tfork (implicit_rendezvous_t *i, const char *loc, R &r, 
 	     typename callback<R,void>::ref a)
 {
-  __cfork (loc, _mkevent (i, loc), r, a);
+  __tfork (loc, _mkevent (i, loc), r, a);
 }
 
-#include "tame_cfork_ag.h"
+#include "tame_tfork_ag.h"
 
-#define cfork(...) _cfork (__cls_g, __FL__, ##__VA_ARGS__)
+#define tfork(...) _tfork (__cls_g, __FL__, ##__VA_ARGS__)
 
 
 

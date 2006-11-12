@@ -31,7 +31,7 @@ run_thr ()
   warn << "+ run_thr\n";
 
   sleeper_ev (mkevent (rv, 0, r1));
-  cfork (rv, 1, r2, wrap (sleeper_thr));
+  tfork (rv, 1, r2, wrap (sleeper_thr));
 
   rv.wait (i);
   warn << "oo event return: " << i << "\n";
@@ -52,7 +52,7 @@ run_ev (cbv cb)
   warn << "+ run_ev\n";
 
   sleeper_ev (mkevent (rv, 0, r1));
-  cfork (rv, 1, r2, wrap (sleeper_thr));
+  tfork (rv, 1, r2, wrap (sleeper_thr));
 
   twait (rv, i);
   warn << "oo event return: " << i << "\n";
@@ -67,9 +67,9 @@ tamed static void
 run ()
 {
   twait { run_ev (mkevent ()); }
-  twait { cfork (wrap (run_thr)); }
+  twait { tfork (wrap (run_thr)); }
   twait { run_ev (mkevent ()); }
-  twait { cfork (wrap (run_thr)); }
+  twait { tfork (wrap (run_thr)); }
   exit (0);
 }
 

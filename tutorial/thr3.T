@@ -50,7 +50,7 @@ server_t::init ()
   for (size_t i = 0; i < _workers.size (); i++) {
     worker_t *w = &_workers[i];
     w->_index = i;
-    cfork (_rv, i, wrap (w, &worker_t::serve));
+    tfork (_rv, i, wrap (w, &worker_t::serve));
     ready_thread (w);
   }
 }

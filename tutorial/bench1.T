@@ -209,7 +209,7 @@ bench1_twait_thr_implicit (int niter)
 {
 #ifdef HAVE_PTH
   for (int i = 0; i < niter; i++) {
-    twait { cfork (wrap (noop)); }
+    twait { tfork (wrap (noop)); }
   }
 #else
   panic ("Cannot run testcase without PTH support");
@@ -223,7 +223,7 @@ bench1_twait_thr_explicit (int niter)
 #ifdef HAVE_PTH
   rendezvous_t<> r;
   for (int i = 0; i < niter; i++) {
-    cfork (r, wrap (noop));
+    tfork (r, wrap (noop));
     r.wait ();
   }
 #else
@@ -390,10 +390,10 @@ harness ()
       start = corebench_get_time ();
       switch (mode) {
       case THR_IMPL_MODE:
-	twait { cfork (wrap (bench1_twait_thr_implicit, niter)); }
+	twait { tfork (wrap (bench1_twait_thr_implicit, niter)); }
 	break;
       case THR_EXPL_MODE:
-	twait { cfork (wrap (bench1_twait_thr_explicit, niter)); }
+	twait { tfork (wrap (bench1_twait_thr_explicit, niter)); }
 	break;
       default:
 	{
