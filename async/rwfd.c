@@ -32,23 +32,26 @@ writevfd (int fd, const struct iovec *iov, int iovcnt, int wfd)
 {
   struct msghdr mh;
 #ifdef HAVE_CMSGHDR
-  char cmhbuf[sizeof (struct cmsghdr) + sizeof (int)];
-  struct cmsghdr *const cmh = (struct cmsghdr *) cmhbuf;
-  int *const fdp = (int *) (cmhbuf + sizeof (struct cmsghdr));
+  struct cmsghdr *cmh;
+  char cmhbuf[CMSG_SPACE(sizeof(int))];
 #else /* !HAVE_CMSGHDR */
   int fdp[1];
+  *fdp = wfd;
 #endif /* !HAVE_CMSGHDR */
 
-  *fdp = wfd;
   bzero (&mh, sizeof mh);
   mh.msg_iov = (struct iovec *) iov;
   mh.msg_iovlen = iovcnt;
 
 #ifdef HAVE_CMSGHDR
-  mh.msg_control = (char *) cmh;
-  mh.msg_controllen = cmh->cmsg_len = sizeof (cmhbuf) /* + sizeof (int) */;
+  mh.msg_control = (caddr_t)cmhbuf;
+  bzero(cmhbuf, sizeof(cmhbuf));
+  mh.msg_controllen = CMSG_LEN(sizeof(int));
+  cmh = CMSG_FIRSTHDR(&mh);
   cmh->cmsg_level = SOL_SOCKET;
   cmh->cmsg_type = SCM_RIGHTS;
+  cmh->cmsg_len = CMSG_LEN(sizeof(int));
+  *(int *)CMSG_DATA(cmh) = wfd;
 #else /* !HAVE_CMSGHDR */
   mh.msg_accrights = (char *) fdp;
   mh.msg_accrightslen = sizeof (fdp);
@@ -72,35 +75,51 @@ readvfd (int fd, const struct iovec *iov, int iovcnt, int *rfdp)
 {
   struct msghdr mh;
 #ifdef HAVE_CMSGHDR
-  char cmhbuf[sizeof (struct cmsghdr) + sizeof (int)];
-  struct cmsghdr *const cmh = (struct cmsghdr *) cmhbuf;
-  int *const fdp = (int *) (cmhbuf + sizeof (struct cmsghdr));
+  char cmhbuf[CMSG_SPACE(sizeof(int))];
+  struct cmsghdr *cmh;
 #else /* !HAVE_CMSGHDR */
   int fdp[1];
 #endif /* !HAVE_CMSGHDR */
   int n;
 
-  *fdp = -1;
   bzero (&mh, sizeof mh);
   mh.msg_iov = (struct iovec *) iov;
   mh.msg_iovlen = iovcnt;
 
 #ifdef HAVE_CMSGHDR
-  mh.msg_control = (char *) cmh;
-  mh.msg_controllen = cmh->cmsg_len = sizeof (cmhbuf) /* + sizeof (int) */;
-  cmh->cmsg_level = SOL_SOCKET;
-  cmh->cmsg_type = SCM_RIGHTS;
+  mh.msg_control = (caddr_t) cmhbuf;
+  mh.msg_controllen = sizeof(cmhbuf);
 #else /* !HAVE_CMSGHDR */
+  *fdp = -1;
   mh.msg_accrights = (char *) fdp;
   mh.msg_accrightslen = sizeof (fdp);
 #endif /* !HAVE_CMSGHDR */
 
   n = recvmsg (fd, &mh, 0);
-  *rfdp = *fdp;
 
-  if (*fdp >= 0 && n == 0) {
-    n = -1;
-    errno = EAGAIN;
+  if (n == -1)
+      return n;
+
+  if (n >= 0) {
+#ifdef HAVE_CMSGHDR
+      *rfdp = -1;
+      cmh = CMSG_FIRSTHDR(&mh);
+      if (cmh) {
+	  if (n == 0) {
+	      n = -1;
+	      errno = EAGAIN;
+	  }
+	  if (cmh->cmsg_type == SCM_RIGHTS) {
+	      *rfdp = (*(int *)CMSG_DATA(cmh));
+	  }
+      }
+#else /* !HAVE_CMSGHDR */
+      *rfdp = *fdp;
+      if (n == 0 && *rfdp >= 0) {
+	  n = -1;
+	  errno = EAGAIN;
+      }
+#endif /* !HAVE_CMSGHDR */
   }
   return n;
 }
