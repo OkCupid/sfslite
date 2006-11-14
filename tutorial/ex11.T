@@ -13,7 +13,7 @@ struct rpc_t {
   clnt_stat err;
 };
 
-tamed static void 
+static void 
 launch_call (rendezvous_t<ptr<rpc_t> > *rv, u_int i, ptr<aclnt> cli)
 {
   ptr<rpc_t> r = New refcounted<rpc_t> (i);
