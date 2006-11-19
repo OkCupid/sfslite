@@ -57,7 +57,7 @@
  *   Decrypt:  D(C)
  */
 
-#include "crypt.h"
+#include "crypt_prot.h"
 #include "prime.h"
 #include "paillier.h"
 
@@ -69,26 +69,28 @@ scrubinit ()
   mp_setscrub ();
 }
 
+static const bigint zerobig = 0;
 
 paillier_pub::paillier_pub (const bigint &nn)
   : n (nn), 
     g (2), 
-    nbits (max ((int) n.nbits (), 0)),
+    nbits (n.nbits ()),
     fast (false)
 { 
+  assert (nbits);
   init ();
 }
 
 paillier_pub::paillier_pub (const bigint &nn, const bigint &gg)
   : n (nn), 
     g (gg), 
-    nbits (max ((int) n.nbits (), 0)),
+    nbits (n.nbits ()),
     fast (true)
 { 
+  assert (nbits);
   init ();
 }
 
-#include "bench.h"
 
 void
 paillier_pub::init ()
@@ -100,116 +102,63 @@ paillier_pub::init ()
     gn = powm (g, n, nsq);
 }
 
-
+  
 bool
-paillier_pub::E (bigint &m, const bigint &r) const
+paillier_pub::encrypt (crypt_ctext *c, const bigint &msg, bool recover) const 
 {
-  if (m >= n) {
-    warn << "paillier_pub::E: input too large [m " << m.nbits () 
+  assert (c);
+  assert (c->type == CRYPT_PAILLIER);
+
+  if (msg >= n) {
+    warn << "paillier_pub::encrypt: input too large [m " << msg.nbits () 
 	 << " n " << n.nbits () << "]\n";
     return false;
   }
-  
-  bigint tmp;
+
+  bigint &m = *c->paillier;
+
+  bigint r;
+  do r = random_zn (n);
+  while (r == 0);
+
   if (fast)
     // g^(nr) mod n^2
-    tmp = powm (gn, r, nsq);
+    m = powm (gn, r, nsq);
   else
     // r^n mod n^2
-    tmp = powm (r, n, nsq);
+    m = powm (r, n, nsq);
 
   // g^m mod n^2
-  m = powm (g, m, nsq);
-
   // r^n g^m mod n^2  OR  g^{m+nr} mod n^2
-  m *= tmp;
+  m *= powm (g, msg, nsq);
   m %= nsq;
-
   return true;
 }
 
 
-/* Calculate CRT (mp,mq) mod N */
 void
-paillier_priv::CRT (bigint &mp, bigint &mq) const
+paillier_pub::add (crypt_ctext *c, const crypt_ctext &msg1, const crypt_ctext &msg2) const 
 {
-#if _PAILLIER_CRT_
+  assert (c);
+  assert (c->type   == CRYPT_PAILLIER);
+  assert (msg1.type == CRYPT_PAILLIER);
+  assert (msg2.type == CRYPT_PAILLIER);
 
-  // sp = mp * rp * q mod N
-  mp *= rp;
-  mp *= q;
-  mp %= n;
-
-  // sq = mq * rq * p mod N
-  mq *= rq;
-  mq *= p;
-  mq %= n;
-
-  // sp + sq
-  mp += mq;
-
-  if (mp >= n)
-    mp -= n;
-
-#endif
+  *c->paillier = (*msg1.paillier) * (*msg2.paillier);
+  *c->paillier %= nsq;
 }
 
 
-// Calculate fast decryption with chinese remainder and pre-computed values
+// Resulting ciphertext is msg's corresponding plaintext * constant
+// ctext = ctext^const ==> ptext = const * ptext 
 void
-paillier_priv::D (bigint &m, const bigint &msg) const
+paillier_pub::mult (crypt_ctext *c, const crypt_ctext &msg, const bigint &cons) const 
 {
-#if _PAILLIER_CRT_
-  // mq = Lq (msg^a mod q^2) hq mod q
-  bigint mq;
-  if (fast)
-    mq = powm (msg, a, qsq);
-  else
-    mq = powm (msg, q1, qsq);
+  assert (c);
+  assert (c->type  == CRYPT_PAILLIER);
+  assert (msg.type == CRYPT_PAILLIER);
 
-  // Compute Lq (m)
-  mq -= 1;
-  mq *= lq;
-  mq %= two_q;
-  m  %= q;
-
-  mq *= hq;
-  mq %= q;
-
-  // mp = Lp (msg^a mod p^2) hp mod p
-  if (fast)
-    m = powm (msg, a, psq);
-  else 
-    m = powm (msg, p1, psq);
-
-  // Compute L_p(m)
-  m -= 1;
-  m *= lp;
-  m %= two_p;
-  m %= p;
-
-  m *= hp;
-  m %= p;
-
-  // Recombine modulo residues
-  CRT (m, mq);
-
-#else /* PAILLIER_CRT */
-
-  if (fast)
-    m = powm (msg, a, nsq);
-  else
-    m = powm (msg, k, nsq);
-
-  m -= 1;
-  m *= ln;
-  m %= two_n;
-  m %= n;
-
-  m *= hn;
-  m %= n;
-
-#endif
+  *c->paillier = powm (*msg.paillier, cons, nsq);
 }
 
 
@@ -221,6 +170,7 @@ paillier_priv::paillier_priv (const bigint &pp, const bigint &qq,
   assert (fast);
   init ();
 }
+
 
 paillier_priv::paillier_priv (const bigint &pp, const bigint &qq,
 			      const bigint *nn)
@@ -305,6 +255,102 @@ paillier_priv::init ()
 }
 
 
+str 
+paillier_priv::decrypt (const crypt_ctext &msg, size_t msglen, 
+			bool recover) const
+{
+  assert (msg.type == CRYPT_PAILLIER);
+
+  bigint m;
+  D (m, *msg.paillier);
+  return post_decrypt (m, msglen);
+}
+
+
+// Calculate fast decryption with chinese remainder and pre-computed values
+void
+paillier_priv::D (bigint &m, const bigint &msg) const
+{
+#if _PAILLIER_CRT_
+  // mq = Lq (msg^a mod q^2) hq mod q
+  bigint mq;
+  if (fast)
+    mq = powm (msg, a, qsq);
+  else
+    mq = powm (msg, q1, qsq);
+
+  // Compute Lq (m)
+  mq -= 1;
+  mq *= lq;
+  mq %= two_q;
+  m  %= q;
+
+  mq *= hq;
+  mq %= q;
+
+  // mp = Lp (msg^a mod p^2) hp mod p
+  if (fast)
+    m = powm (msg, a, psq);
+  else 
+    m = powm (msg, p1, psq);
+
+  // Compute L_p(m)
+  m -= 1;
+  m *= lp;
+  m %= two_p;
+  m %= p;
+
+  m *= hp;
+  m %= p;
+
+  // Recombine modulo residues
+  CRT (m, mq);
+
+#else /* PAILLIER_CRT */
+
+  if (fast)
+    m = powm (msg, a, nsq);
+  else
+    m = powm (msg, k, nsq);
+
+  m -= 1;
+  m *= ln;
+  m %= two_n;
+  m %= n;
+
+  m *= hn;
+  m %= n;
+
+#endif
+}
+
+
+/* Calculate CRT (mp,mq) mod N */
+void
+paillier_priv::CRT (bigint &mp, bigint &mq) const
+{
+#if _PAILLIER_CRT_
+
+  // sp = mp * rp * q mod N
+  mp *= rp;
+  mp *= q;
+  mp %= n;
+
+  // sq = mq * rq * p mod N
+  mq *= rq;
+  mq *= p;
+  mq %= n;
+
+  // sp + sq
+  mp += mq;
+
+  if (mp >= n)
+    mp -= n;
+
+#endif
+}
+
+
 static void 
 paillier_gen (const bigint &p, const bigint &q, const bigint &n, 
 	      const bigint &a, bigint &g, bigint &k)
@@ -359,27 +405,38 @@ paillier_priv::make (const bigint &p,
 
 
 paillier_priv
-paillier_keygen (size_t bits, bool fast, u_int iter)
+paillier_skeygen (size_t nbits, u_int iter)
 {
+  assert (nbits > 0);
+
   random_init ();
   bigint p, q;
 
-  if (!fast) {
-    p = random_prime ((bits/2 + (bits & 1)), odd_sieve, 2, iter);
-    q = random_prime ((bits/2 + 1),          odd_sieve, 2, iter);
-    
-    if (p > q)
-      swap (p, q);
+  // Not fast
+  p = random_prime ((nbits/2 + (nbits & 1)), odd_sieve, 2, iter);
+  q = random_prime ((nbits/2 + 1),           odd_sieve, 2, iter);
+  
+  if (p > q)
+    swap (p, q);
+  
+  return paillier_priv (p, q);
+}
 
-    return paillier_priv (p, q);
-  }
-  else {
 
-    bigint a, g, k;
+paillier_priv
+paillier_keygen (size_t nbits, size_t abits, u_int iter)
+{
+  // Fast decryption
+  assert (nbits > 0);
+  assert (abits > 0);
+  assert (abits <= nbits);
 
-    a  = random_prime (paillier_priv::a_nbits, odd_sieve, 2, iter);
-    
-    size_t sbits = bits - (2 * paillier_priv::a_nbits);
+  random_init ();
+  size_t sbits = nbits - (2 * abits);
+  bigint n, p, q, a, g, k;
+
+  do {
+    a  = random_prime (abits, odd_sieve, 2, iter);
     bigint cp = random_bigint (sbits/2 + (sbits & 1));
     bigint cq = random_bigint (sbits/2 + 1);
     
@@ -393,48 +450,14 @@ paillier_keygen (size_t bits, bool fast, u_int iter)
       // p2 = a * (++c2) + 1
       q += a;
     
-    bigint n = p * q;
-    if (n.nbits () != bits && n.nbits () != (bits+1))
-      return paillier_keygen (bits);
-
-    paillier_gen (p, q, n, a, g, k);
-
-    if (p > q)
-      swap (p, q);
-    
-    return paillier_priv (p, q, a, g, k, &n);
-  }
-}
-
-
-bigint
-pre_paillier (const str &msg, size_t nbits)
-{
-  if (msg.len () > nbits) {
-    warn << "pre_paillier: message too large [len " << msg.len () << "]\n";
-    return 0;
-  }
+    n = p * q;
+  } while (n.nbits () != nbits && n.nbits () != (nbits+1) || p == q);
   
-  bigint r;
-  mpz_set_rawmag_le (&r, msg.cstr (), msg.len ());
-  return r;
-}
-
-
-str
-post_paillier (const bigint &m, size_t msglen, size_t nbits)
-{
-  if (m.nbits () > nbits || msglen > nbits) {
-    warn << "post_paillier: message too large [len " << m.nbits ()
-	 << " buf " << msglen << " bits " << nbits << "]\n";
-    return NULL;
-  }
-
-  zcbuf msg (nbits);
-  mpz_get_rawmag_le (msg, msg.size, &m);
+  paillier_gen (p, q, n, a, g, k);
   
-  char *mp = msg;
-  wmstr r (msglen);
-  memcpy (r, mp, msglen);
-  return r;
+  if (p > q)
+    swap (p, q);
+  
+  return paillier_priv (p, q, a, g, k, &n);
 }
+

@@ -121,3 +121,31 @@ struct srp_info {
   bigint v;
 };
 #endif
+
+
+enum crypt_keytype {
+  CRYPT_NOKEY = 0,
+  CRYPT_RABIN = 1,
+  CRYPT_2SCHNORR = 2,          /* proactive 2-Schnorr -- private */
+  CRYPT_SCHNORR = 3,           /* either *Schnorr -- public */
+  CRYPT_1SCHNORR = 4,          /* standard 1-Schnorr -- private */
+  CRYPT_ESIGN = 5,
+  CRYPT_PAILLIER = 6,
+  CRYPT_ELGAMAL = 7
+};
+
+struct elgamal_ctext {
+  bigint r;
+  bigint m;
+};
+
+union crypt_ctext switch (crypt_keytype type) {
+ case CRYPT_RABIN:
+   bigint rabin;
+ case CRYPT_PAILLIER:
+   bigint paillier;
+ case CRYPT_ELGAMAL:
+   elgamal_ctext elgamal;
+ default:
+   void;
+};
