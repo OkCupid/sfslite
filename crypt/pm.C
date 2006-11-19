@@ -81,12 +81,10 @@ pm_client::set_polynomial (const vec<str> &inputs)
     return false;
 
   // Convert strings to bigints
-  u_int nbits = sk->ptxt_modulus ().nbits ();
-
   vec<bigint> in;
   in.setsize (len);
   for (size_t i=0; i < len; i++)
-    in[i] = pre_paillier (inputs[i], nbits);
+    in[i] = sk->pre_encrypt (inputs[i]);
   
   return set_polynomial (in);
 }
@@ -98,7 +96,7 @@ pm_client::set_polynomial (const vec<bigint> &inputs)
   // A.1.
   // Compute coefficients of polynomial with roots = inputs
   polynomial P;
-  P.generate_coeffs (inputs, sk->ptxt_modulus ());
+  P.generate_coeffs (inputs, sk->ptext_modulus ());
   const vec<bigint> pcoeffs = P.coefficients ();
   size_t kc = pcoeffs.size ();
   if (!kc)
@@ -111,12 +109,9 @@ pm_client::set_polynomial (const vec<bigint> &inputs)
   // A.2.
   // Encrypt polynomial coefficients
   coeffs.clear ();
-  coeffs.setsize (kc-1);
   for (size_t i=0; i < kc-1; i++) {
-
-    coeffs[i] = sk->encrypt (pcoeffs[i]);
-
-    if (!coeffs[i]) {
+    coeffs.push_back (crypt_ctext (sk->ctext_type ()));
+    if (!sk->encrypt (&coeffs.back (), pcoeffs[i], false)) {
       coeffs.clear ();
       return false;
     }
@@ -137,6 +132,8 @@ pm_client::decrypt_intersection (vec<str> &payloads,
 
     // C.1.b
     // tests > len so that something left after stripping wellformed
+    //X warnx << "dec [" << hexdump (res.cstr (), res.len ()) << "]\n";
+
     if (!res || res.len () <= matchlen
 	|| strncmp (res.cstr (), match, matchlen))
       continue;
@@ -149,69 +146,86 @@ pm_client::decrypt_intersection (vec<str> &payloads,
 
 void 
 pm_server::evaluate_intersection (vec<cpayload> *res, 
-				  const vec<bigint> *ccoeffs,
-				  const paillier_pub *pk)
+				  const vec<crypt_ctext> *ccoeffs,
+				  const homoenc_pub *pk)
 {
   // B.1
   assert (pk);
-  bigint cy = pk->encrypt (one);
-  if (!cy)
+  crypt_ctext encone (pk->ctext_type ());
+  if (!pk->encrypt (&encone, one, false))
     return;
 
+  vec<cpayload> unshuffled;
   inputs.traverse (wrap (this, &pm_server::evaluate_polynomial, 
-			 res, ccoeffs, pk, &cy));
+			 &unshuffled, ccoeffs, pk, &encone));
 
   // B.2
-  if (res->size ()) {
-    // XXX Do a random shuffle of res here...
+  // XXX Do a GOOD random shuffle here...
+  size_t usize = unshuffled.size ();
+  if (usize) {
+    res->reserve (usize);
+    for (size_t i=0; i < usize; i++) {
+      if (rnd.getword () % 2)
+	res->push_back (unshuffled.pop_front ());
+      else
+	res->push_back (unshuffled.pop_back ());
+    }
   }
 }
 
 
 void
 pm_server::evaluate_polynomial (vec<cpayload> *res, 
-				const vec<bigint> *pccoeffs, 
-				const paillier_pub *ppk,
-				const bigint *encone,
+				const vec<crypt_ctext> *pccoeffs, 
+				const homoenc_pub *ppk,
+				const crypt_ctext *encone,
 				const str &x, ppayload *payload)
 {
   assert (res && pccoeffs && ppk && encone);
-  const vec<bigint> &ccoeffs = *pccoeffs;
-  const paillier_pub &pk     = *ppk;
+  const vec<crypt_ctext> &ccoeffs = *pccoeffs;
+  const homoenc_pub &pk           = *ppk;
   size_t deg = ccoeffs.size ();
 
   // B.1.a
   // Compute E(P(y))
-  bigint px = pre_paillier (x, pk.nbits);
+  bigint px = pk.pre_encrypt (x);
   if (!px)
     return;
 
   // Require coefficient c[deg-1] = 1, to ensure that malicious client
   // doesn't send over generate polynomial. See FNP04, 5.1
-  bigint cy = *encone;
+  crypt_ctext cy = *encone;
 
   // See polynomial::evaluate
   // Coeffs sent over already don't include last element
-  while (deg)
+  while (deg) {
     // y = y * x + coeff[i];
-    cy = pk.add (pk.mult (cy, px), ccoeffs[--deg]);
+    crypt_ctext tmp (pk.ctext_type ());
+    pk.mult (&tmp, cy, px);
+    pk.add  (&cy, tmp, ccoeffs[--deg]);
+  }
 
   // B.1.b
   // Compute E(rP(x))
-  cy = pk.mult (cy, random_bigint (pk.nbits));
+  pk.mult (&cy, cy, random_zn (pk.ptext_modulus ()));
 
   // Generate payload
   str buf = strbuf () << match << payload->ptxt;
-  bigint cp = pk.encrypt (buf);
-  if (!cp)
+  crypt_ctext cpay (pk.ctext_type ());
+
+  //X warnx << "pay [" << hexdump (buf.cstr (), buf.len ()) << "]\n";
+
+  if (!pk.encrypt (&cpay, buf, true))
     return;
 
-  // Compute E(rP(x) + (match|| payload))
+  // Compute E(rP(x) + (match || payload))
+  pk.add (&cy, cy, cpay);
+
   cpayload pay;
-  pay.ctxt  = pk.add (cy, cp);
+  pay.ctxt = cy;
   // if P(x) != 0, resulting plaintext can be > buf.len, but
   // we don't care, because the match check will fail
-  pay.ptsz  = buf.len ();
+  pay.ptsz = buf.len ();
 
   res->push_back (pay);
 }

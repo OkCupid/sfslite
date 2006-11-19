@@ -7,18 +7,19 @@ sfslib_LTLIBRARIES = libsfscrypt.la
 LIBSFSCRYPT = libsfscrypt.la
 
 libsfscrypt_la_SOURCES = \
-aes.C arc4.C axprt_crypt.C blowfish.C crypt_prot.C esign.C		\
-getkbdnoise.C getsysnoise.C hashcash.C mdblock.C modalg.C mpscrub.C	\
-mpz_misc.C mpz_raw.C mpz_square.C mpz_xor.C pad.C paillier.C password.C \
-pm.C poly.C prng.C rabin.C random_prime.C rndseed.C rsa.C seqno.C       \
-sha1.C sha1oracle.C tiger.C tiger_sboxes.C wmstr.C                      \
-xdr_mpz_t.C schnorr.C ocb.C
+aes.C arc4.C axprt_crypt.C blowfish.C crypt_prot.C dsa.C elgamal.C     \
+esign.C fips186.C getkbdnoise.C getsysnoise.C hashcash.C mdblock.C     \
+modalg.C mpscrub.C mpz_misc.C mpz_raw.C mpz_square.C mpz_xor.C pad.C   \
+paillier.C password.C pm.C poly.C prng.C rabin.C random_prime.C        \
+rndseed.C rsa.C seqno.C serial.C sha1.C sha1oracle.C srp.C tiger.C     \
+tiger_sboxes.C wmstr.C xdr_mpz_t.C schnorr.C ocb.C umac.C
 
 sfsinclude_HEADERS = crypt_prot.x \
-aes.h arc4.h axprt_crypt.h bench.h bigint.h blowfish.h crypt.h		\
-crypthash.h crypt_prot.h esign.h hashcash.h modalg.h paillier.h         \
-password.h pm.h poly.h prime.h prng.h rabin.h rsa.h seqno.h sha1.h      \
-srp.h tiger.h wmstr.h schnorr.h ocb.h umac.h
+aes.h arc4.h axprt_crypt.h bench.h bigint.h blowfish.h crypt.h         \
+crypthash.h crypt_prot.h dsa.h elgamal.h esign.h fips186.h hashcash.h  \
+homoenc.h modalg.h paillier.h password.h pm.h poly.h prime.h prng.h    \
+rabin.h rsa.h seqno.h sha1.h srp.h tiger.h wmstr.h schnorr.h ocb.h     \
+umac.h
 
 
 noinst_HEADERS = blowfish_data.h

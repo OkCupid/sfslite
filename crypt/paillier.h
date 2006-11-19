@@ -25,20 +25,16 @@
 #ifndef _PAILLIER_H_
 #define _PAILLIER_H_ 1
 
+#include "homoenc.h"
+
 // Use Chinese Remaindering for fast decryption
 #define _PAILLIER_CRT_ 1
 
-#include "crypt.h"
-#include "bigint.h"
-
-bigint pre_paillier (const str &msg, size_t nbits);
-str post_paillier (const bigint &m, size_t msglen, size_t nbits);
-
-class paillier_pub {
+class paillier_pub : public virtual homoenc_pub {
 public:
   const bigint n;		/* Modulus */
   const bigint g;		/* Basis g */
-  const int nbits;
+  const size_t nbits;
 
 protected:
   bool fast;
@@ -46,57 +42,41 @@ protected:
   // _FAST_PAILLIER_  
   bigint gn;                    /* g^N % nsq */
 
-  bool E (bigint &, const bigint &) const;
   void init ();
 
 public:
   paillier_pub (const bigint &nn);
   paillier_pub (const bigint &nn, const bigint &gg);
+  virtual ~paillier_pub () {}
 
-  const bigint &ptxt_modulus () const { return n; }
-  const bigint &ctxt_modulus () const { return nsq; }
+  virtual const size_t &mod_size      () const { return nbits; }
+  virtual const bigint &ptext_modulus () const { return n;     }
+  virtual const bigint &ctext_modulus () const { return nsq;   }
 
-  bigint encrypt (const str &msg) const {
-    bigint m = pre_paillier (msg, nbits);
-    if (!m)
-      return 0;
-    bigint r = random_bigint (nbits);
-    r %= n;
-    if (!E (m, r))
-      return 0;
-    return m;
-  }
+  virtual bool encrypt (crypt_ctext *c, const bigint &msg, bool recover) const;
+  virtual bool encrypt (crypt_ctext *c, const str &msg,
+			bool recover = true) const
+  { return homoenc_pub::encrypt (c, msg, recover); }
 
-  bigint encrypt (const bigint &msg) const {
-    bigint m = msg;
-    bigint r = random_bigint (nbits);
-    r %= n;
-    if (!E (m, r))
-      return 0;
-    return m;
-  }
+  virtual crypt_keytype ctext_type () const { return CRYPT_PAILLIER; }
 
   // Resulting ciphertext is sum of msgs' corresponding plaintexts
   // ctext = ctext1*ctext2 ==> ptext = ptext1 + ptext2
-  bigint add (const bigint &msg1, const bigint &msg2) const {
-    bigint m = msg1 * msg2;
-    m %= nsq;
-    return m;
-  }
+  virtual void add (crypt_ctext *c, const crypt_ctext &msg1, 
+		    const crypt_ctext &msg2) const;
 
   // Resulting ciphertext is msg's corresponding plaintext * constant
-  // ctext = ctext1^const ==> ptext = const * ptext1 
-  bigint mult (const bigint &msg1, const bigint &const1) const {
-    return powm (msg1, const1, nsq);
-  }
+  // ctext = ctext^const ==> ptext = const * ptext 
+  virtual void mult (crypt_ctext *c, const crypt_ctext &msg, 
+		     const bigint &cons) const;
 };
 
-class paillier_priv : public paillier_pub {
+
+class paillier_priv : public paillier_pub, public virtual homoenc_priv {
 public:
   const bigint p;		/* Smaller prime */
   const bigint q;	        /* Larger prime  */
   const bigint a;               /* For fast decryption */
-  enum { a_nbits = 160 };
 
 protected:
   bigint p1;		        /* p-1             */
@@ -125,7 +105,6 @@ protected:
   bigint hn;                    /* Ln (g^k % n^2) ^ {-1} % n */
 #endif
 
-
   void init ();
 
   void CRT (bigint &, bigint &) const;
@@ -136,6 +115,7 @@ public:
   paillier_priv (const bigint &pp, const bigint &qq, 
 		 const bigint &aa, const bigint &gg, 
 		 const bigint &kk, const bigint *nn = NULL);
+  virtual ~paillier_priv () {}
 
   // Use the slower version, yet more standard cryptographic assumptions
   static ptr<paillier_priv> make (const bigint &p, const bigint &q);
@@ -143,68 +123,16 @@ public:
   static ptr<paillier_priv> make (const bigint &p, const bigint &q,
 				  const bigint &a);
 
-  str decrypt (const bigint &msg, size_t msglen) const {
-    bigint m;
-    D (m, msg);
-    return post_paillier (m, msglen, nbits);
-  }
+  virtual str decrypt (const crypt_ctext &msg, size_t msglen,
+		       bool recover = true) const;
 };
 
-paillier_priv paillier_keygen  (size_t nbits, bool fast = true, u_int iter = 32);
 
-/*
- * Serialized format of a paillier private key:
- *
- * The private key itself is stured using the following XDR data structures:
- *
- * struct keyverf {
- *   asckeytype type;  // SK_PAILLIER_EKSBF
- *   bigint pubkey;    // The modulus of the public key
- * };
- *
- * struct privkey {
- *   bigint p;         // Smaller prime of secret key
- *   bigint q;         // Larger prime of secret key
- *   sfs_hash verf;    // SHA-1 hash of keyverf structure
- * };
- *
- * Option 1:  The secret key is stored without a passphrase
- *
- * "SK" SK_PAILLIER_EKSBF ",," privkey "," pubkey "," comment
- *
- *   SK_PAILLIER_EKSBF - the number 1 in ascii decimal
- *          privkey - a struct privkey, XDR and armor64 encoded
- *           pubkey - the public key modulus in hex starting "0x"
- *          comment - an arbitrary and possibly empty string
- *
- * Option 2:  There is a passphrase
- *
- * "SK" SK_PAILLIER_EKSBF "," rounds "$" salt "$" ptext "," seckey "," pubkey
- *   "," comment
- *
- *           rounds - the cost paraeter of eksblowfish in ascii decimal
- *             salt - a 16 byte random salt for eksblowfish, armor64 encoded
- *            ptext - arbitrary length string of the user's choice
- *        secretkey - A privkey struct XDR encoded, with 4 null-bytes
- *                    appended if neccesary to make the size a multiple
- *                    of 8 bytes, encrypted once with eksblowfish,
- *                    then armor64 encoded
- *       
- */
+// Paillier without fast decryption
+paillier_priv paillier_skeygen  (size_t nbits, u_int iter = 32);
 
-#if 0
-enum asckeytype {
-  SK_ERROR = 0,			// Keyfile corrupt
-  SK_PAILLIER_EKSBF = 1,	// Paillier secret key encrypted with eksblowfish
-};
-
-const size_t SK_PAILLIER_SALTBITS = 1024;
-
-inline str
-file2wstr (str path)
-{
-  return str2wstr (file2str (path));
-}
-#endif
+// Paillier with fast decryption
+// abits gives length of subgroup [e.g., 160 bits for 1024-bit keys]
+paillier_priv paillier_keygen  (size_t nbits, size_t abits, u_int iter = 32);
 
 #endif /* !_PAILLIER_H_  */
