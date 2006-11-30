@@ -113,7 +113,7 @@ __backtrace (const char *file, int lim)
     if (sigsetjmp (segv_env, 0))
       break;
 #endif /* NO_STACK_TOP */
-    framep = *framep;
+    framep = (const void *const *) *framep;
   }
 
 #if NO_STACK_TOP
@@ -126,10 +126,10 @@ __backtrace (const char *file, int lim)
     if (!strcmp (tb->name, bp))
       return tb->name;
 
-  tb = malloc (sizeof (*tb));
+  tb = (struct traceback *)malloc (sizeof (*tb));
   if (!tb)
     return file;
-  tb->name = malloc (1 + strlen (bp));
+  tb->name = (char *)malloc (1 + strlen (bp));
   if (!tb->name) {
     free (tb);
     return file;
