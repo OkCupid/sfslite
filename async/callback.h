@@ -6,6 +6,7 @@
 #include "autoconf.h"
 
 #ifndef _CALLBACK_H_INCLUDED_
+#define _CALLBACK_H_INCLUDED_
 
 # ifdef SFS_HAVE_CALLBACK2
 #  include "callback2.h"

@@ -6,10 +6,11 @@ LIBSFSMISC = libsfsmisc.la
 
 if USE_SFSMISC
 libsfsmisc_la_SOURCES = \
- afsdir.C afsnode.C agentmisc.C attrcache.C closesim.C	\
+ afsdir.C afsnode.C agentconn.C agentmisc.C attrcache.C closesim.C	\
  findfs.C getfh3.C nfs3_err.C nfsserv.C nfstrans.C nfs3attr.C		\
- nfsxattr.C pathexpand.C sfs_err.C sfsaid.C sfsclient.C	\
+ nfsxattr.C pathexpand.C sfs_err.C sfsaid.C sfsauthorizer.C sfsclient.C	\
  sfsclientauth.C sfsconnect.C sfsconst.C sfskeyfetch.C sfskeymisc.C	\
+ sfshostalias.C \
  sfspath.C sfsserv.C sfssesskey.C sfssrpconnect.C sfstty.C suidgetfd.C	\
  unixserv.C uvfstrans.C sfscrypt.C sfsschnorr.C validshell.C sfskeymgr.C \
  sfsgroupmgr.C 
