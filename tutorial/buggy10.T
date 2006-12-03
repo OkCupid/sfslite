@@ -61,7 +61,7 @@ state_t::launch (cbb cv)
 
     delaycb (10, 0, wrap (foofoo, mkevent (window, -1, xx)));
   }
-  cv->trigger (ret);
+  TRIGGER (cv, ret);
 }
 
 tamed void 
@@ -95,7 +95,7 @@ state_t::relaunch (cbb cv)
     }
   }
   warn << "All done...\n";
-  cv->trigger (!err_occurred);
+  TRIGGER (cv, !err_occurred);
 }
 
 state_t *s;

@@ -34,7 +34,7 @@ part1 (cb_hog_t *hog, rendezvous_t<> *rv, cbv cb)
 {
   delaycb (1, 0, mkevent (*rv));
   hog->call_me (mkevent (*rv));
-  cb->trigger ();
+  TRIGGER (cb);
 }
 
 tamed static void part2 (rendezvous_t<> *rv, cbv cb)
@@ -43,7 +43,7 @@ tamed static void part2 (rendezvous_t<> *rv, cbv cb)
   for (i = 0; i < 2; i++) {
     twait (*rv);
   }
-  cb->trigger ();
+  TRIGGER (cb);
 }
 
 
@@ -60,7 +60,7 @@ tamed static void buggy1b (cbb cb)
   if (fix_bug)
     delete hog;
 
-  cb->trigger (true);
+  TRIGGER (cb, true);
 }
 
 static void usage ()

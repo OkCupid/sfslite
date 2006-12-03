@@ -10,7 +10,7 @@ sleeper_ev (cbi cb)
   warn << "++ sleeper_ev: to sleep!\n";
   twait { delaycb (3, 0, mkevent ()); }
   warn << "-- sleeper_ev: woke up!\n";
-  cb->trigger (33);
+  TRIGGER (cb, 33);
 }
 
 static int
@@ -60,7 +60,7 @@ run_ev (cbv cb)
   warn << "oo event return: " << i << "\n";
 
   warn << "- run_ev (" << r1 << "," << r2 << ")\n";
-  cb->trigger ();
+  TRIGGER (cb);
 }
 
 tamed static void

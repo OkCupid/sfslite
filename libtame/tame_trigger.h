@@ -30,6 +30,8 @@
 
 #ifdef SFS_HAVE_CALLBACK2
 
+void dtrigger_cb (callback<void>::ref cb);
+
 void dtrigger (callback<void>::ref cb);
 
 template<class T1> void

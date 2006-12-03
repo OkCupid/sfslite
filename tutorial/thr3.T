@@ -5,6 +5,8 @@
 #include "tame.h"
 #include <list.h>
 
+#ifdef SFS_HAVE_CALLBACK2
+
 struct req_t {
   req_t (int p, cbi::ptr d) : _param (p), _done (d) {}
   int _param;
@@ -237,3 +239,12 @@ int main (int argc, char *argv[])
   main2 ();
   amain ();
 }
+
+#else // SFS_HAVE_CALLBACK2
+
+int main (int argc, char *argv[])
+{
+  panic ("this program requires CALLBACK2\n");
+}
+
+#endif // SFS_HAVE_CALLBACK2

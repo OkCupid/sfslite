@@ -37,7 +37,7 @@ buggy1c (cbb cv)
   for (i = 0; i < (fix_bug ? 2 : 1); i++) {
     twait (rv);
     if (i == 0) 
-      cv->trigger (true);
+      TRIGGER (cv, true);
   }
   warn << "leaving buggy1c\n";
 }
