@@ -74,7 +74,7 @@ bool dostuff (str h, int port, cbb cb)
     warn << "All done...\n";
     warn << bad_rpcs.size () << " bad RPCs, total\n";
   }
-  cb->signal (!err_occurred);
+  SIGNAL (cb, !err_occurred);
 }
 
 static void finish (bool rc)

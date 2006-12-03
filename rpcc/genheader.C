@@ -251,6 +251,8 @@ dumpunion (const rpc_sym *s)
        << "  rpcunion_switch_" << rs->id << "\n"
        << "    (obj." << rs->tagid << ", RPCUNION_TRAVERSE, "
        << "return true, return false);\n"
+       << "  /* gcc 4.0.3 makes buggy warnings without the following line */\n"
+       << "  return false;\n"
        << "}\n"
        << "inline bool\n"
        << "rpc_traverse (const stompcast_t &s, " << rs->id << " &obj)\n"
@@ -259,6 +261,8 @@ dumpunion (const rpc_sym *s)
        << "    (obj." << rs->tagid << ", RPCUNION_REC_STOMPCAST,\n"
        << "     obj._base.destroy (); return true, "
        << "obj._base.destroy (); return true;);\n"
+       << "  /* gcc 4.0.3 makes buggy warnings without the following line */\n"
+       << "  return false;\n"
        << "}\n";
   pmshl (rs->id);
   // aout << "RPC_TYPE_DECL (" << rs->id << ")\n";

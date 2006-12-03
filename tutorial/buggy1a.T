@@ -40,7 +40,7 @@ void buggy1a (cbb cv)
     delaycb (1, 0, @()); 
     hog->call_me (@());
   }
-  cv->signal (true);
+  SIGNAL (cv, true);
   BLOCK { delaycb (1, 0, @()); }
 
   if (fix_bug)

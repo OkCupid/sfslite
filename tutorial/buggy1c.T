@@ -37,7 +37,7 @@ buggy1c (cbb cv)
   for (i = 0; i < (fix_bug ? 2 : 1); i++) {
     WAIT (JG);
     if (i == 0) 
-      cv->signal (true);
+      SIGNAL (cv, true);
   }
   warn << "leaving buggy1c\n";
 }

@@ -83,7 +83,7 @@ connect_to_in_addr (in_addr a, int port, cbi cv)
 
   // calls (*callercv)(fd); also enforces that this
   // callback is called exactly once.
-  cv->signal (fd);
+  SIGNAL (cv, fd);
 }
 
 /**
@@ -124,7 +124,7 @@ my_tcpconnect (str hostname, u_int16_t port, cbi cv,
     warn << "DNS lookup cancelled!\n";
     dnsreq_cancel (dnsp);
     cg.remove_join ();
-    cv->signal (fd);
+    SIGNAL (cv, fd);
   } else {
     // if we keep going, note that the canceller is still outstanding,
     // and might still cancel us.
@@ -133,9 +133,9 @@ my_tcpconnect (str hostname, u_int16_t port, cbi cv,
       canceller->toolate ();
       cg.remove_join ();
       if (dns_tmperr (err))
-	cv->signal (-EAGAIN);
+	SIGNAL (cv, -EAGAIN);
       else
-	cv->signal (-ENOENT);
+	SIGNAL (cv, -ENOENT);
     } else {
       if (namep)
 	*namep = h->h_name;
@@ -149,7 +149,7 @@ my_tcpconnect (str hostname, u_int16_t port, cbi cv,
       } else {
 	cancel_connect->cancel ();
       }
-      cv->signal (fd); 
+      SIGNAL (cv, fd);
       
       // wait on the call to connect_to_inaddr if we've timed out.
       if (cg.n_vars_left ()) 

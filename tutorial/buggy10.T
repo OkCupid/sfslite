@@ -61,7 +61,7 @@ void state_t::launch (cbb cv)
 
     delaycb (10, 0, wrap (foofoo, @[window](xx)));
   }
-  cv->signal (ret);
+  SIGNAL (cv, ret);
 }
 
 TAMED
@@ -95,7 +95,7 @@ void state_t::relaunch (cbb cv)
     }
   }
   warn << "All done...\n";
-  cv->signal (!err_occurred);
+  SIGNAL (cv, !err_occurred);
 }
 
 state_t *s;

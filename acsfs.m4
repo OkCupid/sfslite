@@ -2083,6 +2083,25 @@ test "${enable_libsfs+set}" = "set" && with_libsfs="yes"
 AM_CONDITIONAL(USE_LIBSFS, test "$with_libsfs" = "yes")
 ])
 dnl
+dnl Enable all optional directories
+dnl
+AC_DEFUN([SFS_ALL],
+[AC_ARG_ENABLE(all,
+--enable-all    enable full sfsmisc libsfs and tutorial)
+test "${enable_all+set}" = "set" && with_all="yes"
+if test "$with_all" = "yes"
+then
+	with_libsfs="yes"
+	AM_CONDITIONAL(USE_LIBSFS, test "$with_libsfs" = "yes")
+	with_sfsmisc="yes"
+	AM_CONDITIONAL(USE_SFSMISC, test "$with_sfsmisc" = "yes")
+	AC_DEFINE(HAVE_SFSMISC, 1, 
+		  Define if we're compiling with full sfsmisc library)
+	with_tutorial="yes"
+	AM_CONDITIONAL(USE_TUTORIAL, test "$with_tutorial" = "yes")
+fi
+])
+dnl
 dnl SFS_SET_CLOCK
 dnl
 dnl  Check for function in sfs that allows different types of clocks
@@ -2113,4 +2132,11 @@ if test "${enable_callback2+set}" = "set" -o \
 	AC_DEFINE(SFS_HAVE_CALLBACK2, 1, Toggle callback2.h with CB signaling)
 fi
 ])
-
+dnl
+dnl SFS_SYSTEM_BIN
+dnl
+AC_DEFUN([SFS_SYSTEM_BIN],
+[AC_ARG_ENABLE(system-bin,
+--enabel-system-bin   Dump rpcc and tame into system-wide bin)
+"${enable_system_bin+set}" = "set" && install_to_system_bin=1
+])

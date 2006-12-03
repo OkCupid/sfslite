@@ -34,7 +34,7 @@ part1 (cb_hog_t *hog, coordgroup_t<> *JG, cbv cb)
 {
   delaycb (1, 0, @[*JG]());
   hog->call_me (@[*JG]());
-  cb->signal ();
+  SIGNAL (cb);
 }
 
 TAMED static void part2 (coordgroup_t<> *JG, cbv cb)
@@ -43,7 +43,7 @@ TAMED static void part2 (coordgroup_t<> *JG, cbv cb)
   for (i = 0; i < 2; i++) {
     WAIT (*JG);
   }
-  cb->signal ();
+  SIGNAL (cb);
 }
 
 
@@ -60,7 +60,7 @@ TAMED static void buggy1b (cbb cb)
   if (fix_bug)
     delete hog;
 
-  cb->signal (true);
+  SIGNAL (cb, true);
 }
 
 static void usage ()

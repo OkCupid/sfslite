@@ -109,7 +109,7 @@ remote_host_t::dostuff_private (int port, cbb cv)
     }
   }
   warn << "All done...\n";
-  cv->signal (!err_occurred);
+  SIGNAL (cv, !err_occurred);
 }
 
 static void finish (bool rc)

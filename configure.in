@@ -13,6 +13,7 @@ dnl
 dnl begin SFSLITE change
 dnl
 SFS_TAG
+SFS_SYSTEM_BIN
 dnl
 dnl End SFSLITE change
 dnl
@@ -438,21 +439,19 @@ AC_ARG_WITH(sfsgroup,
 dnl
 dnl being SFSlite changes
 dnl
-dnl    - add unwrap and tutorial stuff
+dnl    - add tame and tutorial stuff
 dnl    - prune other directories
 dnl
 SFS_TUTORIAL
 SFS_MISC
 SFS_LIBSFS
 SFS_CALLBACK
+SFS_ALL
 
 AC_OUTPUT(Makefile async/Makefile rpcc/Makefile arpc/Makefile
 	crypt/Makefile sfsmisc/Makefile contrib/Makefile tame/Makefile
-	svc/Makefile libtame/Makefile arpcgen/Makefile libsfs/Makefile)
-
-if test "$with_tutorial" = "yes"; then
-	AC_OUTPUT(tutorial/Makefile tutorial/doc/Makefile)
-fi
+	svc/Makefile libtame/Makefile arpcgen/Makefile libsfs/Makefile
+	tutorial/Makefile tutorial/doc/Makefile)
 dnl
 dnl end SFSlite changes
 dnl

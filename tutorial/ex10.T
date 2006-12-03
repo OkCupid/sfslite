@@ -66,7 +66,7 @@ my_host_t<T,X>::try_it (cbb cv)
       }
     }
   }
-  cv->signal (ret);
+  SIGNAL (cv, ret);
   fd ++;
 }
  

@@ -74,7 +74,7 @@ bool dostuff (const str &h, int port, cbb cb)
     }
     warn << "All done...\n";
   }
-  cb->signal (!err_occurred);
+  SIGNAL (cb, !err_occurred);
   return true;
 }
 

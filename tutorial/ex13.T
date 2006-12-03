@@ -56,7 +56,7 @@ dostuff (str h, int port, cbb cb)
 
     warn << "All done...\n";
   }
-  cb->signal (!err);
+  SIGNAL (cb, !err);
 }
 
 static void finish (bool rc)

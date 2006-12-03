@@ -20,7 +20,7 @@ void leaky_callee (cbv cb)
   holding_area.push_back (cb);
   BLOCK { delaycb (1, 0, @()); }
   if (fix_bug)
-    cb->signal ();
+    SIGNAL (cb);
   else
     (*cb) ();
 }
@@ -31,7 +31,7 @@ void block_with_cb_hog (cbv cb)
 {
   warn << "block_with_cb_hog...\n";
   BLOCK { leaky_callee (@()); }
-  cb->signal ();
+  SIGNAL (cb);
 }
 
 TAMED static
@@ -43,7 +43,7 @@ void nonblock_with_cb_hog (cbv cb)
   warn << "nonblock_with_cb_hog...\n";
   leaky_callee (@[G] ());
   WAIT (G);
-  cb->signal ();
+  SIGNAL (cb);
 }
 
 TAMED static
@@ -57,7 +57,7 @@ void nonblock_with_unwaited_cvs (cbv cb)
   if (fix_bug) {
     WAIT (G); 
   }
-  cb->signal ();
+  SIGNAL (cb);
 }
 
 typedef void (* run_me_t) (cbv, ptr<closure_t>);
