@@ -253,6 +253,7 @@ shmbuf::alloc (int fd)
   void *buf = mmap (NULL, (size_t) sb.st_size, PROT_READ|PROT_WRITE,
 		    MAP_FILE|MAP_SHARED, fd, 0);
   if (buf == reinterpret_cast<char *> (MAP_FAILED)) {
+    warn ("mmap: %m\n");
     return NULL;
   }
   return New refcounted<shmbuf> (fd, buf, sb.st_size);
