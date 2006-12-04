@@ -1417,7 +1417,7 @@ test "${CXXDEBUG+set}" || CXXDEBUG="$CXXFLAGS"
 export CXXDEBUG
 case $host_os in
     openbsd*)
-	sfs_gnu_WFLAGS="-ansi -Wall -Wsign-compare -Wchar-subscripts -Werror"
+	sfs_gnu_WFLAGS="-Wall -Wsign-compare -Wchar-subscripts -Werror"
 	sfs_gnu_CXXWFLAGS="$sfs_gnu_WFLAGS"
 	;;
     linux*|freebsd*)
@@ -1438,13 +1438,6 @@ test "$GCC" = yes -a -z "${WFLAGS+set}" && WFLAGS="$sfs_gnu_WFLAGS"
 test "$GXX" = yes -a -z "${CXXWFLAGS+set}" && CXXWFLAGS="$sfs_gnu_CXXWFLAGS"
 CXXNOERR=
 test "$GXX" = yes && CXXNOERR='-Wno-error'
-# Temporarily set CFLAGS to ansi so tests for things like __inline go correctly
-if expr "x$DEBUG $WFLAGS $ECFLAGS" : '.*-ansi' > /dev/null; then
-	CFLAGS="$CFLAGS -ansi"
-	ac_cpp="$ac_cpp -ansi"
-fi
-expr "x$CXXDEBUG $CXXWFLAGS $ECXXFLAGS" : '.*-ansi' > /dev/null \
-    && CXXFLAGS="$CXXFLAGS -ansi"
 ])
 dnl
 dnl SFS_CFLAGS puts the effects of SFS_WFLAGS into place.
