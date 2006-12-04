@@ -23,7 +23,7 @@ tame_init::start ()
     panic ("tame_init called twice\n");
   initialized = true;
 
-#ifdef HAVE_PTH
+#ifdef HAVE_TAME_PTH
   pth_init ();
 #endif
 

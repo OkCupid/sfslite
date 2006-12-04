@@ -2221,7 +2221,7 @@ then
 	fi
 	if test "${sfs_cv_libpth+set}" && test "$sfs_cv_libpth" != "no"; then
 		CPPFLAGS="$CPPFLAGS $sfs_cv_pth_h"
-		AC_DEFINE(HAVE_PTH, 1, Allow libamt to use the GNU Pth library)
+		AC_DEFINE(HAVE_TAME_PTH, 1, Allow tame to use the GNU Pth library)
 		sfs_have_threads=yes
 		LDADD_THR=$sfs_cv_libpth
 	else

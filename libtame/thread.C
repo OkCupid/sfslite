@@ -2,16 +2,16 @@
 #include "tame_thread.h"
 #include "async.h"
 
-#ifdef HAVE_PTH
+#ifdef HAVE_TAME_PTH
 # include <pth.h>
-#endif /* HAVE_PTH */
+#endif /* HAVE_TAME_PTH */
 
 int threads_out;
 
 void
 tame_thread_spawn (const char *loc, void * (*fn) (void *), void *arg)
 {
-#ifdef HAVE_PTH
+#ifdef HAVE_TAME_PTH
 
   //warn << "thread spawn ....\n";
   pth_attr_t attr = pth_attr_new ();
@@ -29,27 +29,27 @@ tame_thread_spawn (const char *loc, void * (*fn) (void *), void *arg)
 
 #else 
   panic ("no PTH package available\n");
-#endif /* HAVE_PTH */
+#endif /* HAVE_TAME_PTH */
   
 }
 
 void
 tame_thread_exit ()
 {
-#ifdef HAVE_PTH
+#ifdef HAVE_TAME_PTH
   --threads_out;
   pth_exit (NULL);
 #else 
   panic ("no PTH package available\n");
-#endif /* HAVE_PTH */
+#endif /* HAVE_TAME_PTH */
 }
 
 void
 tame_thread_init ()
 {
-#ifdef HAVE_PTH
+#ifdef HAVE_TAME_PTH
   pth_init ();
   threads_out = 0;
-#endif /* HAVE_PTH */
+#endif /* HAVE_TAME_PTH */
 }
 
