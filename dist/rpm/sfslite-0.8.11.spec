@@ -29,7 +29,7 @@ Maintained as port of the OKWS distribution by Maxwell Krohn.
 %setup -q
 
 %build
-%configure --enable-sfsmisc --enable-libsfs
+%configure --enable-all
 make 
 
 %install
