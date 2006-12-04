@@ -58,7 +58,7 @@ tameclean:
 dist-hook:
 	cd $(distdir) && rm -f tame_out
 
-EXTRA_DIST = .svnignore tame_in Makefile.am.m4
+EXTRA_DIST = .svnignore tame_in Makefile.am.m4 mkevent.pl mktfork_ag.pl
 CLEANFILES = core *.core *~ *.rpo tame_mkevent.h tame_tfork_ag.h tame_out
 MAINTAINERCLEANFILES = Makefile.in Makefile.am
 

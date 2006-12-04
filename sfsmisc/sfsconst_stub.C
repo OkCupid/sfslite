@@ -322,7 +322,7 @@ sfsconst_init ()
     char *p = safegetenv ("SFS_RELEASE");
     if (!p || !convertint (p, &sfs_release)) {
       str rel (strbuf () << "SFS_RELEASE=" << sfs_release);
-      xputenv (const_cast<char> *> (rel.cstr ()));
+      xputenv (const_cast<char *> (rel.cstr ()));
     }
   }
 
