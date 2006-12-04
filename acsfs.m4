@@ -2138,5 +2138,5 @@ dnl
 AC_DEFUN([SFS_SYSTEM_BIN],
 [AC_ARG_ENABLE(system-bin,
 --enabel-system-bin   Dump rpcc and tame into system-wide bin)
-"${enable_system_bin+set}" = "set" && install_to_system_bin=1
+test "${enable_system_bin+set}" = "set" && install_to_system_bin=1
 ])
