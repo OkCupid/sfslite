@@ -337,7 +337,7 @@ AC_SUBST(sfsincludedirp)
 AC_SUBST(sfsincludedir)
 sfsexecdir="$sfslibdir"
 AC_SUBST(sfsexecdir)
-if test -z "$sfstag" -o $install_to_system_bin -eq 1; then
+if ${install_to_system_bin} -eq 1; then
 	sfsbindir='${prefix}/bin'
 else
 	sfsbindir="$sfslibdir"

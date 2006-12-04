@@ -88,7 +88,7 @@ env.mk: Makefile
 
 EXTRA_DIST = .cvsignore env.mk
 CLEANFILES = core *.core *~ *.rpo dftables chartables.c stamp-async-repo
-MAINTAINERCLEANFILES = Makefile.in
+MAINTAINERCLEANFILES = Makefile.in env.mk
 
 .PHONY: cbh
 cbh:
