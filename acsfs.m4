@@ -1694,21 +1694,21 @@ elif test -f ${with_sfs}/include/${sfsprfx}/autoconf.h \
     LIBSFS=${sfslibdir}/libsfs.a
     MALLOCK=${sfslibdir}/mallock.o
 
-	RPCC=rpcc
+    RPCC=rpcc
     SFS_PATH_PROG(rpcc, ${sfslibdir})
     if test "$PATH_RPCC" -a -x "$PATH_RPCC" 
     then
 	RPCC="$PATH_RPCC"
     fi
 
-	TAME=tame
+    TAME=tame
     SFS_PATH_PROG(tame, ${sfslibdir})
     if test "$PATH_TAME" -a -x "$PATH_TAME"
     then
 	TAME="$PATH_TAME"
     fi
 
-	ARPCGEN=arpcgen
+    ARPCGEN=arpcgen
     SFS_PATH_PROG(arpcgen, ${sfslibdir})
     if test "$PATH_ARPCGEN" -a -x "$PATH_ARPCGEN"
     then
