@@ -25,14 +25,12 @@
 #ifndef _SFSMISC_H_
 #define _SFSMISC_H_ 1
 
-#include "config.h"
+#include "amisc.h"
 
 #ifdef HAVE_SFSMISC
 #include "nfs3_prot.h"
 #include "sfs_prot.h"
 #endif /* HAVE_SFSMISC */
-
-#include "amisc.h"
 
 struct svccb;
 struct aclnt;
