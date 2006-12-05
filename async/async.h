@@ -89,7 +89,7 @@ extern u_int64_t ifchg_count;
 ifchgcb_t *ifchgcb (cbv);
 void ifchgcb_remove (ifchgcb_t *chg);
 
-#define SFSLITE_PATCHLEVEL 10000002
-#define SFSLITE_PATCHLEVEL_STR "1.0.0pre2"
+#define SFSLITE_PATCHLEVEL 10000003
+#define SFSLITE_PATCHLEVEL_STR "1.0.0pre3"
 
 #endif /* !_ASYNC_ASYNC_H_ */
