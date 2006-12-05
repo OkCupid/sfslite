@@ -62,6 +62,7 @@ $a\
 / WORDS_BIGENDIAN/b pdefine
 / PYMALLOC/b pdefine
 / SFS_HAVE_CALLBACK2/b pdefine
+/ HAVE_SFSMISC/b pdefine
 
 :skip
 d

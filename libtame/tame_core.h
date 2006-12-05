@@ -945,6 +945,6 @@ extern ptr<closure_t> null_closure;
 
 void start_rendezvous_collection ();
 
-#define mkevent(...) _mkevent (__cls_g, __FL__, ## __VA_ARGS__)
+#define mkevent(...) _mkevent (__cls_g, __FL__, ##__VA_ARGS__)
 
 #endif /* _ASYNC_TAME_CORE_H_ */

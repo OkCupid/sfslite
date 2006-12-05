@@ -1686,21 +1686,28 @@ elif test -f ${with_sfs}/include/${sfsprfx}/autoconf.h \
     LIBSVC=${sfslibdir}/libsvc.la
     LIBTAME=${sfslibdir}/libtame.la
     MALLOCK=${sfslibdir}/mallock.o
+
+    RPCC=rpcc
     SFS_PATH_PROG(rpcc, ${sfslibdir})
     if test "$PATH_RPCC" -a -x "$PATH_RPCC" 
     then
 	RPCC="$PATH_RPCC"
     fi
+
+    TAME=tame
     SFS_PATH_PROG(tame, ${sfslibdir})
     if test "$PATH_TAME" -a -x "$PATH_TAME"
     then
 	TAME="$PATH_TAME"
     fi
+
+    ARPCGEN=arpcgen
     SFS_PATH_PROG(arpcgen, ${sfslibdir})
     if test "$PATH_ARPCGEN" -a -x "$PATH_ARPCGEN"
     then
 	ARPCGEN="$PATH_ARPCGEN"
     fi
+
 else
     AC_MSG_ERROR("Can\'t find SFS libraries")
 fi
@@ -1931,7 +1938,6 @@ case $with_mode in
 	"shopt" )
 		sfstag=$with_mode
 		enable_shared=yes
-		install_to_system_bin=1
 		DEBUG='-g -O2'
 		CXXDEBUG='-g -O2'
 		;;
@@ -1969,7 +1975,6 @@ case $with_mode in
 		;;
 
 	"optmz" | "lite" )
-		install_to_system_bin=1
 		dnl
 		dnl no-op, should go in the regular sfslite directory
 		dnl
