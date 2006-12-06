@@ -1,7 +1,7 @@
 %define shortversion 0.8
 Summary: SFSlite -- SFS development libraries 
 Name: sfslite
-Version: 0.8.11
+Version: 0.8.13
 Release: 1
 Copyright: GPL 
 Group: Applications/File
@@ -29,24 +29,23 @@ Maintained as port of the OKWS distribution by Maxwell Krohn.
 %setup -q
 
 %build
-%configure --enable-all
+%configure --enable-tutorial --enable-sfsmisc
 make 
 
 %install
 rm -rf $RPM_BUILD_ROOT
-make install-strip DESTDIR=$RPM_BUILD_ROOT
+make install DESTDIR=$RPM_BUILD_ROOT
 
 %clean
 rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root)
-%dir %{_libdir}/sfslite-%{shortversion}
 %doc AUTHORS COPYING ChangeLog NEWS README STANDARDS TODO
-%{_bindir}/*
-%{_includedir}/sfs.h
+%{_includedir}/sfslite
 %{_includedir}/sfslite-%{shortversion}
-%{_libdir}/sfslite-%{shortversion}/*
+%{_libdir}/sfslite
+%{_libdir}/sfslite-%{shortversion}
 
 %changelog
 * Sun Dec 03 2006 Emil Sit <sit@mit.edu>
