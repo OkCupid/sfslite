@@ -217,7 +217,9 @@ public:
   void weak_incref () { _refcnt++; }
   void weak_decref () 
   {
-    assert ( --_refcnt >= 0);
+    assert (_refcnt > 0);
+    --_refcount;
+
     if (!_refcnt) {
       cbv::ptr c = _weak_finalize_cb;
       _weak_finalize_cb = NULL;
@@ -460,7 +462,9 @@ public:
     weak_refcounted_t<rndvzp_t<T1,T2,T3,T4> > (this),
     _n_out (0), _file (f), _lineno (l),
     _must_deallocate (New refcounted<must_deallocate_t> ()),
-    _join_method (JOIN_NONE) 
+    _join_method (JOIN_NONE),
+    _n_in_progress (0),
+    _gc_mode (false)
   {
 #ifdef HAVE_TAME_PTH
     pth_mutex_init (&_mutex);
@@ -468,8 +472,9 @@ public:
 #endif /* HAVE_TAME_PTH */
   }
 
-
   virtual ~rndvzp_t () { mark_dead (); }
+
+  void in_progress () { _n_in_progress++; }
 
   void mark_dead ()
   { 
@@ -495,6 +500,22 @@ public:
       delaycb (0, 0, wrap (_must_deallocate, &must_deallocate_t::check));
   }
 
+  void gc (cbv cb)
+  {
+    assert (!_gc_mode);
+    assert (!_join_cb);
+
+    // XXX should have some method to make sure we're not also waiting on
+    // a CV for this thread.  That is, we should be more careful about knowing
+    // the state of this rendezvous, setting it and unsetting it after it
+    // comes out of the join.
+
+    _gc_cb = cb;
+    _gc_mode = true;
+
+    gc_internal ();
+  }
+
   void set_join_cb (cbv::ptr c) 
   { set_join_method (JOIN_EVENTS); _join_cb = c; }
 
@@ -503,29 +524,43 @@ public:
 
   void launch_one () { add_join (); }
   inline void add_join () { _n_out ++; }
-  void remove_join () { assert (_n_out-- > 0);}
+
+  void remove_join () 
+  { 
+    assert (_n_out > 0);
+    _n_out --;
+  }
 
   void join (value_set_t<T1, T2, T3, T4> v) 
   {
+    assert (_n_out > 0);
+    assert (_n_in_progress > 0);
+
     _n_out --;
-    _pending.push_back (v);
-    if (_join_method == JOIN_EVENTS) {
-      assert (_join_cb);
-      cbv cb = _join_cb;
-      _join_cb = NULL;
-      (*cb) ();
-    } else if (_join_method == JOIN_THREADS) {
-#ifdef HAVE_TAME_PTH
-      pth_cond_notify (&_cond, 0);
-#else
-      panic ("no PTH available\n");
-#endif
+    _n_in_progress --;
+
+    if (_gc_mode) {
+      gc_internal ();
     } else {
-      /* called join before a waiter; we can just queue */
+      _pending.push_back (v);
+      if (_join_method == JOIN_EVENTS) {
+	assert (_join_cb);
+	cbv cb = _join_cb;
+	_join_cb = NULL;
+	(*cb) ();
+      } else if (_join_method == JOIN_THREADS) {
+#ifdef HAVE_TAME_PTH
+	pth_cond_notify (&_cond, 0);
+#else
+	panic ("no PTH available\n");
+#endif
+      } else {
+	/* called join before a waiter; we can just queue */
+      }
     }
   }
-
-
+    
+    
   void threadjoin ()
   {
     set_join_method (JOIN_THREADS);
@@ -580,6 +615,16 @@ public:
 
 private:
 
+  void gc_internal ()
+  {
+    assert (_gc_mode);
+    if (_n_in_progress > 0) 
+      return;
+    _n_out = 0;
+    _gc_mode = false;
+    (*_gc_cb) ();
+  }
+
   void await ()
   {
 #ifdef HAVE_TAME_PTH
@@ -613,6 +658,11 @@ private:
   pth_cond_t _cond;
   pth_mutex_t _mutex;
 #endif /* HAVE_TAME_PTH */
+
+  // # of joins in progress (that have gone down to the event loop)
+  u_int _n_in_progress;
+  cbv::ptr _gc_cb;
+  bool _gc_mode;
 };
 
 /**
@@ -656,6 +706,9 @@ public:
     if (tame_optimized ()) {
       join_cb (w);
     } else {
+      if (_weak_ref.pointer ()) {
+	_weak_ref.pointer ()->in_progress ();
+      }
       delaycb (0, 0, wrap (mkref (this), &joiner_t<T1,T2,T3,T4>::join_cb, w));
     }
   }
@@ -719,6 +772,13 @@ public:
    * fired.
    */
   void remove_join () { _pointer->remove_join (); }
+
+  /**
+   * Garbage collect this rendezvous.  All in progress joins
+   * will go ahead with their set operations.  All other joins
+   * will be ignored.
+   */
+  void gc (cbv cb) { _pointer->gc (cb); }
 
   /**
    * Determine the number of callbacks that have fired, but are waiting
