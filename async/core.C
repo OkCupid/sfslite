@@ -261,8 +261,20 @@ fdcb_check (void)
   int n = SFS_SELECT (nselfd, fdspt[0], fdspt[1], NULL, &selwait);
 
   // warn << "select exit rc=" << n << "\n";
-  if (n < 0 && errno != EINTR)
-    panic ("select: %m\n");
+  if (n < 0 && errno != EINTR) {
+    warn ("select: %m\n");
+    const char *typ[] = { "reading" , "writing" };
+    for (int k = 0; k < 2; k++) {
+      warnx << "Select Set Dump: " << typ[k] << " { " ;
+      for (int j = 0; j < maxfd; j++) {
+	if (FD_ISSET (j, fdspt[k])) {
+	  warnx << j << " ";
+	}
+      }
+      warnx << " }\n";
+    }
+    panic ("Aborting due to select() failure\n");
+  }
   my_clock_gettime (&tsnow);
   if (sigdocheck)
     sigcb_check ();
