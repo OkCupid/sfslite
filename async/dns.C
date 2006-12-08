@@ -37,7 +37,14 @@
 
 #define NSPORT NAMESERVER_PORT
 
-resolv_conf resconf;
+static resolv_conf *_resconf;
+static resolv_conf *
+resconf ()
+{
+  if (!_resconf)
+    _resconf = New resolv_conf();
+  return _resconf;
+}
 
 dnssock_udp::dnssock_udp (int f, cb_t cb)
   : dnssock (false, cb), fd (f)
@@ -632,7 +639,7 @@ dns_hostbyname (str name, cbhent cb,
       return NULL;
     }
   }
-  return New dnsreq_a (&resconf, name, cb, search);
+  return New dnsreq_a (resconf(), name, cb, search);
 }
 
 
@@ -651,7 +658,7 @@ dnsreq_mx::readreply (dnsparse *reply)
 dnsreq *
 dns_mxbyname (str name, cbmxlist cb, bool search)
 {
-  return New dnsreq_mx (&resconf, name, cb, search);
+  return New dnsreq_mx (resconf(), name, cb, search);
 }
 
 
@@ -670,7 +677,7 @@ dnsreq_srv::readreply (dnsparse *reply)
 dnsreq *
 dns_srvbyname (str name, cbsrvlist cb, bool search)
 {
-  return New dnsreq_srv (&resconf, name, cb, search);
+  return New dnsreq_srv (resconf(), name, cb, search);
 }
 
 
@@ -789,7 +796,7 @@ dnsreq_ptr::readvrfy (int i, ptr<hostent> h, int err)
 dnsreq *
 dns_hostbyaddr (in_addr addr, cbhent cb)
 {
-  return New dnsreq_ptr (&resconf, addr, cb);
+  return New dnsreq_ptr (resconf(), addr, cb);
 }
 
 
@@ -806,7 +813,7 @@ dnsreq_txt::readreply (dnsparse *reply)
 dnsreq_t *
 dns_txtbyname (str name, cbtxtlist cb, bool search)
 {
-  return New dnsreq_txt (&resconf, name, cb, search);
+  return New dnsreq_txt (resconf(), name, cb, search);
 }
 
 
