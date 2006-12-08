@@ -93,8 +93,8 @@ class xhinfo;
 #include "asrv.h"
 #include "xhinfo.h"
 
-extern ptr<axprt_dgram> udpxprt;
-extern ptr<aclnt> udpclnt;
+ptr<axprt_dgram> udpxprt ();
+ptr<aclnt> udpclnt ();
 
 void __acallrpc (const char *host, u_int port,
 		 u_int32_t prog, u_int32_t vers, u_int32_t proc,

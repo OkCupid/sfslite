@@ -26,16 +26,14 @@
 #include "xdr_suio.h"
 #include "pmap_prot.h"
 
-ptr<axprt_dgram> udpxprt;
-ptr<aclnt> udpclnt;
+static ptr<axprt_dgram> _udpxprt;
+static ptr<aclnt> _udpclnt;
 
 static rpc_program noprog;
 
 ptr<axprt_stream> aclnt_axprt_stream_alloc (size_t ps, int fd);
 const axprtalloc_fn axprt_stream_alloc_default
   = gwrap (aclnt_axprt_stream_alloc, int (axprt_stream::defps));
-
-INITFN(acallrpc_init);
 
 static void
 acallrpc_init ()
@@ -48,10 +46,22 @@ acallrpc_init ()
   if (udpfd < 0)
     fatal ("acallrpc_init: inetsocket: %m\n");
   close_on_exec (udpfd);
-  if (!(udpxprt = axprt_dgram::alloc (udpfd)))
+  if (!(_udpxprt = axprt_dgram::alloc (udpfd)))
     fatal ("acallrpc_init: axprt_dgram::alloc failed\n");
-  if (!(udpclnt = aclnt::alloc (udpxprt, noprog, NULL)))
+  if (!(_udpclnt = aclnt::alloc (_udpxprt, noprog, NULL)))
     fatal ("acallrpc_init: aclnt::alloc failed\n");
+}
+
+ptr<axprt_dgram> udpxprt() {
+  if (!_udpxprt)
+    acallrpc_init ();
+  return _udpxprt;
+}
+
+ptr<aclnt> udpclnt() {
+  if (!_udpclnt)
+    acallrpc_init ();
+  return _udpclnt;
 }
 
 ptr<axprt_stream>
@@ -85,10 +95,10 @@ class rpc2sin {
     pm.vers = vers;
     pm.prot = prot;
     pm.port = 0;
-    udpclnt->call (PMAPPROC_GETPORT, (void *) &pm, (void *) &port,
-		   wrap (this, &rpc2sin::gotport),
-		   (AUTH *) 0, xdr_mapping, xdr_int,
-		   PMAP_PROG, PMAP_VERS, (sockaddr *) &sin);
+    udpclnt ()->call (PMAPPROC_GETPORT, (void *) &pm, (void *) &port,
+                      wrap (this, &rpc2sin::gotport),
+                      (AUTH *) 0, xdr_mapping, xdr_int,
+                      PMAP_PROG, PMAP_VERS, (sockaddr *) &sin);
   }
 
   void gotport (clnt_stat stat) {
@@ -158,7 +168,7 @@ class acallrpcobj : rpc2sin {
     else {
       char *msg = callbuf;
       callbuf = NULL;
-      vNew rpccb_unreliable (udpclnt, msg, calllen,
+      vNew rpccb_unreliable (udpclnt(), msg, calllen,
 			     wrap (this, &acallrpcobj::done),
 			     outmem, outxdr, (sockaddr *) &sin);
     }
@@ -229,10 +239,10 @@ acallrpc (const sockaddr_in *sinp, const rpc_program &rp, u_int32_t proc,
 {
   // XXX - the const part of the cast to sockaddr * is not quite right
   assert (proc < rp.nproc);
-  udpclnt->call (proc, in, out, cb, auth,
-		 rp.tbl[proc].xdr_arg, rp.tbl[proc].xdr_res,
-		 rp.progno, rp.versno,
-		 (sockaddr *) (sinp));
+  udpclnt()->call (proc, in, out, cb, auth,
+                   rp.tbl[proc].xdr_arg, rp.tbl[proc].xdr_res,
+                   rp.progno, rp.versno,
+                   (sockaddr *) (sinp));
 }
 
 class aclntudpobj : rpc2sin {
@@ -256,7 +266,7 @@ private:
     if (stat)
       (*cb) (NULL, stat);
     else
-      (*cb) (aclnt::alloc (udpxprt, rp, (sockaddr *) &sin), RPC_SUCCESS);
+      (*cb) (aclnt::alloc (udpxprt(), rp, (sockaddr *) &sin), RPC_SUCCESS);
     delete this;
   }
 };

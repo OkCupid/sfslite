@@ -103,7 +103,7 @@ getsfsnfs_1 (u_int64_t dev, str path, const authunix_parms *aup,
       sin.sin_family = AF_INET;
       sin.sin_port = htons (sin.sin_port);
       sin.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
-      ref<aclnt> c = aclnt::alloc (udpxprt, nfs_program_3, (sockaddr *) &sin);
+      ref<aclnt> c = aclnt::alloc (udpxprt(), nfs_program_3, (sockaddr *) &sin);
       lookupfh3 (c, fh, path, wrap (getsfsnfs_2, nfsdbrx[2], path, c, cb),
 		 aup);
       return;
