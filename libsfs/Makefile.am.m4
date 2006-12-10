@@ -13,7 +13,7 @@ if USE_AUTH_HELPER
 AUTH_HELPER = auth_helper
 endif
 
-sfslib_LIBRARIES = libsfs.a
+sfslib_LTLIBRARIES = libsfs.la
 sfsexec_PROGRAMS = pathinfo suidconnect $(AUTH_HELPER)
 noinst_PROGRAMS = tst
 
@@ -34,7 +34,7 @@ define(`rpcmk_sources', rpcmk_sources $1.c)dnl
 $1.h: $(SVCDIR)/$1.x
 	@rm -f $`'@
 	-$(ARPCGEN) -r sfs-internal.h -h $(SVCDIR)/$1.x -o `$'@ || rm -f $`'@
-$1.c: $(SVCDIR)/$1.x
+$1.c: $(SVCDIR)/$1.x $1.h
 	@rm -f $`'@
 	-$(ARPCGEN) -c $(SVCDIR)/$1.x -o `$'@ || rm -f $`'@
 $1.o: $1.c $1.h
@@ -65,7 +65,7 @@ authunixint.c:
 EXTRA_DIST = Makefile.am.m4 .cvsignore \
 	auth_helper_common.c auth_helper_pam.c auth_helper_bsd.c
 
-libsfs_a_SOURCES = rpcmk_sources \
+libsfs_la_SOURCES = rpcmk_sources \
 rwfd.c suidprotect.c authunixint.c \
 devcon.c hashtab.c sfsops.c sfspaths.c srpc.c xdr_misc.c suio.c
 

@@ -277,14 +277,18 @@ print_ifstat (int indent, char *prefix, char *type, relation rel, char *amax, ch
 		 objname, name, objname, name);
       }
 #else
-      if (*objname == '&') {
-	/* Don't know what this does but it seems broken */
-	f_print (fout, "%s.val, (u_int *)%s.len",
-		 objname, objname);
-      }
-      else {
-	f_print (fout, "&%s->val, (u_int *)&%s->len",
-		 objname, objname);
+      f_print (fout, "&((%s)->val), (u_int *)((%s)->len)",
+		objname, objname);
+      if (0) {  
+	if (*objname == '&') {
+	  /* Don't know what this does but it seems broken */
+	  f_print (fout, "%s.val, (u_int *)%s.len",
+		   objname, objname);
+	}
+	else {
+	  f_print (fout, "&%s->val, (u_int *)&%s->len",
+		   objname, objname);
+	}
       }
 #endif
     }
@@ -339,8 +343,8 @@ emit_union (definition * def)
   declaration *cs;
   char *object;
 #if 1
-  char *vecformat = "objp->RPC_UNION_NAME(%s).%s";
-  char *format = "&objp->RPC_UNION_NAME(%s).%s";
+  char *format = "XDR_%s_POINTER_WIDGET(objp->RPC_UNION_NAME(%s).%s)";
+  char *typ;
 #else
   char *vecformat = "objp->u.%s";
   char *format = "&objp->u.%s";
@@ -355,9 +359,13 @@ emit_union (definition * def)
       continue;
     cs = &cl->case_decl;
     if (!streq (cs->type, "void")) {
+
+      typ = isvectordef (cs->type, cs->rel) ? "_vector" : cs->type;
       object = alloc (strlen (def->def_name) + strlen (format) +
-		      strlen (cs->name) + 1);
-#if 1
+		      strlen (cs->name) + strlen (typ) + 1);
+
+      s_print (object, format, typ, def->def_name, cs->name);
+#if 0
       if (isvectordef (cs->type, cs->rel)) {
 	s_print (object, vecformat, def->def_name,
 		 cs->name);
@@ -366,12 +374,12 @@ emit_union (definition * def)
 	s_print (object, format, def->def_name,
 		 cs->name);
       }
-#else
       if (isvectordef (cs->type, cs->rel))
 	s_print (object, vecformat, cs->name);
       else
 	s_print (object, format, cs->name);
 #endif
+
       print_ifstat (2, cs->prefix, cs->type, cs->rel, cs->array_max,
 		    object, cs->name);
       free (object);
@@ -382,9 +390,13 @@ emit_union (definition * def)
   if (dflt != NULL) {
     f_print (fout, "\tdefault:\n");
     if (!streq (dflt->type, "void")) {
+
+      typ = isvectordef (dflt->type, dflt->rel) ? "_vector" : dflt->type;
       object = alloc (strlen (def->def_name) + strlen (format) +
-		      strlen (dflt->name) + 1);
-#if 1
+		      strlen (dflt->name) + 1 + strlen (typ));
+
+      s_print (object, format, typ, def->def_name, dflt->name);
+#if 0
       if (isvectordef (dflt->type, dflt->rel)) {
 	s_print (object, vecformat, def->def_name,
 		 dflt->name);
@@ -393,7 +405,6 @@ emit_union (definition * def)
 	s_print (object, format, def->def_name,
 		 dflt->name);
       }
-#else
       if (isvectordef (dflt->type, dflt->rel))
 	s_print (object, vecformat, dflt->name);
       else
@@ -644,15 +655,24 @@ print_stat (int indent, declaration * dec)
   char *type = dec->type;
   char *amax = dec->array_max;
   relation rel = dec->rel;
-  char name[256];
+  char *object;
+  char *widg_type;
+  char *format = "XDR_%s_POINTER_WIDGET(objp->%s)";
 
+  widg_type = isvectordef (type, rel) ? "_vector" : type;
+  object = alloc (strlen (widg_type) + strlen (format) + 1);
+  s_print (object, format, widg_type, dec->name);
+
+#if 0
   if (isvectordef (type, rel)) {
     s_print (name, "objp->%s", dec->name);
   }
   else {
     s_print (name, "&objp->%s", dec->name);
   }
-  print_ifstat (indent, prefix, type, rel, amax, name, dec->name);
+#endif
+  print_ifstat (indent, prefix, type, rel, amax, object, dec->name);
+  free (object);
 }
 
 

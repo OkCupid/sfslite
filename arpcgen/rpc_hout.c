@@ -120,6 +120,9 @@ pxdrfuncdecl (char *name, int pointerp, int structp)
   f_print (fout, "RPC_EXTERN bool_t xdr_%s(XDR *, %s%s%s);\n",
 	   name, structp ? "struct " : "", name,
 	   pointerp ? (" *") : "");
+  f_print (fout, "#define XDR_%s_POINTER_WIDGET(x) %sx\n",
+	   name, pointerp ? "&" : "" );
+	   
 }
 
 

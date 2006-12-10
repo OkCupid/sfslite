@@ -117,4 +117,14 @@ struct bigint {
 typedef struct bigint bigint;
 bool_t xdr_bigint (XDR *xdrs, bigint *bp);
 
+#define XDR_opaque_POINTER_WIDGET(x) &x
+#define XDR_bool_POINTER_WIDGET(x) &x
+#define XDR_void_POINTER_WIDGET(x) &x
+#define XDR_bigint_POINTER_WIDGET(x) &x
+#define XDR_string_POINTER_WIDGET(x) &x
+#define XDR_u_int_POINTER_WIDGET(x) &x
+#define XDR_int_POINTER_WIDGET(x) &x
+#define XDR__vector_POINTER_WIDGET(x) x
+#define XDR_u_int64_t_POINTER_WIDGET(x) &x
+
 #endif /* _SFS_INTERNAL_H_ */
