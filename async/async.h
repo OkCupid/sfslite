@@ -89,7 +89,21 @@ extern u_int64_t ifchg_count;
 ifchgcb_t *ifchgcb (cbv);
 void ifchgcb_remove (ifchgcb_t *chg);
 
-#define SFSLITE_PATCHLEVEL 8014100
+#define SFSLITE_VERSION_MAJOR 0
+#define SFSLITE_VERSION_MINOR 8
+#define SFSLITE_VERSION_PATCHLEVEL 14
+#define SFSLITE_VERSION_PRE 100
+
+#define VERSION_FLATTEN(Maj,Min,Pat,Pre) \
+   (((Maj * 256 + Min) * 256 + Pat) * 256 + Pre)
+
+#define SFSLITE_AT_VERSION(Maj,Min,Pat,Pre) \
+  (VERSION_FLATTEN(Maj,Min,Pat,Pre) <= \
+   VERSION_FLATTEN(SFSLITE_VERSION_MAJOR,\
+                   SFSLITE_VERSION_MINOR,\
+                   SFSLITE_VERSION_PATCHLEVEL, \
+                   SFSLITE_VERSION_PRE))
+
 #define SFSLITE_PATCHLEVEL_STR "0.8.14"
 
 #endif /* !_ASYNC_ASYNC_H_ */
