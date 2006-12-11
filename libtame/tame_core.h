@@ -218,7 +218,7 @@ public:
   void weak_decref () 
   {
     assert (_refcnt > 0);
-    --_refcount;
+    --_refcnt;
 
     if (!_refcnt) {
       cbv::ptr c = _weak_finalize_cb;
@@ -440,10 +440,11 @@ INIT(tame_init);
 
 void collect_rendezvous (mortal_ref_t r, void *p);
 
+// XXX - Should set this up instead as a state machine, the states
+// being: THREAD_WAIT, EVENT_WAIT, GC, NONE. See comment below.
 typedef enum { JOIN_NONE = 0,
 	       JOIN_EVENTS = 1,
 	       JOIN_THREADS = 2 } join_method_t;
-
 
 /**
  * Holds the important information associated with a rendezvous.
@@ -517,7 +518,10 @@ public:
   }
 
   void set_join_cb (cbv::ptr c) 
-  { set_join_method (JOIN_EVENTS); _join_cb = c; }
+  { 
+    assert (!_gc_mode);
+    set_join_method (JOIN_EVENTS); _join_cb = c; 
+  }
 
   void collect_myself (void *jgwp) 
   { collect_rendezvous (mortal_t::make_mortal_ref (), jgwp); }
@@ -622,7 +626,9 @@ private:
       return;
     _n_out = 0;
     _gc_mode = false;
-    (*_gc_cb) ();
+    cbv::ptr cb = _gc_cb;
+    _gc_cb = NULL;
+    (*cb) ();
   }
 
   void await ()
