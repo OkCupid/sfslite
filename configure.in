@@ -13,7 +13,7 @@ dnl
 dnl begin SFSLITE change
 dnl
 SFS_TAG
-SFSLITE_LAYOUT_VERSION
+SFS_LAYOUT_VERSION
 SFS_SYSTEM_BIN
 dnl
 dnl End SFSLITE change
@@ -327,6 +327,11 @@ dnl BEGIN sfslite changes
 dnl
 dnl Auxilliary executables go in sfsexecdi
 SFS_MMAP
+
+dnl
+dnl Make a symlink or not?
+dnl
+SFS_MAKE_SYMLINK
 
 dnl
 dnl Map  X.Y.Z => X.Y

@@ -68,20 +68,24 @@ dist-hook:
 
 install-data-local:
 	-src=$(DESTDIR)$(sfsincludedirp); dst=$(DESTDIR)$(pkgincludedir); \
-	rm -f $$dst; \
-	if test "`dirname $$src`" = "`dirname $$dst`"; then \
-		ln -s "`basename $$src`" $$dst; \
-	else \
-		ln -s $(sfsincludedirp) $$dst; \
+	if test $(make_symlink) -eq 1; then \
+		rm -f $$dst; \
+		if test "`dirname $$src`" = "`dirname $$dst`"; then \
+			ln -s "`basename $$src`" $$dst; \
+		else \
+			ln -s $(sfsincludedirp) $$dst; \
+		fi
 	fi
 
 install-exec-local:
 	-src=$(DESTDIR)$(sfslibpdir); dst=$(DESTDIR)$(pkglibdir); \
-	rm -f $$dst; \
-	if test "`dirname $$src`" = "`dirname $$dst`"; then \
-		ln -s "`basename $$src`" $$dst; \
-	else \
-		ln -s $(sfslibpdir) $$dst; \
+	if test $(make_symlink) -eq 1; then \
+		rm -f $$dst; \
+		if test "`dirname $$src`" = "`dirname $$dst`"; then \
+			ln -s "`basename $$src`" $$dst; \
+		else \
+			ln -s $(sfslibpdir) $$dst; \
+		fi
 	fi
 
 install-data-hook:

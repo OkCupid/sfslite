@@ -2241,7 +2241,7 @@ dnl
 dnl SFSLITE_FAKE_VERSION - allow configuration-time specification of 
 dnl the version that the libdir and includedir refer to.
 dnl
-AC_DEFUN([SFSLITE_LAYOUT_VERSION],
+AC_DEFUN([SFS_LAYOUT_VERSION],
 [AC_ARG_WITH(fake-version,
 --with-fake-version=FAKE	Specify a fake version)
 if test "$with_fake_version"; then
@@ -2258,4 +2258,18 @@ AC_DEFUN([SFS_SYSTEM_BIN],
 [AC_ARG_ENABLE(system-bin,
 --enabel-system-bin   Dump rpcc and tame into system-wide bin)
 test "${enable_system_bin+set}" = "set" && install_to_system_bin=1
+])
+dnl
+dnl OKWS_MAKE_SYMLINK - Whether or not to override the default
+dnl symlink.
+dnl 
+AC_DEFUN([SFS_MAKE_SYMLINK],
+[AC_ARG_ENABLE(symlink,
+--enable-symlink          Make a symlink to SFS libs and inc )
+make_symlink=1
+if test "${enable_symlink}" -a "${enable_symlink}" = "no";
+then
+	make_symlink=0
+fi
+AC_SUBST(make_symlink)
 ])
