@@ -1615,17 +1615,16 @@ if test "$with_sfs" = yes -o "$with_sfs" = ""; then
     for dir in "$prefix" /usr/local /usr; do
 
 	dnl
+	dnl sfs${sfstagdir} in there for bkwds comptability
+	dnl
+	sfsprefixes="sfs${sfsvers}${sfstagdir} sfs${sfsvers}"
+
+	dnl
 	dnl can turn off sfslite with the --with-heavy flag
 	dnl
 	if test ! "$with_heavy" -o "$with_heavy" = "no"; then
 	   sfsprefixes="sfslite${sfsvers}${sfstagdir} $sfsprefixes"
 	fi
-
-	dnl
-	dnl sfs${sfstagdir} in there for bkwds comptability
-	dnl
-	sfsprefixes="sfs${sfsvers}${sfstagdir} sfs${sfsvers}"
-
 
 	BREAKOUT=0
 	for sfsprfx in $sfsprefixes
@@ -2143,4 +2142,32 @@ AC_DEFUN([SFS_SYSTEM_BIN],
 [AC_ARG_ENABLE(system-bin,
 --enabel-system-bin   Dump rpcc and tame into system-wide bin)
 test "${enable_system_bin+set}" = "set" && install_to_system_bin=1
+])
+dnl
+dnl SFS_MAKE_SYMLINK - Whether or not to override the default
+dnl symlink.
+dnl 
+AC_DEFUN([SFS_MAKE_SYMLINK],
+[AC_ARG_ENABLE(symlink,
+--enable-symlink          Make a symlink to SFS libs and inc )
+make_symlink=1
+if test "${enable_symlink}" -a "${enable_symlink}" = "no";
+then
+	make_symlink=0
+fi
+AC_SUBST(make_symlink)
+])
+dnl
+dnl SFS_LAYOUT_VERSION - allow configuration-time specification of 
+dnl the version that the libdir and includedir refer to.
+dnl
+AC_DEFUN([SFS_LAYOUT_VERSION],
+[AC_ARG_WITH(fake-version,
+--with-fake-version=FAKE	Specify a fake version)
+if test "$with_fake_version"; then
+	layoutversion=$with_fake_version
+else
+	layoutversion=$VERSION
+fi
+AC_SUBST(layoutversion)
 ])

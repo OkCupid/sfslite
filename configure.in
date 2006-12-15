@@ -319,9 +319,16 @@ dnl Auxilliary executables go in sfsexecdi
 SFS_MMAP
 
 dnl
+dnl Disable (potentially sfs symlinks)
+dnl
+SFS_MAKE_SYMLINK
+
+dnl
 dnl Map  X.Y.Z => X.Y
 dnl
-SHORTVERSION=`echo ${VERSION} | awk -F. '{ print $1 "." $2 }' `
+SFS_LAYOUT_VERSION
+
+SHORTVERSION=`echo ${layoutversion} | awk -F. '{ print $1 "." $2 }' `
 AC_SUBST(SHORTVERSION)
 if test -z "$sfslibdir"; then
 	sfslibpdir='${pkglibdir}-${SHORTVERSION}'
