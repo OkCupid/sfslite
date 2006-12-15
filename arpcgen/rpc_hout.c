@@ -93,8 +93,8 @@ print_datadef (definition * def)
   if (def->def_kind != DEF_PROGRAM && def->def_kind != DEF_CONST
       && def->def_kind != DEF_STRUCT && def->def_kind != DEF_UNION) {
     pxdrfuncdecl (def->def_name,
-		  def->def_kind != DEF_TYPEDEF ||
-		  !isvectordef (def->def.ty.old_type, def->def.ty.rel),
+		  def->def_kind != DEF_TYPEDEF 
+		  /* || !isvectordef (def->def.ty.old_type, def->def.ty.rel) */,
 		  0);
 
   }
@@ -117,12 +117,10 @@ print_funcdef (definition * def)
 void
 pxdrfuncdecl (char *name, int pointerp, int structp)
 {
+  pointerp = 1;
   f_print (fout, "RPC_EXTERN bool_t xdr_%s(XDR *, %s%s%s);\n",
 	   name, structp ? "struct " : "", name,
 	   pointerp ? (" *") : "");
-  f_print (fout, "#define XDR_%s_POINTER_WIDGET(x) %sx\n",
-	   name, pointerp ? "&" : "" );
-	   
 }
 
 
@@ -440,8 +438,10 @@ ptypedef (definition * def)
       f_print (fout, "%s%s *%s", prefix, old, name);
       break;
     case REL_VECTOR:
-      f_print (fout, "%s%s %s[%s]", prefix, old, name,
-	       def->def.ty.array_max);
+      f_print (fout , 
+	       "struct {\n"
+	       "  %s%s val[%s];\n"
+	       "} %s", prefix, old, def->def.ty.array_max, name);
       break;
     case REL_ALIAS:
       f_print (fout, "%s%s %s", prefix, old, name);
@@ -488,8 +488,11 @@ pdeclaration (char *name, declaration * dec, int tab, char *separator)
       f_print (fout, "%s%s %s", prefix, type, dec->name);
       break;
     case REL_VECTOR:
-      f_print (fout, "%s%s %s[%s]", prefix, type, dec->name,
-	       dec->array_max);
+      f_print (fout, 
+	       "struct {\n"
+	       "  %s%s val[%s];\n"
+	       "} %s;\n",
+	       prefix, type, dec->array_max, dec->name);
       break;
     case REL_POINTER:
       f_print (fout, "%s%s *%s", prefix, type, dec->name);
