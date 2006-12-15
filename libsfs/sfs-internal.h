@@ -24,13 +24,27 @@
 #ifndef _SFS_INTERNAL_H_
 #define _SFS_INTERNAL_H_ 1
 
-#include "sfs.h"
+#ifndef SRPC_ONLY
+# include "sfs.h"
+#endif /* SRPC_ONLY */
 
-#include "sysconf.h"
+#ifndef NO_SYSCONF
+# define xdrlong_t long
+# define HAVE_CMSGHDR 1
+#else /* NO_SYSCONF */
+# include "sysconf.h"
+#endif
+
 #include <rpc/rpc.h>
 
 ssize_t readfd (int fd, void *buf, size_t len, int *rfdp);
 ssize_t writefd (int fd, const void *buf, size_t len, int wfd);
+
+#if SRPC_ONLY
+
+int recvfd ();
+
+#else 
 
 char *xstrsep(char **str, const char *delim);
 char *strnnsep (char **stringp, const char *delim);
@@ -40,6 +54,8 @@ void devcon_flush (void);
 void devcon_close (void);
 bool_t devcon_lookup (int *fdp, const char **fsp, dev_t dev);
 
+#endif /* SRPC_ONLY */
+
 struct rpc_program;
 enum clnt_stat srpc_callraw (int fd,
 			     u_int32_t prog, u_int32_t vers, u_int32_t proc,
@@ -48,9 +64,13 @@ enum clnt_stat srpc_callraw (int fd,
 enum clnt_stat srpc_call (const struct rpc_program *, int fd, u_int32_t proc,
 			  void *in, void *out);
 
+#ifndef SPRC_ONLY
+
 AUTH *authunixint_create (const char *host, u_int32_t uid, u_int32_t gid,
 			  u_int32_t ngroups, const u_int32_t *groups);
 AUTH *authunix_create_realids (void);
+
+#endif
 
 
 #ifndef __linux__
