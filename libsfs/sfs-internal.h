@@ -28,7 +28,7 @@
 # include "sfs.h"
 #endif /* SRPC_ONLY */
 
-#ifndef NO_SYSCONF
+#ifdef NO_SYSCONF
 # define xdrlong_t long
 # define HAVE_CMSGHDR 1
 #else /* NO_SYSCONF */
@@ -40,7 +40,7 @@
 ssize_t readfd (int fd, void *buf, size_t len, int *rfdp);
 ssize_t writefd (int fd, const void *buf, size_t len, int wfd);
 
-#if SRPC_ONLY
+#ifdef SRPC_ONLY
 
 int recvfd ();
 

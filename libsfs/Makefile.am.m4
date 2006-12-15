@@ -72,8 +72,8 @@ devcon.c hashtab.c sfsops.c sfspaths.c srpc.c xdr_misc.c suio.c
 DEPEND_ON_MAKEFILE = devgetcon.o sfspaths.o
 $(DEPEND_ON_MAKEFILE): Makefile
 
-include_HEADERS = sfs.h
-sfsinclude_HEADERS = sfs-internal.h auth_helper.h
+include_HEADERS = sfs.h sfs-internal.h
+sfsinclude_HEADERS = auth_helper.h
 noinst_HEADERS = hashtab.h queue.h suio.h xdr_suio.h
 
 suidconnect_SOURCES = suidconnect.c
