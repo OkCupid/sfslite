@@ -1417,7 +1417,7 @@ test "${CXXDEBUG+set}" || CXXDEBUG="$CXXFLAGS"
 export CXXDEBUG
 case $host_os in
     openbsd*)
-	sfs_gnu_WFLAGS="-ansi -Wall -Wsign-compare -Wchar-subscripts -Werror"
+	sfs_gnu_WFLAGS="-ansi -Wsign-compare -Wchar-subscripts -Werror"
 	sfs_gnu_CXXWFLAGS="$sfs_gnu_WFLAGS"
 	;;
     linux*|freebsd*)
@@ -1668,7 +1668,7 @@ if test -f ${with_sfs}/Makefile -a -f ${with_sfs}/autoconf.h; then
     LIBARPC=${with_sfs}/arpc/libarpc.la
     LIBSFSCRYPT=${with_sfs}/crypt/libsfscrypt.la
     LIBSFSMISC=${with_sfs}/sfsmisc/libsfsmisc.la
-    LIBSVC=${with_sfs}/svc/libsvc.la
+    LIBSVC=${with_sfs}/svc/libsvc.a
     LIBTAME=${with_sfs}/libtame/libtame.la
     LIBSFS=${with_sfs}/libsfs/libsfs.a
     MALLOCK=${with_sfs}/sfsmisc/mallock.o
@@ -1689,7 +1689,7 @@ elif test -f ${with_sfs}/include/${sfsprfx}/autoconf.h \
     LIBSFSCRYPT=${sfslibdir}/libsfscrypt.la
     LIBSFSMISC=${sfslibdir}/libsfsmisc.la
     LIBTAME=${sfslibdir}/libtame.la
-    LIBSVC=${sfslibdir}/libsvc.la
+    LIBSVC=${sfslibdir}/libsvc.a
     LIBSFS=${sfslibdir}/libsfs.a
     MALLOCK=${sfslibdir}/mallock.o
 
@@ -1735,8 +1735,6 @@ if test "$enable_static" = yes -a -z "${NOPAGING+set}"; then
     esac
 fi
 
-sfslibdir='$(libdir)/sfs'
-sfsincludedir='$(libdir)/include'
 AC_SUBST(sfslibdir)
 AC_SUBST(sfsincludedir)
 
