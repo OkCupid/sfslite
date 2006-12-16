@@ -52,7 +52,7 @@ _ihash_grow (_ihash_table *htp, const size_t eos)
   if (nbuckets < 3)
     nbuckets = 3;
 
-  ntab = New (void *) [nbuckets];
+  ntab = New (void * [nbuckets]);
   bzero (ntab, nbuckets * sizeof (*ntab));
 
   for (i = 0; i < htp->buckets; i++)

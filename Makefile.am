@@ -74,7 +74,7 @@ install-data-local:
 			ln -s "`basename $$src`" $$dst; \
 		else \
 			ln -s $(sfsincludedirp) $$dst; \
-		fi
+		fi \
 	fi
 
 install-exec-local:
@@ -85,7 +85,7 @@ install-exec-local:
 			ln -s "`basename $$src`" $$dst; \
 		else \
 			ln -s $(sfslibpdir) $$dst; \
-		fi
+		fi \
 	fi
 
 install-data-hook:
