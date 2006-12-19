@@ -148,7 +148,7 @@ public:
 
 /* daemonize.C */
 extern str syslog_priority;
-void daemonize ();
+void daemonize (const str &name = NULL);
 void start_logger ();
 int start_logger (const str &pri, const str &tag, const str &line, 
 		  const str &logfile, int flags, mode_t mode);
