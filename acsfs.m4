@@ -1668,7 +1668,7 @@ if test -f ${with_sfs}/Makefile -a -f ${with_sfs}/autoconf.h; then
     LIBARPC=${with_sfs}/arpc/libarpc.la
     LIBSFSCRYPT=${with_sfs}/crypt/libsfscrypt.la
     LIBSFSMISC=${with_sfs}/sfsmisc/libsfsmisc.la
-    LIBSVC=${with_sfs}/svc/libsvc.a
+    LIBSVC=${with_sfs}/svc/libsvc.la
     LIBTAME=${with_sfs}/libtame/libtame.la
     LIBSFS=${with_sfs}/libsfs/libsfs.a
     MALLOCK=${with_sfs}/sfsmisc/mallock.o
@@ -1689,7 +1689,7 @@ elif test -f ${with_sfs}/include/${sfsprfx}/autoconf.h \
     LIBSFSCRYPT=${sfslibdir}/libsfscrypt.la
     LIBSFSMISC=${sfslibdir}/libsfsmisc.la
     LIBTAME=${sfslibdir}/libtame.la
-    LIBSVC=${sfslibdir}/libsvc.a
+    LIBSVC=${sfslibdir}/libsvc.la
     LIBSFS=${sfslibdir}/libsfs.a
     MALLOCK=${sfslibdir}/mallock.o
 
