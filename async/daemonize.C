@@ -151,8 +151,12 @@ pidclean ()
 }
 
 void
-daemonize ()
+daemonize (const str &nm)
 {
+  str pidfilebase = nm;
+  if (!pidfilebase)
+    pidfilebase = progname;
+
   switch (fork ()) {
   default:
     _exit (0);
@@ -166,7 +170,7 @@ daemonize ()
     fatal ("setsid: %m\n");
   if (!builddir) {
     start_logger ();
-    str path = strbuf () << PIDDIR << "/" << progname << ".pid";
+    str path = strbuf () << PIDDIR << "/" << pidfilebase << ".pid";
     struct stat sb;
     if (str2file (path, strbuf ("%d\n", int (getpid ())), 0444, false, &sb))
       pidfiles.push_back (pidfile (path, sb));
@@ -175,7 +179,7 @@ daemonize ()
     str piddir = buildtmpdir;
     if (!piddir)
       piddir = builddir;
-    str path = strbuf () << piddir << "/" << progname << ".pid";
+    str path = strbuf () << piddir << "/" << pidfilebase << ".pid";
     struct stat sb;
     if (str2file (path, strbuf ("%d\n", int (getpid ())), 0444, &sb))
       pidfiles.push_back (pidfile (path, sb));
