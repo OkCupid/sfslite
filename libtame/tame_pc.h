@@ -49,6 +49,16 @@ namespace tame {
       }
       c->trigger (ret, _val);
     }
+
+    bool has (V *v)
+    {
+      if (_set && !_done) {
+	assert (!_cb);
+	*v = _val;
+	return true;
+      }
+      return false;
+    }
    
   private:
     bool _set;
