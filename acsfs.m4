@@ -1343,7 +1343,8 @@ dnl	CPPFLAGS="$CPPFLAGS -DDMALLOC"
 	lflags="-L${withval}/lib -ldmalloc"
 	LIBS="$LIBS $lflags"
 	AC_TRY_LINK([#include <dmalloc.h>
-		dmalloc_shutdown ();], sfs_cv_ldmalloc="${lflags}")
+		    ], [ dmalloc_shutdown (); ], 
+		   sfs_cv_ldmalloc="${lflags}")
 	])
 	if test -z "$sfs_cv_ldmalloc"
 	then
