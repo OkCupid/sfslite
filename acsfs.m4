@@ -1327,8 +1327,28 @@ using_dmalloc=no
 if test "$withval" != no; then
 	AC_DEFINE(DMALLOC, 1, Define if compiling with dmalloc. )
 dnl	CPPFLAGS="$CPPFLAGS -DDMALLOC"
-	CPPFLAGS="$CPPFLAGS -I${withval}/include"
-	LIBS="$LIBS -L${withval}/lib -ldmalloc"
+	AC_CACHE_CHECK(for dmalloc.h, sfs_cv_dmalloc_h,
+	[ 
+	iflags="-I${withval}/include"
+	CPPFLAGS="$CPPFLAGS $iflags"
+        AC_TRY_COMPILE([#include <dmalloc.h>
+          ], 0, sfs_cv_dmalloc_h="${iflags}")
+	])
+	if test -z "$sfs_cv_dmalloc_h" 
+	then
+		AC_MSG_ERROR([Could not find dmalloc.h])
+	fi
+   	AC_CACHE_CHECK(for -ldamalloc, sfs_cv_ldmalloc,
+	[
+	lflags="-L${withval}/lib -ldmalloc"
+	LIBS="$LIBS $lflags"
+	AC_TRY_LINK([#include <dmalloc.h>
+		dmalloc_shutdown ();], sfs_cv_ldmalloc="${lflags}")
+	])
+	if test -z "$sfs_cv_ldmalloc"
+	then
+		AC_MSG_ERROR([Could not link against -ldmalloc])
+	fi
 	using_dmalloc=yes
 fi)
 AM_CONDITIONAL(DMALLOC, test "$using_dmalloc" = yes)
