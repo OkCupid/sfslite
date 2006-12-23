@@ -6,7 +6,7 @@ sfslib_LTLIBRARIES = libtame.la
 sfsinclude_HEADERS = tame_pipeline.h tame_lock.h tame_autocb.h \
 	tame.h tame_core.h tame_cancel.h tame_mkevent.h \
 	tame_tfork.h tame_tfork_ag.h tame_thread.h tame_trigger.h \
-	tame_cb.h
+	tame_cb.h tame_io.h
 
 SUFFIXES = .C .T .h
 .T.C:
@@ -31,6 +31,7 @@ dnl
 
 tame_src(pipeline)
 tame_src(lock)
+tame_src(io)
 
 dnl
 dnl
