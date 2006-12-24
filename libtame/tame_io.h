@@ -28,8 +28,8 @@
 
 void clearread (int fd);
 void clearwrite (int fd);
-void waitread (int fd, cbv cb, CLOSURE);
-void waitwrite (int fd, cbv cb, CLOSURE);
+void waitread (int fd, cbv cb, ptr<canceller_t> *cn = NULL, CLOSURE);
+void waitwrite (int fd, cbv cb, ptr<canceller_t> *cn = NULL, CLOSURE);
 
 
 #endif /* _LIBTAME_TAME_THREAD_H_ */
