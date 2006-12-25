@@ -26,6 +26,7 @@
 #include "dns.h"
 #include "tame.h"
 #include "parseopt.h"
+#include "tame_io.h"
 
 /**
  * Given a UNIX in_addr structure and a port, make a new TCP connect
@@ -58,10 +59,8 @@ connect_to_in_addr (in_addr a, int port, cbi cv)
 	errno == EINPROGRESS) {
 
       ret->wait (mkevent(cg, false));
-      fdcb (fd, selwrite, mkevent (cg,true));
-      
+      waitwrite (fd, mkevent (cg, true));
       twait (cg, completed);
-      fdcb (fd, selwrite, NULL);
       warn << "return from function\n";
 
       if (completed) {
@@ -74,8 +73,9 @@ connect_to_in_addr (in_addr a, int port, cbi cv)
 	    fd = -ECONNREFUSED;
 	}
 	ret->toolate ();
+      } else {
+	clearwrite (fd);
       }
-      cg.remove_join ();
     } else {
       fd = -errno;
     }
@@ -123,7 +123,6 @@ my_tcpconnect (str hostname, u_int16_t port, cbi cv,
   if (!completed) {
     warn << "DNS lookup cancelled!\n";
     dnsreq_cancel (dnsp);
-    cg.remove_join ();
     TRIGGER(cv, fd);
   } else {
     // if we keep going, note that the canceller is still outstanding,
@@ -131,7 +130,6 @@ my_tcpconnect (str hostname, u_int16_t port, cbi cv,
     dnsp = NULL;
     if (!h) {
       canceller->toolate ();
-      cg.remove_join ();
       if (dns_tmperr (err))
 	TRIGGER(cv, -EAGAIN);
       else
@@ -145,7 +143,6 @@ my_tcpconnect (str hostname, u_int16_t port, cbi cv,
       twait (cg, completed);
       if (completed) {
 	canceller->toolate ();
-	cg.remove_join ();
       } else {
 	cancel_connect->cancel ();
       }

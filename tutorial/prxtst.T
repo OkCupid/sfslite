@@ -77,7 +77,6 @@ listen_loop (int lport, str hn, int port, ptr<canceller_t> *cnp, cbv cb)
 	waitread (lfd, mkevent (G, READ), &rcnc);
 
       twait (G, which);
-      warn << "wakeup!\n";
 
       switch (which) {
       case READ:
