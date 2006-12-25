@@ -220,7 +220,7 @@ closure_t::block_dec_count (const char *loc)
 {
   bool ret = false;
   if (_block._count <= 0) {
-    tame_error (loc, "too many trigger for wait environment.");
+    tame_error (loc, "too many triggers for wait environment.");
   } else if (--_block._count == 0) {
     ret = true;
   }

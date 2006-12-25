@@ -9,6 +9,14 @@
 #include "vec.h"
 #include "init.h"
 
+class cancelable_t : public virtual refcount {
+public:
+  cancelable_t () {}
+  virtual ~cancelable_t () {}
+  virtual void cancel () = 0;
+};
+typedef ptr<cancelable_t> cancelable_ptr_t;
+
 template<class C>
 class container_t {
 public:

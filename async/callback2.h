@@ -201,7 +201,16 @@ $endnotdebug
       if (!*cf) clear (cf);
     }
   }
-  virtual ~callback () {}
+  virtual ~callback () 
+  {
+    if (!*_cleared_flag && _canc) {
+      _canc->cancel ();
+    }
+  }
+  void set_cancel (cancelable_ptr_t c)
+  {
+    _canc = c;
+  }
 protected:
   inline bool second_trigger () {
     if (*_cleared_flag) {
@@ -222,6 +231,7 @@ $enddebug
 
   virtual void _clear (ref_flag_ptr_t) = 0;
   ref_flag_ptr_t _cleared_flag;
+  cancelable_ptr_t _canc;
 };
 
 EOF
@@ -291,7 +301,8 @@ ${adecl}public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
-${dellist}      cf->set (true);
+      cf->set (true);
+${dellist}      
     }
   } 
 };
@@ -777,7 +788,16 @@ public:
       if (!*cf) clear (cf);
     }
   }
-  virtual ~callback () {}
+  virtual ~callback () 
+  {
+    if (!*_cleared_flag && _canc) {
+      _canc->cancel ();
+    }
+  }
+  void set_cancel (cancelable_ptr_t c)
+  {
+    _canc = c;
+  }
 protected:
   inline bool second_trigger () {
     if (*_cleared_flag) {
@@ -798,6 +818,7 @@ protected:
 
   virtual void _clear (ref_flag_ptr_t) = 0;
   ref_flag_ptr_t _cleared_flag;
+  cancelable_ptr_t _canc;
 };
 
 
@@ -817,6 +838,7 @@ protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
       cf->set (true);
+      
     }
   } 
 };
@@ -984,8 +1006,9 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
-      a1.del ();
       cf->set (true);
+      a1.del ();
+      
     }
   } 
 };
@@ -1160,9 +1183,10 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -1344,10 +1368,11 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
       a3.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -1536,11 +1561,12 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
       a3.del ();
       a4.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -1736,12 +1762,13 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
       a3.del ();
       a4.del ();
       a5.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -1948,7 +1975,16 @@ public:
       if (!*cf) clear (cf);
     }
   }
-  virtual ~callback () {}
+  virtual ~callback () 
+  {
+    if (!*_cleared_flag && _canc) {
+      _canc->cancel ();
+    }
+  }
+  void set_cancel (cancelable_ptr_t c)
+  {
+    _canc = c;
+  }
 protected:
   inline bool second_trigger () {
     if (*_cleared_flag) {
@@ -1969,6 +2005,7 @@ protected:
 
   virtual void _clear (ref_flag_ptr_t) = 0;
   ref_flag_ptr_t _cleared_flag;
+  cancelable_ptr_t _canc;
 };
 
 
@@ -1988,6 +2025,7 @@ protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
       cf->set (true);
+      
     }
   } 
 };
@@ -2155,8 +2193,9 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
-      a1.del ();
       cf->set (true);
+      a1.del ();
+      
     }
   } 
 };
@@ -2331,9 +2370,10 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -2515,10 +2555,11 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
       a3.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -2707,11 +2748,12 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
       a3.del ();
       a4.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -2907,12 +2949,13 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
       a3.del ();
       a4.del ();
       a5.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -3119,7 +3162,16 @@ public:
       if (!*cf) clear (cf);
     }
   }
-  virtual ~callback () {}
+  virtual ~callback () 
+  {
+    if (!*_cleared_flag && _canc) {
+      _canc->cancel ();
+    }
+  }
+  void set_cancel (cancelable_ptr_t c)
+  {
+    _canc = c;
+  }
 protected:
   inline bool second_trigger () {
     if (*_cleared_flag) {
@@ -3140,6 +3192,7 @@ protected:
 
   virtual void _clear (ref_flag_ptr_t) = 0;
   ref_flag_ptr_t _cleared_flag;
+  cancelable_ptr_t _canc;
 };
 
 
@@ -3159,6 +3212,7 @@ protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
       cf->set (true);
+      
     }
   } 
 };
@@ -3326,8 +3380,9 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
-      a1.del ();
       cf->set (true);
+      a1.del ();
+      
     }
   } 
 };
@@ -3502,9 +3557,10 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -3686,10 +3742,11 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
       a3.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -3878,11 +3935,12 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
       a3.del ();
       a4.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -4078,12 +4136,13 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
       a3.del ();
       a4.del ();
       a5.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -4290,7 +4349,16 @@ public:
       if (!*cf) clear (cf);
     }
   }
-  virtual ~callback () {}
+  virtual ~callback () 
+  {
+    if (!*_cleared_flag && _canc) {
+      _canc->cancel ();
+    }
+  }
+  void set_cancel (cancelable_ptr_t c)
+  {
+    _canc = c;
+  }
 protected:
   inline bool second_trigger () {
     if (*_cleared_flag) {
@@ -4311,6 +4379,7 @@ protected:
 
   virtual void _clear (ref_flag_ptr_t) = 0;
   ref_flag_ptr_t _cleared_flag;
+  cancelable_ptr_t _canc;
 };
 
 
@@ -4330,6 +4399,7 @@ protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
       cf->set (true);
+      
     }
   } 
 };
@@ -4497,8 +4567,9 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
-      a1.del ();
       cf->set (true);
+      a1.del ();
+      
     }
   } 
 };
@@ -4673,9 +4744,10 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -4857,10 +4929,11 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
       a3.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -5049,11 +5122,12 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
       a3.del ();
       a4.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -5249,12 +5323,13 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
       a3.del ();
       a4.del ();
       a5.del ();
-      cf->set (true);
+      
     }
   } 
 };

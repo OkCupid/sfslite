@@ -30,6 +30,21 @@ void clearread (int fd);
 void clearwrite (int fd);
 void waitread (int fd, cbv cb, ptr<canceller_t> *cn = NULL, CLOSURE);
 void waitwrite (int fd, cbv cb, ptr<canceller_t> *cn = NULL, CLOSURE);
+void proxy (int in, int out, cbv cb, ptr<canceller_t> *cncp = NULL,
+	    CLOSURE);
 
+
+class iofd_t {
+public:
+  iofd_t (int fd, selop op) : _fd (fd), _op (op), _on (false) {}
+  ~iofd_t () { off (); }
+  void on (cbv cb, CLOSURE);
+  void off (bool check = true);
+  int fd () const { return _fd; }
+private:
+  const int _fd;
+  const selop _op;
+  bool _on;
+}; 
 
 #endif /* _LIBTAME_TAME_THREAD_H_ */

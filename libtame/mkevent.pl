@@ -85,12 +85,18 @@ sub do_mkevent_generic_cb ($$)
 sub do_mkevent_generic ($$)
 {
     my ($t, $w) = @_;
+
+    # $rt = "return type"
+    my $rt = "ref<callback<" . arglist ("void", ["T%", $t]) ."> >";
+
+    # $jt = "joiner type"
+    my $jt = "ptr<joiner_t<". arglist (["W%", $w]). "> >";
+
     if ($t > 0 || $w > 0) {
 	print ("template<" , arglist (["class W%", $w], ["class T%", $t]) , 
 	       ">\n");
-	print "typename ";
-    } 
-    print "callback<", arglist ("void", ["T%", $t])  , ">::ref\n";
+    }
+    print $rt, "\n";
     print ("${name} (" , 
 	   arglist ("ptr<closure_t> c",
 		    "const char *loc",
@@ -106,12 +112,16 @@ sub do_mkevent_generic ($$)
 	my @args = ("${name}_cb_${w}_${t}" .
 		    template_arglist (["W%", $w], ["T%", $t]) ,
 		    "c",
-		    "rv.make_joiner (loc, c)",
+		    "j",
 		    "refset_t<" . arglist (["T%", $t]) . ">" 
 		    . " (" . arglist (["t%", $t]) . ")" ,
 		    "value_set_t<" . arglist (["W%", $w]) . ">"
 		    . " (" . arglist (["w%", $w]) . ")");
-	print "  return wrap (" . join (",\n               ", @args). ");\n";
+	print "  $jt j (rv.make_joiner (loc, c));\n";
+	print "  $rt ret (wrap (" 
+	    .  join (",\n               ", @args). "));\n";
+	print "  ret->set_cancel (j);\n";
+	print "  return ret;\n";
 	print "}\n\n";
     } else {
 	print ";\n\n";
