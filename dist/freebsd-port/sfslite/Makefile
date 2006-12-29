@@ -1,28 +1,23 @@
-# New ports collection makefile for:  sfslite
-# Date created:        10 September 2005
-# Whom:                max
+# New ports collection makefile for:	sfslite
+# Date created:				10 September 2005
+# Whom:					max
 #
-# $FreeBSD$
+# $FreeBSD: ports/devel/sfslite/Makefile,v 1.6 2006/08/14 22:55:16 clsung Exp $
 #
 
 PORTNAME=	sfslite
-
-#
-# SFS version 0.8 => sfslite versions 0.8.1, 0.8.2, 0.8.3, ....
-# since it will be updated more frequently.
-#
-PORTVERSION=	0.8.2
+PORTVERSION=	0.8.14
+PORTREVISION=	0
 CATEGORIES=	devel
 MASTER_SITES=	http://dist.okws.org/dist/
 
 MAINTAINER=	ports@okws.org
-COMMENT= 	Standard version of the sfslite library
+COMMENT=	Standard version of the sfslite library
 
 GNU_CONFIGURE=	yes
 USE_GMAKE=	yes
-USE_REINPLACE=	yes
 CONFIGURE_ARGS+=--with-sfsuser=sfs \
-		--with-sfsgroup=sfs 
+		--with-sfsgroup=sfs
 #
 # rpcc does not work with byacc, so just require BISON
 #
@@ -31,7 +26,7 @@ USE_BISON=	yes
 .include <bsd.port.pre.mk>
 
 .if ${OSVERSION} > 500000
-LIB_DEPENDS+=	gmp.6:${PORTSDIR}/math/libgmp4
+LIB_DEPENDS+=	gmp.7:${PORTSDIR}/math/libgmp4
 CONFIGURE_ARGS+=--with-gmp=${LOCALBASE}
 .else
 CONFIGURE_ARGS+=--with-gmp=/usr
@@ -40,7 +35,7 @@ CONFIGURE_ARGS+=--with-gmp=/usr
 #
 # Map X.Y.Z.Q => X.Y
 #
-SHORTVERSION!=	${ECHO} ${PORTVERSION} | sed -Ee 's/([^.]+\.[^.]+).*/\1/'
+SHORTVERSION=	${PORTVERSION:C/^([^\.]+\.[^\.]+).*$/\1/}
 
 #
 # if being called from one of the slave distributions (like
@@ -49,28 +44,32 @@ SHORTVERSION!=	${ECHO} ${PORTVERSION} | sed -Ee 's/([^.]+\.[^.]+).*/\1/'
 # be built.
 #
 .if defined(BUILD_MODE)
-PKGNAMESUFFIX+= -${BUILD_MODE}
-RPCC_BIN?=      lib/${PORTNAME}-${SHORTVERSION}/${BUILD_MODE}
+PKGNAMESUFFIX+=	-${BUILD_MODE}
 .else
-BUILD_MODE?=    shopt
-RPCC_BIN?=      bin
+BUILD_MODE?=	shopt
 .endif # define(BUILD_MODE)
 
-INSTALLS_SHLIB= yes
-LDCONFIG_DIRS=  %%PREFIX%%/lib/${PORTNAME}/${BUILD_MODE}
+#
+# As of 0.8.14, always install to sfslite lib dir (as opposed
+# to the system bin).
+#
+RPCC_BIN?=	lib/${PORTNAME}-${SHORTVERSION}/${BUILD_MODE}
 
-CONFIGURE_TARGET=--build=${MACHINE_ARCH}-portbld-freebsd${OSREL}
-CONFIGURE_ARGS+=  --with-mode=${BUILD_MODE}
+USE_LDCONFIG=	yes
+LDCONFIG_DIRS=	%%PREFIX%%/lib/${PORTNAME}/${BUILD_MODE}
 
-PLIST_SUB+=      VERSION=${SHORTVERSION}
-PLIST_SUB+=      TAG=${BUILD_MODE}
-PLIST_SUB+=      RPCC_BIN=${RPCC_BIN}
+CONFIGURE_TARGET=	--build=${MACHINE_ARCH}-portbld-freebsd${OSREL}
+CONFIGURE_ARGS+=--with-mode=${BUILD_MODE}
+
+PLIST_SUB=	VERSION=${SHORTVERSION} \
+		TAG=${BUILD_MODE} \
+		RPCC_BIN=${RPCC_BIN}
 
 #
-# Slave distributions might override this since they won't have a 
+# Slave distributions might override this since they won't have a
 # pkg-install script in their directory.
 #
-PKG_INSTALL?=    pkg-install
+PKG_INSTALL?=	pkg-install
 
 pre-install:
 	PKG_PREFIX=${PREFIX} ${SH} ${PKG_INSTALL} ${PKGNAME} PRE-INSTALL
