@@ -1,7 +1,0 @@
-@comment $OpenBSD$
-lib/sfs-0.5/libarpc.so.0.0
-lib/sfs-0.5/libasync.so.0.0
-lib/sfs-0.5/libsfscrypt.so.0.0
-lib/sfs-0.5/libsfsmisc.so.0.0
-lib/sfs-0.5/libsvc.so.0.0
-NEWDYNLIBDIR(%D/lib/sfs-0.5)

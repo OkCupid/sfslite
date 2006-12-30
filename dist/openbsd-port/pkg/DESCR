@@ -1,10 +1,15 @@
-Self-Certifying File System
+This is a port of the SFS-Lite development libraries.  The SFS toolkit
+was developed to support the SFS distributed file system (see
+http://www.fs.net).  But because others use the toolkit for other
+reasons, we're making SFS's libraries available as a separate,
+lightweight package.  sfslite compiles much faster and can be
+installed as different non-conflicting build modes (such as
+sfslite-dbg or sfslite-noopt) so might be better for some applications
+that need the SFS libraries but not SFS.
 
-SFS is a secure, global file system with completely decentralized
-control. SFS lets you access your files from anywhere and share them
-with anyone, anywhere. Anyone can set up an SFS server, and any user
-can access any server from any client. SFS lets you share files across
-administrative realms without involving administrators or
-certification authorities.
+Maintained as port of the OKWS distribution by Maxwell Krohn.
 
-WWW: ${HOMEPAGE}
+WWW: http://www.okws.org
+
+- Max
+ports@okws.org

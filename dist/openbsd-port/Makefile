@@ -1,37 +1,30 @@
-# $OpenBSD$
-
+# New ports collection makefile for:	sfslite
+# Date created:				10 September 2005
+# Whom:					max
 #
-# To update this port:
-#   - Set snapshot in DISTNAME and release in WRKSRC
-#   - rm pkg/PLIST pkg/PFRAG.shared files/md5
-#   - make addsum
-#   - make plist
+# $FreeBSD: ports/devel/sfslite/Makefile,v 1.6 2006/08/14 22:55:16 clsung Exp $
 #
 
-COMMENT=	"self-certifying file system"
+BASENAME=	sfslite
+VERSION=	1.0.0
+DISTNAME=       ${BASENAME}-${VERSION}
+CATEGORIES=	devel
 
-BASENAME=	sfs
-DISTNAME=	${BASENAME}-0.5k
-WRKSRC=		${WRKDIR}/${BASENAME}-0.5
-CATEGORIES=	security
+MASTER_SITES=	http://dist.okws.org/dist/
 
-HOMEPAGE=	http://www.fs.net/
+MAINTAINER=	ports@okws.org
+COMMENT=	"Standard version of the sfslite library"
 
-MAINTAINER=	David Mazieres <dm@openbsd.org>
+USE_GMAKE=	yes
+AUTOCONF_VERSION = 2.59
+AUTOMAKE_VERSION = 1.9
+CONFIGURE_STYLE = gnu
 
-PERMIT_PACKAGE_CDROM=	Yes
-PERMIT_PACKAGE_FTP=	Yes
-PERMIT_DISTFILES_CDROM=	Yes
-PERMIT_DISTFILES_FTP=	Yes
+CONFIGURE_ARGS+= --with-mode=shared \
+		 --with-libsfs
 
-MASTER_SITES=	http://www.fs.net/download/
+BUILD_DEPENDS+=	bison-*::devel/bison
+LIB_DEPENDS=	gmp::devel/gmp
 
-SEPARATE_BUILD=	simple
-CONFIGURE_STYLE= gnu
-.if !defined(NO_SHARED_LIBS)
-CONFIGURE_ARGS+= --enable-shlib
-.endif
-CONFIGURE_ARGS+= --with-confdir=/usr/local/etc/sfs
-CONFIGURE_ARGS+= --with-gmp=/usr
 
 .include <bsd.port.mk>
