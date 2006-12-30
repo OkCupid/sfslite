@@ -35,7 +35,6 @@ do_proxy (int infd, str hn, int port, cbv cb)
 {
   tvars {
     int outfd;
-    ev_t which;
   }
   warn << "TCPconnect to " << hn << ":" << port << "\n";
   twait { tcpconnect (hn, port, mkevent (outfd)); }
