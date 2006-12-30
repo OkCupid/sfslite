@@ -2142,8 +2142,11 @@ dnl
 AC_DEFUN([SFS_CALLBACK],
 [AC_ARG_ENABLE(callback2,
 --enable-callback2   use callback.h version 2)
-if test "${enable_callback2+set}" = "set" -o \ 
-	"${with_tutorial}" = "yes"; then \
+callback2="yes"
+if test "${enable_callback2}" = "no" ; then
+	callback2="no"
+fi
+if test "${callback2}" = "yes" ; then
 	AC_DEFINE(SFS_HAVE_CALLBACK2, 1, Toggle callback2.h with CB signaling)
 fi
 ])

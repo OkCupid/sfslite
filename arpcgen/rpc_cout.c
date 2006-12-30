@@ -162,7 +162,7 @@ print_header (definition * def)
   if (doinline == 0)
     return;
   /* May cause lint to complain. but  ... */
-  f_print (fout, "\t register int32_t *buf;\n\n");
+  /* f_print (fout, "\t register int32_t *buf;\n\n"); */
 }
 
 static void
@@ -239,7 +239,7 @@ print_ifstat (int indent, char *prefix, char *type, relation rel, char *amax, ch
     else if (streq (type, "opaque")) {
       alt = "opaque";
     }
-    arg = alloc (strlen (argfmt) + strlen (arg) + 1);
+    arg = alloc (strlen (argfmt) + strlen (objname) + 1);
     s_print (arg, argfmt, objname);
     if (alt) {
       print_ifopen (indent, alt);
@@ -426,7 +426,6 @@ emit_struct (definition * def)
   }
   for (dl = def->def.st.decls; dl != NULL; dl = dl->next)
     if (dl->decl.rel == REL_VECTOR) {
-      f_print (fout, "\t int i;\n");
       break;
     }
   size = 0;
@@ -527,7 +526,8 @@ emit_struct (definition * def)
 	  else {
 	    /* were already looking at a
 	     * xdr_inlineable structure */
-	    if (sizestr == NULL)
+	    f_print (fout, "  do {\nregister int32_t *buf;\n");
+	    if (sizestr == NULL) 
 	      f_print (fout, "\t buf = (int32_t *)XDR_INLINE(xdrs,%d * BYTES_PER_XDR_UNIT);",
 		       size);
 	    else if (size == 0)
@@ -556,6 +556,7 @@ emit_struct (definition * def)
 	    }
 
 	    f_print (fout, "\t  }\n");
+		f_print (fout, "  } while (0);\n");
 	  }
 	}
 	size = 0;
@@ -578,6 +579,7 @@ emit_struct (definition * def)
 
 	/* were already looking at a xdr_inlineable
 	 * structure */
+	  f_print (fout, "  do {\nregister int32_t *buf;\n");
 	if (sizestr == NULL)
 	  f_print (fout, "\t\tbuf = (int32_t *)XDR_INLINE(xdrs,%d * BYTES_PER_XDR_UNIT);",
 		   size);
@@ -606,6 +608,7 @@ emit_struct (definition * def)
 	}
 
 	f_print (fout, "\t  }\n");
+	f_print (fout, "  } while (0);\n");
 
       }
     }
