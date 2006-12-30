@@ -77,13 +77,13 @@ sfsinclude_HEADERS = auth_helper.h
 noinst_HEADERS = hashtab.h queue.h suio.h xdr_suio.h
 
 suidconnect_SOURCES = suidconnect.c
-suidconnect_LDADD = libsfs.a 
+suidconnect_LDADD = libsfs.la 
 
 pathinfo_SOURCES = pathinfo.c
-pathinfo_LDADD = libsfs.a
+pathinfo_LDADD = libsfs.la
 
 auth_helper_SOURCES = auth_helper.c auth_helper_common.c
-auth_helper_LDADD = libsfs.a $(AUTH_HELPER_LIB)
+auth_helper_LDADD = libsfs.la $(AUTH_HELPER_LIB)
 
 # Ugh... this is the only way I could get automake to work
 auth_helper.c: $(srcdir)/$(AUTH_HELPER_STYLE) Makefile
@@ -91,7 +91,7 @@ auth_helper.c: $(srcdir)/$(AUTH_HELPER_STYLE) Makefile
 	$(LN_S) $(srcdir)/$(AUTH_HELPER_STYLE) $@
 
 tst_SOURCES = tst.c
-tst_LDADD = libsfs.a
+tst_LDADD = libsfs.la
 
 dist-hook:
 	cd $(distdir) && rm -f rwfd.c authunixint.c rpcmk_built

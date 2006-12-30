@@ -103,12 +103,12 @@ dev2int (dev_t dev)
 #undef u_longlong_t
 #define u_longlong_t u_int64_t
 
-#ifndef HAVE_XDR_LONGLONG_T
-#define xdr_longlong_t xdr_int64_t
-#define xdr_u_longlong_t xdr_u_int64_t
 #ifndef HAVE_XDR_U_INT64_T
 bool_t xdr_u_int64_t (XDR *xdrs, u_int64_t *qp);
 #endif /* !HAVE_XDR_U_INT64_T */
+#ifndef HAVE_XDR_LONGLONG_T
+#define xdr_longlong_t xdr_int64_t
+#define xdr_u_longlong_t xdr_u_int64_t
 #ifndef HAVE_XDR_INT64_T
 bool_t xdr_int64_t (XDR *xdrs, int64_t *qp);
 #endif /* !HAVE_XDR_INT64_T */
