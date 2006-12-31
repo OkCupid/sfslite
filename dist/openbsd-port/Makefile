@@ -26,5 +26,13 @@ CONFIGURE_ARGS+= --with-mode=shared \
 BUILD_DEPENDS+=	bison-*::devel/bison
 LIB_DEPENDS=	gmp::devel/gmp
 
+REV=1.0
+SUBST_VARS=REV
+
+NO_REGRESS=	Yes
+
+post-install:
+	ln -s ${PREFIX}/lib/sfslite-${REV} ${PREFIX}/lib/sfslite
+	ln -s ${PREFIX}/include/sfslite-${REV} ${PREFIX}/include/sfslite
 
 .include <bsd.port.mk>
