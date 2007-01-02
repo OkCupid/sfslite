@@ -77,7 +77,7 @@ private:
   }
   void delslot (slot *s) { core::remove (s); delete s; }
 
-  void copyslot (const slot *s) { insert (s->key, s->value); }
+  void copyslot (const slot &s) { insert (s.key, s.value); }
 
   static void mkcb (ref<callback<void, K, typename R::type> > cb, slot *s)
     { (*cb) (s->key, R::ret (&s->value)); }
@@ -89,7 +89,7 @@ public:
   qhash () : eq (E ()), hash (H ()) {}
   qhash (const qhash<K,V,H,E,R> &in)
   {
-    in.traverse (wrap (this, &qhash::copyslot));
+    in.core::traverse (wrap (this, &qhash::copyslot));
   }
   void clear () {
     core::traverse (wrap (this, &qhash::delslot));
@@ -100,7 +100,7 @@ public:
   qhash<K,V,H,E,R> &operator= (const qhash<K,V,H,E,R> &in)
   {
     clear ();
-    in.traverse (wrap (this, &qhash::copyslot));
+    in.core::traverse (wrap (this, &qhash::copyslot));
     return *this;
   }
 

@@ -2,6 +2,7 @@
 /* $Id$ */
 
 #include "async.h"
+#include "qhash.h"
 
 int counter;
 class A {
@@ -35,4 +36,13 @@ main (int argc, char *argv[])
   bar ();
   warn << "x5\n";
 
+
+  qhash<int,int> x,y;
+  x.insert (1, 5);
+  y = x;
+
+  qhash<int, int> z (x);
+  
+  warn << *y[1] << "\n";
+  warn << *z[1] << "\n";
 }
