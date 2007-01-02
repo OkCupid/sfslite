@@ -102,6 +102,7 @@ include/sfslite-${REV}/shared/str.h
 include/sfslite-${REV}/shared/suio++.h
 include/sfslite-${REV}/shared/sysconf.h
 include/sfslite-${REV}/shared/tame_pipeline.h
+include/sfslite-${REV}/shared/tame_event.h
 include/sfslite-${REV}/shared/tame_lock.h
 include/sfslite-${REV}/shared/tame_autocb.h
 include/sfslite-${REV}/shared/tame.h
