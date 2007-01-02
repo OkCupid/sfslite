@@ -97,6 +97,13 @@ public:
   }
   ~qhash () { clear (); }
 
+  qhash<K,V,H,E,R> &operator= (const qhash<K,V,H,E,R> &in)
+  {
+    clear ();
+    in.traverse (wrap (this, &qhash::copyslot));
+    return *this;
+  }
+
 #if 0
   void traverse (callback<void, K, typename R::type>::ref cb)
     { core::traverse (wrap (mkcb, cb)); }
