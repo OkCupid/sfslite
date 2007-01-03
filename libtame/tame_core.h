@@ -689,7 +689,7 @@ public:
   joiner_t (ptr<rndvzp_t<T1,T2,T3,T4> > p, const char *l,
 	    ptr<must_deallocate_t> md) 
     : _weak_ref (p->make_weak_ref ()), _loc (l), _must_deallocate (md),
-      _joined (false)
+      _joined (false), _cancelled (false)
   {
     if (_must_deallocate)
       _must_deallocate->add (this);
@@ -697,9 +697,10 @@ public:
 
   ~joiner_t () 
   { 
-    if (!_joined && _weak_ref.pointer ()) {
+    if (!_joined && _weak_ref.pointer () && !_cancelled) {
       _weak_ref.pointer ()->remove_join ();
     }
+
     if (_must_deallocate)
       _must_deallocate->rem (this); 
   }
@@ -707,6 +708,7 @@ public:
   void cancel ()
   {
     if (_weak_ref.pointer ()) {
+      _cancelled = true;
       _weak_ref.pointer ()->remove_join ();
     }
   }
@@ -751,7 +753,7 @@ private:
   weak_ref_t<rndvzp_t<T1,T2,T3,T4> > _weak_ref;
   const char *_loc;
   ptr<must_deallocate_t> _must_deallocate;
-  bool _joined;
+  bool _joined, _cancelled;
 };
 
 
@@ -783,7 +785,7 @@ public:
   void add_join () { _pointer->add_join (); }
 
   /**
-   * Unregister a callback, in case a callback was canceled before it
+   * Unregister a callback, in case a callback was cancelled before it
    * fired.
    */
   void remove_join () { _pointer->remove_join (); }
