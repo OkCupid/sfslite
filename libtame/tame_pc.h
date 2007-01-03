@@ -23,6 +23,7 @@ namespace tame {
       assert (!_set);
       assert (!_done);
 
+      _val = v;
       if (_cb) {
 	_done = true;
 	typename callback<void, bool, V>::ref c (_cb);
@@ -30,7 +31,6 @@ namespace tame {
 	c->trigger (true, _val);
       } else {
 	_set = true;
-	_val = v;
       }
     }
 
