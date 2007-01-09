@@ -477,7 +477,6 @@ public:
 
   void in_progress () { _n_in_progress++; }
 
-
   void mark_dead ()
   { 
     if (*mortal_t::dead_flag ())
@@ -683,13 +682,12 @@ private:
 template<class T1 = nil_t, class T2 = nil_t, class T3 = nil_t, 
 	 class T4 = nil_t>
 class joiner_t : public virtual refcount,
-		 public must_deallocate_obj_t,
-		 public cancelable_t {
+		 public must_deallocate_obj_t {
 public:
   joiner_t (ptr<rndvzp_t<T1,T2,T3,T4> > p, const char *l,
 	    ptr<must_deallocate_t> md) 
     : _weak_ref (p->make_weak_ref ()), _loc (l), _must_deallocate (md),
-      _joined (false), _cancelled (false)
+      _joined (false)
   {
     if (_must_deallocate)
       _must_deallocate->add (this);
@@ -697,20 +695,12 @@ public:
 
   ~joiner_t () 
   { 
-    if (!_joined && _weak_ref.pointer () && !_cancelled) {
+    if (!_joined && _weak_ref.pointer ()) {
       _weak_ref.pointer ()->remove_join ();
     }
 
     if (_must_deallocate)
       _must_deallocate->rem (this); 
-  }
-
-  void cancel ()
-  {
-    if (_weak_ref.pointer ()) {
-      _cancelled = true;
-      _weak_ref.pointer ()->remove_join ();
-    }
   }
 
   void join (value_set_t<T1,T2,T3,T4> w)
@@ -753,7 +743,7 @@ private:
   weak_ref_t<rndvzp_t<T1,T2,T3,T4> > _weak_ref;
   const char *_loc;
   ptr<must_deallocate_t> _must_deallocate;
-  bool _joined, _cancelled;
+  bool _joined;
 };
 
 

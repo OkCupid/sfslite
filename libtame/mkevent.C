@@ -25,9 +25,6 @@ _mkevent_cb_0_0 (ptr<closure_t> hold, ptr<joiner_t<> > j,
 callback<void>::ref
 _mkevent (ptr<closure_t> c, const char *loc, rendezvous_t<> rv)
 {
-  ptr<joiner_t<> > j (rv.make_joiner (loc, c));
-  ref<callback<void> > ret (wrap (_mkevent_cb_0_0, c, j,
-				  refset_t<> (), value_set_t<> ()));
-  ret->set_cancel (j);
-  return ret;
+  return wrap (_mkevent_cb_0_0, c, rv.make_joiner (loc, c),
+               refset_t<> (), value_set_t<> ());
 }
