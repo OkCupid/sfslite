@@ -203,7 +203,9 @@ $endnotdebug
   }
   virtual ~callback () 
   {
-    if (!*_cleared_flag && _canc) {
+    bool cleared = *_cleared_flag;
+    *_cleared_flag = true;
+    if (!cleared && _canc) {
       _canc->cancel ();
     }
   }
