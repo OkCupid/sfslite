@@ -818,6 +818,7 @@ protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
       cf->set (true);
+      
     }
   } 
 };
@@ -985,8 +986,9 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
-      a1.del ();
       cf->set (true);
+      a1.del ();
+      
     }
   } 
 };
@@ -1161,9 +1163,10 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -1345,10 +1348,11 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
       a3.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -1537,11 +1541,12 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
       a3.del ();
       a4.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -1737,12 +1742,13 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
       a3.del ();
       a4.del ();
       a5.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -1989,6 +1995,7 @@ protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
       cf->set (true);
+      
     }
   } 
 };
@@ -2156,8 +2163,9 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
-      a1.del ();
       cf->set (true);
+      a1.del ();
+      
     }
   } 
 };
@@ -2332,9 +2340,10 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -2516,10 +2525,11 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
       a3.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -2708,11 +2718,12 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
       a3.del ();
       a4.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -2908,12 +2919,13 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
       a3.del ();
       a4.del ();
       a5.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -3160,6 +3172,7 @@ protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
       cf->set (true);
+      
     }
   } 
 };
@@ -3327,8 +3340,9 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
-      a1.del ();
       cf->set (true);
+      a1.del ();
+      
     }
   } 
 };
@@ -3503,9 +3517,10 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -3687,10 +3702,11 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
       a3.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -3879,11 +3895,12 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
       a3.del ();
       a4.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -4079,12 +4096,13 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
       a3.del ();
       a4.del ();
       a5.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -4331,6 +4349,7 @@ protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
       cf->set (true);
+      
     }
   } 
 };
@@ -4498,8 +4517,9 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
-      a1.del ();
       cf->set (true);
+      a1.del ();
+      
     }
   } 
 };
@@ -4674,9 +4694,10 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -4858,10 +4879,11 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
       a3.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -5050,11 +5072,12 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
       a3.del ();
       a4.del ();
-      cf->set (true);
+      
     }
   } 
 };
@@ -5250,12 +5273,13 @@ public:
 protected:
   void _clear (ref_flag_ptr_t cf) {
     if (!*cf) { 
+      cf->set (true);
       a1.del ();
       a2.del ();
       a3.del ();
       a4.del ();
       a5.del ();
-      cf->set (true);
+      
     }
   } 
 };
