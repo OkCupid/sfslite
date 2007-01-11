@@ -1617,45 +1617,50 @@ AC_ARG_WITH(heavy,
 --with-heavy                do not use sfslite)
 AC_ARG_WITH(sfs-version,
 --with-sfs-version=[[VERSION]] Specify a Major.Minor SFS version)
-if test "$with_sfs" = yes -o "$with_sfs" = ""; then
 
-    if test "$with_sfs_version"
-    then
-	sfsvers="-${with_sfs_version}"
-    else
-	sfsvers=""
-    fi	
+if test "$with_sfs_version"
+then
+    sfsvers="-${with_sfs_version}"
+else
+    sfsvers=""
+fi	
 
-    for dir in "$prefix" /usr/local /usr; do
-
-	dnl
-	dnl sfs${sfstagdir} in there for bkwds comptability
-	dnl
-	sfsprefixes="sfs${sfsvers}${sfstagdir} sfs${sfsvers}"
-
-	dnl
-	dnl can turn off sfslite with the --with-heavy flag
-	dnl
-	if test ! "$with_heavy" -o "$with_heavy" = "no"; then
-	   sfsprefixes="sfslite${sfsvers}${sfstagdir} $sfsprefixes"
-	fi
-
-	BREAKOUT=0
-	for sfsprfx in $sfsprefixes
-	do
-	    if test -f $dir/lib/${sfsprfx}/libasync.la; then
-		with_sfs=$dir
-		BREAKOUT=1
-		break
-	    fi
-	done
-
-	if test $BREAKOUT -eq 1; then
-	    break
-	fi
-
-    done
+sfsdirs="$prefix /usr/local /usr"
+if test "$with_sfs"
+then
+  sfsdirs="$with_sfs"
 fi
+
+for dir in $sfsdirs ; do
+
+    dnl
+    dnl sfs${sfstagdir} in there for bkwds comptability
+    dnl
+    sfsprefixes="sfs${sfsvers}${sfstagdir} sfs${sfsvers}"
+
+    dnl
+    dnl can turn off sfslite with the --with-heavy flag
+    dnl
+    if test ! "$with_heavy" -o "$with_heavy" = "no"; then
+        sfsprefixes="sfslite${sfsvers}${sfstagdir} $sfsprefixes"
+    fi
+
+    BREAKOUT=0
+    for sfsprfx in $sfsprefixes ''
+    do
+	if test -f $dir/lib/${sfsprfx}/libasync.la; then
+	    with_sfs=$dir
+	    BREAKOUT=1
+            break
+	fi
+    done
+
+    if test $BREAKOUT -eq 1; then
+        break
+    fi
+
+done
+
 case "$with_sfs" in
     /*) ;;
     *) with_sfs="$PWD/$with_sfs" ;;
@@ -1688,6 +1693,7 @@ if test -f ${with_sfs}/Makefile -a -f ${with_sfs}/autoconf.h; then
     MALLOCK=${with_sfs}/sfsmisc/mallock.o
     TAME=${with_sfs}/tame/tame
     ARPCGEN=${with_sfs}/arpcgen/arpcgen
+
 elif test -f ${with_sfs}/include/${sfsprfx}/autoconf.h \
 	-a -f ${with_sfs}/lib/${sfsprfx}/libasync.la; then
     sfsincludedir="${with_sfs}/include/${sfsprfx}"
