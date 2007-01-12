@@ -56,12 +56,12 @@ bool_t devcon_lookup (int *fdp, const char **fsp, dev_t dev);
 
 #endif /* SRPC_ONLY */
 
-struct rpc_program;
+struct rpc_program_tc;
 enum clnt_stat srpc_callraw (int fd,
 			     u_int32_t prog, u_int32_t vers, u_int32_t proc,
 			     xdrproc_t inproc, void *in,
 			     xdrproc_t outproc, void *out, AUTH *auth);
-enum clnt_stat srpc_call (const struct rpc_program *, int fd, u_int32_t proc,
+enum clnt_stat srpc_call (const struct rpc_program_tc *, int fd, u_int32_t proc,
 			  void *in, void *out);
 
 #ifndef SPRC_ONLY
@@ -115,7 +115,7 @@ bool_t xdr_int64_t (XDR *xdrs, int64_t *qp);
 #endif /* HAVE_XDR_LONGLONG_T */
 
 #define RPCGEN_ACTION(x) 0
-struct rpcgen_table {
+struct rpcgen_table_tc {
   char *(*proc)();
   xdrproc_t xdr_arg;
   unsigned len_arg;
@@ -123,10 +123,10 @@ struct rpcgen_table {
   unsigned len_res;
 };
 
-struct rpc_program {
+struct rpc_program_tc {
   u_int32_t progno;
   u_int32_t versno;
-  const struct rpcgen_table *tbl;
+  const struct rpcgen_table_tc *tbl;
   size_t nproc;
 };
 
@@ -136,15 +136,5 @@ struct bigint {
 };
 typedef struct bigint bigint;
 bool_t xdr_bigint (XDR *xdrs, bigint *bp);
-
-#define XDR_opaque_POINTER_WIDGET(x) &x
-#define XDR_bool_POINTER_WIDGET(x) &x
-#define XDR_void_POINTER_WIDGET(x) &x
-#define XDR_bigint_POINTER_WIDGET(x) &x
-#define XDR_string_POINTER_WIDGET(x) &x
-#define XDR_u_int_POINTER_WIDGET(x) &x
-#define XDR_int_POINTER_WIDGET(x) &x
-#define XDR__vector_POINTER_WIDGET(x) x
-#define XDR_u_int64_t_POINTER_WIDGET(x) &x
 
 #endif /* _SFS_INTERNAL_H_ */

@@ -260,7 +260,7 @@ srpc_callraw (int fd, u_int32_t prog, u_int32_t vers, u_int32_t proc,
 }
 
 enum clnt_stat
-srpc_call (const struct rpc_program *rpp, int fd, u_int32_t proc,
+srpc_call (const struct rpc_program_tc *rpp, int fd, u_int32_t proc,
 	   void *in, void *out)
 {
   assert (proc < rpp->nproc);

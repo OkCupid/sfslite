@@ -266,7 +266,7 @@ pprogramdef (definition * def)
 	     "#ifndef RPCGEN_ACTION\n"
 	     "#define RPCGEN_ACTION(x) 0\n"
 	     "#endif /* !RPCGEN_ACTION */\n"
-	     "struct rpcgen_table {\n"
+	     "struct rpcgen_table_tc {\n"
 	     "  char *(*proc)();\n"
 	     "  xdrproc_t xdr_arg;\n"
 	     "  unsigned len_arg;\n"
@@ -274,10 +274,10 @@ pprogramdef (definition * def)
 	     "  unsigned len_res;\n"
 	     "};\n"
 	     "\n"
-	     "struct rpc_program {\n"
+	     "struct rpc_program_tc {\n"
 	     "  u_int32_t progno;\n"
 	     "  u_int32_t versno;\n"
-	     "  const struct rpcgen_table *tbl;\n"
+	     "  const struct rpcgen_table_tc *tbl;\n"
 	     "  size_t nproc;\n"
 	     "};\n"
 	     "#endif /* !_RPCGEN_TABLE_DEFINED_ */\n\n");
@@ -289,11 +289,11 @@ pprogramdef (definition * def)
   puldefine (def->def_name, def->def.pr.prog_num);
   for (vers = def->def.pr.versions; vers != NULL; vers = vers->next) {
     if (tblflag) {
-      f_print (fout, "RPC_EXTERN const struct rpcgen_table %s_%s_table[];\n",
+      f_print (fout, "RPC_EXTERN const struct rpcgen_table_tc %s_%s_table[];\n",
 	       locase (def->def_name), vers->vers_num);
       f_print (fout, "RPC_EXTERN const int %s_%s_nproc;\n",
 	       locase (def->def_name), vers->vers_num);
-      f_print (fout, "RPC_EXTERN const struct rpc_program  %s_%s;\n",
+      f_print (fout, "RPC_EXTERN const struct rpc_program_tc  %s_%s;\n",
 	       locase (def->def_name), vers->vers_num);
     }
     puldefine (vers->vers_name, vers->vers_num);

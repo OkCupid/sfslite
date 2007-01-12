@@ -44,7 +44,7 @@
 
 static char tabstr[TABCOUNT + 1] = "\t\t\t\t\t";
 
-static char tbl_hdr[] = "const struct rpcgen_table %s_table[] = {\n";
+static char tbl_hdr[] = "const struct rpcgen_table_tc %s_table[] = {\n";
 static char tbl_end[] = "};\n";
 
 static char null_entry[] = "    {\n\t(char *(*)())0,\n\
@@ -138,7 +138,7 @@ write_table (definition * def)
     f_print (fout, tbl_nproc, progvers, progvers, progvers);
 
     f_print (fout,
-	     "const struct rpc_program %s = {\n"
+	     "const struct rpc_program_tc %s = {\n"
 	     "\t%s, %s, %s_table,\n"
 	     "\tsizeof (%s_table) / sizeof (%s_table[0])\n"
 	     "};\n\n",

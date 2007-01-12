@@ -369,7 +369,7 @@ c_initialize (void)
 char rpcgen_table_dcl[] = "\
 #ifndef _RPCGEN_TABLE_DEFINED_\n\
 #define _RPCGEN_TABLE_DEFINED_ 1\n\
-struct rpcgen_table {\n\
+struct rpcgen_table_tc {\n\
   char *(*proc) ();\n\
   xdrproc_t xdr_arg;\n\
   unsigned len_arg;\n\
