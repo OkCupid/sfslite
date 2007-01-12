@@ -37,13 +37,13 @@ struct rpcgen_table {
 
   const std::type_info *type_arg;
   void *(*alloc_arg) ();
-  xdrproc_t xdr_arg;
+  sfs::xdrproc_t xdr_arg;
   void (*print_arg) (const void *, const strbuf *, int,
 		     const char *, const char *);
 
   const std::type_info *type_res;
   void *(*alloc_res) ();
-  xdrproc_t xdr_res;
+  sfs::xdrproc_t xdr_res;
   void (*print_res) (const void *, const strbuf *, int,
 		     const char *, const char *);
 };

@@ -99,13 +99,13 @@ genxid (xhinfo *xi)
 }
 
 rpccb::rpccb (ref<aclnt> c, u_int32_t xid, aclnt_cb cb,
-	      void *out, xdrproc_t outproc, const sockaddr *d)
+	      void *out, sfs::xdrproc_t outproc, const sockaddr *d)
   : callbase (c, xid, d), cb (cb), outmem (out), outxdr (outproc)
 {
 }
 
 rpccb::rpccb (ref<aclnt> c, xdrsuio &x, aclnt_cb cb,
-	      void *out, xdrproc_t outproc, const sockaddr *d)
+	      void *out, sfs::xdrproc_t outproc, const sockaddr *d)
   : callbase (c, getxid (c, x), d), cb (cb), outmem (out), outxdr (outproc)
 {
 }
@@ -197,7 +197,7 @@ rpccb_msgbuf::xmit (int retry)
 
 rpccb_unreliable::rpccb_unreliable (ref<aclnt> c, xdrsuio &x,
 				    aclnt_cb cb,
-				    void *out, xdrproc_t outproc,
+				    void *out, sfs::xdrproc_t outproc,
 				    const sockaddr *d)
   : rpccb_msgbuf (c, x, cb, out, outproc, d)
 {
@@ -206,7 +206,7 @@ rpccb_unreliable::rpccb_unreliable (ref<aclnt> c, xdrsuio &x,
 rpccb_unreliable::rpccb_unreliable (ref<aclnt> c,
 				    char *buf, size_t len,
 				    aclnt_cb cb,
-				    void *out, xdrproc_t outproc,
+				    void *out, sfs::xdrproc_t outproc,
 				    const sockaddr *d)
   : rpccb_msgbuf (c, buf, len, cb, out, outproc, d)
 {
@@ -285,7 +285,7 @@ aclnt::xprt () const
 bool
 aclnt::marshal_call (xdrsuio &x, AUTH *auth,
 		     u_int32_t progno, u_int32_t versno, u_int32_t procno,
-		     xdrproc_t inproc, const void *in)
+		     sfs::xdrproc_t inproc, const void *in)
 {
   u_int32_t *dp = (u_int32_t *) XDR_INLINE (x.xdrp (), 6*4);
 #if 0
@@ -340,7 +340,7 @@ bool
 aclnt::init_call (xdrsuio &x,
 	          u_int32_t procno, const void *in, void *out,
 	          aclnt_cb &cb, AUTH *auth,
-	          xdrproc_t inproc, xdrproc_t outproc,
+	          sfs::xdrproc_t inproc, sfs::xdrproc_t outproc,
 	          u_int32_t progno, u_int32_t versno)
 {
   if (xi_ateof_fail ()) {
@@ -400,7 +400,7 @@ callbase *
 aclnt::call (u_int32_t procno, const void *in, void *out,
 	     aclnt_cb cb,
 	     AUTH *auth,
-	     xdrproc_t inproc, xdrproc_t outproc,
+	     sfs::xdrproc_t inproc, sfs::xdrproc_t outproc,
 	     u_int32_t progno, u_int32_t versno,
 	     sockaddr *d)
 {
@@ -443,7 +443,7 @@ aclnt::timedcall (time_t sec, long nsec,
 		  u_int32_t procno, const void *in, void *out,
 		  aclnt_cb cb,
 		  AUTH *auth,
-		  xdrproc_t inproc, xdrproc_t outproc,
+		  sfs::xdrproc_t inproc, sfs::xdrproc_t outproc,
 		  u_int32_t progno, u_int32_t versno,
 		  sockaddr *d)
 {
@@ -464,7 +464,7 @@ scall_cb (clnt_stat *errp, bool *donep, clnt_stat err)
 clnt_stat
 aclnt::scall (u_int32_t procno, const void *in, void *out,
 	      AUTH *auth,
-	      xdrproc_t inproc, xdrproc_t outproc,
+	      sfs::xdrproc_t inproc, sfs::xdrproc_t outproc,
 	      u_int32_t progno, u_int32_t versno,
 	      sockaddr *d, time_t duration)
 {

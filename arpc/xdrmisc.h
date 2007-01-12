@@ -76,8 +76,9 @@ extern "C" {
 
 #define BOOL bool_t
 
-typedef BOOL (*xdrproc_t) (XDR *, void *);
-
+namespace sfs {
+  typedef BOOL (*xdrproc_t) (XDR *, void *);
+}
 #include "rpctypes.h"
 
 #ifdef __APPLE__
@@ -297,7 +298,7 @@ rpc_destruct (T *objp)
 }
 
 inline void
-xdr_free (xdrproc_t proc, void *objp)
+xdr_free (sfs::xdrproc_t proc, void *objp)
 {
   XDR x;
   x.x_op = XDR_FREE;
@@ -305,21 +306,21 @@ xdr_free (xdrproc_t proc, void *objp)
 }
 
 inline void
-xdr_delete (xdrproc_t proc, void *objp)
+xdr_delete (sfs::xdrproc_t proc, void *objp)
 {
   xdr_free (proc, objp);
   operator delete (objp);
 }
 
 class auto_xdr_delete {
-  const xdrproc_t proc;
+  const sfs::xdrproc_t proc;
   void *const objp;
 
   auto_xdr_delete (const auto_xdr_delete &);
   auto_xdr_delete &operator= (const auto_xdr_delete &);
 
 public:
-  auto_xdr_delete (xdrproc_t p, void *o) : proc (p), objp (o) {}
+  auto_xdr_delete (sfs::xdrproc_t p, void *o) : proc (p), objp (o) {}
   ~auto_xdr_delete () { xdr_delete (proc, objp); }
 };
 

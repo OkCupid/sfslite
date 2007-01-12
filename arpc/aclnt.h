@@ -65,7 +65,7 @@ public:
 
 class rpccb : public callbase {
 protected:
-  rpccb (ref<aclnt>, u_int32_t, aclnt_cb, void *, xdrproc_t, const sockaddr *);
+  rpccb (ref<aclnt>, u_int32_t, aclnt_cb, void *, sfs::xdrproc_t, const sockaddr *);
   virtual ~rpccb () {}
 
   static u_int32_t getxid (ref<aclnt> c, xdrsuio &x);
@@ -74,9 +74,9 @@ protected:
 public:
   aclnt_cb cb;
   void *outmem;
-  xdrproc_t outxdr;
+  sfs::xdrproc_t outxdr;
 
-  rpccb (ref<aclnt>, xdrsuio &, aclnt_cb, void *, xdrproc_t, const sockaddr *);
+  rpccb (ref<aclnt>, xdrsuio &, aclnt_cb, void *, sfs::xdrproc_t, const sockaddr *);
   virtual callbase *init (xdrsuio &x);
   clnt_stat decodemsg (const char *, size_t);
   void finish (clnt_stat);
@@ -85,13 +85,13 @@ public:
 class rpccb_msgbuf : public rpccb {
 protected:
   rpccb_msgbuf (ref<aclnt> c, xdrsuio &x, aclnt_cb cb,
-		void *out, xdrproc_t outproc, const sockaddr *d)
+		void *out, sfs::xdrproc_t outproc, const sockaddr *d)
     : rpccb (c, x, cb, out, outproc, d) {
     msglen = x.uio ()->resid ();
     msgbuf = suio_flatten (x.uio ());
   }
   rpccb_msgbuf (ref<aclnt> c, char *buf, size_t len, aclnt_cb cb,
-		void *out, xdrproc_t outproc, const sockaddr *d)
+		void *out, sfs::xdrproc_t outproc, const sockaddr *d)
     : rpccb (c, getxid (c, buf, len), cb, out, outproc, d),
       msgbuf (buf), msglen (len) {}
   ~rpccb_msgbuf () { xfree (msgbuf); }
@@ -106,7 +106,7 @@ public:
 class rpccb_msgbuf_xmit : public rpccb_msgbuf {
 public:
   rpccb_msgbuf_xmit (ref<aclnt> c, xdrsuio &x, aclnt_cb cb,
-                     void *out, xdrproc_t outproc, const sockaddr *d)
+                     void *out, sfs::xdrproc_t outproc, const sockaddr *d)
     : rpccb_msgbuf (c, x, cb, out, outproc, d) {}
   virtual callbase *init (xdrsuio &x) { xmit (0); return this; }
 };
@@ -118,9 +118,9 @@ public:
   tmoq_entry<rpccb_unreliable> tlink;
 
   rpccb_unreliable (ref<aclnt>, xdrsuio &, aclnt_cb,
-		    void *out, xdrproc_t outproc, const sockaddr *);
+		    void *out, sfs::xdrproc_t outproc, const sockaddr *);
   rpccb_unreliable (ref<aclnt>, char *, size_t, aclnt_cb,
-		    void *out, xdrproc_t outproc, const sockaddr *);
+		    void *out, sfs::xdrproc_t outproc, const sockaddr *);
   ~rpccb_unreliable ();
   virtual callbase *init (xdrsuio &x);
 
@@ -129,7 +129,7 @@ public:
 
 template<class T> callbase *
 callbase_alloc (ref<aclnt> c, xdrsuio &x, aclnt_cb cb,
-    		void *out, xdrproc_t outproc, sockaddr *d)
+    		void *out, sfs::xdrproc_t outproc, sockaddr *d)
 {
   return (New T (c, x, cb, out, outproc, d))->init (x);
 }
@@ -167,7 +167,7 @@ public:
   list_entry<aclnt> xhlink;
   const ref<axprt> &xprt () const;
   typedef callbase *(*rpccb_alloc_t) (ref<aclnt>, xdrsuio &, aclnt_cb,
-				      void *, xdrproc_t, sockaddr *);
+				      void *, sfs::xdrproc_t, sockaddr *);
   rpccb_alloc_t rpccb_alloc;
 
   bool calls_outstanding () { return calls.first; }
@@ -181,27 +181,27 @@ public:
   static void dispatch (ref<xhinfo>, const char *, ssize_t, const sockaddr *);
   static bool marshal_call (xdrsuio &, AUTH *auth, u_int32_t progno,
 			    u_int32_t versno, u_int32_t procno,
-			    xdrproc_t inproc, const void *in);
+			    sfs::xdrproc_t inproc, const void *in);
   bool init_call (xdrsuio &x,
 		  u_int32_t procno, const void *in, void *out, aclnt_cb &,
 		  AUTH *auth = NULL,
-		  xdrproc_t inproc = NULL, xdrproc_t outproc = NULL,
+		  sfs::xdrproc_t inproc = NULL, sfs::xdrproc_t outproc = NULL,
 		  u_int32_t progno = 0, u_int32_t versno = 0);
 
   callbase *call (u_int32_t procno, const void *in, void *out, aclnt_cb,
 		  AUTH *auth = NULL,
-		  xdrproc_t inproc = NULL, xdrproc_t outproc = NULL,
+		  sfs::xdrproc_t inproc = NULL, sfs::xdrproc_t outproc = NULL,
 		  u_int32_t progno = 0, u_int32_t versno = 0,
 		  sockaddr *d = NULL);
   callbase *timedcall (time_t sec, long nsec,
 		       u_int32_t procno, const void *in, void *out, aclnt_cb,
 		       AUTH *auth = NULL,
-		       xdrproc_t inproc = NULL, xdrproc_t outproc = NULL,
+		       sfs::xdrproc_t inproc = NULL, sfs::xdrproc_t outproc = NULL,
 		       u_int32_t progno = 0, u_int32_t versno = 0,
 		       sockaddr *d = NULL);
   callbase *timedcall (time_t sec, u_int32_t procno, const void *in, void *out,
 		       aclnt_cb cb, AUTH *auth = NULL,
-		       xdrproc_t inproc = NULL, xdrproc_t outproc = NULL,
+		       sfs::xdrproc_t inproc = NULL, sfs::xdrproc_t outproc = NULL,
 		       u_int32_t progno = 0, u_int32_t versno = 0,
 		       sockaddr *d = NULL) {
     return timedcall (sec, 0, procno, in, out, cb, auth,
@@ -209,7 +209,7 @@ public:
   }
   clnt_stat scall (u_int32_t procno, const void *in, void *out,
 		   AUTH *auth = NULL,
-		   xdrproc_t inproc = NULL, xdrproc_t outproc = NULL,
+		   sfs::xdrproc_t inproc = NULL, sfs::xdrproc_t outproc = NULL,
 		   u_int32_t progno = 0, u_int32_t versno = 0,
 		   sockaddr *d = NULL, time_t duration = 0);
 

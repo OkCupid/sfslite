@@ -97,7 +97,7 @@ public:
   const sockaddr *getsa () const { return addr; }
   bool fromresvport () const;
 
-  void reply (const void *, xdrproc_t = NULL, bool nocache = false);
+  void reply (const void *, sfs::xdrproc_t = NULL, bool nocache = false);
   template<class T> void replyref (const T &res, bool nocache = false)
     { reply (&res, NULL, nocache); }
   void replyref (const int &res, bool nocache = false)

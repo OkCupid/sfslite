@@ -147,12 +147,12 @@ class acallrpcobj : rpc2sin {
   bool used;
 
   u_int32_t proc;
-  xdrproc_t outxdr;
+  sfs::xdrproc_t outxdr;
   void *outmem;
   aclnt_cb cb;
   AUTH *auth;
 
-  void setmsg (xdrproc_t inxdr, void *inmem) {
+  void setmsg (sfs::xdrproc_t inxdr, void *inmem) {
     callbuf = NULL;
     xdrsuio x (XDR_ENCODE);
     if (aclnt::marshal_call (x, auth, prog, vers,
@@ -184,8 +184,8 @@ class acallrpcobj : rpc2sin {
 public:
 
   acallrpcobj (u_int32_t prog, u_int32_t vers,
-	       u_int32_t proc, xdrproc_t inxdr, void *inmem,
-	       xdrproc_t outxdr, void *outmem,
+	       u_int32_t proc, sfs::xdrproc_t inxdr, void *inmem,
+	       sfs::xdrproc_t outxdr, void *outmem,
 	       aclnt_cb cb, AUTH *auth = NULL)
     : rpc2sin (prog, vers, IPPROTO_UDP),
       used (false), proc (proc),
@@ -213,7 +213,7 @@ public:
 void
 __acallrpc (const char *host, u_int port,
 	    u_int32_t prog, u_int32_t vers, u_int32_t proc,
-	    xdrproc_t inxdr, void *inmem, xdrproc_t outxdr, void *outmem,
+	    sfs::xdrproc_t inxdr, void *inmem, sfs::xdrproc_t outxdr, void *outmem,
 	    aclnt_cb cb, AUTH *auth)
 {
   acallrpcobj *co = New acallrpcobj (prog, vers, proc, inxdr, inmem,
@@ -224,7 +224,7 @@ __acallrpc (const char *host, u_int port,
 void
 __acallrpc (in_addr host, u_int port,
 	    u_int32_t prog, u_int32_t vers, u_int32_t proc,
-	    xdrproc_t inxdr, void *inmem, xdrproc_t outxdr, void *outmem,
+	    sfs::xdrproc_t inxdr, void *inmem, sfs::xdrproc_t outxdr, void *outmem,
 	    aclnt_cb cb, AUTH *auth)
 {
   acallrpcobj *co = New acallrpcobj (prog, vers, proc, inxdr, inmem,

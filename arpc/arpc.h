@@ -98,13 +98,13 @@ ptr<aclnt> udpclnt ();
 
 void __acallrpc (const char *host, u_int port,
 		 u_int32_t prog, u_int32_t vers, u_int32_t proc,
-		 xdrproc_t inxdr, void *inmem,
-		 xdrproc_t outxdr, void *outmem,
+		 sfs::xdrproc_t inxdr, void *inmem,
+		 sfs::xdrproc_t outxdr, void *outmem,
 		 aclnt_cb cb, AUTH *auth);
 void __acallrpc (in_addr host, u_int port,
 		 u_int32_t prog, u_int32_t vers, u_int32_t proc,
-		 xdrproc_t inxdr, void *inmem,
-		 xdrproc_t outxdr, void *outmem,
+		 sfs::xdrproc_t inxdr, void *inmem,
+		 sfs::xdrproc_t outxdr, void *outmem,
 		 aclnt_cb cb, AUTH *auth);
 
 inline void

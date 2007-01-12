@@ -66,13 +66,13 @@ svccb::svccb ()
 
 svccb::~svccb ()
 {
-  xdr_free (reinterpret_cast<xdrproc_t> (xdr_callmsg), &msg);
+  xdr_free (reinterpret_cast<sfs::xdrproc_t> (xdr_callmsg), &msg);
   if (arg)
     xdr_delete (srv->tbl[proc ()].xdr_arg, arg);
   if (resdat)
     xdr_delete (srv->tbl[proc ()].xdr_res, resdat);
   if (aup)
-    xdr_delete (reinterpret_cast<xdrproc_t> (xdr_authunix_parms), aup);
+    xdr_delete (reinterpret_cast<sfs::xdrproc_t> (xdr_authunix_parms), aup);
   if (srv)
     srv->xi->svcdel ();
   xfree (res);
@@ -124,7 +124,7 @@ svccb::getaup () const
   bzero (aup, sizeof (*aup));
   if (xdr_authunix_parms (x.xdrp (), aup))
     return aup;
-  xdr_free (reinterpret_cast<xdrproc_t> (xdr_authunix_parms), aup);
+  xdr_free (reinterpret_cast<sfs::xdrproc_t> (xdr_authunix_parms), aup);
   delete aup;
   // msg.rm_call.cb_cred.oa_flavor = AUTH_NONE;
   return aup = NULL;
@@ -148,7 +148,7 @@ svccb::fromresvport () const
 }
 
 void
-svccb::reply (const void *reply, xdrproc_t xdr, bool nocache)
+svccb::reply (const void *reply, sfs::xdrproc_t xdr, bool nocache)
 {
   rpc_msg rm;
 
