@@ -46,9 +46,9 @@ int recvfd ();
 
 #else 
 
-char *xstrsep(char **str, const char *delim);
-char *strnnsep (char **stringp, const char *delim);
-const char *getsfssockdir (void);
+char *xstrsep_c(char **str, const char *delim);
+char *strnnsep_c (char **stringp, const char *delim);
+const char *getsfssockdir_c (void);
 
 void devcon_flush (void);
 void devcon_close (void);

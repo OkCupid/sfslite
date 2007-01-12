@@ -66,7 +66,7 @@ getaddr (struct sockaddr_un *sun, const char *prog)
     dmalloc_debug (0);
   }
 #endif /* DMALLOC */
-  sockdir = getsfssockdir ();
+  sockdir = getsfssockdir_c ();
 
   if (!checkprog (prog)
       || (strlen (sockdir) + 1 + strlen (runinplace)

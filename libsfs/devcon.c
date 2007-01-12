@@ -196,9 +196,9 @@ devdblookup (char **progp, char **fsp, u_int64_t dev)
     if (!strncmp (linebuf, devstr, devlen)) {
       char *sdev, *sfs, *sprog;
       char *bufp = linebuf;
-      if ((sdev = strnnsep (&bufp, " \r\n"))
-	  && (sfs = strnnsep (&bufp, " \r\n")) && strlen (sfs) <= 255
-	  && (sprog = strnnsep (&bufp, " \r\n")) && strlen (sprog) <= 255) {
+      if ((sdev = strnnsep_c (&bufp, " \r\n"))
+	  && (sfs = strnnsep_c (&bufp, " \r\n")) && strlen (sfs) <= 255
+	  && (sprog = strnnsep_c (&bufp, " \r\n")) && strlen (sprog) <= 255) {
 	if (fsp) {
 	  *fsp = malloc (strlen (sfs) + 1);
 	  if (!*fsp) {

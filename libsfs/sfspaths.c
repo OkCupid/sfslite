@@ -28,7 +28,7 @@
  * separators.  This is the same as the 4.4BSD strsep, but different
  * from the one in the GNU libc. */
 char *
-xstrsep(char **str, const char *delim)
+xstrsep_c(char **str, const char *delim)
 {
   char *s, *e;
 
@@ -49,18 +49,18 @@ xstrsep(char **str, const char *delim)
  * return a null token for two adjacent separators, so we may have to
  * loop. */
 char *
-strnnsep (char **stringp, const char *delim)
+strnnsep_c (char **stringp, const char *delim)
 {
   char *tok;
 
   do {
-    tok = xstrsep (stringp, delim);
+    tok = xstrsep_c (stringp, delim);
   } while (tok && *tok == '\0');
   return (tok);
 }
 
 const char *
-getsfssockdir (void)
+getsfssockdir_c (void)
 {
   static char *sockdir;
   char *runinplace;
@@ -95,10 +95,10 @@ getsfssockdir (void)
     while ((s = fgets (buf, sizeof (buf), f))) {
       if (strlen (buf) >= sizeof (buf) - 1)
 	break;
-      t = strnnsep (&s, " \r\n");
+      t = strnnsep_c (&s, " \r\n");
       if (strcasecmp (t, "sfsdir"))
 	continue;
-      t = strnnsep (&s, " \r\n");
+      t = strnnsep_c (&s, " \r\n");
       if (t && *t == '/') {
 	sockdir = malloc (strlen (t) + sizeof ("/sockets"));
 	if (!sockdir) {
