@@ -21,7 +21,9 @@
 
 #include "rabinpoly.h"
 #include "msb.h"
-#define INT64(n) n##LL
+#ifndef INT64
+# define INT64(n) n##LL
+#endif
 #define MSB64 INT64(0x8000000000000000)
                     
 u_int64_t
