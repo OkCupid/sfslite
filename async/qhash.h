@@ -220,7 +220,7 @@ class qhash_const_iterator_t {
 public:
   qhash_const_iterator_t (const qhash<K,V,H,E> &q) 
     : _i (q.first ()), _qh (q) {}
-  const K *next (const V *val = NULL) {
+  const K *next (V *val = NULL) {
     const K *r = NULL;
     if (_i) {
       if (val) *val = _i->value;
