@@ -191,7 +191,8 @@ class weak_refcounted_t : public mortal_t {
 public:
   weak_refcounted_t (T *p) :
     _pointer (p),
-    _refcnt (1) {}
+    _refcnt (1),
+    _cleared (ref_flag_t::alloc (false)) {}
 
   virtual ~weak_refcounted_t () {}
 
@@ -199,6 +200,13 @@ public:
    * eschew fancy C++ cast operator overloading for ease or readability, etc..
    */
   T * pointer () { return _pointer; }
+
+  /**
+   * If this thing was cleared before it went out of scope
+   */
+  ptr<ref_flag_t> cleared_flag () { return _cleared; }
+  void mark_cleared () { _cleared->set(true); }
+  bool is_cleared () const { return *_cleared; }
 
   /**
    * Make a weak reference to this class, copying over the base pointer,
@@ -233,6 +241,7 @@ private:
   T        *_pointer;
   int _refcnt;
   cbv::ptr _weak_finalize_cb;
+  ptr<ref_flag_t> _cleared;
 };
 
 /**
@@ -247,7 +256,8 @@ class weak_ref_t {
 public:
   weak_ref_t (weak_refcounted_t<T> *p) : 
     _pointer (p->pointer ()), 
-    _destroyed_flag (p->destroyed_flag ()) {}
+    _destroyed_flag (p->destroyed_flag ()),
+    _cleared_flag (p->cleared_flag ()) {}
 
   /**
    * Access the underlying pointer only after we have ensured that
@@ -257,10 +267,12 @@ public:
 
   void weak_decref () { if (pointer ()) pointer ()->weak_decref (); }
   void weak_incref () { if (pointer ()) pointer ()->weak_incref (); }
+  bool cleared () const { return *_cleared_flag; }
 
 private:
   T                            *_pointer;
   ptr<ref_flag_t>              _destroyed_flag;
+  ptr<ref_flag_t>              _cleared_flag;
 };
 
 template<class T> weak_ref_t<T>
@@ -463,9 +475,7 @@ public:
     weak_refcounted_t<rndvzp_t<T1,T2,T3,T4> > (this),
     _n_out (0), _file (f), _lineno (l),
     _must_deallocate (New refcounted<must_deallocate_t> ()),
-    _join_method (JOIN_NONE),
-    _n_in_progress (0),
-    _gc_mode (false)
+    _join_method (JOIN_NONE)
   {
 #ifdef HAVE_TAME_PTH
     pth_mutex_init (&_mutex);
@@ -475,7 +485,10 @@ public:
 
   virtual ~rndvzp_t () { mark_dead (); }
 
-  void in_progress () { _n_in_progress++; }
+  void cancel ()
+  {
+    this->mark_cleared ();
+  }
 
   void mark_dead ()
   { 
@@ -485,7 +498,7 @@ public:
 
     // XXX - find some way to identify this join, either by filename
     // and line number, or other ways.
-    if (need_join ()) {
+    if (!is_cleared() && need_join ()) {
       str s1 = (_file && _lineno) ?
 	str (strbuf ("%s:%d", _file, _lineno)) :
 	str ("(unknown)");
@@ -496,30 +509,13 @@ public:
       tame_error (s1.cstr (), s2.cstr ());
     }
 
-    if (tame_check_leaks () && _must_deallocate)
+    if (!is_cleared() && tame_check_leaks () && _must_deallocate)
       // Check for any leaked events
       delaycb (0, 0, wrap (_must_deallocate, &must_deallocate_t::check));
   }
 
-  void gc (cbv cb)
-  {
-    assert (!_gc_mode);
-    assert (!_join_cb);
-
-    // XXX should have some method to make sure we're not also waiting on
-    // a CV for this thread.  That is, we should be more careful about knowing
-    // the state of this rendezvous, setting it and unsetting it after it
-    // comes out of the join.
-
-    _gc_cb = cb;
-    _gc_mode = true;
-
-    gc_internal ();
-  }
-
   void set_join_cb (cbv::ptr c) 
   { 
-    assert (!_gc_mode);
     set_join_method (JOIN_EVENTS); _join_cb = c; 
   }
 
@@ -538,32 +534,24 @@ public:
   void join (value_set_t<T1, T2, T3, T4> v) 
   {
     assert (_n_out > 0);
-    assert (_n_in_progress > 0);
-
     _n_out --;
-    _n_in_progress --;
 
-    if (_gc_mode) {
-      gc_internal ();
-    } else {
-      _pending.push_back (v);
-      if (_join_method == JOIN_EVENTS) {
-	assert (_join_cb);
-	cbv cb = _join_cb;
-	_join_cb = NULL;
-	(*cb) ();
-      } else if (_join_method == JOIN_THREADS) {
+    _pending.push_back (v);
+    if (_join_method == JOIN_EVENTS) {
+      assert (_join_cb);
+      cbv cb = _join_cb;
+      _join_cb = NULL;
+      (*cb) ();
+    } else if (_join_method == JOIN_THREADS) {
 #ifdef HAVE_TAME_PTH
-	pth_cond_notify (&_cond, 0);
+      pth_cond_notify (&_cond, 0);
 #else
-	panic ("no PTH available\n");
+      panic ("no PTH available\n");
 #endif
-      } else {
-	/* called join before a waiter; we can just queue */
-      }
+    } else {
+      /* called join before a waiter; we can just queue */
     }
   }
-    
     
   void threadjoin ()
   {
@@ -619,18 +607,6 @@ public:
 
 private:
 
-  void gc_internal ()
-  {
-    assert (_gc_mode);
-    if (_n_in_progress > 0) 
-      return;
-    _n_out = 0;
-    _gc_mode = false;
-    cbv::ptr cb = _gc_cb;
-    _gc_cb = NULL;
-    (*cb) ();
-  }
-
   void await ()
   {
 #ifdef HAVE_TAME_PTH
@@ -665,10 +641,6 @@ private:
   pth_mutex_t _mutex;
 #endif /* HAVE_TAME_PTH */
 
-  // # of joins in progress (that have gone down to the event loop)
-  u_int _n_in_progress;
-  cbv::ptr _gc_cb;
-  bool _gc_mode;
 };
 
 /**
@@ -705,18 +677,17 @@ public:
 
   void join (value_set_t<T1,T2,T3,T4> w)
   {
+    assert (!_joined);
     _joined = true;
 
-    // Need at least one return to the bottom event loop between
-    // a call into the callback and a join.
-
-    if (tame_optimized ()) {
-      join_cb (w);
+    // Cannot return to the event loop between getting a join and
+    // calling the _join_cb;  if we did, we could get a second fdcb
+    // on the same joiner, which is bad.
+    if (!_weak_ref.pointer ()) {
+      if (!_weak_ref.cleared ())
+	error ();
     } else {
-      if (_weak_ref.pointer ()) {
-	_weak_ref.pointer ()->in_progress ();
-      }
-      delaycb (0, 0, wrap (mkref (this), &joiner_t<T1,T2,T3,T4>::join_cb, w));
+      _weak_ref.pointer ()->join (w);
     }
   }
 
@@ -728,16 +699,6 @@ private:
   void error ()
   {
     tame_error (_loc, "rendezvous_t went out of scope before trigger");
-  }
-
-  // cannot join if the underlying join group went out of scope.
-  void join_cb (value_set_t<T1,T2,T3,T4> w)
-  {
-    if (!_weak_ref.pointer ()) {
-      error ();
-    } else {
-      _weak_ref.pointer ()->join (w);
-    }
   }
 
   weak_ref_t<rndvzp_t<T1,T2,T3,T4> > _weak_ref;
@@ -766,6 +727,14 @@ public:
   // be accessed by the programmer when manipulating join groups
   //
 
+  void gc (cbv cb) { warn << __FL__ << ": gc() is stubbed out\n"; }
+
+  /**
+   * Cancel a rendezvous, saying that we have no interest in further
+   * notifications on it.
+   */
+  void cancel () { _pointer->cancel (); }
+
   /**
    * Register another outstanding callback to join; useful in the case
    * of "sticky" callbacks the fire more than once.  If you expect a 
@@ -779,13 +748,6 @@ public:
    * fired.
    */
   void remove_join () { _pointer->remove_join (); }
-
-  /**
-   * Garbage collect this rendezvous.  All in progress joins
-   * will go ahead with their set operations.  All other joins
-   * will be ignored.
-   */
-  void gc (cbv cb) { _pointer->gc (cb); }
 
   /**
    * Determine the number of callbacks that have fired, but are waiting

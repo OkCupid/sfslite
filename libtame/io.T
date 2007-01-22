@@ -17,40 +17,33 @@ clearwrite (int fd)
   fdcb (fd, selwrite, NULL);
 }
 
-tamed static void
-fdcb1(int fd, selop which, cbv cb, ptr<canceller_t> *cnp)
+tamed void
+fdcb1(int fd, selop which, cbv cb)
 {
-  tvars {
-    rendezvous_t<bool> G (__FILE__, __LINE__);
-    ptr<canceller_t> cn;
-    bool ok;
-  }
-  if (cnp) {
-    cn = New refcounted<canceller_t> ();
-    *cnp = cn;
-    cn->wait (mkevent (G, false));
-  }
-  fdcb (fd, which, mkevent (G, true));
-  twait (G, ok);
+  twait { fdcb (fd, which, mkevent ()); }
   fdcb (fd, which, NULL);
-  if (cn) 
-    cn->toolate ();
-  if (ok) 
-    TRIGGER (cb);
-  twait { G.gc (mkevent ()); }
-}
-
-
-tamed void
-waitwrite (int fd, cbv cb, ptr<canceller_t> *cnp)
-{
-  fdcb1(fd, selwrite, cb, cnp);
+  cb->trigger ();
 }
 
 tamed void
-waitread (int fd, cbv cb, ptr<canceller_t> *cnp)
+sigcb1 (int sig, cbv cb)
 {
-  fdcb1(fd, selread, cb, cnp);
+  twait { sigcb (sig, mkevent ()); }
+  sigcb (sig, NULL);
+  cb->trigger ();
+}
+
+
+void
+waitwrite (int fd, cbv cb)
+{
+  fdcb1(fd, selwrite, cb);
+}
+
+void
+waitread (int fd, cbv cb)
+{
+  fdcb1(fd, selread, cb);
 }
 
 tamed void
@@ -136,5 +129,5 @@ proxy (int infd, int outfd, cbv cb, ptr<canceller_t> *cncp)
     cnc->toolate ();
 
   cb->trigger ();
-  twait { G.gc (mkevent ()); }
+  G.cancel (); // for the timer (if necessary )
 }

@@ -28,11 +28,13 @@
 
 void clearread (int fd);
 void clearwrite (int fd);
-void waitread (int fd, cbv cb, ptr<canceller_t> *cn = NULL, CLOSURE);
-void waitwrite (int fd, cbv cb, ptr<canceller_t> *cn = NULL, CLOSURE);
+void waitread (int fd, cbv cb);
+void waitwrite (int fd, cbv cb);
 void proxy (int in, int out, cbv cb, ptr<canceller_t> *cncp = NULL,
 	    CLOSURE);
 
+void fdcb1(int fd, selop which, cbv cb, CLOSURE);
+void sigcb1 (int sig, cbv cb, CLOSURE);
 
 class iofd_t {
 public:
