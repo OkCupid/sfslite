@@ -160,7 +160,7 @@ main (int argc, char *argv[])
   }
 
   mmap_rgn_sz = sizeof (struct timespec )  * 2;
-  mmap_rgn = mmap (NULL, mmap_rgn_sz, PROT_WRITE, MAP_SHARED, mmap_fd, 0); 
+  mmap_rgn = mmap (NULL, mmap_rgn_sz, PROT_READ|PROT_WRITE, MAP_SHARED, mmap_fd, 0); 
   if (mmap_rgn == MAP_FAILED) {
     fprintf (stderr, "mmcd: mmap failed: %d\n", errno);
     exit (1);
