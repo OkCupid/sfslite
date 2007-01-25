@@ -56,7 +56,7 @@ listen_loop (int lport, str hn, int port, ptr<canceller_t> *cnp, cbv cb)
     int lfd;
     bool go (true);
     rendezvous_t<ev_t> G (__FILE__, __LINE__);
-    ptr<canceller_t> cncl, rcnc;
+    ptr<canceller_t> cncl;
     int nfd;
     ev_t which;
     int proxies_out (0);
@@ -72,8 +72,8 @@ listen_loop (int lport, str hn, int port, ptr<canceller_t> *cnp, cbv cb)
 
     while (go || proxies_out > 0 ) {
 
-      if (go && !rcnc)
-	waitread (lfd, mkevent (G, READ), &rcnc);
+      if (go)
+	waitread (lfd, mkevent (G, READ));
 
       twait (G, which);
 
@@ -89,7 +89,6 @@ listen_loop (int lport, str hn, int port, ptr<canceller_t> *cnp, cbv cb)
 	  } else {
 	    warn ("accept failed: %m\n");
 	  }
-	  rcnc = NULL;
 	  break;
 	}
       case PROXY_DONE:
@@ -105,9 +104,7 @@ listen_loop (int lport, str hn, int port, ptr<canceller_t> *cnp, cbv cb)
     }
 
     warn << "Exiting listen loop....\n";
-    if (rcnc) rcnc->cancel ();
-
-    twait { G.gc (mkevent ()); }
+    G.cancel ();
   }
   cb->trigger ();
 }

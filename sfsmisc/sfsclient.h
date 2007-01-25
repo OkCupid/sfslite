@@ -92,7 +92,7 @@ protected:
   virtual void setfd (int fd);
   virtual sfs_fsinfo *fsinfo_alloc () { return New sfs_fsinfo; }
   virtual void fsinfo_free (sfs_fsinfo *fsi) { delete fsi; }
-  virtual xdrproc_t fsinfo_marshall () { return xdr_sfs_fsinfo; }
+  virtual sfs::xdrproc_t fsinfo_marshall () { return xdr_sfs_fsinfo; }
   typedef callback<void, const sfs_hash *>::ref crypt_cb;
   virtual void crypt (sfs_connectok cres, ref<const sfs_servinfo_w> si, 
 		      crypt_cb cb);

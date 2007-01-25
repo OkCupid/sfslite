@@ -82,7 +82,7 @@ nfscall::sendreply ()
 }
 
 void
-nfscall::setreply (void *r, xdrproc_t xdr, bool nc)
+nfscall::setreply (void *r, sfs::xdrproc_t xdr, bool nc)
 {
   if (resp != r) {
     clearres ();
@@ -96,7 +96,7 @@ nfscall::setreply (void *r, xdrproc_t xdr, bool nc)
 }
 
 void
-nfscall::reply (void *r, xdrproc_t xdr, bool nc)
+nfscall::reply (void *r, sfs::xdrproc_t xdr, bool nc)
 {
   setreply (r, xdr, nc);
   sendreply ();

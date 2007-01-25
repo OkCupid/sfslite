@@ -68,7 +68,7 @@ struct nfscall {
   const u_int32_t procno;
   void *const argp;
   void *resp;
-  xdrproc_t xdr_res;
+  sfs::xdrproc_t xdr_res;
   accept_stat acstat;
   auth_stat austat;
   const time_t rqtime;
@@ -81,8 +81,8 @@ struct nfscall {
   nfscall (const authunix_parms *aup, u_int32_t p, void *a);
   virtual ~nfscall () { clearres (); }
   void sendreply ();
-  void setreply (void *, xdrproc_t = NULL, bool nc = false);
-  void reply (void *, xdrproc_t = NULL, bool nc = false);
+  void setreply (void *, sfs::xdrproc_t = NULL, bool nc = false);
+  void reply (void *, sfs::xdrproc_t = NULL, bool nc = false);
   void seterr (nfsstat3 err);
   void error (nfsstat3 err) { seterr (err); sendreply (); }
   void reject (accept_stat s) { acstat = s; error (NFS3ERR_IO); }

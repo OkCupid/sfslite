@@ -498,7 +498,7 @@ public:
 
     // XXX - find some way to identify this join, either by filename
     // and line number, or other ways.
-    if (!is_cleared() && need_join ()) {
+    if (!this->is_cleared() && need_join ()) {
       str s1 = (_file && _lineno) ?
 	str (strbuf ("%s:%d", _file, _lineno)) :
 	str ("(unknown)");
@@ -509,7 +509,7 @@ public:
       tame_error (s1.cstr (), s2.cstr ());
     }
 
-    if (!is_cleared() && tame_check_leaks () && _must_deallocate)
+    if (!this->is_cleared() && tame_check_leaks () && _must_deallocate)
       // Check for any leaked events
       delaycb (0, 0, wrap (_must_deallocate, &must_deallocate_t::check));
   }
