@@ -45,6 +45,7 @@ lock_t::release ()
   }
   if ((w = _waiters.first) && _mode == OPEN) {
     assert (w->_mode == EXCLUSIVE);
+    _mode = EXCLUSIVE;
     call (w);
   }
 }

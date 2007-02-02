@@ -368,26 +368,26 @@ conftab::report ()
 bool
 conftab::run (const str &file, u_int opts)
 {
-  parseargs pa (file);
   bool errors = false;
-  vec<str> av;
-  int line;
-
-  if (!file) 
-    return false;
 
   if (opts & (CONFTAB_APPLY_DEFAULTS|CONFTAB_VERBOSE)) {
     reset ();
   }
 
-  if (opts & CONFTAB_VERBOSE) {
-    warn << "Parsing configuration file: " << file << "\n";
-  }
-
-  while (pa.getline (&av, &line)) {
-    if (!match (av, file, line, &errors)) {
-      warn << file << ":" << line << ": unknown config parameter\n";
-      errors = true;
+  if (file) {
+    parseargs pa (file);
+    vec<str> av;
+    int line;
+    
+    if (opts & CONFTAB_VERBOSE) {
+      warn << "Parsing configuration file: " << file << "\n";
+    }
+    
+    while (pa.getline (&av, &line)) {
+      if (!match (av, file, line, &errors)) {
+	warn << file << ":" << line << ": unknown config parameter\n";
+	errors = true;
+      }
     }
   }
   
