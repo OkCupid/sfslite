@@ -50,7 +50,8 @@ public:
   virtual u_int64_t get_raw_bytes_sent () const { return 0; }
   virtual int sndbufsize () const { panic ("unimplemented"); return 0; }
   virtual void poll () = 0;
-  virtual int getfd () = 0;
+  virtual int getreadfd () = 0;
+  virtual int getwritefd () = 0;
 
   void send (const void *data, size_t len, const sockaddr *dest) {
     iovec iov = {(char *) data, len};
@@ -74,7 +75,8 @@ protected:
   virtual ~axprt_dgram ();
 
 public:
-  int getfd () { return fd; }
+  int getreadfd () { return fd; }
+  int getwritefd () { return fd; }
   void sendv (const iovec *, int, const sockaddr *);
   void setrcb (recvcb_t);
   void poll ();
@@ -84,7 +86,8 @@ public:
     { return New refcounted<axprt_dgram> (f, isconnected (f), ss, ps); }
 };
 
-class axprt_stream : public axprt {
+
+class axprt_pipe : public axprt {
   bool destroyed;
   bool ingetpkt;
   vec<u_int64_t> syncpts;
@@ -94,7 +97,8 @@ protected:
   const size_t pktsize;
   const size_t bufsize;
 
-  int fd;
+  int fdread;
+  int fdwrite;
 
   recvcb_t cb;
   u_int32_t pktlen;
@@ -109,26 +113,28 @@ protected:
   void sendbreak (cbv::ptr);
   bool checklen (int32_t *len);
   virtual ssize_t doread (void *buf, size_t maxlen);
-  virtual int dowritev (int iovcnt) { return out->output (fd, iovcnt); }
+  virtual int dowritev (int iovcnt) { return out->output (fdwrite, iovcnt); }
   virtual void recvbreak ();
   virtual bool getpkt (char **, char *);
 
+  void _sockcheck(int fd);
   void fail ();
   void input ();
   void callgetpkt ();
   void output ();
-
-  axprt_stream (int fd, size_t ps, size_t bufsize = 0);
-  virtual ~axprt_stream ();
+  
+  axprt_pipe (int rfd, int wfd, size_t ps, size_t bufsize = 0);
+  virtual ~axprt_pipe ();
 
 public:
   void ungetpkt (const void *pkt, size_t len);
-  int reclaim ();
-  int getfd () { return fd; }
+  void reclaim (int *rfd, int *wfd);
+  int getreadfd () { return fdread; }
+  int getwritefd () { return fdwrite; }
   void sockcheck ();
   void poll ();
 
-  bool ateof () { return fd < 0; }
+  bool ateof () { return fdread < 0; }
   virtual void sendv (const iovec *, int, const sockaddr * = NULL);
   void setrcb (recvcb_t);
   void setwcb (cbv);
@@ -136,12 +142,26 @@ public:
   u_int64_t get_raw_bytes_sent () const { return raw_bytes_sent; }
   int sndbufsize () const { return sndbufsz; }
 
-  static ref<axprt_stream> alloc (int f, size_t ps = defps)
-    { return New refcounted<axprt_stream> (f, ps); }
+  static ref<axprt_pipe> alloc (int rfd, int wfd, size_t ps = defps)
+  { return New refcounted<axprt_pipe> (rfd, wfd, ps); }
 
   unsigned long bytes_sent;
   unsigned long bytes_recv;
 };
+
+
+class axprt_stream : public axprt_pipe {
+
+protected:
+  axprt_stream (int fd, size_t ps, size_t bufsize = 0);
+
+public:
+  int getfd () { return fdread; }
+
+  static ref<axprt_stream> alloc (int f, size_t ps = defps)
+    { return New refcounted<axprt_stream> (f, ps); }
+};
+
 
 /* Clonesrv reads only one packet at a time from the kernel.  Its file
  * descriptor can therefore be passed off to another process without
@@ -185,7 +205,7 @@ public:
   static ref<axprt_unix> alloc (int, size_t = axprt_stream::defps);
 
   void sendfd (int fd, bool closeit = true);
-  void sendfd (ref<axprt_unix> x) { sendfd (x->fd, false); }
+  void sendfd (ref<axprt_unix> x) { sendfd (x->fdwrite, false); }
   void clone (ref<axprt_clone> x);
   int recvfd ();
 };

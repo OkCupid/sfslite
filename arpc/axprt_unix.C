@@ -74,9 +74,9 @@ ssize_t
 axprt_unix::doread (void *buf, size_t maxlen)
 {
   if (!allow_recvfd)
-    return read (fd, buf, maxlen);
+    return read (fdread, buf, maxlen);
   int nfd = -1;
-  ssize_t n = readfd (fd, buf, maxlen, &nfd);
+  ssize_t n = readfd (fdread, buf, maxlen, &nfd);
   if (nfd >= 0) {
     if (fdrecvq.size () >= 4) {
       close (nfd);
@@ -92,17 +92,17 @@ int
 axprt_unix::dowritev (int cnt)
 {
   if (fdsendq.empty ())
-    return out->output (fd, cnt);
+    return out->output (fdwrite, cnt);
 
   static timeval ztv;
-  if (!fdwait (fd, selwrite, &ztv))
+  if (!fdwait (fdwrite, selwrite, &ztv))
     return 0;
 
   if (cnt < 0)
     cnt = out->iovcnt ();
   if (cnt > UIO_MAXIOV)
     cnt = UIO_MAXIOV;
-  ssize_t n = writevfd (fd, out->iov (), cnt, fdsendq.front ().fd);
+  ssize_t n = writevfd (fdwrite, out->iov (), cnt, fdsendq.front ().fd);
   if (n < 0)
     return errno == EAGAIN ? 0 : -1;
   fdsendq.pop_front ();
@@ -182,9 +182,9 @@ axprt_unix_dospawnv (str path, const vec<str> &avs,
   close_on_exec (fds[0]);
   pid_t pid;
   if (async)
-    pid = aspawn (path, av.base (), fds[1], 1, 2, postforkcb, env);
+    pid = aspawn (path, av.base (), fds[1], fds[1], 2, postforkcb, env);
   else
-    pid = spawn (path, av.base (), fds[1], 1, 2, postforkcb, env);
+    pid = spawn (path, av.base (), fds[1], fds[1], 2, postforkcb, env);
   axprt_unix_spawn_pid = pid;
   close (fds[1]);
   if (pid < 0) {
