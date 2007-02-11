@@ -103,6 +103,7 @@ static int exponent (char *, int, int);
 #define	ZEROPAD		0x080	/* zero (as opposed to blank) pad */
 #define FPT		0x100	/* Floating point number */
 #define NOCOPY          0x200   /* String contents doesn't have to be copied */
+#define SIZET           0x400   /* Variable of type size_t */
 
 void
 #ifndef DSPRINTF_DEBUG
@@ -151,11 +152,13 @@ __suio_vuprintf (const char *line, struct suio *uio,
 #define	SARG()						\
   (flags&QUADINT ? va_arg(ap, quad_t) :			\
    flags&LONGINT ? va_arg(ap, long) :			\
+   flags&SIZET ? va_arg(ap, size_t) :                   \
    flags&SHORTINT ? (long)(short)va_arg(ap, int) :	\
    (long)va_arg(ap, int))
 #define	UARG()						\
   (flags&QUADINT ? va_arg(ap, u_quad_t) :		\
    flags&LONGINT ? va_arg(ap, u_long) :			\
+   flags&SIZET ? va_arg(ap, size_t) :                   \
    flags&SHORTINT ? (u_long)(u_short)va_arg(ap, int) :	\
    (u_long)va_arg(ap, u_int))
 
@@ -267,6 +270,9 @@ __suio_vuprintf (const char *line, struct suio *uio,
       else {
 	flags |= LONGINT;
       }
+      goto rflag;
+    case 'z':
+      flags |= SIZET;
       goto rflag;
     case 'q':
       flags |= QUADINT;
