@@ -18,7 +18,7 @@ public:
     EXCLUSIVE = 2
   };
 
-  lock_t (mode_t m = OPEN) : _mode (m) {}
+  lock_t (mode_t m = OPEN) : _mode (m), _sharers (0) {}
 
   struct waiter_t {
     waiter_t (mode_t m, cbv c) : _mode (m), _cb (c) {}
@@ -33,9 +33,11 @@ public:
   void cancel (waiter_t *w);
 
 protected:
+  void call (waiter_t *w);
+
   list<waiter_t, &waiter_t::_lnk> _waiters;
   mode_t _mode;
-  void call (waiter_t *w);
+  int _sharers;
 };
 
 

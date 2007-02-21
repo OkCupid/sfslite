@@ -6,14 +6,37 @@ lock_t::waiter_t *
 lock_t::acquire (lock_t::mode_t m, cbv cb)
 {
   lock_t::waiter_t *ret = NULL;
+  bool wait = false;
+
   assert (m != OPEN);
-  if (_mode == OPEN) {
-    _mode = m;
-  } else if (_mode != SHARED || m != SHARED) {
+
+  if (m == SHARED) {
+    if (_mode == OPEN) {
+      _mode = SHARED;
+      assert (_sharers == 0);
+      _sharers = 1;
+    } else if (_mode == SHARED) {
+      assert (_sharers > 0);
+      _sharers ++;
+    } else {
+      wait = true;
+    }
+  } else {
+    assert (m == EXCLUSIVE);
+    if (_mode == OPEN) {
+      _mode = EXCLUSIVE;
+      assert (_sharers == 0);
+    } else {
+      wait = true;
+    }
+  }
+    
+  if (wait) {
     ret = New lock_t::waiter_t (m, cb);
     _waiters.insert_head (ret);
   }
-  if (!ret) TRIGGER (cb);
+
+  if (!ret) cb->trigger ();
   return ret;
 }
 
@@ -23,7 +46,7 @@ lock_t::call (waiter_t *w)
   _waiters.remove (w);
   cbv cb (w->_cb);
   delete w;
-  (*cb) ();
+  cb->trigger ();
 }
 
 void
@@ -36,18 +59,44 @@ lock_t::cancel (waiter_t *w)
 void
 lock_t::release ()
 {
+  mode_t old_mode = _mode;
+
   assert (_mode != OPEN);
-  _mode = OPEN;
-  waiter_t *w;
-  while ((w = _waiters.first) && w->_mode == SHARED) {
-    _mode = SHARED;
-    call (w);
+
+  if (_mode == SHARED) {
+    assert (_sharers > 0);
+    if ( -- _sharers == 0) {
+      _mode = OPEN;
+    }
+  } else {
+    assert (_sharers == 0);
+    _mode = OPEN;
   }
-  if ((w = _waiters.first) && _mode == OPEN) {
-    assert (w->_mode == EXCLUSIVE);
-    _mode = EXCLUSIVE;
-    call (w);
+
+  if (_mode == OPEN) {
+
+    waiter_t *w = _waiters.first;
+    if (w) {
+      if (w->_mode == SHARED) {
+	assert (old_mode != SHARED);
+	_mode = SHARED;
+
+	waiter_t *n, *p;
+	for (p = _waiters.first; p; p = n) {
+	  n = _waiters.next (p);
+	  if (p->_mode == SHARED) {
+	    _sharers ++;
+	    call (p);
+	  }
+	}
+      } else {
+	assert (w->_mode == EXCLUSIVE);
+	_mode = EXCLUSIVE;
+	call (w);
+      }
+    }
   }
+
 }
 
 tamed void
