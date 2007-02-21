@@ -366,7 +366,7 @@ conftab::report ()
 }
 
 bool
-conftab::run (const str &file, u_int opts)
+conftab::run (const str &file, u_int opts, int fd)
 {
   bool errors = false;
 
@@ -375,7 +375,7 @@ conftab::run (const str &file, u_int opts)
   }
 
   if (file) {
-    parseargs pa (file);
+    parseargs pa (file, fd);
     vec<str> av;
     int line;
     

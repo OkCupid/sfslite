@@ -230,7 +230,7 @@ class conftab {
 public:
   conftab () {}
   
-  bool run (const str &file, u_int opts = 0);
+  bool run (const str &file, u_int opts = 0, int fd = -1);
 
   template<class P, class D> 
   conftab &add (const str &nm, P *dp, D lb, D ub)
