@@ -18,7 +18,7 @@ public:
     EXCLUSIVE = 2
   };
 
-  lock_t (mode_t m = OPEN) : _mode (m), _sharers (0) {}
+  lock_t (mode_t m = OPEN);
 
   struct waiter_t {
     waiter_t (mode_t m, cbv c) : _mode (m), _cb (c) {}

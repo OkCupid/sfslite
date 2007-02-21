@@ -56,6 +56,9 @@ lock_t::cancel (waiter_t *w)
   delete w;
 }
 
+lock_t::lock_t (mode_t m)
+  : _mode (m), _sharers (m == SHARED ? 1 : 0) {}
+
 void
 lock_t::release ()
 {
