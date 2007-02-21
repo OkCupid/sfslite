@@ -30,6 +30,12 @@ lock_t::acquire (lock_t::mode_t m, cbv cb)
       wait = true;
     }
   }
+  
+  /*
+   * DEBUG
+   warn ("LL acquire %p mode=%d sharers=%d wait=%d\n", 
+   this, m, _sharers, wait);
+  */
     
   if (wait) {
     ret = New lock_t::waiter_t (m, cb);
@@ -52,6 +58,10 @@ lock_t::call (waiter_t *w)
 void
 lock_t::cancel (waiter_t *w)
 {
+  /*
+   * DEBUG
+   warn ("LL cancel %p\n", this);
+  */
   _waiters.remove (w);
   delete w;
 }
@@ -63,6 +73,11 @@ void
 lock_t::release ()
 {
   mode_t old_mode = _mode;
+
+  /*
+   * DEBUG
+  warn ("LL release %p mode=%d sharers=%d\n", this, _mode, _sharers);
+  */
 
   assert (_mode != OPEN);
 
