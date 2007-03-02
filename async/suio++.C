@@ -377,13 +377,14 @@ suio::output (int fd, int cnt)
       if ((n = writev (fd, const_cast<iovec *> (iov ()),
 		       min(maxiovno - nremiov,
 			   (u_int64_t) UIO_MAXIOV))) > 0) {
-
+	
 	// make sure we didn't over/underwtie the iov boundary.
 	assert (nremiov_hold == nremiov);
 	rembytes (n);
       } else {
 	break;
       }
+    }
   }
 
   if (n < 0 && errno != EAGAIN)
