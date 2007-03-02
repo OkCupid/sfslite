@@ -371,12 +371,21 @@ suio::output (int fd, int cnt)
   else {
     assert ((size_t) cnt <= iovs.size ());
     u_int64_t maxiovno =  nremiov + cnt;
-    while (nremiov < maxiovno
-	   && (n = writev (fd, const_cast<iovec *> (iov ()),
-			   min(maxiovno - nremiov,
-			       (u_int64_t) UIO_MAXIOV))) > 0)
-      rembytes (n);
+
+    while (nremiov < maxiovno) {
+      u_int64_t nremiov_hold = nremiov;
+      if ((n = writev (fd, const_cast<iovec *> (iov ()),
+		       min(maxiovno - nremiov,
+			   (u_int64_t) UIO_MAXIOV))) > 0) {
+
+	// make sure we didn't over/underwtie the iov boundary.
+	assert (nremiov_hold == nremiov);
+	rembytes (n);
+      } else {
+	break;
+      }
   }
+
   if (n < 0 && errno != EAGAIN)
     return -1;
   return nrembytes > startpos;
