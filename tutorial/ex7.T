@@ -63,19 +63,24 @@ connect (vec<str> hosts, int port, cbi done)
  * @param done the callback to call when done
  */
 tamed static 
-void get_fastest_web_page (vec<str> hosts, int port, cbb done)
+void get_fastest_web_page (vec<str> hosts, int port, cbb cb)
 {
   tvars {
-    int fd, rc;
+    int fd (-1), rc;
     strbuf req, resp;
-    rendezvous_t<> read_rv, write_rv;
     bool go (true);
+    bool ret (true);
+    
   }
 
   //
   // get the fastest connection, and dump the result into 'fd'
   //
   twait { connect (hosts, port, mkevent(fd)); }
+  if (fd < 0) {
+    ret = false;
+    goto done;
+  }
 
   //
   // A dirt simple HTTP 1.0 request
@@ -98,8 +103,8 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
     //
     if (req.tosuio ()->output (fd) < 0) {
       warn << "write failed...\n";
-      done->trigger (false);
-      return;
+      ret = false;
+      goto done;
     }
     //
     // suio::resid() returns the # of bytes left to write.  If there
@@ -121,9 +126,8 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
   while (go) {
     twait { waitread (fd, mkevent ()); }
     if ((rc = resp.tosuio ()->input (fd)) < 0 && errno != EAGAIN) {
-      warn << "read failed...\n";
-      done->trigger (false);
-      return;
+      ret = false;
+      goto done;
     }
     if (rc == 0)
       go = false;
@@ -137,7 +141,11 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
   // 
   // success!
   //
-  done->trigger (true);
+ done:
+  if (fd >= 0)
+    close (fd);
+
+  cb->trigger (ret);
 }
 
 static void finish (bool rc)

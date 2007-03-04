@@ -5,6 +5,7 @@
 #include "arpc.h"
 #include "parseopt.h"
 #include "ex_prot.h"
+#include "tame_io.h"
 
 /**
  * Get fastest Web page, where 'fast' is defined by how fast the DNS
@@ -13,15 +14,16 @@
  *
  * @param hosts the hosts to try
  * @param port the port to try on
- * @param done the callback to call when done
+ * @param cb the callback to call when done
  */
 tamed static 
-void get_web_page (str host, int port, strbuf *resp, cbb done)
+void get_web_page (str host, int port, strbuf *resp, cbb cb)
 {
   tvars {
-    int fd, rc;
+    int fd (-1), rc;
     strbuf req;
-    rendezvous_t<> read_rv, write_rv;
+    bool go (true);
+    bool ret (true);
   }
 
   //
@@ -30,8 +32,8 @@ void get_web_page (str host, int port, strbuf *resp, cbb done)
   twait { tcpconnect (host, port, mkevent (fd)); }
   if (fd < 0) {
     warn << host << ":" << port << ": connection failed\n";
-    (*done) (false);
-    return;
+    ret = false;
+    goto done;
   }
 
 
@@ -40,23 +42,9 @@ void get_web_page (str host, int port, strbuf *resp, cbb done)
   //
   req << "GET / HTTP/1.0\n\n";
   
-  //
-  // Call 'fdcb' to select on a file descriptor.  In this case we're
-  // selecting on the TCP connection to the 'fastest' Web server, and
-  // selecting for 'write'.  Once the socket is writeable, we'll be
-  // callback.  Note that '@()' generates a callback of type 
-  // callback<void> -- i.e., a callback that doesn't 'return' any
-  // parameters.
-  //
-  // Also note that 'fdcb' is a bit different from the asychronous
-  // functions we've seen so far, in that it can call us back multiple
-  // times.  That is, fdcb will call us back every time the socket
-  // 'fd' is available for writing.
-  //
-  fdcb (fd, selwrite, mkevent (write_rv));
   
-  while (true) {
-    twait (write_rv);
+  while (go) {
+    twait { waitwrite (fd, mkevent ()); }
 
     //
     // Use this syntax to output the results of the string buffer
@@ -70,65 +58,40 @@ void get_web_page (str host, int port, strbuf *resp, cbb done)
     //
     if (req.tosuio ()->output (fd) < 0) {
       warn << "write failed...\n";
-      fdcb (fd, selwrite, NULL);
-      close (fd);
-      (*done) (false);
-      return;
+      ret = false;
+      goto done;
     }
     
-    //
-    // suio::resid() returns the # of bytes left to write.  If there
-    // are any bytes left to write, we'll need to be called back from
-    // fdcb again, and we'll therefore need to wait again.  Use the
-    // coordgroup_t::add_var call to schedule an additional coordination
-    // variable for this coordination group.
-    //
-    if (req.tosuio ()->resid ()) {
-      write_rv.add_join ();
-    }
-    
-    // 
-    // otherwise, no more writing left to do, and we are no longer
-    // interested in writing to 'fd'
-    //
-    else {
-      fdcb (fd, selwrite, NULL);
-      break;
+    // suio::resid() returns the # of bytes left to write. 
+    if (req.tosuio ()->resid () == 0) {
+      go = false;
     }
   }
 
-  // 
-  // As before, but now we need to schedule a callback for reading
-  //
-  fdcb (fd, selread, mkevent (read_rv));
-  
   //
   // The details of the reading loop are almost identical to the
   // writing loop above.
   //
-  while (true) {
-    twait (read_rv);
+  go = true;
+  while (go) {
+
+    twait { waitread (fd, mkevent ()); }
+
     if ((rc = resp->tosuio ()->input (fd)) < 0 && errno != EAGAIN) {
       warn << "read failed...\n";
-      fdcb (fd, selread, NULL);
-      close (fd);
-      TRIGGER (done, false);
-      return;
+      ret = false;
+      goto done;
     }
-    if (rc != 0) {
-      read_rv.add_join ();
-    } else {
-      fdcb (fd, selread, NULL);
-      break;
+    if (rc == 0) {
+      go = false;
     }
   }
 
-  close (fd);
-  
-  // 
-  // success!
-  //
-  TRIGGER (done, true);
+ done:
+  if (fd >= 0)
+    close (fd);
+
+  cb->trigger (ret);
 }
 
 /**
@@ -164,7 +127,7 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
     if (*res) {
       warnx << "connection succeeded";
       if (!got_one) {
-	(*done) (true);
+	done->trigger (true);
 	responses[i].tosuio ()->output (1);
 	got_one = true;
       } else {
@@ -176,7 +139,7 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
     }
   }
   if (!got_one)
-    (*done) (false);
+    done->trigger (false);
 }
 
 static void finish (bool rc)
