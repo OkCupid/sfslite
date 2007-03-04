@@ -5,6 +5,7 @@
 #include "arpc.h"
 #include "parseopt.h"
 #include "ex_prot.h"
+#include "tame_io.h"
 
 /**
  * Given a vector of N hosts, connect to all of them on the given port.
@@ -36,7 +37,7 @@ connect (vec<str> hosts, int port, cbi done)
     if (*fd >= 0) {
       warnx << "connection succeeded";
       if (!got_one) {
-	TRIGGER (done, *fd);
+	done->trigger(*fd);
 	got_one = true;
       } else {
 	warnx << "... but too late!";
@@ -48,7 +49,7 @@ connect (vec<str> hosts, int port, cbi done)
     }
   }
   if (!got_one) {
-    TRIGGER (done, -1);
+    done->trigger (-1);
   }
 }
 
@@ -68,6 +69,7 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
     int fd, rc;
     strbuf req, resp;
     rendezvous_t<> read_rv, write_rv;
+    bool go (true);
   }
 
   //
@@ -79,24 +81,10 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
   // A dirt simple HTTP 1.0 request
   //
   req << "GET / HTTP/1.0\n\n";
-  
-  //
-  // Call 'fdcb' to select on a file descriptor.  In this case we're
-  // selecting on the TCP connection to the 'fastest' Web server, and
-  // selecting for 'write'.  Once the socket is writeable, we'll be
-  // callback.  Note that '@()' generates a callback of type 
-  // callback<void> -- i.e., a callback that doesn't 'return' any
-  // parameters.
-  //
-  // Also note that 'fdcb' is a bit different from the asychronous
-  // functions we've seen so far, in that it can call us back multiple
-  // times.  That is, fdcb will call us back every time the socket
-  // 'fd' is available for writing.
-  //
-  fdcb (fd, selwrite, mkevent (write_rv));
-  
-  while (true) {
-    twait (write_rv);
+
+  while (go) {
+   
+    twait { waitwrite (fd, mkevent ()); }
 
     //
     // Use this syntax to output the results of the string buffer
@@ -110,11 +98,9 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
     //
     if (req.tosuio ()->output (fd) < 0) {
       warn << "write failed...\n";
-      fdcb (fd, selwrite, NULL);
-      (*done) (false);
+      done->trigger (false);
       return;
     }
-    
     //
     // suio::resid() returns the # of bytes left to write.  If there
     // are any bytes left to write, we'll need to be called back from
@@ -122,43 +108,25 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
     // join_group_t::add_join call to schedule an additional join for
     // this join group.
     //
-    if (req.tosuio ()->resid ()) {
-      write_rv.add_join ();
-    }
-    
-    // 
-    // otherwise, no more writing left to do, and we are no longer
-    // interested in writing to 'fd'
-    //
-    else {
-      fdcb (fd, selwrite, NULL);
-      break;
+    if (req.tosuio ()->resid () == 0) {
+      go = false;
     }
   }
-
-  // 
-  // As before, but now we need to schedule a callback for reading
-  //
-  fdcb (fd, selread, mkevent (read_rv) ); 
 
   //
   // The details of the reading loop are almost identical to the
   // writing loop above.
   //
-  while (true) {
-    twait (read_rv);
+  go = true;
+  while (go) {
+    twait { waitread (fd, mkevent ()); }
     if ((rc = resp.tosuio ()->input (fd)) < 0 && errno != EAGAIN) {
       warn << "read failed...\n";
-      fdcb (fd, selread, NULL);
-      (*done) (false);
+      done->trigger (false);
       return;
     }
-    if (rc != 0) {
-      read_rv.add_join ();
-    } else {
-      fdcb (fd, selread, NULL);
-      break;
-    }
+    if (rc == 0)
+      go = false;
   }
 
   // 
@@ -169,12 +137,12 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
   // 
   // success!
   //
-  (*done) (true);
+  done->trigger (true);
 }
 
 static void finish (bool rc)
 {
-  delaycb (0, 0, wrap (exit, rc ? 0 : -1));
+  delaycb (3, 0, wrap (exit, rc ? 0 : -1));
 }
 
 int
