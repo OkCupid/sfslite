@@ -88,7 +88,10 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb cb)
   req << "GET / HTTP/1.0\n\n";
 
   while (go) {
-   
+
+    // Wait on fd to become writable, and get called back when so.
+    // Unlike libasync's fdcb, waitwrite (and waitread) are not
+    // "sticky" --- they're one-shots.
     twait { waitwrite (fd, mkevent ()); }
 
     //
