@@ -2,10 +2,8 @@
 /* $Id$ */
 
 #include "tame.h"
-#include "arpc.h"
 #include "parseopt.h"
 #include "ex_prot.h"
-#include "async.h"
 
 //
 // A test case to make sure that biggest callbacks work.

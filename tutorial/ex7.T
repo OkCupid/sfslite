@@ -2,10 +2,10 @@
 /* $Id$ */
 
 #include "tame.h"
-#include "arpc.h"
 #include "parseopt.h"
-#include "ex_prot.h"
 #include "tame_io.h"
+
+typedef callback<void,int,int>::ref cbii ;
 
 /**
  * Given a vector of N hosts, connect to all of them on the given port.
@@ -17,7 +17,7 @@
  * @param done the callback to call when the first has returned.
  */
 tamed static void 
-connect (vec<str> hosts, int port, cbi done)
+connect (vec<str> hosts, int port, cbii done)
 {
   tvars {
     u_int i;
@@ -37,7 +37,7 @@ connect (vec<str> hosts, int port, cbi done)
     if (*fd >= 0) {
       warnx << "connection succeeded";
       if (!got_one) {
-	done->trigger(*fd);
+	done->trigger(*fd, i);
 	got_one = true;
       } else {
 	warnx << "... but too late!";
@@ -49,7 +49,7 @@ connect (vec<str> hosts, int port, cbi done)
     }
   }
   if (!got_one) {
-    done->trigger (-1);
+    done->trigger (-1, -1);
   }
 }
 
@@ -62,21 +62,20 @@ connect (vec<str> hosts, int port, cbi done)
  * @param port the port to try on
  * @param done the callback to call when done
  */
-tamed static 
-void get_fastest_web_page (vec<str> hosts, int port, cbb cb)
+tamed static void
+get_fastest_web_page (vec<str> hosts, int port, cbb cb)
 {
   tvars {
     int fd (-1), rc;
     strbuf req, resp;
-    bool go (true);
     bool ret (true);
-    
+    int host;
   }
 
   //
   // get the fastest connection, and dump the result into 'fd'
   //
-  twait { connect (hosts, port, mkevent(fd)); }
+  twait { connect (hosts, port, mkevent(fd, host)); }
   if (fd < 0) {
     ret = false;
     goto done;
@@ -85,9 +84,12 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb cb)
   //
   // A dirt simple HTTP 1.0 request
   //
-  req << "GET / HTTP/1.0\n\n";
+  req << "GET / HTTP/1.0\r\n"
+         "Host: " << hosts[host] << "\r\n"
+	 "\r\n";
 
-  while (go) {
+  // suio::resid() returns the # of bytes left to write.
+  while (req.tosuio ()->resid ()) {
 
     // Wait on fd to become writable, and get called back when so.
     // Unlike libasync's fdcb, waitwrite (and waitread) are not
@@ -109,31 +111,21 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb cb)
       ret = false;
       goto done;
     }
-    //
-    // suio::resid() returns the # of bytes left to write.  If there
-    // are any bytes left to write, we'll need to be called back from
-    // fdcb again, and we'll therefore need to join again.  Use the
-    // join_group_t::add_join call to schedule an additional join for
-    // this join group.
-    //
-    if (req.tosuio ()->resid () == 0) {
-      go = false;
-    }
   }
 
   //
   // The details of the reading loop are almost identical to the
   // writing loop above.
   //
-  go = true;
-  while (go) {
+  while (true) {
     twait { waitread (fd, mkevent ()); }
     if ((rc = resp.tosuio ()->input (fd)) < 0 && errno != EAGAIN) {
       ret = false;
       goto done;
     }
-    if (rc == 0)
-      go = false;
+    if (rc == 0) {
+      break;
+    }
   }
 
   // 

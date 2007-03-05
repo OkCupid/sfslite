@@ -1338,7 +1338,7 @@ dnl	CPPFLAGS="$CPPFLAGS -DDMALLOC"
 	then
 		AC_MSG_ERROR([Could not find dmalloc.h])
 	fi
-   	AC_CACHE_CHECK(for -ldamalloc, sfs_cv_ldmalloc,
+   	AC_CACHE_CHECK(for -ldmalloc, sfs_cv_ldmalloc,
 	[
 	lflags="-L${withval}/lib -ldmalloc"
 	LIBS="$LIBS $lflags"

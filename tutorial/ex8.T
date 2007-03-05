@@ -2,9 +2,7 @@
 /* $Id$ */
 
 #include "tame.h"
-#include "arpc.h"
 #include "parseopt.h"
-#include "ex_prot.h"
 #include "tame_io.h"
 
 /**
@@ -16,13 +14,12 @@
  * @param port the port to try on
  * @param cb the callback to call when done
  */
-tamed static 
-void get_web_page (str host, int port, strbuf *resp, cbb cb)
+tamed static void
+get_web_page (str host, int port, strbuf *resp, cbb cb)
 {
   tvars {
     int fd (-1), rc;
     strbuf req;
-    bool go (true);
     bool ret (true);
   }
 
@@ -40,10 +37,12 @@ void get_web_page (str host, int port, strbuf *resp, cbb cb)
   //
   // A dirt simple HTTP 1.0 request
   //
-  req << "GET / HTTP/1.0\n\n";
+  req << "GET / HTTP/1.0\r\n"
+         "Host: " << host << "\r\n"
+         "\r\n";
   
-  
-  while (go) {
+  // suio::resid() returns the # of bytes left to write. 
+  while (req.tosuio ()->resid () ) {
     twait { waitwrite (fd, mkevent ()); }
 
     //
@@ -61,19 +60,13 @@ void get_web_page (str host, int port, strbuf *resp, cbb cb)
       ret = false;
       goto done;
     }
-    
-    // suio::resid() returns the # of bytes left to write. 
-    if (req.tosuio ()->resid () == 0) {
-      go = false;
-    }
   }
 
   //
   // The details of the reading loop are almost identical to the
   // writing loop above.
   //
-  go = true;
-  while (go) {
+  while (true) {
 
     twait { waitread (fd, mkevent ()); }
 
@@ -83,7 +76,7 @@ void get_web_page (str host, int port, strbuf *resp, cbb cb)
       goto done;
     }
     if (rc == 0) {
-      go = false;
+      break;
     }
   }
 
@@ -103,8 +96,8 @@ void get_web_page (str host, int port, strbuf *resp, cbb cb)
  * @param port the port to try on
  * @param done the callback to call when the first has returned.
  */
-tamed static 
-void get_fastest_web_page (vec<str> hosts, int port, cbb done)
+tamed static void
+get_fastest_web_page (vec<str> hosts, int port, cbb done)
 {
   tvars {
     u_int i;
@@ -142,7 +135,8 @@ void get_fastest_web_page (vec<str> hosts, int port, cbb done)
     done->trigger (false);
 }
 
-static void finish (bool rc)
+static void
+finish (bool rc)
 {
   delaycb (10, 0, wrap (exit, rc ? 0 : -1));
 }
