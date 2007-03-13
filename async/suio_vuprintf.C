@@ -152,7 +152,7 @@ __suio_vuprintf (const char *line, struct suio *uio,
 #define	SARG()						\
   (flags&QUADINT ? va_arg(ap, quad_t) :			\
    flags&LONGINT ? va_arg(ap, long) :			\
-   flags&SIZET ? va_arg(ap, size_t) :                   \
+   flags&SIZET ? va_arg(ap, ssize_t) :                  \
    flags&SHORTINT ? (long)(short)va_arg(ap, int) :	\
    (long)va_arg(ap, int))
 #define	UARG()						\
