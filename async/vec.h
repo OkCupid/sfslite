@@ -132,6 +132,8 @@ public:
     { if (this != &v) { clear (); append (v); } return *this; }
   template<size_t NN> vec &operator= (const vec<T, NN> &v)
     { clear (); append (v); return *this; }
+  template<size_t NN> vec &operator+= (const vec<T, NN> &v)
+    { append(v); return *this; }
 
   void reserve (size_t n) {
     if (lastp + n <= limp)
