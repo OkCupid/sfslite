@@ -5,6 +5,7 @@
 #ifndef _ASYNC_TAME_H_
 #define _ASYNC_TAME_H_
 
+#include "tame_event.h"
 #include "tame_core.h"
 #include "tame_cancel.h"
 #include "tame_mkevent.h"
