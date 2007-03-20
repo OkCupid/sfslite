@@ -17,7 +17,7 @@ exsrv_t::exsrv_t (int fd)
 {
   tcp_nodelay (fd);
   x = axprt_stream::alloc (fd);
-  s = asrv_delayed_eof::alloc (x, ex_prog_1, wrap (this, &exsrv_t::dispatch));
+  s = asrv::alloc (x, ex_prog_1, wrap (this, &exsrv_t::dispatch));
 }
 
 void
@@ -38,7 +38,7 @@ exsrv_t::dispatch (svccb *sbp)
 {
   if (!sbp) {
     warn << "EOF on socket recevied; shutting down\n";
-    delete this;
+    //delete this;
     return;
   }
 

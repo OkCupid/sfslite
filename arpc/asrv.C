@@ -679,17 +679,32 @@ asrv_alloc (ref<axprt> x, const rpc_program &pr,
 }
 
 asrv_delayed_eof::asrv_delayed_eof (ref<xhinfo> xi, const rpc_program &pr, 
-				  asrv_cb scb, cbv::ptr eofcb)
-  : asrv (xi, pr, wrap (this, &asrv_delayed_eof::dispatch)),
+				    asrv_cb::ptr scb, cbv::ptr eofcb)
+  : asrv (xi, pr, NULL),
     _count (0), 
     _eof (false), 
-    _asrv_cb (scb),
     _eofcb (eofcb) 
-{}
+{
+  asrv_delayed_eof::setcb (scb);
+}
+
+void
+asrv_delayed_eof::setcb (asrv_cb::ptr cb)
+{
+  bool isset = _asrv_cb;
+  _asrv_cb = cb;
+  if (cb && !isset) {
+    this->asrv::setcb (wrap (this, &asrv_delayed_eof::dispatch));
+  } else if (!cb && isset) {
+    this->asrv::setcb (NULL);
+  }
+}
+
+
 
 ptr<asrv_delayed_eof>
 asrv_delayed_eof::alloc (ref<axprt> x, const rpc_program &pr, 
-			asrv_cb cb, cbv::ptr eofcb)
+			 asrv_cb::ptr cb, cbv::ptr eofcb)
 {
   ptr<xhinfo> xi = xhinfo::lookup (x);
   if (!xi || !x->reliable)
