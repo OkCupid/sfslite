@@ -82,6 +82,56 @@ sub do_mkevent_generic_cb ($$)
     }
 }
 
+sub do_trigger_func ($$$)
+{
+    my ($fn, $arg1, $t) = @_;
+
+    print ("  void $fn (",
+	   arglist (["T% t%", $t]), ") ",
+	   " { dotrig (",
+	   arglist ($arg1, ["t%", $t], ["nil_t()", $N_tv - $t]),
+	   " ); }\n");
+}
+
+sub do_event_class ($)
+{
+    my ($t) = @_;
+    my ($tlist, $tlist2);
+    if ($t > 0) {
+	print ("template<", arglist (["class T%", $t]), ">\n");
+	$tlist = "<" . arglist (["T%", $t]) . ">";
+	$tlist2 = $tlist;
+    } else {
+	$tlist = "";
+	$tlist2 = "<>";
+    }
+    my $vlist = "<" . arglist ("void", ["T%", $t]) . ">";
+
+    # print the classname
+    print ("class event_t", $tlist, " :\n",
+	   "     public virtual event_base_t", $tlist2, ",\n",
+	   "     public callback", $vlist , "\n",
+	   "{\n");
+
+    # print the constructor
+    print ("  event_t (",
+	   arglist ("ptr<tame_action_t> a",
+		    "refset_t$tlist2 rs",
+		    "const char *loc"),
+	   ")\n",
+	   "    : event_base_t" , $tlist2 , " (a, rs, loc),\n",
+	   "      callback", $vlist, 
+	   " (CALLBACK_ARGS(loc))\n",
+	   "     {}\n");
+
+    # print the trigger functions
+    do_trigger_func ("operator()", "true", $t);
+    do_trigger_func ("trigger", "false", $t);
+    
+    # close the class
+    print "};\n\n";
+}
+
 sub do_mkevent_generic ($$)
 {
     my ($t, $w) = @_;
@@ -201,6 +251,7 @@ EOF
 
 
 for (my $t = 0; $t <= $N_tv; $t++) {
+    do_event_class ($t);
     do_block ($t);
     for (my $w = 0; $w <= $N_wv; $w++) {
 	do_generic ($t, $w);
