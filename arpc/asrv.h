@@ -143,7 +143,7 @@ public:
   void start ();
   void stop ();
 
-  void setcb (asrv_cb::ptr c);
+  virtual void setcb (asrv_cb::ptr c);
   bool hascb () { return cb; }
 
   void set_recv_hook (cbv::ptr cb) { recv_hook = cb; }
@@ -186,11 +186,12 @@ class asrv_delayed_eof : public asrv {
 private:
   int _count;
   bool _eof;
-  asrv_cb _asrv_cb;
+  asrv_cb::ptr _asrv_cb;
   cbv::ptr _eofcb;
 
 protected:
-  asrv_delayed_eof (ref<xhinfo>, const rpc_program &, asrv_cb, cbv::ptr eofcb);
+  asrv_delayed_eof (ref<xhinfo>, const rpc_program &, asrv_cb::ptr, 
+		    cbv::ptr eofcb);
   void dispatch (svccb *sbp);
   void inc_svccb_count () { _count ++; }
   void dec_svccb_count ();
@@ -198,9 +199,11 @@ protected:
   
 public:
   static ptr<asrv_delayed_eof> 
-  alloc (ref<axprt>, const rpc_program &, asrv_cb,
+  alloc (ref<axprt>, const rpc_program &, 
+	 asrv_cb::ptr cb = NULL,
 	 cbv::ptr eofcb = NULL);
   bool is_eof () const { return _eof; }
+  void setcb (asrv_cb::ptr cb);
 };
 
 class asrv_unreliable : public asrv_replay {
