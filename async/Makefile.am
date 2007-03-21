@@ -95,10 +95,8 @@ MAINTAINERCLEANFILES = Makefile.in env.mk
 
 .PHONY: cbh
 cbh:
-	cd $(srcdir) && sh ./callback1.h > callback1.h~ \
-		     && mv -f callback1.h~ callback1.h \
-		     && sh ./callback2.h > callback2.h~ \
-		     && mv -f callback2.h~ callback2.h
+	cd $(srcdir) && sh ./callback.h > callback.h~ \
+		     && mv -f callback.h~ callback.h 
 
 .PHONY: vah
 vah:

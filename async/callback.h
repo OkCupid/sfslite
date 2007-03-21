@@ -170,7 +170,8 @@ sub pcallback ($) {
     my $tmpparam = jc ('class R', mklist ('class B%', $b));
     my $tmpargs = jc ('R', mklist ('B%', $b));
     my $specargs = $b == $NB ? '' : "<" . $tmpargs . ">";
-    my $cbargs = mklist ('B%', $b);
+    my $cbdecl = mklist ('B% b%', $b);
+    my $cbargs = mklist ('b%', $b);
 
     print <<"EOF";
 
@@ -187,7 +188,8 @@ public:
   callback (const char *df, const char *f, const char *l)
     : dest (df[0] == '&' ? df + 1 : df), src (f), line (l) {}
 $enddebug
-  virtual R operator() ($cbargs) = 0;
+  virtual R operator() ($cbdecl) = 0;
+  virtual void trigger ($cbdecl) { (void) (*this) ($cbargs); }
   virtual ~callback () {}
 };
 
@@ -686,6 +688,7 @@ public:
     : dest (df[0] == '&' ? df + 1 : df), src (f), line (l) {}
 #endif /* WRAP_DEBUG */
   virtual R operator() () = 0;
+  virtual void trigger () { (void) (*this) (); }
   virtual ~callback () {}
 };
 
@@ -1564,7 +1567,8 @@ public:
   callback (const char *df, const char *f, const char *l)
     : dest (df[0] == '&' ? df + 1 : df), src (f), line (l) {}
 #endif /* WRAP_DEBUG */
-  virtual R operator() (B1) = 0;
+  virtual R operator() (B1 b1) = 0;
+  virtual void trigger (B1 b1) { (void) (*this) (b1); }
   virtual ~callback () {}
 };
 
@@ -2443,7 +2447,8 @@ public:
   callback (const char *df, const char *f, const char *l)
     : dest (df[0] == '&' ? df + 1 : df), src (f), line (l) {}
 #endif /* WRAP_DEBUG */
-  virtual R operator() (B1, B2) = 0;
+  virtual R operator() (B1 b1, B2 b2) = 0;
+  virtual void trigger (B1 b1, B2 b2) { (void) (*this) (b1, b2); }
   virtual ~callback () {}
 };
 
@@ -3322,7 +3327,8 @@ public:
   callback (const char *df, const char *f, const char *l)
     : dest (df[0] == '&' ? df + 1 : df), src (f), line (l) {}
 #endif /* WRAP_DEBUG */
-  virtual R operator() (B1, B2, B3) = 0;
+  virtual R operator() (B1 b1, B2 b2, B3 b3) = 0;
+  virtual void trigger (B1 b1, B2 b2, B3 b3) { (void) (*this) (b1, b2, b3); }
   virtual ~callback () {}
 };
 
