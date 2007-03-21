@@ -67,41 +67,6 @@ extern int tame_options;
 inline bool tame_check_leaks () { return tame_options & TAME_CHECK_LEAKS ; }
 inline bool tame_optimized () { return tame_options & TAME_OPTIMIZE; }
 
-struct nil_t {};
-
-
-// A set of references
-template<class T1=nil_t, class T2=nil_t, class T3=nil_t, class T4=nil_t>
-class refset_t {
-public:
-  refset_t (T1 &r1, T2 &r2, T3 &r3, T4 &r4) 
-    :  _r1 (r1), _r2 (r2), _r3 (r3), _r4 (r4) {}
-  refset_t (T1 &r1, T2 &r2, T3 &r3)
-    : _r1 (r1), _r2 (r2), _r3 (r3), _r4 (_dummy) {}
-  refset_t (T1 &r1, T2 &r2)
-    : _r1 (r1), _r2 (r2), _r3 (_dummy), _r4 (_dummy) {}
-  refset_t (T1 &r1)
-    : _r1 (r1), _r2 (_dummy), _r3 (_dummy), _r4 (_dummy) {}
-  refset_t ()
-    : _r1 (_dummy), _r2 (_dummy), _r3 (_dummy), _r4 (_dummy) {}
-
-  void assign (const T1 &v1, const T2 &v2, const T3 &v3, const T4 &v4) 
-  { _r1 = v1; _r2 = v2; _r3 = v3; _r4 = v4; }
-  void assign (const T1 &v1, const T2 &v2, const T3 &v3)
-  { _r1 = v1; _r2 = v2; _r3 = v3; }
-  void assign (const T1 &v1, const T2 &v2) { _r1 = v1; _r2 = v2; }
-  void assign (const T1 &v1) { _r1 = v1; }
-  void assign () {}
-
-private:
-  nil_t _dummy;
-
-  T1 &_r1;
-  T2 &_r2;
-  T3 &_r3;
-  T4 &_r4;
-};
-
 /**
  * Weak Reference Counting
  *

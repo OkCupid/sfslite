@@ -46,6 +46,8 @@ private:
 class event_action_t : public virtual refcount {
 public:
   virtual void perform (bool reuse) = 0;
+  virtual void clear () = 0;
+  virtual ~event_action_t () {}
 };
 
 
@@ -57,35 +59,31 @@ public:
     _action (a),
     _refset (rs),
     _loc (loc), 
-    _state (NONE),
     _reuse (false) {}
 
-  ~event_base_t () { _state = DELETED; }
-
-  typedef enum { NONE = 0, INUSE = 1, CLEARED = 2, CANCELED = 3, 
-		 DELETED = 4 } state_t;
+  ~event_base_t () { finalize (); }
 
   void set_reuse (bool b) { _reuse = b; }
 
   void dotrig (bool legacy, const B1 &b1, const B2 &b2, const B3 &b3)
   {
     ptr<event_action_t> a = _action;
-    if (!_reuse) {
-      if (_state != NONE) {
-	callback_second_trigger (_loc);
-      }
-      _state = CLEARED;
-      _action = NULL;
+    if (!a) {
+      callback_second_trigger (_loc);
     } else {
-      _stat = INUSE;
+      if (!_reuse)
+	_action = NULL;
+      _refset.assign (b1,b2,b3);
+      a->perform (_reuse);
     }
-    _refset.assign (b1,b2,b3);
-    a->perform (_reuse);
   }
 
   void finalize ()
   {
-    assert (_reuse);
+    if (_reuse && _action) {
+      _action->clear ();
+    }
+    _action = NULL;
   }
 
 private:
