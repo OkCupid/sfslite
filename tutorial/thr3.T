@@ -5,12 +5,10 @@
 #include "tame.h"
 #include <list.h>
 
-#ifdef SFS_HAVE_CALLBACK2
-
 struct req_t {
-  req_t (int p, cbi::ptr d) : _param (p), _done (d) {}
+  req_t (int p, evi_t::ptr d) : _param (p), _done (d) {}
   int _param;
-  cbi::ptr _done;
+  evi_t::ptr _done;
 };
 
 struct worker_t {
@@ -19,7 +17,7 @@ struct worker_t {
   int blocking_action (int i);
   int _index;
   list_entry<worker_t> _rlnk;
-  cbv::ptr _ev;
+  evv_t::ptr _ev;
   bool _shutdown;
   req_t *_req;
 };
@@ -27,20 +25,20 @@ struct worker_t {
 struct server_t {
 public:
   server_t (size_t n) : _n_threads (n), _rv (__FILE__, __LINE__) { init (); }
-  void run (cbv cb, CLOSURE);
-  void shutdown (cbv cb, CLOSURE);
-  void serve (int i, cbi cb, CLOSURE);
+  void run (evv_t cb, CLOSURE);
+  void shutdown (evv_t cb, CLOSURE);
+  void serve (int i, evi_t cb, CLOSURE);
 private:
   void init ();
   void ready_thread (worker_t *w);
-  void get_thread (callback<void, worker_t *>::ref, CLOSURE);
+  void get_thread (event_t<worker_t *>::ref, CLOSURE);
   size_t _n_threads;
   vec<worker_t> _workers;
   list<worker_t, &worker_t::_rlnk> _ready;
   size_t _n_alive;
-  vec<cbv> _waiters;
+  vec<evv_t> _waiters;
   rendezvous_t<size_t> _rv;
-  cbv::ptr _shutdown_cb;
+  evv_t::ptr _shutdown_cb;
   bool _shutdown;
 };
 
@@ -62,20 +60,20 @@ server_t::ready_thread (worker_t *w)
 {
   _ready.insert_head (w);
   if (_waiters.size ()) {
-    cbv cb = _waiters.pop_front ();
-    (*cb) ();
+    evv_t cb = _waiters.pop_front ();
+    cb->trigger ();
   }
 }
 
 tamed void
-server_t::run (cbv cb)
+server_t::run (evv_t cb)
 {
   twait { _shutdown_cb = mkevent (); }
-  (*cb) ();
+  cb->trigger ();
 }
 
 tamed void
-server_t::shutdown (cbv cb)
+server_t::shutdown (evv_t cb)
 {
   tvars {
     size_t i;
@@ -85,14 +83,14 @@ server_t::shutdown (cbv cb)
   for (i = 0; i < _workers.size (); i++) {
     worker_t *w = &_workers[i];
     w->_shutdown = true;
-    if (w->_ev) (*w->_ev) ();
+    if (w->_ev) w->_ev->trigger ();
   }
   while (_rv.n_out ()) {
     twait (_rv, i);
     warn << "s> thread " << i << " exitted\n";
   }
   warn << "s> shutdown finished...\n";
-  (*cb) ();
+  cb->trigger ();
 }
 
 void
@@ -132,7 +130,7 @@ worker_t::blocking_action (int i)
 }
 
 tamed void
-server_t::get_thread (callback<void, worker_t *>::ref cb)
+server_t::get_thread (event_t<worker_t *>::ref cb)
 {
   tvars {
     worker_t *w (NULL);
@@ -144,7 +142,7 @@ server_t::get_thread (callback<void, worker_t *>::ref cb)
 }
 
 tamed void
-server_t::serve (int i, cbi cb)
+server_t::serve (int i, evi_t cb)
 {
   tvars {
     worker_t *w;
@@ -154,7 +152,7 @@ server_t::serve (int i, cbi cb)
   if (i == 0) {
     if (_shutdown_cb) {
       warn << "s> invoking shutdown_cb ...\n";
-      cbv c = _shutdown_cb;
+      evv_t c = _shutdown_cb;
       _shutdown_cb = NULL;
       c->trigger ();
     }
@@ -176,7 +174,7 @@ server_t::serve (int i, cbi cb)
 }
 
 tamed static void
-run_server (server_t **sp, cbv cb) 
+run_server (server_t **sp, evv_t cb) 
 {
   tvars {
     server_t *s (New server_t (6));
@@ -194,7 +192,7 @@ run_server (server_t **sp, cbv cb)
 #define N_CALLS 30
 
 tamed static void
-run_client (server_t *s, cbv cb)
+run_client (server_t *s, evv_t cb)
 {
   tvars {
     int res[N_CALLS];
@@ -235,16 +233,7 @@ void main2 ()
 
 int main (int argc, char *argv[])
 {
-  callback_strict_mode = true;
   main2 ();
   amain ();
 }
 
-#else // SFS_HAVE_CALLBACK2
-
-int main (int argc, char *argv[])
-{
-  panic ("this program requires CALLBACK2\n");
-}
-
-#endif // SFS_HAVE_CALLBACK2

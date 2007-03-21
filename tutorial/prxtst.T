@@ -46,7 +46,7 @@ do_proxy (int infd, str hn, int port, cbv cb)
   } else {
     warn ("tcpconnect failed: %m\n");
   }
-  cb->trigger ();
+  (*cb) ();
 }
 
 tamed static void
@@ -106,7 +106,7 @@ listen_loop (int lport, str hn, int port, ptr<canceller_t> *cnp, cbv cb)
     warn << "Exiting listen loop....\n";
     G.cancel ();
   }
-  cb->trigger ();
+  (*cb) ();
 }
 
 tamed static void
