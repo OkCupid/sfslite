@@ -93,18 +93,19 @@ sub do_trigger_func ($$$)
 	   " ); }\n");
 }
 
+#
+# make a class of type event, the inherits from libasync's callback,
+# for each number of trigger values.
+#
 sub do_event_class ($)
 {
     my ($t) = @_;
     my ($tlist, $tlist2);
-    if ($t > 0) {
-	print ("template<", arglist (["class T%", $t]), ">\n");
-	$tlist = "<" . arglist (["T%", $t]) . ">";
-	$tlist2 = $tlist;
-    } else {
-	$tlist = "";
-	$tlist2 = "<>";
-    }
+
+    print ("template<", arglist (["class T%", $t]), ">\n");
+    $tlist = "<" . arglist (["T%", $t]) . ">";
+    $tlist2 = $tlist;
+
     my $vlist = "<" . arglist ("void", ["T%", $t]) . ">";
 
     # print the classname
@@ -115,7 +116,7 @@ sub do_event_class ($)
 
     # print the constructor
     print ("  event_t (",
-	   arglist ("ptr<tame_action_t> a",
+	   arglist ("ptr<event_action_t> a",
 		    "refset_t$tlist2 rs",
 		    "const char *loc"),
 	   ")\n",

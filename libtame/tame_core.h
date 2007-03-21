@@ -69,19 +69,6 @@ inline bool tame_optimized () { return tame_options & TAME_OPTIMIZE; }
 
 struct nil_t {};
 
-/**
- * not in use, but perhaps useful for "zero"ing out callback::ref's,
- * which might be necessary.
- */
-template<class T>
-class generic_wrapper_t {
-public:
-  generic_wrapper_t (T o) : _obj (o) {}
-  T obj () const { return _obj; }
-private:
-  const T _obj;
-};
-
 
 // A set of references
 template<class T1=nil_t, class T2=nil_t, class T3=nil_t, class T4=nil_t>

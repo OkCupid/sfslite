@@ -50,11 +50,11 @@ ref_flag_t::alloc (const bool &b)
 //-----------------------------------------------------------------------
 
 void
-callback_second_trigger (const char *file, const char *line)
+callback_second_trigger (const char *loc)
 {
   warn << "trigger after deallocation";
   if (file && line) {
-    warnx << " (on callback allocated from " << file << ":" << line << ")";
+    warnx << " (on callback allocated from " << loc << ")";
   } else {
     warnx << " (no further information without debugging build)";
   }
