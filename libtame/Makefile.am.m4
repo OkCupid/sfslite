@@ -4,9 +4,10 @@ $(PROGRAMS): $(LDEPS)
 sfslib_LTLIBRARIES = libtame.la
 
 sfsinclude_HEADERS = tame_pipeline.h tame_lock.h tame_autocb.h \
-	tame.h tame_core.h tame_cancel.h tame_mkevent.h \
+	tame.h tame_core.h tame_cancel.h tame_event_ag.h \
 	tame_tfork.h tame_tfork_ag.h tame_thread.h tame_trigger.h \
-	tame_pc.h tame_io.h tame_event.h
+	tame_pc.h tame_io.h tame_event.h tame_recycle.h \
+	tame_typedefs.h
 
 SUFFIXES = .C .T .h
 .T.C:
@@ -37,13 +38,13 @@ dnl
 dnl
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
 
-mkevent.o:  tame_mkevent.h mkevent.C
-mkevent.lo: tame_mkevent.h mkevent.C
+mkevent.o:  tame_event_ag.h mkevent.C
+mkevent.lo: tame_event_ag.h mkevent.C
 
-tfork.o:    tame_mkevent.h tame_tfork_ag.h tfork.C
-tfork.lo:   tame_mkevent.h tame_tfork_ag.h tfork.C
+tfork.o:    tame_event_ag.h tame_tfork_ag.h tfork.C
+tfork.lo:   tame_event_ag.h tame_tfork_ag.h tfork.C
 
-tame_mkevent.h: $(srcdir)/mkevent.pl
+tame_event_ag.h: $(srcdir)/mkevent.pl
 	perl $< > $@
 
 tame_tfork_ag.h: $(srcdir)/mktfork_ag.pl
@@ -51,7 +52,7 @@ tame_tfork_ag.h: $(srcdir)/mktfork_ag.pl
 
 
 libtame_la_SOURCES = mkevent.C tfork.C thread.C core.C trigger.C event.C \
-	tame_out 
+	recycle.C tame_out 
 
 .PHONY: tameclean
 
@@ -62,7 +63,7 @@ dist-hook:
 	cd $(distdir) && rm -f tame_out
 
 EXTRA_DIST = .svnignore tame_in Makefile.am.m4 mkevent.pl mktfork_ag.pl
-CLEANFILES = core *.core *~ *.rpo tame_mkevent.h tame_tfork_ag.h tame_out
+CLEANFILES = core *.core *~ *.rpo tame_event_ag.h tame_tfork_ag.h tame_out
 MAINTAINERCLEANFILES = Makefile.in Makefile.am
 
 $(srcdir)/Makefile.am: $(srcdir)/Makefile.am.m4

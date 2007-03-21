@@ -8,6 +8,7 @@
 #include "refcnt.h"
 #include "vec.h"
 #include "init.h"
+#include "async.h"
 
 struct nil_t {};
 
@@ -46,25 +47,30 @@ private:
 class event_action_t : public virtual refcount {
 public:
   virtual void perform (bool reuse) = 0;
-  virtual void clear () = 0;
+  virtual void clear_reusable_event () = 0;
   virtual ~event_action_t () {}
 };
 
+typedef ptr<event_action_t> event_action_ptr_t;
 
-template<class B1 = void, class B2 = void, class B3 = void>
-class event_base_t<B1,B2,B3> {
+void callback_second_trigger (const char *loc);
+
+template<class B1=nil_t, class B2=nil_t, class B3=nil_t, class B4=nil_t>
+class event_base_t {
 public:
-  event_base_t (ptr<event_action_t> a, refset_t<B1,B2,B3> rs, 
+  event_base_t (ptr<event_action_t> a, refset_t<B1,B2,B3,B4> rs, 
 		const char *loc = NULL) : 
     _action (a),
     _refset (rs),
     _loc (loc), 
     _reuse (false) {}
 
-  ~event_base_t () { finalize (); }
+  ~event_base_t () { finish (); }
 
-  void set_reuse (bool b) { _reuse = b; }
+  bool set_reuse (bool b) { _reuse = b; return _action; }
+  bool get_reuse () const { return _reuse; }
 
+  // Must tune dotrig to accept the correct number of arguments
   void dotrig (bool legacy, const B1 &b1, const B2 &b2, const B3 &b3)
   {
     ptr<event_action_t> a = _action;
@@ -78,19 +84,18 @@ public:
     }
   }
 
-  void finalize ()
+  void finish ()
   {
     if (_reuse && _action) {
-      _action->clear ();
+      _action->clear_reusable_event ();
     }
     _action = NULL;
   }
 
 private:
   ptr<event_action_t> _action;
-  refset_t<B1,B2,B3> _refset;
+  refset_t<B1,B2,B3,B4> _refset;
   const char *const _loc;
-  state_t _state;
   bool _reuse;
 };
 

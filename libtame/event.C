@@ -8,8 +8,6 @@
 // Global flags for toggling callback/event behavior
 //
 
-bool callback_strict_mode;
-
 //
 //-----------------------------------------------------------------------
 
@@ -52,16 +50,7 @@ ref_flag_t::alloc (const bool &b)
 void
 callback_second_trigger (const char *loc)
 {
-  warn << "trigger after deallocation";
-  if (file && line) {
-    warnx << " (on callback allocated from " << loc << ")";
-  } else {
-    warnx << " (no further information without debugging build)";
-  }
-  warnx << "\n";
-
-  if (callback_strict_mode) 
-    panic ("Aborting due to callback strict mode\n");
+  tame_error ("event triggered after deallocation");
 }
 
 int ref_flag_init::count;

@@ -1,30 +1,18 @@
 
-#include "tame_mkevent.h"
+#include "tame_event_ag.h"
 
-void
-_mkevent_cb_0 (ptr<reenterer_t> c, refset_t<> rs)
-{
-  rs.assign ();
-  c->maybe_reenter ();
-}
-
-callback<void>::ref
+event_t<>::ref
 _mkevent (implicit_rendezvous_t *c, const char *loc)
 {
-  return wrap (_mkevent_cb_0, c->make_reenter (loc), refset_t<> ());
+  return New refcounted<event_t<> > 
+    (c->make_reenter (loc), refset_t<> (), loc);
 }
 
-void
-_mkevent_cb_0_0 (ptr<closure_t> hold, ptr<joiner_t<> > j, 
-		 refset_t<> rs, value_set_t<> w)
-{
-  rs.assign ();
-  j->join (w);
-}
-
-callback<void>::ref
+event_t<>::ref
 _mkevent (ptr<closure_t> c, const char *loc, rendezvous_t<> rv)
 {
-  return wrap (_mkevent_cb_0_0, c, rv.make_joiner (loc, c),
-               refset_t<> (), value_set_t<> ());
+  return New refcounted<event_t<> > 
+    (rv.make_joiner (c, loc, value_set_t<> ()), 
+     refset_t<> (), 
+     loc);
 }

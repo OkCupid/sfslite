@@ -23,8 +23,8 @@
  *
  */
 
-#ifndef _ASYNC_TAME_CORE_H_
-#define _ASYNC_TAME_CORE_H_
+#ifndef _LIBTAME_CORE_H_
+#define _LIBTAME_CORE_H_
 
 
 /*
@@ -49,6 +49,7 @@
 #include "keyfunc.h"
 #include "tame_event.h"
 #include "list.h"
+#include "tame_recycle.h"
 
 #ifdef HAVE_TAME_PTH
 # include <pth.h>
@@ -348,11 +349,13 @@ private:
 // An interface used for reentering a function from within a 
 // cwait {} block with an implicit rendezvous.
 //
-class reenterer_t : public virtual refcount, public must_deallocate_obj_t {
+class reenterer_t : public virtual refcount, 
+		    public must_deallocate_obj_t,
+		    public event_action_t
+{
 public:
   reenterer_t (ptr<must_deallocate_t> md, const char *loc);
   virtual ~reenterer_t ();
-  virtual void maybe_reenter () = 0;
   const char *loc () const { return _loc; }
 public:
   list_entry<must_deallocate_obj_t> _lnk;
@@ -373,7 +376,8 @@ public:
   ~closure_reenter_t ();
 
   const char *must_dealloc_typ () const { return "event"; }
-  void maybe_reenter () { _cls->maybe_reenter (_loc); }
+  void perform (bool reuse) { _cls->maybe_reenter (_loc); }
+  void clear () {};
 
 private:
   ptr<closure_t> _cls;
@@ -382,10 +386,11 @@ private:
 template<class T1 = nil_t, class T2 = nil_t, class T3 = nil_t, class T4 = nil_t>
 struct value_set_t {
   value_set_t () {}
-  value_set_t (T1 v1) : v1 (v1) {}
-  value_set_t (T1 v1, T2 v2) : v1 (v1), v2 (v2) {}
-  value_set_t (T1 v1, T2 v2, T3 v3) : v1 (v1), v2 (v2), v3 (v3) {}
-  value_set_t (T1 v1, T2 v2, T3 v3, T4 v4) 
+  value_set_t (const T1 &v1) : v1 (v1) {}
+  value_set_t (const T1 &v1, const T2 &v2) : v1 (v1), v2 (v2) {}
+  value_set_t (const T1 &v1, const T2 &v2, const T3 &v3) 
+    : v1 (v1), v2 (v2), v3 (v3) {}
+  value_set_t (const T1 &v1, const T2 &v2, const T3 &v3, const T4 &v4) 
     : v1 (v1), v2 (v2), v3 (v3), v4 (v4) {}
 
   T1 v1;
@@ -483,11 +488,8 @@ public:
     _n_out --;
   }
 
-  void join (value_set_t<T1, T2, T3, T4> v) 
+  void join (const value_set_t<T1,T2,T3,T4> &v) 
   {
-    assert (_n_out > 0);
-    _n_out --;
-
     _pending.push_back (v);
     if (_join_method == JOIN_EVENTS) {
       assert (_join_cb);
@@ -606,41 +608,54 @@ private:
 template<class T1 = nil_t, class T2 = nil_t, class T3 = nil_t, 
 	 class T4 = nil_t>
 class joiner_t : public virtual refcount,
-		 public must_deallocate_obj_t {
+		 public must_deallocate_obj_t,
+		 public event_action_t 
+{
 public:
-  joiner_t (ptr<rndvzp_t<T1,T2,T3,T4> > p, const char *l,
-	    ptr<must_deallocate_t> md) 
-    : _weak_ref (p->make_weak_ref ()), _loc (l), _must_deallocate (md),
-      _joined (false)
+  joiner_t (ptr<rndvzp_t<T1,T2,T3,T4> > rv, 
+	    ptr<closure_t> hold,
+	    const char *l,
+	    const value_set_t<T1,T2,T3,T4> &vs)
+    : _rv_ref (rv->make_weak_ref ()),
+      _rv_object_collector (rv->must_deallocate ()),
+      _closure_hold (hold),
+      _loc (l), 
+      _value_set (vs)
   {
-    if (_must_deallocate)
-      _must_deallocate->add (this);
+    if (_rv_object_collector)
+      _rv_object_collector->add (this);
+    rv->add_join ();
+  }
+
+  void perform (bool reuse)
+  {
+    rndvzp_t<T1,T2,T3,T4> *rvp = _rv_ref.pointer ();
+    if (!rvp && !_rv_ref.cleared ()) {
+      error ();
+    } else if (rvp) {
+      if (!reuse) {
+	// Need to unregister the join eagerly; it might be too late
+	// if we wait until the object is deallocated.
+	rvp->remove_join ();
+      }
+      rvp->join (_value_set);
+    }
+  }
+
+  void clear_reusable_event () 
+  {
+    rndvzp_t<T1,T2,T3,T4> *rvp = _rv_ref.pointer ();
+    if (rvp) {
+      rvp->remove_join ();
+    }
   }
 
   ~joiner_t () 
   { 
-    if (!_joined && _weak_ref.pointer ()) {
-      _weak_ref.pointer ()->remove_join ();
-    }
+    if (_rv_object_collector)
+      _rv_object_collector->rem (this); 
 
-    if (_must_deallocate)
-      _must_deallocate->rem (this); 
-  }
-
-  void join (value_set_t<T1,T2,T3,T4> w)
-  {
-    assert (!_joined);
-    _joined = true;
-
-    // Cannot return to the event loop between getting a join and
-    // calling the _join_cb;  if we did, we could get a second fdcb
-    // on the same joiner, which is bad.
-    if (!_weak_ref.pointer ()) {
-      if (!_weak_ref.cleared ())
-	error ();
-    } else {
-      _weak_ref.pointer ()->join (w);
-    }
+    // Note, no corresponding remove_join() call in the destructor.
   }
 
   const char *loc () const { return _loc; }
@@ -653,10 +668,11 @@ private:
     tame_error (_loc, "rendezvous_t went out of scope before trigger");
   }
 
-  weak_ref_t<rndvzp_t<T1,T2,T3,T4> > _weak_ref;
+  weak_ref_t<rndvzp_t<T1,T2,T3,T4> > _rv_ref;
+  ptr<must_deallocate_t> _rv_object_collector;
+  ptr<closure_t> _closure_hold;
   const char *_loc;
-  ptr<must_deallocate_t> _must_deallocate;
-  bool _joined;
+  value_set_t<T1,T2,T3,T4> _value_set;
 };
 
 
@@ -843,11 +859,11 @@ public:
   { return value_set_t<T1,T2,T3,T4> (); }
 
   ptr<joiner_t<T1,T2,T3,T4> > 
-  make_joiner (const char *loc, ptr<closure_t> c = NULL)
+  make_joiner (ptr<closure_t> c, const char *loc, 
+	       const value_set_t<T1,T2,T3,T4> &v)
   { 
-    launch_one ();
     return New refcounted<joiner_t<T1,T2,T3,T4> > 
-      (_pointer, loc, _pointer->must_deallocate ()); 
+      (_pointer, c, loc, v);
   }
 
   void clear_join_method () { _pointer->clear_join_method (); }
@@ -866,7 +882,8 @@ public:
 		   const char *l, rendezvous_t<> jg);
   ~stack_reenter_t ();
   const char *must_dealloc_typ () const { return "thread-based event"; }
-  void maybe_reenter () { _joiner->join (value_set_t<> ()); }
+  void perform (bool x) { _joiner->perform (x); }
+  void clear_reusable_event () {}
 private:
   ptr<joiner_t<> > _joiner;
 };
@@ -902,19 +919,6 @@ private:
 
 template<class T> void use_reference (T &i) {}
 
-// make shortcuts to the most common callbacks, but while using
-// ptr's, and not ref's.
-
-typedef ref<callback<void, bool> > event_bool_t;
-typedef ref<callback<void, int> > event_int_t;
-typedef ref<callback<void, void> > event_void_t;
-typedef ref<callback<void, str> > event_str_t;
-
-template<class T1 = void, class T2 = void, class T3 = void>
-struct event {
-  typedef ref<callback<void, T1, T2, T3> > t;
-};
-
 #define TAME_GLOBAL_INT      tame_global_int
 #define CLOSURE              ptr<closure_t> __frame = NULL
 #define TAME_OPTIONS         "TAME_OPTIONS"
@@ -928,4 +932,4 @@ void start_rendezvous_collection ();
 
 #define mkevent(...) _mkevent (__cls_g, __FL__, ##__VA_ARGS__)
 
-#endif /* _ASYNC_TAME_CORE_H_ */
+#endif /* _LIBTAME_CORE_H_ */

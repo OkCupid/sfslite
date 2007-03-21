@@ -12,5 +12,6 @@
 #include "tame_thread.h"
 #include "tame_tfork.h"
 #include "tame_trigger.h"
+#include "tame_typedefs.h"
 
 #endif /* _ASYNC_TAME_H_ */
