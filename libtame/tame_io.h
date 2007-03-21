@@ -49,4 +49,20 @@ private:
   bool _on;
 }; 
 
+class iofd_sticky_t {
+public:
+  iofd_sticky_t (int fd, selop op) : _fd (fd), _op (op), _on (false) {}
+  ~iofd_sticky_t () { finish (); }
+  void setev (evv_t ev) { _ev = ev; ev->set_reuse (true); }
+  void on ();
+  void off ();
+  void finish ();
+  int fd () const { return _fd; }
+private:
+  const int _fd;
+  const selop _op;
+  bool _on;
+  evv_t::ptr _ev;
+};
+
 #endif /* _LIBTAME_TAME_THREAD_H_ */

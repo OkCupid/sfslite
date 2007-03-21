@@ -9,6 +9,7 @@
 #include "vec.h"
 #include "init.h"
 #include "async.h"
+#include "tame_recycle.h"
 
 struct nil_t {};
 
@@ -44,6 +45,14 @@ private:
   T4 &_r4;
 };
 
+class cancelable_t {
+public:
+  cancelable_t () {}
+  virtual void cancel () = 0 ;
+  virtual ~cancelable_t () {}
+  virtual ref_flag_ptr_t delflag () = 0;
+};
+
 class event_action_t : public virtual refcount {
 public:
   virtual void perform (bool reuse) = 0;
@@ -56,7 +65,7 @@ typedef ptr<event_action_t> event_action_ptr_t;
 void callback_second_trigger (const char *loc);
 
 template<class B1=nil_t, class B2=nil_t, class B3=nil_t, class B4=nil_t>
-class event_base_t {
+class event_base_t : public cancelable_t {
 public:
   event_base_t (ptr<event_action_t> a, refset_t<B1,B2,B3,B4> rs, 
 		const char *loc = NULL) : 
@@ -65,7 +74,24 @@ public:
     _loc (loc), 
     _reuse (false) {}
 
-  ~event_base_t () { finish (); }
+  ~event_base_t () 
+  { 
+    finish (); 
+    if (_df)
+      _df->set (true);
+  }
+
+  ref_flag_ptr_t delflag () 
+  {
+    if (!_df) 
+      _df = ref_flag_t::alloc (false);
+    return _df;
+  }
+
+  void cancel ()
+  {
+
+  }
 
   bool set_reuse (bool b) { _reuse = b; return _action; }
   bool get_reuse () const { return _reuse; }
@@ -97,6 +123,7 @@ private:
   refset_t<B1,B2,B3,B4> _refset;
   const char *const _loc;
   bool _reuse;
+  ref_flag_ptr_t _df;
 };
 
 template<class T1=nil_t, class T2=nil_t, class T3=nil_t, class T4=nil_t> 

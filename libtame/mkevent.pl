@@ -111,13 +111,19 @@ sub do_event_class ($)
 sub do_mkevent_generic ($$)
 {
     my ($t, $w) = @_;
+    my $tn;
     if ($t > 0 || $w > 0) {
 	print ("template<" , arglist (["class W%", $w], ["class T%", $t]) , 
 	       ">\n");
-	print "typename ";
-    } 
-    print "${WCN}<", arglist (["T%", $t])  , ">::ref\n";
-    print ("${name} (" , 
+	$tn = "typename";
+    } else {
+	$tn = "";
+    }
+    my $ret = "$tn ${WCN}<". arglist (["T%", $t]) . ">::ref";
+
+    
+    print ("$ret\n",
+	   "${name} (" , 
 	   arglist ("ptr<closure_t> c",
 		    "const char *loc",
 		    "rendezvous_t<" . arglist (["W%", $w]) . "> rv",
@@ -128,18 +134,15 @@ sub do_mkevent_generic ($$)
 	   );
     if ($t > 0 || $w > 0) {
 	print "{\n";
-	my @args = ("rv.make_joiner (c, loc, value_set_t<" .
-		    arglist (["W%", $w]) . "> (" .
-		    arglist (["w%", $w]) . "))",
+	my @args = ("c", 
+		    "loc",
+		    "value_set_t<" . arglist (["W%", $w]) . "> (" .
+		    arglist (["w%", $w]) . ")",
 		    "refset_t<" . arglist (["T%", $t]) . "> (" .
 		    arglist (["t%", $t]) . ")",
-		    "loc");
-	my $nspc = 5;
-	my $spacer = ",\n" . join ("", map { " " } 1 .. $nspc);
-	print ("  return New refcounted<${CN}<" ,
-	       arglist (["T%", $t]),
-	       "> >\n    (",
-	       join ($spacer, @args),
+		    );
+	print ("  return rv._mkevent (" ,
+	       join (",\n                      ", @args),
 	       ");\n",
 	       "}\n\n");
     } else {
@@ -178,29 +181,6 @@ sub do_mkevent_block ($)
 			 "loc"
 			 ),
 	       ");\n");
-	print "}\n\n";
-    } else {
-	print ";\n\n";
-    }
-}
-
-sub do_mkevent_block_cb ($)
-{
-    my ($t) = @_;
-    if ($t > 0) {
-	print "template<" . arglist (["class T%", $t]) . ">\n";
-    }
-    print "void\n";
-    print ("${name}_cb_${t} (",
-	   arglist ("ptr<reenterer_t> c",
-		    "refset_t<" . arglist (["T%", $t]). "> rs",
-		    ["T% t%", $t]
-		    ),
-	   ")\n");
-    if ($t > 0) {
-	print "{\n";
-	print "  rs.assign (" . arglist (["t%", $t]) . ");\n";
-	print "  c->maybe_reenter ();\n";
 	print "}\n\n";
     } else {
 	print ";\n\n";

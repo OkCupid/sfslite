@@ -326,6 +326,23 @@ public:
 
 };
 
+/*
+ * A little wrapper class around an event.
+ */
+class event_wr_t {
+public: 
+  event_wr_t (cancelable_t *o) : _obj (o), _df (o->delflag ()) {}
+  event_wr_t () : _obj (NULL) {}
+  void cancel () 
+  {
+    if (_df && !*_df && _obj) { _obj->cancel (); }
+    _df = NULL;
+  }
+private:
+  cancelable_t *_obj;
+  ref_flag_ptr_t _df;
+};
+
 struct must_deallocate_obj_t {
   virtual ~must_deallocate_obj_t () {}
   virtual const char *loc () const = 0;
@@ -445,12 +462,18 @@ public:
   void cancel ()
   {
     this->mark_cleared ();
+    _clear ();
   }
+
+  void add_event_wr (event_wr_t c) { _to_clear.push_back (c); }
 
   void mark_dead ()
   { 
+    _clear ();
+
     if (*mortal_t::dead_flag ())
       return;
+
     mortal_t::dead_flag ()->set (true);
 
     // XXX - find some way to identify this join, either by filename
@@ -561,6 +584,14 @@ public:
 
 private:
 
+  void _clear () 
+  {
+    event_wr_t e;
+    while ((_to_clear.size ())) {
+      _to_clear.pop_front ().cancel ();
+    }
+  }
+
   void await ()
   {
 #ifdef HAVE_TAME_PTH
@@ -595,6 +626,8 @@ private:
   pth_mutex_t _mutex;
 #endif /* HAVE_TAME_PTH */
 
+  // Events that we can potentially cancel
+  vec<event_wr_t> _to_clear;
 };
 
 /**
@@ -751,6 +784,25 @@ public:
    */
   bool pending (value_set_t<T1, T2, T3, T4> *p = NULL)
   { return _pointer->pending (p); }
+
+  /**
+   * Called internally; add a weak link from the rendezvous to the 
+   * callback
+   */
+  void add_event_wr (event_wr_t c) { _pointer->add_event_wr (c); }
+
+
+  template<class R1, class R2, class R3>
+  typename event_t<R1,R2,R3>::ref
+  _mkevent (ptr<closure_t> c, const char *loc, 
+	    const value_set_t<T1,T2,T3,T4> &vs,
+	    const refset_t<R1,R2,R3> &rs)
+  {
+    typename event_t<R1,R2,R3>::ref ret = New refcounted<event<R1,R2,R3> > 
+      (make_joiner (c, loc, vs), rs, loc);
+    add_event_wr (event_wr_t (ret));
+    return ret;
+  }
 
   
   /**

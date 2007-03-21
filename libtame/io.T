@@ -69,6 +69,34 @@ iofd_t::off (bool check)
 
 typedef enum { READ, WRITE, ENDPROG } ev_t;
 
+void
+iofd_sticky_t::on ()
+{
+  if (!_on && _ev)
+    fdcb (_fd, _op, _ev);
+
+  if (_ev) 
+    _on = true;
+}
+
+void
+iofd_sticky_t::off ()
+{
+  if (_on)
+    fdcb (_fd, _op, NULL);
+
+  _on = false;
+}
+
+void
+iofd_sticky_t::finish ()
+{
+  off ();
+  _ev = NULL;
+}
+
+
+
 tamed void
 proxy (int infd, int outfd, evv_t cb, ptr<canceller_t> *cncp)
 {
@@ -80,7 +108,7 @@ proxy (int infd, int outfd, evv_t cb, ptr<canceller_t> *cncp)
     ev_t which;
     int rc;
     bool err (false);
-    iofd_t read (infd, selread), write (outfd, selwrite);
+    iofd_sticky_t read (infd, selread), write (outfd, selwrite);
     ptr<canceller_t> cnc;
     bool cancelled (false);
   }
@@ -90,12 +118,16 @@ proxy (int infd, int outfd, evv_t cb, ptr<canceller_t> *cncp)
     cnc->wait (mkevent (G, ENDPROG));
   }
 
+
+  read.setev (mkevent (G, READ));
+  write.setev (mkevent (G, WRITE));
+
   while (!err && (!(eof || cancelled) || buf.resid () )) {
     
-    if (buf.resid () < sz && !eof) read.on (mkevent (G, READ));
+    if (buf.resid () < sz && !eof) read.on ();
     else read.off ();
     
-    if (buf.resid () > 0) write.on (mkevent (G, WRITE));
+    if (buf.resid () > 0) write.on ();
     else write.off ();
 
     twait (G, which);
@@ -122,9 +154,12 @@ proxy (int infd, int outfd, evv_t cb, ptr<canceller_t> *cncp)
     default:
       panic ("unexpected case.\n");
     }
-    read.off ();
-    write.off ();
   }
+
+  read.finish ();
+  write.finish ();
+
+
   if (!cancelled && cnc)
     cnc->toolate ();
 

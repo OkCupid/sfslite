@@ -11,8 +11,5 @@ _mkevent (implicit_rendezvous_t *c, const char *loc)
 event_t<>::ref
 _mkevent (ptr<closure_t> c, const char *loc, rendezvous_t<> rv)
 {
-  return New refcounted<event<> > 
-    (rv.make_joiner (c, loc, value_set_t<> ()), 
-     refset_t<> (), 
-     loc);
+  return rv._mkevent (c, loc, value_set_t<> (), refset_t<> ());
 }
