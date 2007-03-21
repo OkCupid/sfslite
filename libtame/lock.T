@@ -3,7 +3,7 @@
 #include "tame_lock.h"
 
 lock_t::waiter_t *
-lock_t::acquire (lock_t::mode_t m, cbv cb)
+lock_t::acquire (lock_t::mode_t m, evv_t cb)
 {
   lock_t::waiter_t *ret = NULL;
   bool wait = false;
@@ -50,7 +50,7 @@ void
 lock_t::call (waiter_t *w)
 {
   _waiters.remove (w);
-  cbv cb (w->_cb);
+  evv_t cb (w->_cb);
   delete w;
   cb->trigger ();
 }
@@ -118,7 +118,7 @@ lock_t::release ()
 }
 
 tamed void
-lock_t::timed_acquire (lock_t::mode_t m, u_int s, u_int ms, cbb cb)
+lock_t::timed_acquire (lock_t::mode_t m, u_int s, u_int ms, evb_t cb)
 {
   tvars {
     rendezvous_t<bool> rv  (__FILE__, __LINE__);
@@ -131,5 +131,5 @@ lock_t::timed_acquire (lock_t::mode_t m, u_int s, u_int ms, cbb cb)
   twait (rv, ok);
   if (!ok) cancel (w);
   else timecb_remove (tcb);
-  TRIGGER (cb, ok);
+  cb->trigger (ok);
 }

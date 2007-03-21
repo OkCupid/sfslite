@@ -18,7 +18,7 @@ clearwrite (int fd)
 }
 
 tamed void
-fdcb1(int fd, selop which, cbv cb)
+fdcb1(int fd, selop which, evv_t cb)
 {
   twait { fdcb (fd, which, mkevent ()); }
   fdcb (fd, which, NULL);
@@ -26,7 +26,7 @@ fdcb1(int fd, selop which, cbv cb)
 }
 
 tamed void
-sigcb1 (int sig, cbv cb)
+sigcb1 (int sig, evv_t cb)
 {
   twait { sigcb (sig, mkevent ()); }
   sigcb (sig, NULL);
@@ -35,19 +35,19 @@ sigcb1 (int sig, cbv cb)
 
 
 void
-waitwrite (int fd, cbv cb)
+waitwrite (int fd, evv_t cb)
 {
   fdcb1(fd, selwrite, cb);
 }
 
 void
-waitread (int fd, cbv cb)
+waitread (int fd, evv_t cb)
 {
   fdcb1(fd, selread, cb);
 }
 
 tamed void
-iofd_t::on (cbv cb)
+iofd_t::on (evv_t cb)
 {
   _on = true;
   twait { fdcb (_fd, _op, mkevent ()); }
@@ -70,7 +70,7 @@ iofd_t::off (bool check)
 typedef enum { READ, WRITE, ENDPROG } ev_t;
 
 tamed void
-proxy (int infd, int outfd, cbv cb, ptr<canceller_t> *cncp)
+proxy (int infd, int outfd, evv_t cb, ptr<canceller_t> *cncp)
 {
   tvars {
     rendezvous_t<ev_t> G (__FILE__, __LINE__);

@@ -18,7 +18,7 @@ dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
 
 SUFFIXES = .T .x .C .h
 .T.C:
-	-$(TAME) -o $@ $< || rm -f $@
+	$(TAME) -o $@ $< || (rm -f $@ && false)
 .x.h:
 	-$(RPCC) -h $< || rm -f $@
 .x.C:

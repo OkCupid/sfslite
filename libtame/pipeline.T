@@ -9,24 +9,24 @@ pipeliner_t::pipeliner_t (size_t w) :
 { assert (_wsz > 0); }
 
 tamed void
-pipeliner_t::wait_n (size_t n, cbv done)
+pipeliner_t::wait_n (size_t n, evv_t done)
 {
   while (_rv.n_triggers_left () > n) {
     twait (_rv);
   }
-  TRIGGER (done);
+  done->trigger ();
 }
 
 tamed void
-pipeliner_t::launch (size_t i, cbv done)
+pipeliner_t::launch (size_t i, evv_t done)
 {
   twait { wait_n (_wsz - 1, mkevent () ); }
   pipeline_op (i, mkevent (_rv) );
-  TRIGGER (done);
+  done->trigger ();
 }
 
 tamed void
-pipeliner_t::run (cbv done)
+pipeliner_t::run (evv_t done)
 {
   tvars {
     size_t i;
@@ -35,7 +35,7 @@ pipeliner_t::run (cbv done)
     twait { launch (i, mkevent () ); }
   }
   twait { wait_n (0, mkevent () ); }
-  TRIGGER (done);
+  done->trigger ();
 }
 
 class pipeliner_cb_t : public pipeliner_t {
@@ -44,7 +44,7 @@ public:
     : pipeliner_t (w), _n_calls (n), _op (o) {}
 
 protected:
-  void pipeline_op (size_t i, cbv cb, CLOSURE);
+  void pipeline_op (size_t i, evv_t cb, CLOSURE);
   bool keep_going (size_t i) const { return i < _n_calls; }
 
 private:
@@ -54,22 +54,22 @@ private:
 };
 
 tamed void
-pipeliner_cb_t::pipeline_op (size_t i, cbv cb)
+pipeliner_cb_t::pipeline_op (size_t i, evv_t cb)
 {
   tvars {
     bool ok;
   }
   twait { (*_op) (i, mkevent (ok), NULL); }
   if (!ok) cancel ();
-  TRIGGER (cb);
+  cb->trigger ();
 }
 
 tamed void
-do_pipeline (size_t w, size_t n, pipeline_op_t op, cbv done)
+do_pipeline (size_t w, size_t n, pipeline_op_t op, evv_t done)
 {
   tvars {
     pipeliner_cb_t ppl (w, n, op);
   }
   twait { ppl.run (mkevent ()); }
-  TRIGGER (done);
+  done->trigger ();
 }

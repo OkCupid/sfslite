@@ -21,14 +21,14 @@ public:
   lock_t (mode_t m = OPEN);
 
   struct waiter_t {
-    waiter_t (mode_t m, cbv c) : _mode (m), _cb (c) {}
+    waiter_t (mode_t m, evv_t c) : _mode (m), _cb (c) {}
     mode_t _mode;
-    cbv _cb;
+    evv_t _cb;
     list_entry<waiter_t> _lnk;
   };
 
-  waiter_t *acquire (mode_t m, cbv cb);
-  void timed_acquire (mode_t m, u_int s, u_int ms, cbb cb, CLOSURE);
+  waiter_t *acquire (mode_t m, evv_t cb);
+  void timed_acquire (mode_t m, u_int s, u_int ms, evb_t cb, CLOSURE);
   void release ();
   void cancel (waiter_t *w);
 

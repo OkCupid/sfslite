@@ -377,7 +377,7 @@ public:
 
   const char *must_dealloc_typ () const { return "event"; }
   void perform (bool reuse) { _cls->maybe_reenter (_loc); }
-  void clear () {};
+  void clear_reusable_event () {};
 
 private:
   ptr<closure_t> _cls;
@@ -879,7 +879,9 @@ private:
 class stack_reenter_t : public reenterer_t {
 public:
   stack_reenter_t (ptr<must_deallocate_t> sentinel, 
-		   const char *l, rendezvous_t<> jg);
+		   const char *l, 
+		   rendezvous_t<> rv,
+		   ptr<closure_t> cl);
   ~stack_reenter_t ();
   const char *must_dealloc_typ () const { return "thread-based event"; }
   void perform (bool x) { _joiner->perform (x); }
@@ -905,16 +907,17 @@ private:
 
 class threaded_implicit_rendezvous_t : public implicit_rendezvous_t {
 public:
-  threaded_implicit_rendezvous_t (const char *f, int l)
+  threaded_implicit_rendezvous_t (const char *f, int l, ptr<closure_t> c)
     : _md (must_deallocate_t::alloc ()),
-      _rv (f, l) {}
+      _rv (f, l),
+      _closure (c) {}
   ~threaded_implicit_rendezvous_t () { _rv.waitall (); }
+  ptr<reenterer_t> make_reenter (const char *loc);
 
-  ptr<reenterer_t> make_reenter (const char *loc)
-  { return New refcounted<stack_reenter_t> (_md, loc, _rv); }
 private:
   ptr<must_deallocate_t> _md;
   rendezvous_t<> _rv;
+  closure_t *_closure;
 };
 
 template<class T> void use_reference (T &i) {}

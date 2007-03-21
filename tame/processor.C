@@ -850,8 +850,8 @@ tame_block_ev_t::output (outputter_t *o)
   b << "    do {\n"
     << "    " << TAME_CLOSURE_NAME << "->init_block (" 
     << _id << ", " << _lineno << ");\n"
-    << "      closure_implicit_rendezvous_t _irv (__cls_g);\n"
-    << "      implicit_rendezvous_t *__cls_g = &_irv;\n"
+    << "      closure_implicit_rendezvous_t _irv (" CLOSURE_GENERIC ");\n"
+    << "      implicit_rendezvous_t *" CLOSURE_GENERIC " = &_irv;\n"
     ;
 
   _fn->jump_out (b, _id);
@@ -895,8 +895,9 @@ tame_block_thr_t::output (outputter_t *o)
   output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL);
 
   b << "  do {\n"
-    << "      threaded_implicit_rendezvous_t _irv (__FILE__, __LINE__);\n"
-    << "      implicit_rendezvous_t *__cls_g = &_irv;\n"
+    << "      threaded_implicit_rendezvous_t _irv "
+    << "(__FILE__, __LINE__, " CLOSURE_GENERIC ");\n"
+    << "      implicit_rendezvous_t *" CLOSURE_GENERIC " = &_irv;\n"
     ;
 
   o->output_str (b);

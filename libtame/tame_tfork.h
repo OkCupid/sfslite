@@ -28,13 +28,15 @@
 
 #include "tame_thread.h"
 #include "tame_core.h"
-#include "tame_mkevent.h"
+#include "tame_event.h"
+#include "tame_event_ag.h"
+#include "tame_typedefs.h"
 #include "async.h"
 
 template<class R>
 class cthread_t {
 public:
-  cthread_t (event_void_t e, R &r, typename callback<R, void>::ref a) 
+  cthread_t (evv_t e, R &r, typename callback<R, void>::ref a) 
     : _event (e), _result (r), _action (a) {}
 
   static void * run (void *me) 
@@ -43,19 +45,19 @@ public:
   void _run ()
   {
     _result = (*_action) ();
-    TRIGGER (_event);
+    _event->trigger ();
     delete this;
     tame_thread_exit ();
   }
   
 private:
-  event_void_t _event;
+  evv_t _event;
   R &_result;
   typename callback<R, void>::ref _action;
 };
 
 template<class R>
-void __tfork (const char *loc, event_void_t e, R &r, 
+void __tfork (const char *loc, evv_t e, R &r, 
 	      typename callback<R,void>::ref a)
 {
   cthread_t<R> *t = New cthread_t<R> (e, r, a);
@@ -65,7 +67,7 @@ void __tfork (const char *loc, event_void_t e, R &r,
 template<>
 class cthread_t<void> {
 public:
-  cthread_t (event_void_t e, cbv a) : _event (e), _action (a) {}
+  cthread_t (evv_t e, cbv a) : _event (e), _action (a) {}
   
   static void * run (void *me)
   { (reinterpret_cast<cthread_t<void> *> (me))->_run (); return NULL; }
@@ -73,16 +75,16 @@ public:
   void _run ()
   {
     (*_action) ();
-    TRIGGER (_event);
+    _event->trigger ();
     delete this;
     tame_thread_exit ();
   }
 private:
-  event_void_t _event;
+  evv_t _event;
   cbv _action;
 };
 
-void __tfork (const char *loc, event_void_t e, cbv a);
+void __tfork (const char *loc, evv_t e, cbv a);
 
 void _tfork (implicit_rendezvous_t *i, const char *loc, cbv a);
 void _tfork (ptr<closure_t> c, const char *loc, rendezvous_t<> rv, cbv a);

@@ -84,7 +84,7 @@ get_web_page (str host, int port, strbuf *resp, cbb cb)
   if (fd >= 0)
     close (fd);
 
-  cb->trigger (ret);
+  (*cb) (ret);
 }
 
 /**
@@ -120,7 +120,7 @@ get_fastest_web_page (vec<str> hosts, int port, cbb done)
     if (*res) {
       warnx << "connection succeeded";
       if (!got_one) {
-	done->trigger (true);
+	(*done) (true);
 	responses[i].tosuio ()->output (1);
 	got_one = true;
       } else {
@@ -132,7 +132,7 @@ get_fastest_web_page (vec<str> hosts, int port, cbb done)
     }
   }
   if (!got_one)
-    done->trigger (false);
+    (*done) (false);
 }
 
 static void

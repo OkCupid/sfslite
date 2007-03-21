@@ -67,13 +67,6 @@ sub do_trigger_func ($$$)
 	   " ); }\n");
 }
 
-sub do_typedef ($$)
-{
-    my ($type, $t) = @_;
-    print ("  typedef ${type}<${CN}<",
-	   arglist (["T%", $t]), "> > ${type};\n");
-}
-
 #
 # make a class of type event, the inherits from libasync's callback,
 # for each number of trigger values.
@@ -123,7 +116,7 @@ sub do_mkevent_generic ($$)
 	       ">\n");
 	print "typename ";
     } 
-    print "${CN}<", arglist (["T%", $t])  , ">::ref\n";
+    print "${WCN}<", arglist (["T%", $t])  , ">::ref\n";
     print ("${name} (" , 
 	   arglist ("ptr<closure_t> c",
 		    "const char *loc",
@@ -168,7 +161,7 @@ sub do_mkevent_block ($)
 	print "template<" . arglist (["class T%", $t]) . ">\n";
 	print "typename ";
     }
-    print "${CN}<" . arglist (["T%", $t]) . ">::ref\n";
+    print "${WCN}<" . arglist (["T%", $t]) . ">::ref\n";
     print ("${name} (" ,
 	   arglist ("implicit_rendezvous_t *r",
 		    "const char *loc",
@@ -220,12 +213,6 @@ sub do_block ($)
     do_mkevent_block ($t);
 }
 
-sub do_event_template ()
-{
-    print ("template<", arglist (["class B% = nil_t", $N_tv+1]),
-	   "> class ${CN};\n\n");
-}
-
 print <<EOF;
 // -*-c++-*-
 //
@@ -240,8 +227,6 @@ print <<EOF;
 
 
 EOF
-
-do_event_template ();
 
 for (my $t = 0; $t <= $N_tv; $t++) {
     do_event_class ($t);

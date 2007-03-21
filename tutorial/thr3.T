@@ -63,7 +63,7 @@ server_t::ready_thread (worker_t *w)
   _ready.insert_head (w);
   if (_waiters.size ()) {
     cbv cb = _waiters.pop_front ();
-    cb->trigger ();
+    (*cb) ();
   }
 }
 
@@ -71,7 +71,7 @@ tamed void
 server_t::run (cbv cb)
 {
   twait { _shutdown_cb = mkevent (); }
-  cb->trigger ();
+  (*cb) ();
 }
 
 tamed void
@@ -85,14 +85,14 @@ server_t::shutdown (cbv cb)
   for (i = 0; i < _workers.size (); i++) {
     worker_t *w = &_workers[i];
     w->_shutdown = true;
-    if (w->_ev) w->_ev->trigger ();
+    if (w->_ev) (*w->_ev) ();
   }
   while (_rv.n_out ()) {
     twait (_rv, i);
     warn << "s> thread " << i << " exitted\n";
   }
   warn << "s> shutdown finished...\n";
-  cb->trigger ();
+  (*cb) ();
 }
 
 void

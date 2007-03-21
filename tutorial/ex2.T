@@ -7,7 +7,7 @@
 #include "ex_prot.h"
 
 tamed static void 
-try_rpc (str h, int port, cbb cb)
+try_rpc (str h, int port, evb_t cb)
 {
   tvars {
     bool ret (false);
@@ -44,20 +44,31 @@ try_rpc (str h, int port, cbb cb)
       ret = true;
     }
   }
-  TRIGGER (cb, true);
+  cb->trigger (true);
 }
  
 static void finish (bool rc)
 {
   exit (rc ? 0 : -1);
 }
+
+tamed static void
+main2 (int argc, char **argv)
+{
+  tvars {
+    bool rc;
+    int port;
+  }
+  if (argc != 3 || !convertint (argv[2], &port))
+    fatal << "usage: ex2 <hostname> <port>\n";
+
+  twait { try_rpc (argv[1], port, mkevent (rc)); }
+  finish (rc);
+}
  
 int main (int argc, char *argv[])
 {
-  int port;
-  if (argc != 3 || !convertint (argv[2], &port))
-    fatal << "usage: ex2 <hostname> <port>\n";
-  
-  try_rpc (argv[1], port, wrap (finish));
+  main2 (argc, argv);
   amain ();
+  return 0;
 }

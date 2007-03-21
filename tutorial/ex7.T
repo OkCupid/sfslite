@@ -5,7 +5,7 @@
 #include "parseopt.h"
 #include "tame_io.h"
 
-typedef callback<void,int,int>::ref cbii ;
+typedef event_t<int,int>::ref cbii ;
 
 /**
  * Given a vector of N hosts, connect to all of them on the given port.
@@ -140,7 +140,7 @@ get_fastest_web_page (vec<str> hosts, int port, cbb cb)
   if (fd >= 0)
     close (fd);
 
-  cb->trigger (ret);
+  (*cb) (ret);
 }
 
 static void finish (bool rc)

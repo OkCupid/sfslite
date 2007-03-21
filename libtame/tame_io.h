@@ -28,19 +28,19 @@
 
 void clearread (int fd);
 void clearwrite (int fd);
-void waitread (int fd, cbv cb);
-void waitwrite (int fd, cbv cb);
-void proxy (int in, int out, cbv cb, ptr<canceller_t> *cncp = NULL,
+void waitread (int fd, evv_t cb);
+void waitwrite (int fd, evv_t cb);
+void proxy (int in, int out, evv_t cb, ptr<canceller_t> *cncp = NULL,
 	    CLOSURE);
 
-void fdcb1(int fd, selop which, cbv cb, CLOSURE);
-void sigcb1 (int sig, cbv cb, CLOSURE);
+void fdcb1(int fd, selop which, evv_t cb, CLOSURE);
+void sigcb1 (int sig, evv_t cb, CLOSURE);
 
 class iofd_t {
 public:
   iofd_t (int fd, selop op) : _fd (fd), _op (op), _on (false) {}
   ~iofd_t () { off (); }
-  void on (cbv cb, CLOSURE);
+  void on (evv_t cb, CLOSURE);
   void off (bool check = true);
   int fd () const { return _fd; }
 private:

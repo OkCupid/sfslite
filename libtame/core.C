@@ -277,10 +277,19 @@ reenterer_t::~reenterer_t ()
 }
 
 stack_reenter_t::stack_reenter_t (ptr<must_deallocate_t> snt,
-				  const char *l, rendezvous_t<> jg)
-  : reenterer_t (snt, l), _joiner (jg.make_joiner (l, NULL)) {}
-
+				  const char *l, 
+				  rendezvous_t<> rv,
+				  ptr<closure_t> cl)
+  : reenterer_t (snt, l), 
+    _joiner (rv.make_joiner (cl, l, value_set_t<> ())) {}
+	     
 stack_reenter_t::~stack_reenter_t () {}
+
+ptr<reenterer_t>
+threaded_implicit_rendezvous_t::make_reenter (const char *loc)
+{ 
+  return New refcounted<stack_reenter_t> (_md, loc, _rv, mkref (_closure)); 
+}
 
 
 ptr<must_deallocate_t>

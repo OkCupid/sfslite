@@ -99,6 +99,17 @@ private:
   bool _reuse;
 };
 
+template<class T1=nil_t, class T2=nil_t, class T3=nil_t, class T4=nil_t> 
+class event;
+
+template<class T1=nil_t, class T2=nil_t, class T3=nil_t>
+class event_t {
+public:
+  typedef ref<event<T1,T2,T3> > ref;
+  typedef ptr<event<T1,T2,T3> > ptr;
+};
+
+
 #ifdef WRAP_DEBUG
 # define CALLBACK_ARGS(x) "???", x, x
 # else

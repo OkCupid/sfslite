@@ -1,7 +1,7 @@
 
 #include "tame_tfork.h"
 
-void __tfork (const char *loc, event_void_t e, cbv a)
+void __tfork (const char *loc, evv_t e, cbv a)
 {
   cthread_t<void> *t = New cthread_t<void> (e, a);
   tame_thread_spawn (loc, cthread_t<void>::run, static_cast<void *> (t)); 

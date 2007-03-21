@@ -5,6 +5,10 @@
 #ifndef _ASYNC_TAME_CANCEL_H_
 #define _ASYNC_TAME_CANCEL_H_
 
+#include "tame_event.h"
+#include "tame_event_ag.h"
+#include "tame_typedefs.h"
+
 /**
  * A helper class useful for canceling an TAME'd function midstream.
  */
@@ -14,10 +18,10 @@ public:
     : _toolate (false), _queued_cancel (false), _cancelled (false) {}
 
   // the cancelable function calls this 
-  void wait (cbv b) 
+  void wait (evv_t b) 
   { 
     if (_queued_cancel) {
-      TRIGGER (b);
+      b->trigger();
     } else {
       _cb = b; 
     }
@@ -30,9 +34,9 @@ public:
   {
     _cancelled = true;
     if (_cb) {
-      cbv::ptr t = _cb;
+      evv_t::ptr t = _cb;
       _cb = NULL;
-      TRIGGER (t);
+      t->trigger ();
     } else if (!_toolate) {
       _queued_cancel = true;
     }
@@ -43,7 +47,7 @@ public:
   void toolate () { _toolate = true; clear (); }
   void clear () { _cb = NULL; }
 private:
-  cbv::ptr _cb;
+  evv_t::ptr _cb;
   bool _toolate, _queued_cancel, _cancelled;
 };
 
