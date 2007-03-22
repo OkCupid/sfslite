@@ -29,7 +29,7 @@ fdcb1(int fd, selop which, evv_t cb)
 tamed void
 sigcb1 (int sig, evv_t cb)
 {
-  twait { sigcb (sig, add_cancel (cb, mkevent ())); }
+  twait { sigcb (sig, add_cancel<nil_t,nil_t,nil_t> ((cancelable_t *)cb, mkevent ())); }
   sigcb (sig, NULL);
   cb->trigger ();
 }

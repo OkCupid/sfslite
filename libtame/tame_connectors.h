@@ -108,7 +108,7 @@ do {
 } while (0);
 
   if (res) *res = ok;
-  in->trigger (t1, t2, t3);
+  in->dotrig (t1, t2, t3);
   rv.cancel ();
   do {
   __cls->end_of_scope_checks (41);
@@ -118,7 +118,7 @@ do {
 
 template<class T1, class T2, class T3>
 typename event_t<T1,T2,T3>::ptr 
-add_cancel (cancelable_t *cnc, typename event_t<T1,T2,T3>::ptr in, 
+add_cancel (cancelable_t *cnc, typename event_t<T1,T2,T3>::ref in, 
 	    bool *res = NULL)
 {
   typename event_t<T1,T2,T3>::ptr ncb;
@@ -128,4 +128,4 @@ add_cancel (cancelable_t *cnc, typename event_t<T1,T2,T3>::ptr in,
 }
 
 
-#endif /* _LIBAME_CONNECTORS_H_ */
+#endif /* _LIBTAME_CONNECTORS_H_ */

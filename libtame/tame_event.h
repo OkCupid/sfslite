@@ -106,6 +106,9 @@ public:
   bool set_reuse (bool b) { _reuse = b; return _action; }
   bool get_reuse () const { return _reuse; }
 
+  void dotrig (const B1 &b1, const B2 &b2, const B3 &b3) 
+  { dotrig (false, b1, b2, b3); }
+
   // Must tune dotrig to accept the correct number of arguments
   void dotrig (bool legacy, const B1 &b1, const B2 &b2, const B3 &b3)
   {
