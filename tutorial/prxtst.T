@@ -50,13 +50,12 @@ do_proxy (int infd, str hn, int port, cbv cb)
 }
 
 tamed static void
-listen_loop (int lport, str hn, int port, ptr<canceller_t> *cnp, cbv cb)
+listen_loop (int lport, str hn, int port, evv_t cb)
 {
   tvars {
     int lfd;
     bool go (true);
     rendezvous_t<ev_t> G (__FILE__, __LINE__);
-    ptr<canceller_t> cncl;
     int nfd;
     ev_t which;
     int proxies_out (0);
@@ -66,9 +65,7 @@ listen_loop (int lport, str hn, int port, ptr<canceller_t> *cnp, cbv cb)
 
   if ((lfd = listen_on (lport)) >= 0) {
 
-    cncl = New refcounted<canceller_t> ();
-    cncl->wait (mkevent (G, PROXY_END));
-    *cnp = cncl;
+    cb->set_notify_on_cancel (mkevent (G, PROXY_END));
 
     while (go || proxies_out > 0 ) {
 
@@ -113,16 +110,21 @@ tamed static void
 main2 (int lport, str hn, int port)
 {
   tvars {
-    ptr<canceller_t> cnc;
+    rendezvous_t<bool> rv (__FILE__, __LINE__);
+    bool ok;
   }
 
-  twait {
-    listen_loop (lport, hn, port, &cnc, mkevent ());
-    if (cnc) {
-      sigcb (SIGINT, wrap (cnc, &canceller_t::cancel));
-      sigcb (SIGTERM, wrap (cnc, &canceller_t::cancel));
-    }
-  }
+  listen_loop (lport, hn, port, mkevent (rv, true));
+  sigcb1 (SIGINT, mkevent (rv, false));
+  sigcb1 (SIGTERM, mkevent (rv, false));
+
+  twait (rv, ok);
+
+  rv.cancel ();
+
+  warn << "Waiting 2 second before exit...\n";
+  twait { delaycb (2, 0, mkevent ()); }
+
   exit (0);
 }
 

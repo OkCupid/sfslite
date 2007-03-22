@@ -13,6 +13,8 @@
 
 struct nil_t {};
 
+void tame_error (const char *loc, const char *msg);
+
 // A set of references
 template<class T1=nil_t, class T2=nil_t, class T3=nil_t, class T4=nil_t>
 class refset_t {
@@ -50,7 +52,8 @@ public:
   cancelable_t () {}
   virtual void cancel () = 0 ;
   virtual ~cancelable_t () {}
-  virtual ref_flag_ptr_t delflag () = 0;
+  virtual void set_notify_on_cancel (cbv::ptr cb) = 0;
+  virtual ref_flag_ptr_t toolateflag () = 0;
 };
 
 class event_action_t : public virtual refcount {
@@ -72,26 +75,33 @@ public:
     _action (a),
     _refset (rs),
     _loc (loc), 
-    _reuse (false) {}
+    _reuse (false),
+    _cancelled (false) {}
 
   ~event_base_t () 
   { 
     finish (); 
-    if (_df)
-      _df->set (true);
+    toolate_to_cancel ();
   }
 
-  ref_flag_ptr_t delflag () 
+  ref_flag_ptr_t toolateflag () 
   {
-    if (!_df) 
-      _df = ref_flag_t::alloc (false);
-    return _df;
+    if (!_tlf) 
+      _tlf = ref_flag_t::alloc (false);
+    return _tlf;
   }
 
   void cancel ()
   {
-
+    _cancelled = true;
+    if (_noc) {
+      cbv c (_noc);
+      _noc = NULL;
+      (*c) ();
+    }
   }
+
+  void set_notify_on_cancel (cbv::ptr cb) { _noc = cb; }
 
   bool set_reuse (bool b) { _reuse = b; return _action; }
   bool get_reuse () const { return _reuse; }
@@ -99,15 +109,30 @@ public:
   // Must tune dotrig to accept the correct number of arguments
   void dotrig (bool legacy, const B1 &b1, const B2 &b2, const B3 &b3)
   {
-    ptr<event_action_t> a = _action;
-    if (!a) {
-      callback_second_trigger (_loc);
-    } else {
-      if (!_reuse)
-	_action = NULL;
-      _refset.assign (b1,b2,b3);
-      a->perform (_reuse);
+
+    if (!_cancelled) {
+
+      // once a trigger happens on this, it can't be cancelled
+      toolate_to_cancel ();
+
+      ptr<event_action_t> a = _action;
+      if (!a) {
+	tame_error (_loc, "event triggered after deallocation");
+      } else {
+	if (!_reuse)
+	  _action = NULL;
+	_refset.assign (b1,b2,b3);
+	a->perform (_reuse);
+      }
     }
+  }
+
+  void toolate_to_cancel ()
+  {
+    if (_tlf && !*_tlf)
+      _tlf->set (true);
+    if (_noc)
+      _noc = NULL;
   }
 
   void finish ()
@@ -122,8 +147,9 @@ private:
   ptr<event_action_t> _action;
   refset_t<B1,B2,B3,B4> _refset;
   const char *const _loc;
-  bool _reuse;
-  ref_flag_ptr_t _df;
+  bool _reuse, _cancelled;
+  ref_flag_ptr_t _tlf;
+  cbv::ptr _noc;
 };
 
 template<class T1=nil_t, class T2=nil_t, class T3=nil_t, class T4=nil_t> 

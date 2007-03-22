@@ -7,7 +7,7 @@ sfsinclude_HEADERS = tame_pipeline.h tame_lock.h tame_autocb.h \
 	tame.h tame_core.h tame_cancel.h tame_event_ag.h \
 	tame_tfork.h tame_tfork_ag.h tame_thread.h tame_trigger.h \
 	tame_pc.h tame_io.h tame_event.h tame_recycle.h \
-	tame_typedefs.h
+	tame_typedefs.h tame_connectors.h
 
 SUFFIXES = .C .T .h
 .T.C:
@@ -33,6 +33,7 @@ dnl
 tame_src(pipeline)
 tame_src(lock)
 tame_src(io)
+tame_src(connectors)
 
 dnl
 dnl

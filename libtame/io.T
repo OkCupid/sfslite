@@ -2,8 +2,9 @@
 // -*-c++-*-
 #include "tame.h"
 #include "tame_core.h"
-#include "tame_cancel.h"
 #include "tame_io.h"
+#include "tame_connectors.h"
+
 
 void
 clearread (int fd)
@@ -28,7 +29,7 @@ fdcb1(int fd, selop which, evv_t cb)
 tamed void
 sigcb1 (int sig, evv_t cb)
 {
-  twait { sigcb (sig, mkevent ()); }
+  twait { sigcb (sig, add_cancel (cb, mkevent ())); }
   sigcb (sig, NULL);
   cb->trigger ();
 }
@@ -98,7 +99,7 @@ iofd_sticky_t::finish ()
 
 
 tamed void
-proxy (int infd, int outfd, evv_t cb, ptr<canceller_t> *cncp)
+proxy (int infd, int outfd, evv_t cb)
 {
   tvars {
     rendezvous_t<ev_t> G (__FILE__, __LINE__);
@@ -109,15 +110,11 @@ proxy (int infd, int outfd, evv_t cb, ptr<canceller_t> *cncp)
     int rc;
     bool err (false);
     iofd_sticky_t read (infd, selread), write (outfd, selwrite);
-    ptr<canceller_t> cnc;
     bool cancelled (false);
   }
 
-  if (cncp) {
-    *cncp = cnc = New refcounted<canceller_t> ();
-    cnc->wait (mkevent (G, ENDPROG));
-  }
-
+  // If the parent process gives up on us, then we'll get a callback here
+  cb->set_notify_on_cancel (mkevent (G, ENDPROG));
 
   read.setev (mkevent (G, READ));
   write.setev (mkevent (G, WRITE));
@@ -148,7 +145,6 @@ proxy (int infd, int outfd, evv_t cb, ptr<canceller_t> *cncp)
       }
       break;
     case ENDPROG:
-      cnc->wait (mkevent (G, ENDPROG));
       cancelled = true;
       break;
     default:
@@ -159,9 +155,6 @@ proxy (int infd, int outfd, evv_t cb, ptr<canceller_t> *cncp)
   read.finish ();
   write.finish ();
 
-
-  if (!cancelled && cnc)
-    cnc->toolate ();
 
   cb->trigger ();
   G.cancel (); // for the timer (if necessary )

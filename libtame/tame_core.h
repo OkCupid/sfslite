@@ -327,20 +327,20 @@ public:
 };
 
 /*
- * A little wrapper class around an event.
+ * A little wrapper class around an event; a weak reference.
  */
 class event_wr_t {
 public: 
-  event_wr_t (cancelable_t *o) : _obj (o), _df (o->delflag ()) {}
+  event_wr_t (cancelable_t *o) : _obj (o), _tlf (o->toolateflag ()) {}
   event_wr_t () : _obj (NULL) {}
   void cancel () 
   {
-    if (_df && !*_df && _obj) { _obj->cancel (); }
-    _df = NULL;
+    if (_tlf && !*_tlf && _obj) { _obj->cancel (); }
+    _tlf = NULL;
   }
 private:
   cancelable_t *_obj;
-  ref_flag_ptr_t _df;
+  ref_flag_ptr_t _tlf;
 };
 
 struct must_deallocate_obj_t {
@@ -421,7 +421,6 @@ struct value_set_t {
  * determinig what will happen when an error occurs. Change the
  * runtime behavior of what happens in an error via TAME_OPTIONS
  */
-void tame_error (const char *loc, const char *msg);
 INIT(tame_init);
 
 void collect_rendezvous (mortal_ref_t r, void *p);

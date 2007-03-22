@@ -30,8 +30,7 @@ void clearread (int fd);
 void clearwrite (int fd);
 void waitread (int fd, evv_t cb);
 void waitwrite (int fd, evv_t cb);
-void proxy (int in, int out, evv_t cb, ptr<canceller_t> *cncp = NULL,
-	    CLOSURE);
+void proxy (int in, int out, evv_t cb, CLOSURE);
 
 void fdcb1(int fd, selop which, evv_t cb, CLOSURE);
 void sigcb1 (int sig, evv_t cb, CLOSURE);
