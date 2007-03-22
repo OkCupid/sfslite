@@ -9,12 +9,15 @@ sfsinclude_HEADERS = tame_pipeline.h tame_lock.h tame_autocb.h \
 	tame_pc.h tame_io.h tame_event.h tame_recycle.h \
 	tame_typedefs.h tame_connectors.h
 
-SUFFIXES = .C .T .h
+SUFFIXES = .C .T .h .Th
 .T.C:
-	-$(TAME) -o $@ $< || rm -f $@
+	$(TAME) -o $@ $< || (rm -f $@ && false)
+.Th.h:
+	$(TAME) -o $@ $< || (rm -f $@ && false)
 
 define(`tame_in')dnl
 define(`tame_out')dnl
+define(`tame_out_h')dnl
 
 define(`tame_src',
 changequote([[, ]])dnl
@@ -25,6 +28,14 @@ $1.o: $1.C
 $1.lo: $1.C
 ]]changequote)dnl
 
+define(`tame_hdr',
+changequote([[, ]])dnl
+[[dnl
+$1.Th: $1.h
+define(`tame_out_h', tame_out_h $1.h)dnl
+]]changequote)dnl
+
+
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
 dnl
 dnl List all source files here
@@ -33,7 +44,7 @@ dnl
 tame_src(pipeline)
 tame_src(lock)
 tame_src(io)
-tame_src(connectors)
+tame_hdr(tame_connectors)
 
 dnl
 dnl
@@ -58,7 +69,10 @@ libtame_la_SOURCES = mkevent.C tfork.C thread.C core.C trigger.C event.C \
 .PHONY: tameclean
 
 tameclean:
-	rm -f tame_out
+	rm -f tame_out tame_out_h
+
+clean:
+	rm -f tame_out tame_out_h
 
 dist-hook:
 	cd $(distdir) && rm -f tame_out
