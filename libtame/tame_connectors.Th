@@ -7,6 +7,14 @@
 
 #include "tame.h"
 
+typedef enum { OUTCOME_SUCC = 0,
+	       OUTCOME_TIMEDOUT = 1,
+	       OUTCOME_CANCELLED = 2 } outcome_t;
+
+inline bool valid_timeout (int s, int ns)
+{
+  return (s >= 0 && ns >= 0 && (s > 0 || ns > 0));
+}
 
 template<class T1=nil_t, class T2=nil_t, class T3=nil_t>
 class connector {
@@ -15,38 +23,81 @@ public:
   connector () {}
 
   static typename event_t<T1,T2,T3>::ptr
-  cnc (cancelable_t *cnc, typename event_t<T1,T2,T3>::ref in, bool *res = NULL)
+  cnc (typename event_t<T1,T2,T3>::ref in, 
+       cancelable_t *cobj,
+       int to_s,
+       int to_ns,
+       outcome_t *ocp = NULL)
   {
     typename event_t<T1,T2,T3>::ptr  ncb;
     connector<T1,T2,T3> c;
-    c.__cnc (&ncb, cnc, in, res);
+    c.__cnc (&ncb, in, cobj, to_s, to_ns, ocp);
     return ncb;
   }
 
+  static typename event_t<T1,T2,T3>::ptr
+  timeout (typename event_t<T1,T2,T3>::ref in,
+	   int to_s, int to_ns, outcome_t *ocp = NULL)
+  {
+    assert (valid_timeout (to_s, to_ns));
+    return cnc (NULL, in, to_s, to_ns, ocp);
+  }
+
+  static typename event_t<T1,T2,T3>::ptr
+  cnc (typename event_t<T1,T2,T3>::ref in,
+       cancelable_t *cobj, 
+       outcome_t *ocp = NULL)
+  {
+    return cnc (in, cobj, -1, -1, ocp);
+  }
+
 private:
-  void __cnc (typename event_t<T1,T2,T3>::ptr *out, cancelable_t *cnc, 
+  void __cnc (typename event_t<T1,T2,T3>::ptr *out, 
 	      typename event_t<T1,T2,T3>::ref in, 
-	      bool *res, CLOSURE);
+	      cancelable_t *c, 
+	      int to_s, 
+	      int to_ns,
+	      outcome_t *ocp,
+	      CLOSURE);
+
 };
 
 
 tamed template<class T1, class T2, class T3> void 
 connector<T1,T2,T3>::__cnc (typename event_t<T1,T2,T3>::ptr *out, 
-			    cancelable_t *cnc, 
-			    typename event_t<T1,T2,T3>::ref in, bool *res)
+			    typename event_t<T1,T2,T3>::ref in, 
+			    cancelable_t *cobj, 
+			    int to_s, 
+			    int to_ns,
+			    outcome_t *ocp)
 {
   tvars {
-    rendezvous_t<bool> rv (__FILE__, __LINE__);
+    rendezvous_t<outcome_t> rv (__FILE__, __LINE__);
     T1 t1;
     T2 t2;
     T3 t3;
-    bool ok;
+    outcome_t outc;
+    timecb_t *tcb (NULL);
   }
 
-  cnc->set_notify_on_cancel (mkevent (rv, false));
-  *out = mkevent (rv, true, t1, t2, t3);
-  twait (rv, ok);
-  if (res) *res = ok;
+  if (cobj) {
+    cobj->set_notify_on_cancel (mkevent (rv, OUTCOME_CANCELLED)); 
+  }
+
+  if (valid_timeout (to_s, to_ns)) {
+    tcb = delaycb (to_s, to_ns, mkevent (rv, OUTCOME_TIMEDOUT));
+  }
+
+  *out = mkevent (rv, OUTCOME_SUCC, t1, t2, t3);
+
+  twait (rv, outc);
+
+  if (outc != OUTCOME_TIMEDOUT && tcb) {
+    timecb_remove (tcb);
+  }
+  tcb = NULL;
+
+  if (ocp) *ocp = outc;
   in->dotrig (t1, t2, t3);
   rv.cancel ();
 }

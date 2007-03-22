@@ -19,11 +19,11 @@ tamed static void
 turtle (int to, evv_t cb)
 {
   tvars {
-    bool okfl;
+    outcome_t oc;
   }
   warn << "turtle: about to wait " << to << " seconds...\n";
-  twait { delaycb (to, 0, connector<>::cnc (cb, mkevent (), &okfl)); }
-  warn << "turtle: OK flag: " << okfl << "\n";
+  twait { delaycb (to, 0, connector<>::cnc (mkevent (), cb, &oc)); }
+  warn << "turtle: Outcome flag: " << int (oc) << "\n";
   cb->trigger ();
 }
 

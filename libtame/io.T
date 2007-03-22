@@ -29,10 +29,7 @@ fdcb1(int fd, selop which, evv_t cb)
 tamed void
 sigcb1 (int sig, evv_t cb)
 {
-  tvars {
-    bool x;
-  }
-  twait { sigcb (sig, connector<>::cnc (cb, mkevent (), &x)); }
+  twait { sigcb (sig, connector<>::cnc (mkevent (), cb)); }
   sigcb (sig, NULL);
   cb->trigger ();
 }
