@@ -22,7 +22,7 @@ turtle (int to, evv_t cb)
     outcome_t oc;
   }
   warn << "turtle: about to wait " << to << " seconds...\n";
-  twait { delaycb (to, 0, connector<>::cnc (mkevent (), cb, &oc)); }
+  twait { delaycb (to, 0, connector::cnc (mkevent (), cb, &oc)); }
   warn << "turtle: Outcome flag: " << int (oc) << "\n";
   cb->trigger ();
 }

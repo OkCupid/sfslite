@@ -17,10 +17,10 @@ inline bool valid_timeout (int s, int ns)
 }
 
 template<class T1=nil_t, class T2=nil_t, class T3=nil_t>
-class connector {
+class connector_t {
 public:
 
-  connector () {}
+  connector_t () {}
 
   static typename event_t<T1,T2,T3>::ptr
   cnc (typename event_t<T1,T2,T3>::ref in, 
@@ -30,25 +30,9 @@ public:
        outcome_t *ocp = NULL)
   {
     typename event_t<T1,T2,T3>::ptr  ncb;
-    connector<T1,T2,T3> c;
+    connector_t<T1,T2,T3> c;
     c.__cnc (&ncb, in, cobj, to_s, to_ns, ocp);
     return ncb;
-  }
-
-  static typename event_t<T1,T2,T3>::ptr
-  timeout (typename event_t<T1,T2,T3>::ref in,
-	   int to_s, int to_ns, outcome_t *ocp = NULL)
-  {
-    assert (valid_timeout (to_s, to_ns));
-    return cnc (NULL, in, to_s, to_ns, ocp);
-  }
-
-  static typename event_t<T1,T2,T3>::ptr
-  cnc (typename event_t<T1,T2,T3>::ref in,
-       cancelable_t *cobj, 
-       outcome_t *ocp = NULL)
-  {
-    return cnc (in, cobj, -1, -1, ocp);
   }
 
 private:
@@ -64,12 +48,12 @@ private:
 
 
 tamed template<class T1, class T2, class T3> void 
-connector<T1,T2,T3>::__cnc (typename event_t<T1,T2,T3>::ptr *out, 
-			    typename event_t<T1,T2,T3>::ref in, 
-			    cancelable_t *cobj, 
-			    int to_s, 
-			    int to_ns,
-			    outcome_t *ocp)
+connector_t<T1,T2,T3>::__cnc (typename event_t<T1,T2,T3>::ptr *out, 
+			      typename event_t<T1,T2,T3>::ref in, 
+			      cancelable_t *cobj, 
+			      int to_s, 
+			      int to_ns,
+			      outcome_t *ocp)
 {
   tvars {
     rendezvous_t<outcome_t> rv (__FILE__, __LINE__);
@@ -102,6 +86,32 @@ connector<T1,T2,T3>::__cnc (typename event_t<T1,T2,T3>::ptr *out,
   rv.cancel ();
 }
 
+namespace connector {
 
+  template<typename T1, typename T2, typename T3>
+  ref<event<T1,T2,T3> >
+  cnc (ref<event<T1,T2,T3> > in, cancelable_t *cobj, 
+	outcome_t *ocp = NULL)
+  {
+    return connector_t<T1,T2,T3>::cnc (in, cobj, -1, -1, ocp);
+  }
+
+  template<typename T1, typename T2, typename T3>
+  ref<event<T1,T2,T3> >
+  cnc (ref<event<T1,T2,T3> > in, cancelable_t *cobj, int to_s, int to_ns,
+	outcome_t *ocp = NULL)
+  {
+    return connector_t<T1,T2,T3>::cnc (in, cobj, to_s, to_ns, ocp);
+  }
+
+  template<typename T1, typename T2, typename T3>
+  ref<event<T1,T2,T3> >
+  timeout (ref<event<T1,T2,T3> > in, int to_s, int to_ns, 
+	   outcome_t *ocp = NULL)
+  {
+    return connector_t<T1,T2,T3>::cnc (in, NULL, to_s, to_ns, ocp);
+  }
+
+};
 
 #endif /* _LIBTAME_CONNECTORS_H_ */

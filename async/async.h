@@ -90,8 +90,8 @@ ifchgcb_t *ifchgcb (cbv);
 void ifchgcb_remove (ifchgcb_t *chg);
 
 #define SFSLITE_VERSION_MAJOR 1
-#define SFSLITE_VERSION_MINOR 0
-#define SFSLITE_VERSION_PATCHLEVEL 3
+#define SFSLITE_VERSION_MINOR 1
+#define SFSLITE_VERSION_PATCHLEVEL 0
 #define SFSLITE_VERSION_PRE 1
 
 #define VERSION_FLATTEN(Maj,Min,Pat,Pre) \
@@ -104,6 +104,6 @@ void ifchgcb_remove (ifchgcb_t *chg);
                    SFSLITE_VERSION_PATCHLEVEL, \
                    SFSLITE_VERSION_PRE))
 
-#define SFSLITE_PATCHLEVEL_STR "1.0.3pre1"
+#define SFSLITE_PATCHLEVEL_STR "1.1.0pre1"
 
 #endif /* !_ASYNC_ASYNC_H_ */
