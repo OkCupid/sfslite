@@ -155,14 +155,17 @@ private:
   cbv::ptr _noc;
 };
 
+// Specify 1 extra argument, that way we can do template specialization
+// elsewhere.  We should never have an instatiated event class with
+// 4 templated types, though.
 template<class T1=nil_t, class T2=nil_t, class T3=nil_t, class T4=nil_t> 
 class event;
 
-template<class T1=nil_t, class T2=nil_t, class T3=nil_t, class T4=nil_t>
+template<class T1=nil_t, class T2=nil_t, class T3=nil_t>
 class event_t {
 public:
-  typedef ref<event<T1,T2,T3,T4> > ref;
-  typedef ptr<event<T1,T2,T3,T4> > ptr;
+  typedef ref<event<T1,T2,T3> > ref;
+  typedef ptr<event<T1,T2,T3> > ptr;
 };
 
 
