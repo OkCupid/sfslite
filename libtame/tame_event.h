@@ -67,10 +67,10 @@ typedef ptr<event_action_t> event_action_ptr_t;
 
 void callback_second_trigger (const char *loc);
 
-template<class B1=nil_t, class B2=nil_t, class B3=nil_t, class B4=nil_t>
+template<class B1=nil_t, class B2=nil_t, class B3=nil_t>
 class event_base_t : public cancelable_t {
 public:
-  event_base_t (ptr<event_action_t> a, refset_t<B1,B2,B3,B4> rs, 
+  event_base_t (ptr<event_action_t> a, refset_t<B1,B2,B3> rs, 
 		const char *loc = NULL) : 
     _action (a),
     _refset (rs),
@@ -106,7 +106,7 @@ public:
   bool set_reuse (bool b) { _reuse = b; return _action; }
   bool get_reuse () const { return _reuse; }
 
-  void dotrig (const B1 &b1, const B2 &b2, const B3 &b3) 
+  void dotrig (const B1 &b1, const B2 &b2, const B3 &b3)
   { dotrig (false, b1, b2, b3); }
 
   // Must tune dotrig to accept the correct number of arguments
@@ -148,7 +148,7 @@ public:
 
 private:
   ptr<event_action_t> _action;
-  refset_t<B1,B2,B3,B4> _refset;
+  refset_t<B1,B2,B3> _refset;
   const char *const _loc;
   bool _reuse, _cancelled;
   ref_flag_ptr_t _tlf;
@@ -158,11 +158,11 @@ private:
 template<class T1=nil_t, class T2=nil_t, class T3=nil_t, class T4=nil_t> 
 class event;
 
-template<class T1=nil_t, class T2=nil_t, class T3=nil_t>
+template<class T1=nil_t, class T2=nil_t, class T3=nil_t, class T4=nil_t>
 class event_t {
 public:
-  typedef ref<event<T1,T2,T3> > ref;
-  typedef ptr<event<T1,T2,T3> > ptr;
+  typedef ref<event<T1,T2,T3,T4> > ref;
+  typedef ptr<event<T1,T2,T3,T4> > ptr;
 };
 
 

@@ -7,22 +7,33 @@
 
 #include "tame.h"
 
-template<class T1, class T2, class T3> 
-class __add_cancel_t {
+
+template<class T1=nil_t, class T2=nil_t, class T3=nil_t>
+class connector {
 public:
-  __add_cancel_t () {}
-  void f (typename event_t<T1,T2,T3>::ptr *out, 
-	  cancelable_t *cnc, 
-	  typename event_t<T1,T2,T3>::ref in, 
-	  bool *res, CLOSURE);
+
+  connector () {}
+
+  static typename event_t<T1,T2,T3>::ptr
+  cnc (cancelable_t *cnc, typename event_t<T1,T2,T3>::ref in, bool *res = NULL)
+  {
+    typename event_t<T1,T2,T3>::ptr  ncb;
+    connector<T1,T2,T3> c;
+    c.__cnc (&ncb, cnc, in, res);
+    return ncb;
+  }
+
+private:
+  void __cnc (typename event_t<T1,T2,T3>::ptr *out, cancelable_t *cnc, 
+	      typename event_t<T1,T2,T3>::ref in, 
+	      bool *res, CLOSURE);
 };
 
 
 tamed template<class T1, class T2, class T3> void 
-__add_cancel_t<T1,T2,T3>::f (typename event_t<T1,T2,T3>::ptr *out, 
-			     cancelable_t *cnc, 
-			     typename event_t<T1,T2,T3>::ref in, 
-			     bool *res)
+connector<T1,T2,T3>::__cnc (typename event_t<T1,T2,T3>::ptr *out, 
+			    cancelable_t *cnc, 
+			    typename event_t<T1,T2,T3>::ref in, bool *res)
 {
   tvars {
     rendezvous_t<bool> rv (__FILE__, __LINE__);
@@ -40,16 +51,6 @@ __add_cancel_t<T1,T2,T3>::f (typename event_t<T1,T2,T3>::ptr *out,
   rv.cancel ();
 }
 
-template<class T1, class T2, class T3>
-typename event_t<T1,T2,T3>::ptr 
-add_cancel (cancelable_t *cnc, typename event_t<T1,T2,T3>::ref in, 
-	    bool *res = NULL)
-{
-  typename event_t<T1,T2,T3>::ptr ncb;
-  __add_cancel_t<T1,T2,T3> c;
-  c.f (&ncb, cnc, in, res);
-  return ncb;
-}
 
 
 #endif /* _LIBTAME_CONNECTORS_H_ */
