@@ -31,7 +31,7 @@ $1.lo: $1.C
 define(`tame_hdr',
 changequote([[, ]])dnl
 [[dnl
-$1.Th: $1.h
+$1.h: $1.Th
 define(`tame_out_h', tame_out_h $1.h)dnl
 ]]changequote)dnl
 
@@ -55,6 +55,9 @@ mkevent.lo: tame_event_ag.h mkevent.C
 
 tfork.o:    tame_event_ag.h tame_tfork_ag.h tfork.C
 tfork.lo:   tame_event_ag.h tame_tfork_ag.h tfork.C
+
+io.o: tame_connectors.h
+io.lo: tame_connectors.h
 
 tame_event_ag.h: $(srcdir)/mkevent.pl
 	perl $< > $@
