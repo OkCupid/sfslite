@@ -147,7 +147,7 @@ axprt_crypt::getpkt (char **cpp, char *eom)
 void
 axprt_crypt::sendv (const iovec *iov, int cnt, const sockaddr *)
 {
-  if (fd < 0)
+  if (writefd < 0)
     panic ("axprt_stream::sendv: called after an EOF\n");
 
   if (!cryptsend) {

@@ -744,7 +744,7 @@ asrv_delayed_eof::sendreply (svccb *s, xdrsuio *x, bool nocache)
   if (_eof) {
     warn << "Swallowing RPC reply due to EOF on TCP socket.\n";
     dec_svccb_count ();
-  } else if (xprt ()->getfd () < 0) {
+  } else if (xprt ()->getwritefd () < 0) {
     warn << "Swallowing RPC reply due to unexpected EOF/error on socket.\n";
     dec_svccb_count ();
   } else {

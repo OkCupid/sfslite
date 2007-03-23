@@ -26,13 +26,16 @@
 int
 axprt_clone::takefd ()
 {
-  int ret = fd;
-  if (fd >= 0) {
-    fdcb (fd, selread, NULL);
-    fdcb (fd, selwrite, NULL);
+  int ret = fdread;
+
+  if (fdread >= 0) {
+    fdcb (fdread, selread, NULL);
+  }
+  if (fdwrite >= 0) {
+    fdcb (fdwrite, selwrite, NULL);
     wcbset = false;
   }
-  fd = -1;
+  fdread = fdwrite = -1;
   cb = NULL;
   return ret;
 }
@@ -41,9 +44,9 @@ ssize_t
 axprt_clone::doread (void *buf, size_t maxlen)
 {
   if (pktlen < 4)
-    return read (fd, buf, maxlen);
+    return read (fdread, buf, maxlen);
   u_int32_t psize = getint (pktbuf) & 0x7fffffffU;
-  return read (fd, pktbuf + pktlen,
+  return read (fdread, pktbuf + pktlen,
 	       min<size_t> (maxlen, psize + 4 - pktlen));
 }
 

@@ -9,6 +9,7 @@
 #include <sys/time.h>
 #include <math.h>
 #include "litetime.h"
+#include <inttypes.h>
 
 typedef enum { SFS_MODE = 0, BLOCK_MODE = 1, NONBLOCK_MODE = 2,
 	       CHECK_CPUSPEED_MODE = 3,
@@ -65,7 +66,7 @@ public:
 	     m, sd, sd / m * 100, min);
 
     for (size_t s = 0; s < raw_results.size (); s++) {
-      printf ("%lld\n", raw_results[s] );
+      printf ("%" PRId64 "\n", raw_results[s] );
     }
   }
   vec<double> results;

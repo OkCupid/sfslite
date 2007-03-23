@@ -26,22 +26,36 @@
 int
 fdwait (int fd, bool r, bool w, timeval *tvp)
 {
-  static int nfd;
-  static fd_set *fds;
+  return fdwait(fd, fd, r, w, tvp);
+}
 
-  assert (fd >= 0);
-  if (fd >= nfd) {
+int
+fdwait (int rfd, int wfd, bool r, bool w, timeval *tvp)
+{
+  static int nfd;
+  static fd_set *rfds;
+  static fd_set *wfds;
+  int maxfd = rfd > wfd ? rfd : wfd;
+
+  assert (rfd >= 0 && wfd >=0);
+
+  if (maxfd >= nfd) {
     // nfd = max (fd + 1, FD_SETSIZE);
-    nfd = fd + 1;
+    nfd = maxfd + 1;
     nfd = nfd + 0x3f & ~0x3f;
-    xfree (fds);
-    fds = (fd_set *) xmalloc (nfd >> 3);
-    bzero (fds, nfd >> 3);
+    xfree (rfds);
+    xfree (wfds);
+    rfds = (fd_set *) xmalloc (nfd >> 3);
+    wfds = (fd_set *) xmalloc (nfd >> 3);
+    bzero (rfds, nfd >> 3);
+    bzero (wfds, nfd >> 3);
   }
 
-  FD_SET (fd, fds);
-  int res = select (fd + 1, r ? fds : NULL, w ? fds : NULL, NULL, tvp);
-  FD_CLR (fd, fds);
+  FD_SET (rfd, rfds);
+  FD_SET (wfd, wfds);
+  int res = select (maxfd + 1, r ? rfds : NULL, w ? wfds : NULL, NULL, tvp);
+  FD_CLR (rfd, rfds);
+  FD_CLR (wfd, wfds);
   return res;
 }
 
