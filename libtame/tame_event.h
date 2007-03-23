@@ -59,7 +59,7 @@ public:
 class event_action_t : public virtual refcount {
 public:
   virtual void perform (bool reuse) = 0;
-  virtual void clear_reusable_event () = 0;
+  virtual void clear() = 0;
   virtual ~event_action_t () {}
 };
 
@@ -112,7 +112,6 @@ public:
   // Must tune dotrig to accept the correct number of arguments
   void dotrig (bool legacy, const B1 &b1, const B2 &b2, const B3 &b3)
   {
-
     if (!_cancelled) {
 
       // once a trigger happens on this, it can't be cancelled
@@ -140,10 +139,10 @@ public:
 
   void finish ()
   {
-    if (_reuse && _action) {
-      _action->clear_reusable_event ();
+    if (_action) {
+      _action->clear();
+      _action = NULL;
     }
-    _action = NULL;
   }
 
 private:

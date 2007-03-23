@@ -394,7 +394,7 @@ public:
 
   const char *must_dealloc_typ () const { return "event"; }
   void perform (bool reuse) { _cls->maybe_reenter (_loc); }
-  void clear_reusable_event () {};
+  void clear() {};
 
 private:
   ptr<closure_t> _cls;
@@ -674,7 +674,7 @@ public:
     }
   }
 
-  void clear_reusable_event () 
+  void clear() 
   {
     rndvzp_t<T1,T2,T3,T4> *rvp = _rv_ref.pointer ();
     if (rvp) {
@@ -684,6 +684,8 @@ public:
 
   ~joiner_t () 
   { 
+    warn ("this=%p; collector=%p\n", this, 
+	  (must_deallocate_t *)_rv_object_collector);
     if (_rv_object_collector)
       _rv_object_collector->rem (this); 
 
@@ -936,7 +938,7 @@ public:
   ~stack_reenter_t ();
   const char *must_dealloc_typ () const { return "thread-based event"; }
   void perform (bool x) { _joiner->perform (x); }
-  void clear_reusable_event () {}
+  void clear() {}
 private:
   ptr<joiner_t<> > _joiner;
 };
