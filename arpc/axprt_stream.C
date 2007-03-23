@@ -28,3 +28,12 @@ axprt_stream::axprt_stream (int f, size_t ps, size_t bs)
   : axprt_pipe(f, f, ps, bs)
 {
 }
+
+int
+axprt_stream::reclaim ()
+{
+  int r,w;
+  axprt_pipe::reclaim (&r, &w);
+  assert (r == w);
+  return r;
+}

@@ -157,6 +157,7 @@ protected:
 
 public:
   int getfd () { return fdread; }
+  int reclaim ();
 
   static ref<axprt_stream> alloc (int f, size_t ps = defps)
     { return New refcounted<axprt_stream> (f, ps); }
