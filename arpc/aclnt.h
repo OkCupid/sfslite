@@ -34,6 +34,17 @@ typedef callback<ptr<axprt_stream>, int>::ref axprtalloc_fn;
 extern aclnt_cb aclnt_cb_null;
 extern u_int32_t (*next_xid) ();
 
+typedef enum { ACCT_SEND, ACCT_RECV } acct_t;
+struct aclnt_acct_t {
+  acct_t dir;
+  u_int32_t progno;
+  u_int32_t procno;
+  u_int32_t versno;
+  size_t len;
+  aclnt_acct_t (acct_t a, u_int32_t b, u_int32_t c, u_int32_t d, size_t e)
+    : dir (a), progno (b), procno (c), versno (d), len (e) {}
+};
+typedef callback<void, aclnt_acct_t>::ref aclntacct_cb;
 
 class callbase {
   friend class aclnt;
@@ -55,6 +66,12 @@ public:
   const u_int32_t xid;
   u_int64_t offset;  // Byte offset (in the underlying transport) of
                      // the end of this message
+
+  // For debugging and accounting; initialized at send time.
+  u_int32_t progno;
+  u_int32_t procno;
+  u_int32_t versno;
+
   tailq_entry<callbase> clink;	// Per-client queue of calls
   ihash_entry<callbase> hlink;	// Link in XID hash table
 
@@ -148,6 +165,7 @@ private:
 
   cbv::ptr send_hook;
   cbv::ptr recv_hook;
+  aclntacct_cb::ptr acct_hook;
 
   aclnt (const axprt &);
   const aclnt &operator= (const aclnt &);
@@ -219,6 +237,7 @@ public:
 
   void set_send_hook (cbv::ptr cb) { send_hook = cb; }
   void set_recv_hook (cbv::ptr cb) { recv_hook = cb; }
+  void set_acct_hook (aclntacct_cb::ptr cb) { acct_hook = cb; }
 
   static ptr<aclnt> alloc (ref<axprt> x, const rpc_program &pr,
 			   const sockaddr *d = NULL,

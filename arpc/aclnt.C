@@ -56,7 +56,8 @@ aclnt_init ()
 }
 
 callbase::callbase (ref<aclnt> c, u_int32_t xid, const sockaddr *d)
-  : c (c), dest (d), tmo (NULL), xid (xid), offset (0)
+  : c (c), dest (d), tmo (NULL), xid (xid), offset (0),
+    progno (0), procno (0), versno (0)
 {
   c->calls.insert_tail (this);
   c->xi->xidtab.insert (this);
@@ -228,7 +229,7 @@ rpccb_unreliable::init (xdrsuio &x)
 
 aclnt::aclnt (const ref<xhinfo> &x, const rpc_program &p)
   : xi (x), rp (p), eofcb (NULL), dest (NULL), stopped (true),
-    send_hook (NULL), recv_hook (NULL)
+    send_hook (NULL), recv_hook (NULL), acct_hook (NULL)
 {
   start ();
 }
@@ -415,14 +416,27 @@ aclnt::call (u_int32_t procno, const void *in, void *out,
 
   if (send_hook)
     (*send_hook) ();
+  if (acct_hook) {
+    aclnt_acct_t a (ACCT_SEND, progno ? progno : rp.progno,
+		    procno, versno ? versno : rp.versno,
+		    iovsize (x.iov (), x.iovcnt ()));
+    (*acct_hook) (a); 
+  }
 
   if (forget_call (cb)) {
     if (!xi->ateof ())
       xi->xh->sendv (x.iov (), x.iovcnt (), d);
     return NULL;
   }
-  else
-    return (*rpccb_alloc) (mkref (this), x, cb, out, outproc, d);
+  else {
+    callbase *cbase = (*rpccb_alloc) (mkref (this), x, cb, out, outproc, d);
+    if (cbase) {
+      cbase->progno = progno ? progno : rp.progno;
+      cbase->procno = procno;
+      cbase->versno = versno ? versno : rp.versno;
+    }
+    return cbase;
+  }
 }
 
 bool aclnt::xi_ateof_fail () { return xi->ateof (); }
@@ -586,6 +600,10 @@ aclnt::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
     if (rp->c->recv_hook)
       (*(rp->c->recv_hook)) ();
     xi->max_acked_offset = max (xi->max_acked_offset, rp->offset);
+    if (rp->c->acct_hook) {
+      aclnt_acct_t a (ACCT_RECV, rp->progno, rp->procno, rp->versno, len);
+      (*(rp->c->acct_hook)) (a);
+    }
   }
 
   if (!err || (err && !rp->c->handle_err (err)))
