@@ -27,7 +27,7 @@
 #include "bench.h"
 
 u_int64_t vtime;
-u_int64_t stime;
+u_int64_t signtime;
 
 void
 test_key_sign (esign_priv &sk)
@@ -47,7 +47,7 @@ test_key_sign (esign_priv &sk)
     tmp3 = get_time ();
 
     vtime += (tmp3 - tmp2);
-    stime += (tmp2 - tmp);
+    signtime += (tmp2 - tmp);
 
     if (!ret)
       panic << "Verify failed\n"
@@ -72,7 +72,7 @@ main (int argc, char **argv)
   setprogname (argv[0]);
   random_update ();
 
-  vtime = stime = 0;
+  vtime = signtime = 0;
   int sz = 2048;
 
   bool opt_v = false;
@@ -89,7 +89,7 @@ main (int argc, char **argv)
 
   if (opt_v) {
     warn ("Signed 500 messages with %d bit key in %" U64F "u " 
-	  TIME_LABEL " per signature\n", sz, stime / 500);
+	  TIME_LABEL " per signature\n", sz, signtime / 500);
     warn ("Verified 500 messages with %d bit key in %" U64F "u " 
 	  TIME_LABEL " per verify\n", sz, vtime / 500);
   }

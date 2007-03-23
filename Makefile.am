@@ -24,8 +24,14 @@ LIBSFS =
 ARPCGEN =
 endif
 
+if USE_TESTS
+TESTS = tests
+else
+TESTS = 
+endif
+
 SUBDIRS = async rpcc arpc crypt $(ARPCGEN) $(LIBSFS) $(SVC) sfsmisc contrib \
-	tame libtame $(TUTORIAL) 
+	tame libtame $(TESTS) $(TUTORIAL) 
 DIST_SUBDIRS = $(SUBDIRS)
 #
 # end sfslite change
