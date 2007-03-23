@@ -684,8 +684,6 @@ public:
 
   ~joiner_t () 
   { 
-    warn ("this=%p; collector=%p\n", this, 
-	  (must_deallocate_t *)_rv_object_collector);
     if (_rv_object_collector)
       _rv_object_collector->rem (this); 
 

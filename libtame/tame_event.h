@@ -109,8 +109,12 @@ public:
   void dotrig (const B1 &b1, const B2 &b2, const B3 &b3)
   { dotrig (false, b1, b2, b3); }
 
+  void rawtrig (bool assign, const B1 &b1, const B2 &b2, const B3 &b3)
+  { dotrig (false, b1, b2, b3, assign); }
+
   // Must tune dotrig to accept the correct number of arguments
-  void dotrig (bool legacy, const B1 &b1, const B2 &b2, const B3 &b3)
+  void dotrig (bool legacy, const B1 &b1, const B2 &b2, const B3 &b3,
+	       bool assign = true)
   {
     if (!_cancelled) {
 
@@ -123,7 +127,8 @@ public:
       } else {
 	if (!_reuse)
 	  _action = NULL;
-	_refset.assign (b1,b2,b3);
+	if (assign)
+	  _refset.assign (b1,b2,b3);
 	a->perform (_reuse);
       }
     }

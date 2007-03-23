@@ -82,7 +82,7 @@ connector_t<T1,T2,T3>::__cnc (typename event_t<T1,T2,T3>::ptr *out,
   tcb = NULL;
 
   if (ocp) *ocp = outc;
-  in->dotrig (t1, t2, t3);
+  in->rawtrig (outc == OUTCOME_SUCC, t1, t2, t3);
   rv.cancel ();
 }
 
@@ -106,7 +106,7 @@ namespace connector {
 
   template<typename T1, typename T2, typename T3>
   ref<event<T1,T2,T3> >
-  timeout (ref<event<T1,T2,T3> > in, int to_s, int to_ns, 
+  timeout (ref<event<T1,T2,T3> > in, int to_s, int to_ns = 0, 
 	   outcome_t *ocp = NULL)
   {
     return connector_t<T1,T2,T3>::cnc (in, NULL, to_s, to_ns, ocp);
