@@ -27,7 +27,7 @@
 #include "bench.h"
 
 u_int64_t vtime;
-u_int64_t stime;
+u_int64_t signtime;
 
 
 void
@@ -60,7 +60,7 @@ test_key_encrypt (rabin_priv &sk)
     tmp3 = get_time ();
 
     vtime += (tmp3 - tmp2);
-    stime += (tmp2 - tmp1);
+    signtime += (tmp2 - tmp1);
 
     int bitno = rnd.getword () % mpz_sizeinbase2 (&m);
     m.setbit (bitno, !m.getbit (bitno));
@@ -98,7 +98,7 @@ test_key_encrypt (rabin_priv &sk)
 int
 main (int argc, char **argv)
 {
-  vtime = stime = 0;
+  vtime = signtime = 0;
   bool opt_v = false;
   int vsz = 1280;
   if (argc > 1 && !strcmp (argv[1], "-v")) {
@@ -113,7 +113,7 @@ main (int argc, char **argv)
   }
   if (opt_v) {
     warn ("Signed 500 messages with %d bit key in %" U64F "u " 
-	  TIME_LABEL " per signature\n", vsz, stime / 500);
+	  TIME_LABEL " per signature\n", vsz, signtime / 500);
     warn ("Verified 500 messages with %d bit key in %" U64F "u " 
 	  TIME_LABEL " per verify\n", vsz, vtime / 500);
   }

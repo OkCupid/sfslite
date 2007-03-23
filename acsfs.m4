@@ -2067,13 +2067,23 @@ AC_DEFUN([SFS_MISC],
 [AC_ARG_ENABLE(sfsmisc,
 --enable-sfsmisc      compile the full sfsmisc/ library)
 test "${enable_sfsmisc+set}" = "set" && with_sfsmisc="yes"
+DO_USE_SFSMISC
+])
+
+dnl
+dnl Call this function if we're using SFS_MISC (can be turned on
+dnl in multiple places)
+dnl
+AC_DEFUN([DO_USE_SFSMISC],
+[
 AM_CONDITIONAL(USE_SFSMISC, test "$with_sfsmisc" = "yes")
 if test "$with_sfsmisc" = "yes"
 then
-	AC_DEFINE(HAVE_SFSMISC, 1, 
-		  Define if we're compiling with full sfsmisc library)
+	AC_DEFINE(HAVE_SFSMISC,1,
+			  Define if we're compiling with full sfsmisc library)
 fi
 ])
+
 dnl
 dnl Compile (optionally) arpcgen and libsfs
 dnl
@@ -2083,6 +2093,23 @@ AC_DEFUN([SFS_LIBSFS],
 test "${enable_libsfs+set}" = "set" && with_libsfs="yes"
 AM_CONDITIONAL(USE_LIBSFS, test "$with_libsfs" = "yes")
 ])
+
+dnl
+dnl Compile tests (requires sfsmic)
+dnl
+AC_DEFUN([SFS_TESTS],
+[AC_ARG_ENABLE(tests,
+--enable-tests   enable the SFS tests/regression suite)
+test "${enable_tests+set}" = "set" && with_tests="yes"
+AM_CONDITIONAL(USE_TESTS, test "$with_tests" = "yes")
+
+if test "$with_tests" = "yes" -a "$with_sfsmisc" = "no"
+then
+	with_sfsmisc=yes
+	DO_USE_SFSMISC
+fi
+])
+
 dnl
 dnl Enable all optional directories
 dnl
@@ -2095,11 +2122,12 @@ then
 	with_libsfs="yes"
 	AM_CONDITIONAL(USE_LIBSFS, test "$with_libsfs" = "yes")
 	with_sfsmisc="yes"
-	AM_CONDITIONAL(USE_SFSMISC, test "$with_sfsmisc" = "yes")
-	AC_DEFINE(HAVE_SFSMISC, 1, 
-		  Define if we're compiling with full sfsmisc library)
+	DO_USE_SFSMISC
 	with_tutorial="yes"
 	AM_CONDITIONAL(USE_TUTORIAL, test "$with_tutorial" = "yes")
+	with_tests="yes"
+	AM_CONDITIONAL(USE_TESTS, test "$with_tests" = "yes")
+
 fi
 ])
 dnl

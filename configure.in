@@ -451,6 +451,7 @@ dnl    - prune other directories
 dnl
 SFS_TUTORIAL
 SFS_MISC
+SFS_TESTS
 SFS_LIBSFS
 SFS_CALLBACK
 SFS_ALL
@@ -458,7 +459,7 @@ SFS_ALL
 AC_OUTPUT(Makefile async/Makefile rpcc/Makefile arpc/Makefile
 	crypt/Makefile sfsmisc/Makefile contrib/Makefile tame/Makefile
 	svc/Makefile libtame/Makefile arpcgen/Makefile libsfs/Makefile
-	tutorial/Makefile tutorial/doc/Makefile)
+	tests/Makefile tutorial/Makefile tutorial/doc/Makefile)
 dnl
 dnl end SFSlite changes
 dnl
