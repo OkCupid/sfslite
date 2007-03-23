@@ -138,7 +138,7 @@
 
 #if VERBOSE_REFCNT
 #include <typeinfo>
-void refcnt_warn (const char *op, const type_info &type, void *addr, int cnt);
+void refcnt_warn (const char *op, const std::type_info &type, void *addr, int cnt);
 #endif /* VERBOSE_REFCNT */
 
 #include "opnew.h"
