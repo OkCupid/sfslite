@@ -985,5 +985,6 @@ extern ptr<closure_t> null_closure;
 void start_rendezvous_collection ();
 
 #define mkevent(...) _mkevent (__cls_g, __FL__, ##__VA_ARGS__)
+#define mkevent_rs(...) _mkevent_rs (__cls_g, __FL__, ##__VA_ARGS__)
 
 #endif /* _LIBTAME_CORE_H_ */

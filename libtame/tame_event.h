@@ -31,12 +31,30 @@ public:
     : _r1 (_dummy), _r2 (_dummy), _r3 (_dummy), _r4 (_dummy) {}
 
   void assign (const T1 &v1, const T2 &v2, const T3 &v3, const T4 &v4) 
-  { _r1 = v1; _r2 = v2; _r3 = v3; _r4 = v4; }
+  { _r1 = v1; _r2 = v2; _r3 = v3; _r4 = v4; mark_assign (); }
   void assign (const T1 &v1, const T2 &v2, const T3 &v3)
-  { _r1 = v1; _r2 = v2; _r3 = v3; }
-  void assign (const T1 &v1, const T2 &v2) { _r1 = v1; _r2 = v2; }
-  void assign (const T1 &v1) { _r1 = v1; }
-  void assign () {}
+  { _r1 = v1; _r2 = v2; _r3 = v3; mark_assign (); }
+  void assign (const T1 &v1, const T2 &v2) 
+  { _r1 = v1; _r2 = v2; mark_assign(); }
+  void assign (const T1 &v1) { _r1 = v1; mark_assign(); }
+  void assign () { mark_assign(); }
+
+  void track_assignment () 
+  { 
+    if (_assign_flag)
+      _assign_flag = ref_flag_t::alloc (false); 
+  }
+
+  inline void mark_assign ()
+  {
+    if (_assign_flag)
+      _assign_flag->set (true);
+  }
+
+  inline bool was_assigned () const
+  {
+    return (_assign_flag && *_assign_flag);
+  }
 
 private:
   nil_t _dummy;
@@ -45,6 +63,8 @@ private:
   T2 &_r2;
   T3 &_r3;
   T4 &_r4;
+
+  ref_flag_ptr_t _assign_flag;
 };
 
 class cancelable_t {

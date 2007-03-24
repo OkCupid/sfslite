@@ -7,22 +7,11 @@
 
 #include "tame.h"
 
-class x_t {
-public:
-
-  enum { NONE = 0,
-	 SUCC = 1,
-	 TIMEOUT = 2,
-	 CANCELLED = 3,
-	 SIGNALLED = 4,
-	 INTERNAL_SIGNAL = 5 };
-
-};
-
 typedef enum { OUTCOME_SUCC = 0,
 	       OUTCOME_TIMEDOUT = 1,
 	       OUTCOME_CANCELLED = 2,
-	       OUTCOME_SIGNALED = 3 } outcome_t;
+	       OUTCOME_SIGNALED = 3,
+	       OUTCOME_DISCARDED = 4 } outcome_t;
 
 inline bool valid_timeout (int s, int ns)
 {
@@ -50,13 +39,13 @@ public:
 
   static typename event_t<T1,T2,T3>::ptr
   sig (typename event_t<T1,T2,T3>::ref in, 
-       cancelable_t *cobj,
        vec<int> sigv,
-       int *res)
+       int *res,
+       cancelable_t *cobj)
   {
     typename event_t<T1,T2,T3>::ptr  ncb;
     connector_t<T1,T2,T3> c;
-    c.__sig (&ncb, in, cobj, sigv, res);
+    c.__sig (&ncb, in, sigv, res, cobj);
     return ncb;
   }
 
@@ -69,27 +58,28 @@ private:
 	      outcome_t *ocp,
 	      CLOSURE);
 
-void __sig (typename event_t<T1,T2,T3>::ptr *out, 
-	    typename event_t<T1,T2,T3>::ref in, 
-	    cancelable_t *cobj, 
-	    vec<int> sigs,
-	    int *sigp,
-	    CLOSURE);
+  void __sig (typename event_t<T1,T2,T3>::ptr *out, 
+	      typename event_t<T1,T2,T3>::ref in, 
+	      vec<int> sigs,
+	      int *sigp,
+	      cancelable_t *cobj, 
+	      CLOSURE);
 
 };
 
 tamed template<class T1, class T2, class T3> void 
 connector_t<T1,T2,T3>::__sig (typename event_t<T1,T2,T3>::ptr *out, 
 			      typename event_t<T1,T2,T3>::ref in, 
-			      cancelable_t *cobj, 
 			      vec<int> sigs,
-			      int *sigp)
+			      int *sigp,
+			      cancelable_t *cobj)
 {
   tvars {
     rendezvous_t<int> rv (__FILE__, __LINE__);
     T1 t1;
     T2 t2;
     T3 t3;
+    refset_t<T1,T2,T3> rs (t1, t2, t3);
     int i;
     int sig;
   }
@@ -100,7 +90,10 @@ connector_t<T1,T2,T3>::__sig (typename event_t<T1,T2,T3>::ptr *out,
   for (i = 0; i < sigs.size (); i++) {
     sigcb (sigs[i], mkevent (rv, sigs[i]));
   }
-  *out = mkevent (rv, 0, t1, t2, t3);
+  rs.track_assignment ();
+  *out = mkevent_rs (rs, rv, 0);
+
+  (*out)->set_notify_on_cancel (mkevent (rv, -2));
 
   twait (rv, sig);
 
@@ -109,7 +102,7 @@ connector_t<T1,T2,T3>::__sig (typename event_t<T1,T2,T3>::ptr *out,
   }
 
   if (sigp) *sigp = sig;
-  in->rawtrig (sig == 0, t1, t2, t3);
+  in->rawtrig (rs.was_assigned (), t1, t2, t3);
   rv.cancel ();
 }
 
@@ -129,6 +122,7 @@ connector_t<T1,T2,T3>::__cnc (typename event_t<T1,T2,T3>::ptr *out,
     T3 t3;
     outcome_t outc;
     timecb_t *tcb (NULL);
+    refset_t<T1,T2,T3> rs (t1, t2, t3);
   }
 
   if (cobj) {
@@ -139,7 +133,9 @@ connector_t<T1,T2,T3>::__cnc (typename event_t<T1,T2,T3>::ptr *out,
     tcb = delaycb (to_s, to_ns, mkevent (rv, OUTCOME_TIMEDOUT));
   }
 
-  *out = mkevent (rv, OUTCOME_SUCC, t1, t2, t3);
+  rs.track_assignment ();
+  *out = mkevent_rs (rs, rv, OUTCOME_SUCC);
+  (*out)->set_notify_on_cancel (mkevent (rv, OUTCOME_DISCARDED));
 
   twait (rv, outc);
 
@@ -149,7 +145,7 @@ connector_t<T1,T2,T3>::__cnc (typename event_t<T1,T2,T3>::ptr *out,
   tcb = NULL;
 
   if (ocp) *ocp = outc;
-  in->rawtrig (outc == OUTCOME_SUCC, t1, t2, t3);
+  in->rawtrig (rs.was_assigned (), t1, t2, t3);
   rv.cancel ();
 }
 
@@ -177,6 +173,14 @@ namespace connector {
 	   outcome_t *ocp = NULL)
   {
     return connector_t<T1,T2,T3>::cnc (in, NULL, to_s, to_ns, ocp);
+  }
+
+  template<typename T1, typename T2, typename T3>
+  ref<event<T1,T2,T3> >
+  sig (ref<event<T1,T2,T3> > in, vec<int> sigs, int *sigp = NULL,
+       cancelable_t *cobj = NULL)
+  {
+    return connector_t<T1,T2,T3>::sig (in, sigs, sigp, cobj);
   }
 
 };

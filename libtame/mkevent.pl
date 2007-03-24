@@ -11,6 +11,7 @@ my $N_wv = 3;
 my $name = "_mkevent";
 my $CN = "event";
 my $WCN = "event_t";
+my $mkrs = $name . "_rs";
 
 sub mklist ($$)
 {
@@ -92,7 +93,7 @@ sub do_event_class ($)
     # print the constructor
     print ("  event (",
 	   arglist ("event_action_ptr_t a",
-		    "refset_t$tlist2 rs",
+		    "const refset_t$tlist2 &rs",
 		    "const char *loc"),
 	   ")\n",
 	   "    : event_base_t" , $tlist2 , " (a, rs, loc),\n",
@@ -108,21 +109,69 @@ sub do_event_class ($)
     print "};\n\n";
 }
 
-sub do_mkevent_generic ($$)
+#
+# Return:
+#
+# template<class W1, class W2, class W3, class T1, class T2>
+# typename event_t<T1, T2>::ref
+#
+#
+sub mkevent_prefix ($$)
 {
     my ($t, $w) = @_;
     my $tn;
+    my $ret = "";
     if ($t > 0 || $w > 0) {
-	print ("template<" , arglist (["class W%", $w], ["class T%", $t]) , 
-	       ">\n");
-	$tn = "typename";
+	$ret .= "template<" .  arglist (["class W%", $w], ["class T%", $t]) .
+	    ">\n";
+	$tn = "typename ";
     } else {
 	$tn = "";
     }
-    my $ret = "$tn ${WCN}<". arglist (["T%", $t]) . ">::ref";
+    $ret .= "${tn}${WCN}<". arglist (["T%", $t]) . ">::ref";
+    return $ret;
+}
 
+sub do_mkevent_rs ($$) 
+{
+    my ($t, $w) = @_;
+    my $prfx = mkevent_prefix ($t, $w);
     
-    print ("$ret\n",
+    print ("$prfx\n",
+	   "${mkrs} (" ,
+	   arglist ("ptr<closure_t> c",
+		    "const char *loc",
+		    "const refset_t<" .arglist (["T%", $t]). "> &rs",
+		    "rendezvous_t<" . arglist (["W%", $w]). "> rv",
+		    ["const W% &w%", $w]
+		    ),
+	   ")\n"
+	   );
+
+    if ($t > 0 || $w > 0) {
+	print "{\n";
+	my @args = ("c",
+		    "loc",
+		    "value_set_t<" . arglist (["W%", $w]) . "> (".
+		    arglist (["w%", $w]). ")",
+		    "rs");
+	print ("  return rv._mkevent (" ,
+	       join (",\n                      ", @args),
+	       ");\n");
+	print ("}");
+    } else {
+	print ";";
+    }
+    print "\n\n";
+}
+
+sub do_mkevent ($$)
+{
+    my ($t, $w) = @_;
+
+    my $prfx = mkevent_prefix ($t, $w);
+    
+    print ("$prfx\n",
 	   "${name} (" , 
 	   arglist ("ptr<closure_t> c",
 		    "const char *loc",
@@ -134,26 +183,30 @@ sub do_mkevent_generic ($$)
 	   );
     if ($t > 0 || $w > 0) {
 	print "{\n";
+	
 	my @args = ("c", 
 		    "loc",
-		    "value_set_t<" . arglist (["W%", $w]) . "> (" .
-		    arglist (["w%", $w]) . ")",
 		    "refset_t<" . arglist (["T%", $t]) . "> (" .
 		    arglist (["t%", $t]) . ")",
+		    "rv",
+		    ["w%", $w]
 		    );
-	print ("  return rv._mkevent (" ,
-	       join (",\n                      ", @args),
-	       ");\n",
-	       "}\n\n");
+	print ("  return ${mkrs} (" , 
+	       join (",\n                      ", 
+		     mklist_multi (@args)),
+	       ");\n");
+	print ("}");
     } else {
-	print ";\n\n";
+	print ";";
     }
+    print "\n\n";
 }
     
 sub do_generic ($$)
 {
     my ($t, $w) = @_;
-    do_mkevent_generic ($t, $w);
+    do_mkevent_rs ($t, $w);
+    do_mkevent ($t, $w);
 }
 
 
