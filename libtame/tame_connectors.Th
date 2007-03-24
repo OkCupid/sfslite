@@ -76,10 +76,6 @@ connector_t<T1,T2,T3>::__sig (typename event_t<T1,T2,T3>::ptr *out,
 {
   tvars {
     rendezvous_t<int> rv (__FILE__, __LINE__);
-    T1 t1;
-    T2 t2;
-    T3 t3;
-    refset_t<T1,T2,T3> rs (t1, t2, t3);
     int i;
     int sig;
   }
@@ -90,9 +86,7 @@ connector_t<T1,T2,T3>::__sig (typename event_t<T1,T2,T3>::ptr *out,
   for (i = 0; i < sigs.size (); i++) {
     sigcb (sigs[i], mkevent (rv, sigs[i]));
   }
-  rs.track_assignment ();
-  *out = mkevent_rs (rs, rv, 0);
-
+  *out = mkevent_rs (in->refset (), rv, 0);
   (*out)->set_notify_on_cancel (mkevent (rv, -2));
 
   twait (rv, sig);
@@ -101,9 +95,11 @@ connector_t<T1,T2,T3>::__sig (typename event_t<T1,T2,T3>::ptr *out,
     sigcb (sigs[i], NULL);
   }
 
-  if (sigp) *sigp = sig;
-  in->rawtrig (rs.was_assigned (), t1, t2, t3);
+
   rv.cancel ();
+  if (sigp) *sigp = sig;
+
+  in->rawtrig ();
 }
 
 
@@ -117,12 +113,8 @@ connector_t<T1,T2,T3>::__cnc (typename event_t<T1,T2,T3>::ptr *out,
 {
   tvars {
     rendezvous_t<outcome_t> rv (__FILE__, __LINE__);
-    T1 t1;
-    T2 t2;
-    T3 t3;
     outcome_t outc;
     timecb_t *tcb (NULL);
-    refset_t<T1,T2,T3> rs (t1, t2, t3);
   }
 
   if (cobj) {
@@ -133,10 +125,8 @@ connector_t<T1,T2,T3>::__cnc (typename event_t<T1,T2,T3>::ptr *out,
     tcb = delaycb (to_s, to_ns, mkevent (rv, OUTCOME_TIMEDOUT));
   }
 
-  rs.track_assignment ();
-  *out = mkevent_rs (rs, rv, OUTCOME_SUCC);
+  *out = mkevent_rs (in->refset (), rv, OUTCOME_SUCC);
   (*out)->set_notify_on_cancel (mkevent (rv, OUTCOME_DISCARDED));
-
   twait (rv, outc);
 
   if (outc != OUTCOME_TIMEDOUT && tcb) {
@@ -144,9 +134,12 @@ connector_t<T1,T2,T3>::__cnc (typename event_t<T1,T2,T3>::ptr *out,
   }
   tcb = NULL;
 
-  if (ocp) *ocp = outc;
-  in->rawtrig (rs.was_assigned (), t1, t2, t3);
+  // Cancel before issuing the trigger, for safety's sake.
   rv.cancel ();
+
+  if (ocp) *ocp = outc;
+
+  in->rawtrig ();
 }
 
 namespace connector {

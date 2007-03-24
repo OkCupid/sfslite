@@ -129,28 +129,41 @@ public:
   void dotrig (const B1 &b1, const B2 &b2, const B3 &b3)
   { dotrig (false, b1, b2, b3); }
 
-  void rawtrig (bool assign, const B1 &b1, const B2 &b2, const B3 &b3)
-  { dotrig (false, b1, b2, b3, assign); }
 
   // Must tune dotrig to accept the correct number of arguments
-  void dotrig (bool legacy, const B1 &b1, const B2 &b2, const B3 &b3,
-	       bool assign = true)
+  void dotrig (bool legacy, const B1 &b1, const B2 &b2, const B3 &b3)
   {
+    ptr<event_action_t> a = prepare_action (legacy);
+    if (a) {
+      _refset.assign (b1,b2,b3);
+      a->perform (_reuse);
+    }
+  }
+
+  ptr<event_action_t> prepare_action (bool legacy = false)
+  {
+    ptr<event_action_t> ret;
+
     if (!_cancelled) {
 
       // once a trigger happens on this, it can't be cancelled
       toolate_to_cancel ();
 
-      ptr<event_action_t> a = _action;
-      if (!a) {
+      ret = _action;
+      if (!ret) {
 	tame_error (_loc, "event triggered after deallocation");
-      } else {
-	if (!_reuse)
-	  _action = NULL;
-	if (assign)
-	  _refset.assign (b1,b2,b3);
-	a->perform (_reuse);
+      } else if (!_reuse) {
+	_action = NULL;
       }
+    }
+    return ret;
+  }
+
+  void rawtrig ()
+  {
+    ptr<event_action_t> a = prepare_action ();
+    if (a) {
+      a->perform (_reuse);
     }
   }
 
@@ -169,6 +182,8 @@ public:
       _action = NULL;
     }
   }
+
+  const refset_t<B1,B2,B3> &refset () const { return _refset; }
 
 private:
   ptr<event_action_t> _action;
