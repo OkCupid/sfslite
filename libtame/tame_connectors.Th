@@ -7,6 +7,18 @@
 
 #include "tame.h"
 
+class x_t {
+public:
+
+  enum { NONE = 0,
+	 SUCC = 1,
+	 TIMEOUT = 2,
+	 CANCELLED = 3,
+	 SIGNALLED = 4,
+	 INTERNAL_SIGNAL = 5 };
+
+};
+
 typedef enum { OUTCOME_SUCC = 0,
 	       OUTCOME_TIMEDOUT = 1,
 	       OUTCOME_CANCELLED = 2,
@@ -57,6 +69,13 @@ private:
 	      outcome_t *ocp,
 	      CLOSURE);
 
+void __sig (typename event_t<T1,T2,T3>::ptr *out, 
+	    typename event_t<T1,T2,T3>::ref in, 
+	    cancelable_t *cobj, 
+	    vec<int> sigs,
+	    int *sigp,
+	    CLOSURE);
+
 };
 
 tamed template<class T1, class T2, class T3> void 
@@ -71,7 +90,7 @@ connector_t<T1,T2,T3>::__sig (typename event_t<T1,T2,T3>::ptr *out,
     T1 t1;
     T2 t2;
     T3 t3;
-    outcome_t out;
+    int i;
     int sig;
   }
 
@@ -101,7 +120,6 @@ connector_t<T1,T2,T3>::__cnc (typename event_t<T1,T2,T3>::ptr *out,
 			      cancelable_t *cobj, 
 			      int to_s, 
 			      int to_ns,
-			      vec<int> *sigs,
 			      outcome_t *ocp)
 {
   tvars {
