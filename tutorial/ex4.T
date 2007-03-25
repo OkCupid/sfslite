@@ -6,8 +6,8 @@
 #include "parseopt.h"
 #include "ex_prot.h"
 
-tamed static 
-bool dostuff (const str &h, int port, cbb cb)
+tamed static void 
+dostuff (const str &h, int port, cbb cb)
 {
   // declare all of your "stack" variables here
   tvars {
@@ -16,74 +16,50 @@ bool dostuff (const str &h, int port, cbb cb)
     ptr<aclnt> cli;
     vec<int> res;
     vec<clnt_stat> errs;
-    int n_tot (40), window_sz (5), i;
-    bool err_occurred (false);
-    rendezvous_t<int> rpcback;
+    int ntot (40), window_sz (5), id;
+    int nsent (0), nrecv (0);
+    bool err (false);
+    rendezvous_t<int> rv;
     bool ret (true);
     int return_id;
-    int fds[2];
   }
-
-  int strib;
-
-  fds[0] = 1;
-  fds[1] = 2;
-
-  strib = 10;
-
-  DEFAULT_RETURN { return ret; } 
-
 
   // Call tcpconnect, and block until it returns; when it does return,
   // assign the local variable 'fd' to the result.
   twait { tcpconnect (h, port, mkevent(fd)); }
 
-  strib++;
-
 
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", h.cstr(), port);
-    err_occurred = true;
+    err = true;
   } else {
-    res.setsize (n_tot);
-    errs.setsize (n_tot);
+    res.setsize (ntot);
+    errs.setsize (ntot);
     x = axprt_stream::alloc (fd);
     cli = aclnt::alloc (x, ex_prog_1);
 
-    for (i = 0; i < window_sz && i < n_tot; i++) {
-
-      // launch an asychronous function call, but don't
-      // block on its return. Associate the call with the 
-      // join group 'window' and the index value 'i'
-      cli->call (EX_RANDOM, NULL, &res[i], mkevent (rpcback, i, errs[i]));
-    }
-
-    // a join is needed for every call that returns
-    while (rpcback.n_joins_left ()) {
-
-      // Block until a call has returned; when it has, get
-      // the index variable associated with the call, and assign
-      // it to 'return_id'.
-      twait (rpcback, return_id);
-      if (errs[return_id]) {
-	err_occurred = true;
-	warn << "RPC error: " << errs[return_id] << "\n";
+    // Now do the pipelined/windowed RPCs
+    while (nrecv < ntot) {
+      if (nsent < ntot && nsent - nrecv < window_sz) {
+	// Launch new calls since there is room in the window!
+	cli->call (EX_RANDOM, NULL, &res[nsent], 
+		   mkevent (rv, nsent, errs[nsent])); 
+	nsent++;
       } else {
-	warn << "Success " << return_id << ": " << res[return_id] << "\n";
-	
-	// in the common case, for every call that returns,
-	// another should be launched. but don't bother launching
-	// more if an error occurred.
-	if (i < n_tot && !err_occurred) {
-	  cli->call (EX_RANDOM, NULL, &res[i], mkevent (rpcback, i, errs[i]));
-	  i++;
+	// Harvest
+	twait (rv, id);
+	if (errs[id]) {
+	  err = true;
+	  warn << "RPC error: " << errs[id] << "\n";
+	} else {
+	  warn << "Success " << id << ": " << res[id] << "\n";
 	}
+	nrecv++;
       }
     }
     warn << "All done...\n";
   }
-  TRIGGER (cb, !err_occurred);
-  return true;
+  (*cb) (!err);
 }
 
 static void finish (bool rc)
