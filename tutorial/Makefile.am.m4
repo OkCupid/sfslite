@@ -86,6 +86,7 @@ tame_standalone(thr2)
 tame_standalone(thr3)
 tame_standalone(prxtst)
 tame_standalone(cnc)
+tame_standalone(connect1)
 
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
