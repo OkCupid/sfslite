@@ -24,27 +24,26 @@
 
 #include "async.h"
 #include "dns.h"
-#include "tame.h"
 #include "parseopt.h"
+#include "tame.h"
 #include "tame_io.h"
+#include "tame_connectors.h"
 
 /**
  * Given a UNIX in_addr structure and a port, make a new TCP connect
  * and test that it succeeded by selecting for write on the new socket.
  */
-tamed static ptr<canceller_t>
-connect_to_in_addr (in_addr a, int port, cbi cv)
+tamed static void
+connect_to_in_addr (in_addr a, int port, evi_t ev)
 {
   tvars {
     sockaddr_in sin;
     socklen_t sn;
     int err;
     int fd (-1);
-    rendezvous_t<bool> cg;
     bool completed;
-    ptr<canceller_t> ret (New refcounted<canceller_t> ());
+    outcome_t outc;
   }
-  DEFAULT_RETURN { return ret; }
 
   bzero (&sin, sizeof (sin));
   sin.sin_family = AF_INET;
@@ -58,12 +57,10 @@ connect_to_in_addr (in_addr a, int port, cbi cv)
     if (connect (fd, (sockaddr *) &sin, sizeof (sin)) >= 0 || 
 	errno == EINPROGRESS) {
 
-      ret->wait (mkevent(cg, false));
-      waitwrite (fd, mkevent (cg, true));
-      twait (cg, completed);
+      twait { waitwrite (fd, connector::cnc (mkevent (), ev, &outc)); }
       warn << "return from function\n";
 
-      if (completed) {
+      if (outc == OUTCOME_SUCC) {
 	sn = sizeof (sin);
 	if (getpeername (fd, (sockaddr *) &sin, &sn)) {
 	  err = 0;
@@ -72,7 +69,6 @@ connect_to_in_addr (in_addr a, int port, cbi cv)
 	  if (err)
 	    fd = -ECONNREFUSED;
 	}
-	ret->toolate ();
       } else {
 	clearwrite (fd);
       }
@@ -83,7 +79,7 @@ connect_to_in_addr (in_addr a, int port, cbi cv)
 
   // calls (*callercv)(fd); also enforces that this
   // callback is called exactly once.
-  TRIGGER(cv,fd);
+  ev->trigger (fd);
 }
 
 /**
@@ -96,63 +92,49 @@ connect_to_in_addr (in_addr a, int port, cbi cv)
  * @param cv tha caller's CV
  * @param dnssearch whether to search DNS domains
  * @param namep the name of this host as gotten from DNS
- * @return an object that can be used to cancel this computation midstream.
  */
-tamed static ptr<canceller_t> 
-my_tcpconnect (str hostname, u_int16_t port, cbi cv,
+tamed static void
+my_tcpconnect (str hostname, u_int16_t port, evi_t ev,
 	       bool dnssearch, str *namep)
 {
   tvars {
     dnsreq_t *dnsp (NULL);
     ptr<hostent> h;
     int err;
-    int fd (-1);
-    ptr<canceller_t> canceller (New refcounted<canceller_t> ());
-    ptr<canceller_t> cancel_connect;
-    rendezvous_t<bool> cg (__FILE__, __LINE__);
+    int ret (-1);
     bool completed, dummy;
+    outcome_t outc;
   }
-  DEFAULT_RETURN { return canceller; }
 
   // launch 2 parallel calls that will race: the DNS requester
   // and the canceller.
-  canceller->wait (mkevent (cg,false));
-  dnsp = dns_hostbyname (hostname, mkevent (cg, true, h, err), dnssearch); 
+  twait { 
+    dnsp = dns_hostbyname (hostname, 
+			   connector::cnc (mkevent (h, err), ev, &outc), 
+			   dnssearch); 
+  }
 
-  twait (cg, completed);
-  if (!completed) {
+  if (outc != OUTCOME_SUCC) {
     warn << "DNS lookup cancelled!\n";
     dnsreq_cancel (dnsp);
-    TRIGGER(cv, fd);
   } else {
     // if we keep going, note that the canceller is still outstanding,
     // and might still cancel us.
     dnsp = NULL;
     if (!h) {
-      canceller->toolate ();
-      if (dns_tmperr (err))
-	TRIGGER(cv, -EAGAIN);
-      else
-	TRIGGER(cv, -ENOENT);
+      ret = dns_tmperr (err) ? -EAGAIN : -ENOENT;
     } else {
       if (namep)
 	*namep = h->h_name;
-      
-      cancel_connect = connect_to_in_addr (*(in_addr *) h->h_addr, 
-					   port, mkevent (cg,true,fd)); 
-      twait (cg, completed);
-      if (completed) {
-	canceller->toolate ();
-      } else {
-	cancel_connect->cancel ();
+
+      twait { 
+	connect_to_in_addr (*(in_addr *) h->h_addr, 
+			    port, 
+			    connector::cnc (mkevent (ret), ev));
       }
-      TRIGGER(cv,fd);
-      
-      // wait on the call to connect_to_inaddr if we've timed out.
-      if (cg.n_joins_left ()) 
-	twait (cg, dummy);
     }
   }
+  ev->trigger (ret);
 }
 
 static void usage ()
@@ -161,37 +143,43 @@ static void usage ()
 }
 
 tamed static void 
-run (str s, int p)
+run (str s, int p, evv_t ev)
 {
   tvars {
-    ptr<canceller_t> c;
-    rendezvous_t<bool> cg (__FILE__, __LINE__);
+    rendezvous_t<bool> rv (__FILE__, __LINE__);
     int fd;
-    bool succeeded, dummy;
+    bool succeeded;
   }
   warn << "connect on " << s << ":" << p << "\n";
-  c = my_tcpconnect (s, p, mkevent (cg, true, fd), false, NULL);
-  delaycb (4, 0, mkevent (cg, false));
-  twait (cg, succeeded);
+  my_tcpconnect (s, p, mkevent (rv, true, fd), false, NULL);
+  delaycb (4, 0, mkevent (rv, false));
+  twait (rv, succeeded);
   if (succeeded) {
     warn << "Succeeded; fd=" << fd << "\n";
   } else {
     warn << "Had to cancel!\n";
-    c->cancel ();
   }
-  twait (cg, dummy);
+  rv.cancel ();
+  ev->trigger ();
+}
+
+tamed static void
+main2 (int argc, char **argv)
+{
+  tvars {
+    int port;
+  }
+  if (argc != 3 || !convertint (argv[2], &port))
+    usage ();
+  twait { run (argv[1], port, mkevent ()); }
   twait { delaycb (10, 0, mkevent()); }
   exit (0);
 }
 
-
 int
 main (int argc, char *argv[])
 {
-  int port;
   setprogname (argv[0]);
-  if (argc != 3 || !convertint (argv[2], &port))
-    usage ();
-  run (argv[1], port);
+  main2 (argc, argv);
   amain ();
 }
