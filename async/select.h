@@ -29,7 +29,7 @@
 
 void sfs_add_new_cb ();
 
-#ifdef HAVE_PTH
+#ifdef HAVE_TAME_PTH
 
 # include <pth.h>
 # define SFS_SELECT sfs_pth_core_select
@@ -37,11 +37,11 @@ void sfs_add_new_cb ();
 int sfs_pth_core_select (int nfds, fd_set *rfds, fd_set *wfds,
 			 fd_set *efds, struct timeval *timeout);
 
-#else /* HAVE_PTH */
+#else /* HAVE_TAME_PTH */
 
 # define SFS_SELECT select
 
-#endif /* HAVE_PTH */
+#endif /* HAVE_TAME_PTH */
 
 
 #endif /* _ASYNC_SELECT_H_ */

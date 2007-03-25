@@ -85,7 +85,7 @@ server_t::shutdown (evv_t cb)
     w->_shutdown = true;
     if (w->_ev) w->_ev->trigger ();
   }
-  while (_rv.n_out ()) {
+  while (_rv.n_triggers_left ()) {
     twait (_rv, i);
     warn << "s> thread " << i << " exitted\n";
   }

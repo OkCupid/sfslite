@@ -1,7 +1,7 @@
 
 #include "select.h"
 
-#ifdef HAVE_PTH
+#ifdef HAVE_TAME_PTH
 
 int sfs_cb_ins;
 

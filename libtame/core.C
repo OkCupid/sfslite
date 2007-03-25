@@ -285,10 +285,18 @@ stack_reenter_t::stack_reenter_t (ptr<must_deallocate_t> snt,
 	     
 stack_reenter_t::~stack_reenter_t () {}
 
+ptr<closure_t>
+threaded_implicit_rendezvous_t::closure ()
+{
+  if (!_closure)
+    return NULL;
+  return mkref (_closure);
+}
+
 ptr<reenterer_t>
 threaded_implicit_rendezvous_t::make_reenter (const char *loc)
 { 
-  return New refcounted<stack_reenter_t> (_md, loc, _rv, mkref (_closure)); 
+  return New refcounted<stack_reenter_t> (_md, loc, _rv, closure ()); 
 }
 
 

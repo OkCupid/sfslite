@@ -964,6 +964,7 @@ public:
       _closure (c) {}
   ~threaded_implicit_rendezvous_t () { _rv.waitall (); }
   ptr<reenterer_t> make_reenter (const char *loc);
+  ptr<closure_t> closure ();
 
 private:
   ptr<must_deallocate_t> _md;
