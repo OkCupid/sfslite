@@ -135,27 +135,62 @@ new_connection (int lfd)
   }
 }
 
-static bool
-init_server (u_int port)
+tamed static 
+init_server (u_int port, evb_t ev)
 {
-  int fd = inetsocket (SOCK_STREAM, port);
+  tvars {
+    int fd;
+    event<>::ptr ev;
+    bool ret (false);
+    bool go (true);
+    rendezvous_t<bool> rv (__FILE__, __LINE__);
+  }
+
+  fd = inetsocket (SOCK_STREAM, port);
   if (!fd) {
     warn << "cannot allocate TCP port: " << port << "\n";
-    return false;
+  } else {
+    ret = true;
+
+    sigcb (SIGINT, mkevent (rv, false));
+    sigcb (SIGTERM, mkevent (rv, false));
+
+    close_on_exec (fd);
+    listen (fd, 200);
+
+    ev = mkevent (rv, true);
+    ev->set_reuse (true);
+    fdcb (fd, selread, ev);
+
+    while (go) {
+      twait (rv, go);
+      if (go) 
+	new_connection (fd);
+    }
+
+    ev->finish ();
   }
-  close_on_exec (fd);
-  listen (fd, 200);
-  fdcb (fd, selread, wrap (new_connection, fd));
-  return true;
+  ev->trigger (ret);
+}
+
+tamed static void
+main2 (int argc, char **argv)
+{
+  tvars {
+    bool ret;
+    int port;
+  }
+  if (argc != 2 || !convertint (argv[1], &port))
+    fatal << "usage: exsrv <port>\n";
+
+  twait { run_server (port, mkevent (ret)); }
+  exit (ret ? 0 : -1);
 }
 
 int
 main (int argc, char *argv[])
 {
-  int port;
-  if (argc != 2 || !convertint (argv[1], &port))
-    fatal << "usage: exsrv <port>\n";
-
-  init_server (port);
+  setprogname (argv[0]);
+  main2 (argc, argv);
   amain ();
 }
