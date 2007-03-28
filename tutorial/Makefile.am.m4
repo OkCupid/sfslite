@@ -87,13 +87,12 @@ tame_standalone(thr3)
 tame_standalone(prxtst)
 tame_standalone(cnc)
 tame_standalone(connect1)
+tame_rpcclient(exsrv)
 
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
 
-noinst_PROGRAMS = tame_exes exsrv
-
-exsrv_SOURCES = exsrv.C ex_prot.C
+noinst_PROGRAMS = tame_exes 
 
 RPC_AUTOGEN_FILES = ex_prot.C ex_prot.h
 

@@ -17,7 +17,35 @@ exsrv_t::exsrv_t (int fd)
 {
   tcp_nodelay (fd);
   x = axprt_stream::alloc (fd);
-  s = asrv_delayed_eof::alloc (x, ex_prog_1, wrap (this, &exsrv_t::dispatch));
+  runloop ();
+}
+
+tamed void
+exsrv_t::runloop ()
+{
+  tvars {
+    rendezvous_t<> rv (__FILE__, __LINE__);
+    event_t<svccb *>::ref ev;
+    svccb *sbp;
+  }
+
+  ev = mkevent (rv, sbp);
+  ev->set_reuse (true);
+  
+  s = asrv_delayed_eof::alloc (x, ex_prog_1, ev);
+
+  do {
+    twait (rv);
+    if (sbp) {
+      dispatch (sbp);
+    }
+  } while (sbp);
+
+  warn << "EOF on socket recevied; deleting server...\n";
+  ev->finish ();
+
+  delete this;
+  return;
 }
 
 void
@@ -37,9 +65,6 @@ void
 exsrv_t::dispatch (svccb *sbp)
 {
   if (!sbp) {
-    warn << "EOF on socket recevied; shutting down\n";
-    delete this;
-    return;
   }
 
   u_int p = sbp->proc ();
