@@ -135,21 +135,22 @@ new_connection (int lfd)
   }
 }
 
-tamed static 
-init_server (u_int port, evb_t ev)
+tamed static void
+run_server (u_int port, evb_t done)
 {
   tvars {
     int fd;
-    event<>::ptr ev;
+    event_t<>::ptr ev;
     bool ret (false);
     bool go (true);
     rendezvous_t<bool> rv (__FILE__, __LINE__);
   }
 
   fd = inetsocket (SOCK_STREAM, port);
-  if (!fd) {
+  if (fd <= 0) {
     warn << "cannot allocate TCP port: " << port << "\n";
   } else {
+  	warn << "OK THEN!\n";
     ret = true;
 
     sigcb (SIGINT, mkevent (rv, false));
@@ -160,7 +161,10 @@ init_server (u_int port, evb_t ev)
 
     ev = mkevent (rv, true);
     ev->set_reuse (true);
+
+	warn << "fdcb (" << fd << ")...\n";
     fdcb (fd, selread, ev);
+	warn << "ok!\n";
 
     while (go) {
       twait (rv, go);
@@ -170,7 +174,7 @@ init_server (u_int port, evb_t ev)
 
     ev->finish ();
   }
-  ev->trigger (ret);
+  done->trigger (ret);
 }
 
 tamed static void
