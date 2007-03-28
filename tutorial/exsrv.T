@@ -1,13 +1,16 @@
-
+// -*-c++-*-
+/* $Id$ */
 
 #include "ex_prot.h"
 #include "async.h"
 #include "arpc.h"
 #include "parseopt.h"
+#include "tame.h"
 
 class exsrv_t {
 public:
   void dispatch (svccb *cb);
+  void runloop (CLOSURE);
   exsrv_t (int fd) ;
   ptr<axprt_stream> x;
   ptr<asrv> s;
@@ -25,7 +28,7 @@ exsrv_t::runloop ()
 {
   tvars {
     rendezvous_t<> rv (__FILE__, __LINE__);
-    event_t<svccb *>::ref ev;
+    event_t<svccb *>::ptr ev;
     svccb *sbp;
   }
 
