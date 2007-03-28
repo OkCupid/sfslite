@@ -34,6 +34,7 @@ dnl
 SFS_PYTHON
 
 dnl Checks for programs.
+AC_SYS_LARGEFILE  dnl MW adding b/c we want 64-bit offsets
 AC_PROG_CC
 AC_PROG_CPP
 AC_PROG_CXX
@@ -86,6 +87,9 @@ AM_CONDITIONAL(STATIC, test "$enable_shared" != yes)
 AC_SUBST(MALLOCK)
 MALLOCK='$(top_builddir)/sfsmisc/mallock.o'
 SFS_NOPAGING
+
+dnl Potentially turn on epoll support on linux
+SFS_EPOLL
 
 dnl Path for daemonize
 SFS_PATH_PROG(logger)

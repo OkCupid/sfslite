@@ -30,9 +30,9 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
-#define FDLIM_MAX 0x10000
+#define FDLIM_MAX 0x18000
 
-static int
+int
 fdlim_get (int hard)
 {
 #ifdef RLIMIT_NOFILE
@@ -62,7 +62,7 @@ fdlim_get (int hard)
 #endif /* !RLIMIT_NOFILE */
 }
 
-static int
+int
 fdlim_set (rlim_t lim, int hard)
 {
 #ifdef RLIMIT_NOFILE

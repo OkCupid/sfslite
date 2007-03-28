@@ -2327,3 +2327,14 @@ then
 fi
 AC_SUBST(LDADD_THR)
 ])
+dnl
+dnl SFS_EPOLL
+dnl
+dnl  If supplied, use EPOLL
+dnl
+AC_DEFUN([SFS_EPOLL],
+[AC_ARG_ENABLE(epoll,
+--enable-epoll 		[experimental] epoll support on linux)
+test "${enable_epoll+set}" = "set" && with_epoll="yes"
+AC_DEFINE(USE_EPOLL, 1, Define if using experiment Epoll support on linux)
+])

@@ -33,11 +33,16 @@
 #include "litetime.h"
 #include "select.h"
 
-#define FD_SETSIZE_ROUND (sizeof (long))/* # Bytes to which to round fd_sets */
-int fd_set_bytes;		// Size in bytes of a [wide] fd_set
-int maxfd;
 bool amain_panic;
+int maxfd;
+
+#ifndef USE_EPOLL
+
+/* # Bytes to which to round fd_sets */
+# define FD_SETSIZE_ROUND (sizeof (long))
+int fd_set_bytes;		// Size in bytes of a [wide] fd_set
 static int nselfd;
+#endif /* USE_EPOLL */
 
 // initialize this in case we access tsnow before calling amain()
 timespec tsnow;
@@ -100,8 +105,24 @@ static list<lazycb_t, &lazycb_t::link> *lazylist;
 
 const int fdsn = 2;
 static cbv::ptr *fdcbs[fdsn];
+
+#ifdef USE_EPOLL
+
+int epfd;
+struct epoll_event* ret_events;
+int maxevents;
+struct epoll_state {
+    int  user_events; /* holds bits for READ and WRITE */
+    bool in_epoll;
+};
+static epoll_state* epoll_states;
+
+#else /* USE_EPOLL */
+
 static fd_set *fdsp[fdsn];
 static fd_set *fdspt[fdsn];
+
+#endif /* USE_EPOLL */
 
 static int sigpipes[2] = { -1, -1 };
 #ifdef NSIG
@@ -236,6 +257,116 @@ timecb_check ()
     selwait.tv_sec = selwait.tv_usec = 0;
 }
 
+#ifdef USE_EPOLL
+
+#define EV_READ_BIT   1
+#define EV_WRITE_BIT  2
+#define EV_READ_EVENTS  (EPOLLIN  | EPOLLHUP | EPOLLERR | EPOLLPRI)
+#define EV_WRITE_EVENTS (EPOLLOUT | EPOLLHUP | EPOLLERR)
+
+// maps our change-in-event-state to instructions to epoll
+int
+update_epoll_state(epoll_state* es)
+{
+    int epoll_op = (es->user_events 
+	             ? (es->in_epoll 
+		         ? EPOLL_CTL_MOD 
+			 : EPOLL_CTL_ADD)
+		     : EPOLL_CTL_DEL);
+
+    es->in_epoll = (es->user_events != 0);
+
+    return epoll_op;
+}
+
+int
+user_events_to_epoll_events(epoll_state* es)
+{
+    int ret = 0;
+
+    /* 
+     * we're registering for hang up events and then
+     * passing them onto our callers when our callers have
+     * registered for read. that's because libasync doesn't have a
+     * fdcb(fd, selerrror, cb) interface. In other words, people
+     * using libasync expect only read and write events.
+     */
+    if (es->user_events & EV_READ_BIT)
+	ret |= EV_READ_EVENTS;
+
+    if (es->user_events & EV_WRITE_BIT)
+	ret |= EV_WRITE_EVENTS;
+
+    return ret;
+}
+
+void
+fdcb (int fd, selop op, cbv::ptr cb)
+{
+    assert(fd >= 0);
+    assert(fd < maxfd);
+
+    epoll_event ev;
+    int epoll_op;
+    epoll_state* es = &epoll_states[fd];
+
+    fdcbs[op][fd] = cb;
+
+    // keep gcc4 happy
+    int op_as_int = static_cast<int>(op);
+
+    if (cb) {
+	/* analog of FD_SET */
+	es->user_events |= (1 << op_as_int);
+    } else {
+	/* analog of FD_CLR */
+	es->user_events &= ~(1 << op_as_int);
+    }
+
+    epoll_op   = update_epoll_state(es);
+    ev.events  = user_events_to_epoll_events(es);
+    ev.data.fd = fd;
+
+    epoll_ctl(epfd, epoll_op, fd, &ev);
+}
+
+// version of the "select loop" that uses epoll_wait instead.
+static void
+fdcb_check (void)
+{
+    int timeout_ms = selwait.tv_usec / 1000 + selwait.tv_sec * 1000;
+    int n = epoll_wait(epfd, ret_events, maxevents, timeout_ms);
+
+    if (n < 0 && errno != EINTR)
+	panic ("epoll_wait: %m\n");
+    
+    my_clock_gettime (&tsnow);
+    if (sigdocheck)
+	sigcb_check();
+
+    if (n < 0) return;
+
+    for (int i = 0; i < n; i++) {
+
+	epoll_event* eventp = &ret_events[i];
+	int fd = eventp->data.fd;
+	int* interest = &epoll_states[fd].user_events;
+
+	/* analogous to calling FD_ISSET on the returned fd_set. second
+	 * condition is analogous to calling FD_ISSET on the 'master
+	 * copy'; we need to make sure that the event is still set (an
+	 * earlier event handler could have unreg'ed the handler for the
+	 * current socket fd). */
+	if ( (eventp->events & EV_READ_EVENTS) && (*interest & EV_READ_BIT)) 
+	    (*fdcbs[selread][fd]) ();
+
+	if ( (eventp->events & EV_WRITE_EVENTS) && (*interest & EV_WRITE_BIT))
+	    (*fdcbs[selwrite][fd]) ();
+    }
+}
+
+#else /* USE_EPOLL */
+
 void
 fdcb (int fd, selop op, cbv::ptr cb)
 {
@@ -296,6 +427,8 @@ fdcb_check (void)
 	}
       }
 }
+
+#endif /* USE_EPOLL */
 
 static void
 sigcatch (int sig)
@@ -525,18 +658,38 @@ async_init::start ()
     var = strbuf ("FDLIM_SOFT=%d", fdlim_get (0));
     xputenv (const_cast<char*>(var.cstr()));
   }
-#ifndef HAVE_WIDE_SELECT
+
+#ifdef USE_EPOLL
+  if (!execsafe() || fdlim_set(FDLIM_MAX, 1) < 0)
+      fdlim_set(fdlim_get(1), 0);
+
+  maxfd     = fdlim_get (0);
+  maxevents = maxfd * 2;  // one read, one write....
+  if ( (epfd = epoll_create(maxfd)) < 0) 
+      panic("epoll_create: %m\n");
+
+  ret_events = (epoll_event*)xmalloc(sizeof(struct epoll_event)*maxevents);
+  bzero(ret_events, sizeof(struct epoll_event)*maxevents);
+
+  for (int i = 0; i < fdsn; i++) 
+    fdcbs[i] = New cbv::ptr[maxfd];  
+
+  epoll_states = (epoll_state*)xmalloc(sizeof(struct epoll_state)*maxfd);
+  bzero(epoll_states, sizeof(struct epoll_state)*maxfd);
+#else  /* USE_EPOLL*/
+
+# ifndef HAVE_WIDE_SELECT
   fdlim_set (FD_SETSIZE, execsafe ());
   maxfd = fdlim_get (0);
   fd_set_bytes = sizeof (fd_set);
-#else /* HAVE_WIDE_SELECT */
+# else /* HAVE_WIDE_SELECT */
   if (!execsafe () || fdlim_set (FDLIM_MAX, 1) < 0)
     fdlim_set (fdlim_get (1), 0);
   maxfd = fdlim_get (0);
   fd_set_bytes = (maxfd+7)/8;
   if (fd_set_bytes % FD_SETSIZE_ROUND)
     fd_set_bytes += FD_SETSIZE_ROUND - (fd_set_bytes % FD_SETSIZE_ROUND);
-#endif /* HAVE_WIDE_SELECT */
+# endif /* HAVE_WIDE_SELECT */
 
   for (int i = 0; i < fdsn; i++) {
     fdcbs[i] = New cbv::ptr[maxfd];
@@ -545,6 +698,7 @@ async_init::start ()
     fdspt[i] = (fd_set *) xmalloc (fd_set_bytes);
     bzero (fdspt[i], fd_set_bytes);
   }
+#endif /* USE_EPOLL */
 
   lazylist = New list<lazycb_t, &lazycb_t::link>;
 
