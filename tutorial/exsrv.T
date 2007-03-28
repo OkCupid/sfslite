@@ -150,7 +150,6 @@ run_server (u_int port, evb_t done)
   if (fd <= 0) {
     warn << "cannot allocate TCP port: " << port << "\n";
   } else {
-  	warn << "OK THEN!\n";
     ret = true;
 
     sigcb (SIGINT, mkevent (rv, false));
@@ -162,9 +161,7 @@ run_server (u_int port, evb_t done)
     ev = mkevent (rv, true);
     ev->set_reuse (true);
 
-	warn << "fdcb (" << fd << ")...\n";
     fdcb (fd, selread, ev);
-	warn << "ok!\n";
 
     while (go) {
       twait (rv, go);
