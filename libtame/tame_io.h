@@ -77,4 +77,4 @@ namespace tame {
 
 };
 
-#endif /* _LIBTAME_TAME_THREAD_H_ */
+#endif /* _LIBTAME_TAME_IO_H_ */

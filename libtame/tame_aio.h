@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef _LIBTAME_TAME_IO_H_
-#define _LIBTAME_TAME_IO_H_
+#ifndef _LIBTAME_TAME_AIO_H_
+#define _LIBTAME_TAME_AIO_H_
 
 #include "tame.h"
 #include "aiod.h"
@@ -47,10 +47,11 @@ namespace tame {
     str _fn;
   };
 
+  typedef event_t<ptr<aiofh_t> >::ref open_ev_t;
 
 
 };
 
 
 
-#endif /* _LIBTAME_TAME_THREAD_H_ */
+#endif /* _LIBTAME_TAME_AIO_H_ */
