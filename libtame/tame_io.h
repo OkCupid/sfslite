@@ -26,6 +26,10 @@
 #ifndef _LIBTAME_TAME_IO_H_
 #define _LIBTAME_TAME_IO_H_
 
+#include <sys/types.h>
+#include <sys/socket.h>
+
+
 void clearread (int fd);
 void clearwrite (int fd);
 void waitread (int fd, evv_t cb);
@@ -62,6 +66,15 @@ private:
   const selop _op;
   bool _on;
   evv_t::ptr _ev;
+};
+
+namespace tame {
+
+  void read (int fd, char *buf, size_t sz, evi_t ev, CLOSURE);
+  void write (int fd, const char *buf, size_t sz, evi_t ev, CLOSURE);
+  void accept (int sockfd, struct sockaddr *addr, socklen_t *addrlen, 
+	       evi_t ev, CLOSURE);
+
 };
 
 #endif /* _LIBTAME_TAME_THREAD_H_ */
