@@ -97,7 +97,6 @@ lock_table_t<T>::acquire (ptr<lock_handle_t<T> > *out,
   *out = ret;
   if (do_acquire) {
     twait { 
-      warn << "Block on lock " << n << "\n";
       w = l->acquire (mode, mkevent ()); 
       ret->set_waiter (w);
     }
