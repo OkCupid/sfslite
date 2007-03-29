@@ -30,6 +30,7 @@
 namespace tame {
 
   typedef event_t<ptr<aiobuf>, ssize_t>::ref aio_read_ev_t;
+  typedef event_t<struct stat *, int>::ref aio_stat_ev_t;
 
   class aiofh_t {
   public:
@@ -37,6 +38,7 @@ namespace tame {
     void open (const str &fn, int flg, int mode, evi_t ev, CLOSURE);
     void read (size_t sz, aio_read_ev_t ev, CLOSURE);
     void lseek (off_t o) { _off = o; }
+    void fstat (aio_stat_ev_t ev) { _fh->fstat (ev); }
 
   private:
     aiod *_aiod;

@@ -246,7 +246,7 @@ class aiofh : public virtual refcount {
 
   void rw (aiod_op op, off_t pos, ptr<aiobuf> iobuf,
 	   u_int iostart, u_int iosize, cbrw cb);
-  void simpleop (aiod_op op, aiod::cbb cb, off_t length = 0);
+  void simpleop (aiod_op op, aiod::cbb cb, off_t length);
   void sendclose (cbi::ptr cb = NULL);
 
   void rw_cb (ref<aiobuf> iobuf, cbrw cb, ptr<aiobuf> rqbuf);
@@ -261,7 +261,8 @@ protected:
 public:
   void close (cbi cb);
   void fsync (cbi cb)
-    { simpleop (AIOD_FSYNC, wrap (mkref (this), &aiofh::cbi_cb, cb)); }
+    { simpleop (AIOD_FSYNC, wrap (mkref (this), &aiofh::cbi_cb, cb), 
+		off_t (0)); }
   void ftrunc (off_t length, cbi cb) {
     simpleop (AIOD_FTRUNC, wrap (mkref (this), &aiofh::cbi_cb, cb), length);
   }
@@ -274,7 +275,8 @@ public:
   void swrite (off_t pos, ptr<aiobuf> buf, u_int iostart, u_int iosize,
 	       cbrw cb) { rw (AIOD_WRITE, pos, buf, iostart, iosize, cb); }
   void fstat (aiod::cbstat cb)
-    { simpleop (AIOD_FSTAT, wrap (mkref (this), &aiofh::cbstat_cb, cb)); }
+    { simpleop (AIOD_FSTAT, wrap (mkref (this), &aiofh::cbstat_cb, cb), 
+		off_t (0)); }
 };
 
 
