@@ -41,7 +41,6 @@ connect_to_in_addr (in_addr a, int port, evi_t ev)
     socklen_t sn;
     int err;
     int fd (-1);
-    bool completed;
     outcome_t outc;
   }
 
@@ -102,7 +101,6 @@ my_tcpconnect (str hostname, u_int16_t port, evi_t ev,
     ptr<hostent> h;
     int err;
     int ret (-1);
-    bool completed, dummy;
     outcome_t outc;
   }
 

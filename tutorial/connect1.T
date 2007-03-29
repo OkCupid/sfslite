@@ -62,7 +62,6 @@ int myrand (int lo, int hi)
 event_t<int>::ref
 mk_chain (event_t<int>::ref e, int n, int lo, int hi)
 {
-  int range = hi - lo;
   int i;
 
   for (i = 0; i < n; i++) {

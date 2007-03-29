@@ -20,8 +20,6 @@ dostuff (const str &h, int port, cbb cb)
     int nsent (0), nrecv (0);
     bool err (false);
     rendezvous_t<int> rv;
-    bool ret (true);
-    int return_id;
   }
 
   // Call tcpconnect, and block until it returns; when it does return,
