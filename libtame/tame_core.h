@@ -236,7 +236,7 @@ weak_refcounted_t<T>::make_weak_ref ()
 
 
 class reenterer_t;
-class must_deallocate_t;
+class must_deallocate_list_t;
 
 // All closures are numbered serially so that our accounting does not
 // get confused.
@@ -291,7 +291,8 @@ public:
   str loc (int lineno) const;
   void error (int lineno, const char *msg);
 
-  ptr<must_deallocate_t> must_deallocate () { return _must_deallocate; }
+  ptr<must_deallocate_list_t> must_deallocate_list () 
+  { return _must_deallocate_list; }
 
   // Reenter the function with the appropriate args.
   virtual void reenter () = 0;
@@ -311,9 +312,10 @@ protected:
   vec<mortal_ref_t> _rendezvous;
   
   const char *_filename;              // filename for the function
-  const char *_funcname;            
-
-  ptr<must_deallocate_t> _must_deallocate; // must dealloc as control leaves
+  const char *_funcname;         
+  
+  // list of OBJs that must be dealloced as control leaves
+  ptr<must_deallocate_list_t> _must_deallocate_list; 
 
   // Variables involved with managing BLOCK blocks. Note that only one
   // can be active at any given time.
@@ -350,10 +352,10 @@ struct must_deallocate_obj_t {
   list_entry<must_deallocate_obj_t> _lnk;
 };
 
-class must_deallocate_t {
+class must_deallocate_list_t {
 public:
-  must_deallocate_t () {}
-  static ptr<must_deallocate_t> alloc ();
+  must_deallocate_list_t () {}
+  static ptr<must_deallocate_list_t> alloc ();
   void check ();
   void add (must_deallocate_obj_t *o) { _objs.insert_head (o); }
   void rem (must_deallocate_obj_t *o) { _objs.remove (o); }
@@ -371,13 +373,13 @@ class reenterer_t : public virtual refcount,
 		    public event_action_t
 {
 public:
-  reenterer_t (ptr<must_deallocate_t> md, const char *loc);
+  reenterer_t (ptr<must_deallocate_list_t> md, const char *loc);
   virtual ~reenterer_t ();
   const char *loc () const { return _loc; }
 public:
   list_entry<must_deallocate_obj_t> _lnk;
 protected:
-  ptr<must_deallocate_t> _md;
+  ptr<must_deallocate_list_t> _md;
   const char *_loc;
 };
 
@@ -447,7 +449,7 @@ public:
   rndvzp_t (const char *f, int l) : 
     weak_refcounted_t<rndvzp_t<T1,T2,T3,T4> > (this),
     _n_out (0), _file (f), _lineno (l),
-    _must_deallocate (New refcounted<must_deallocate_t> ()),
+    _must_deallocate_list (New refcounted<must_deallocate_list_t> ()),
     _join_method (JOIN_NONE)
   {
 #ifdef HAVE_TAME_PTH
@@ -488,9 +490,10 @@ public:
       tame_error (s1.cstr (), s2.cstr ());
     }
 
-    if (!this->is_cleared() && tame_check_leaks () && _must_deallocate)
+    if (!this->is_cleared() && tame_check_leaks () && _must_deallocate_list)
       // Check for any leaked events
-      delaycb (0, 0, wrap (_must_deallocate, &must_deallocate_t::check));
+      delaycb (0, 0, wrap (_must_deallocate_list, 
+			   &must_deallocate_list_t::check));
   }
 
   void set_join_cb (cbv::ptr c) 
@@ -550,7 +553,8 @@ public:
     _join_method = JOIN_NONE; 
   }
 
-  ptr<must_deallocate_t> must_deallocate () { return _must_deallocate; }
+  ptr<must_deallocate_list_t> must_deallocate_list () 
+  { return _must_deallocate_list; }
 
   u_int n_pending () const { return _pending.size (); }
   u_int n_out () const { return _n_out; }
@@ -615,7 +619,7 @@ private:
   const char *_file;
   int _lineno;
 
-  ptr<must_deallocate_t> _must_deallocate;
+  ptr<must_deallocate_list_t> _must_deallocate_list;
 
   // for threads
   join_method_t _join_method;
@@ -649,7 +653,7 @@ public:
 	    const char *l,
 	    const value_set_t<T1,T2,T3,T4> &vs)
     : _rv_ref (rv->make_weak_ref ()),
-      _rv_object_collector (rv->must_deallocate ()),
+      _rv_object_collector (rv->must_deallocate_list ()),
       _closure_hold (hold),
       _loc (l), 
       _value_set (vs)
@@ -701,7 +705,7 @@ private:
   }
 
   weak_ref_t<rndvzp_t<T1,T2,T3,T4> > _rv_ref;
-  ptr<must_deallocate_t> _rv_object_collector;
+  ptr<must_deallocate_list_t> _rv_object_collector;
   ptr<closure_t> _closure_hold;
   const char *_loc;
   value_set_t<T1,T2,T3,T4> _value_set;
@@ -929,7 +933,7 @@ private:
 
 class stack_reenter_t : public reenterer_t {
 public:
-  stack_reenter_t (ptr<must_deallocate_t> sentinel, 
+  stack_reenter_t (ptr<must_deallocate_list_t> dummy, 
 		   const char *l, 
 		   rendezvous_t<> rv,
 		   ptr<closure_t> cl);
@@ -959,7 +963,7 @@ private:
 class threaded_implicit_rendezvous_t : public implicit_rendezvous_t {
 public:
   threaded_implicit_rendezvous_t (const char *f, int l, ptr<closure_t> c)
-    : _md (must_deallocate_t::alloc ()),
+    : _md (must_deallocate_list_t::alloc ()),
       _rv (f, l),
       _closure (c) {}
   ~threaded_implicit_rendezvous_t () { _rv.waitall (); }
@@ -967,7 +971,7 @@ public:
   ptr<closure_t> closure ();
 
 private:
-  ptr<must_deallocate_t> _md;
+  ptr<must_deallocate_list_t> _md;
   rendezvous_t<> _rv;
   closure_t *_closure;
 };

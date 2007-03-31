@@ -89,7 +89,7 @@ closure_t::closure_t (const char *file, const char *fun)
     _id (++closure_serial_number),
     _filename (file),
     _funcname (fun),
-    _must_deallocate (must_deallocate_t::alloc ()) 
+    _must_deallocate_list (must_deallocate_list_t::alloc ()) 
   {}
 
 void
@@ -106,8 +106,9 @@ closure_t::end_of_scope_checks (int line)
 
     // After everything unwinds, we can check that everything has
     // been deallocated.
-    if (_must_deallocate) 
-      delaycb (0, 0, wrap (_must_deallocate, &must_deallocate_t::check));
+    if (_must_deallocate_list) 
+      delaycb (0, 0, wrap (_must_deallocate_list, 
+			   &must_deallocate_list_t::check));
   }
 }
 
@@ -228,7 +229,7 @@ closure_t::block_dec_count (const char *loc)
 }
 
 void
-must_deallocate_t::check ()
+must_deallocate_list_t::check ()
 {
   qhash<str, int> tab;
   vec<str> lst;
@@ -261,11 +262,11 @@ must_deallocate_t::check ()
 }
 
 closure_reenter_t::closure_reenter_t (ptr<closure_t> c, const char *l)
-  : reenterer_t (c->must_deallocate (), l), _cls (c) {}
+  : reenterer_t (c->must_deallocate_list (), l), _cls (c) {}
 
 closure_reenter_t::~closure_reenter_t () {}
 
-reenterer_t::reenterer_t (ptr<must_deallocate_t> m, const char *l)
+reenterer_t::reenterer_t (ptr<must_deallocate_list_t> m, const char *l)
   : _md (m), _loc (l)
 {
   if (_md) _md->add (this);
@@ -276,11 +277,11 @@ reenterer_t::~reenterer_t ()
   if (_md) _md->rem (this);
 }
 
-stack_reenter_t::stack_reenter_t (ptr<must_deallocate_t> snt,
+stack_reenter_t::stack_reenter_t (ptr<must_deallocate_list_t> mdl,
 				  const char *l, 
 				  rendezvous_t<> rv,
 				  ptr<closure_t> cl)
-  : reenterer_t (snt, l), 
+  : reenterer_t (mdl, l), 
     _joiner (rv.make_joiner (cl, l, value_set_t<> ())) {}
 	     
 stack_reenter_t::~stack_reenter_t () {}
@@ -300,8 +301,9 @@ threaded_implicit_rendezvous_t::make_reenter (const char *loc)
 }
 
 
-ptr<must_deallocate_t>
-must_deallocate_t::alloc ()
+ptr<must_deallocate_list_t>
+must_deallocate_list_t::alloc ()
 {
-  return tame_check_leaks () ? New refcounted<must_deallocate_t> () : NULL;
+  return tame_check_leaks () ? New refcounted<must_deallocate_list_t> () : 
+    NULL;
 }
