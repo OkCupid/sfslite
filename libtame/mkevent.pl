@@ -12,6 +12,7 @@ my $name = "_mkevent";
 my $CN = "event";
 my $WCN = "event_t";
 my $mkrs = $name . "_rs";
+my $evbg = "event_generic_base_t";
 
 sub mklist ($$)
 {
@@ -85,7 +86,7 @@ sub do_event_class ($)
 
     # print the classname
     print ("class event", $tlist, " :\n",
-	   "     public event_base_t", $tlist2, ",\n",
+	   "     public ${evbg}", $tlist2, ",\n",
 	   "     public callback", $vlist , "\n",
 	   "{\n",
 	   "public:\n");
@@ -96,7 +97,7 @@ sub do_event_class ($)
 		    "const refset_t$tlist2 &rs",
 		    "const char *loc"),
 	   ")\n",
-	   "    : event_base_t" , $tlist2 , " (a, rs, loc),\n",
+	   "    : ${evbg}" , $tlist2 , " (a, rs, loc),\n",
 	   "      callback", $vlist, 
 	   " (CALLBACK_ARGS(loc))\n",
 	   "     {}\n");
