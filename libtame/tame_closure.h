@@ -128,6 +128,8 @@ private:
   ptr<C> _closure;
 };
 
+extern ptr<closure_t> __cls_g;
+extern ptr<closure_t null_closure;
 
 
 #endif /* _LIBTAME_CLOSURE_H_ */

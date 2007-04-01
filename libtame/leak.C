@@ -22,13 +22,11 @@
  *
  */
 
-#ifndef _LIBTAME_LEAKS_H_
-#define _LIBTAME_LEAKS_H_
-
 #include "tame_event.h"
 
 void report_leaks (event_cancel_list_t *lst)
 {
+
   qhash<str, int> tab;
   vec<str> v;
   _event_cancel_base *p;
@@ -58,6 +56,4 @@ void report_leaks (event_cancel_list_t *lst)
   if (v.size () > 0 && (tame_options & TAME_ERROR_FATAL))
     panic ("abort on TAME failure\n");
 }
-
-#endif /* _LIBTAME_LEAKS_H_ */
 
