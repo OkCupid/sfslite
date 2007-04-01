@@ -86,7 +86,7 @@ mkweakref (T *p)
 class _event_cancel_base : public virtual refcount,
 			   public weakrefcount {
 public:
-  _event_cancel_base () : _cancelled (false) {}
+  _event_cancel_base (const char *loc) : _loc (loc), _cancelled (false) {}
 
   void set_cancel_notifier (ptr<cancel_notifier_t> c) { _cancel_notifier = c; }
 
@@ -100,9 +100,13 @@ public:
     }
   }
 
+  const char *loc () const { return _loc; }
+  const char *typ () const { return "event"; }
+
   list_entry<_event_cancel_base> _lnk;
 
-private:
+protected:
+  const char *_loc;
   bool _cancelled;
   ptr<cancel_notifier_t> _cancel_notifier;
 
@@ -116,10 +120,9 @@ public:
   _event_base (const A &a, 
 		const refset_t<T1,T2,T3> &rs,
 		const char *loc = NULL) :
-    _event_cancel_base ()
+    _event_cancel_base (loc)
     _action (a),
     _refset (rs),
-    _loc (loc),
     _reuse (false),
     _cancelled (false) {}
 
@@ -133,19 +136,19 @@ public:
   void trigger (const T1 &t1, const T2 &t2, const T3 &t3)
   {
     if (this->_cancelled) {
-      tame_error (_loc, "event triggered after it was cancelled");
+      tame_error (this->_loc, "event triggered after it was cancelled");
     } else {
       _refset.assign (t1, t2, t3);
-      _action.perform (this, _loc, _reuse);
+      _action.perform (this, this->_loc, _reuse);
     }
   }
 
   void trigger_no_assign ()
   {
     if (this->_cancelled) {
-      tame_error (_loc, "event triggered after it was cancelled");
+      tame_error (this->_loc, "event triggered after it was cancelled");
     } else {
-      _action.perform (this, _loc, _reuse);
+      _action.perform (this, this->_loc, _reuse);
     }
   }
 
@@ -158,7 +161,6 @@ public:
 protected:
   A _action;
   refset_t<T1,T2,T3> _refset;
-  const char *const _loc;
   bool _reuse;
 
 };
