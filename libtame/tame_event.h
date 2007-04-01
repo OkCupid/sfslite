@@ -49,8 +49,6 @@ private:
   T4 &_r4;
 };
 
-void event_second_trigger (const char *loc);
-
 class cancel_notifier_t {
 public:
   virtual ~cancel_notifier_t () {}
@@ -112,6 +110,8 @@ protected:
 
 };
 
+typedef list<_event_cancel_base, &_event_cancel_base::_lnk> 
+event_cancel_list_t;
 
 template<class A, class T1=nil_t, class T2=nil_t, class T3=nil_t>
 class _event_base : public _event_cancel_base,

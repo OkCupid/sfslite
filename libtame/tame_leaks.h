@@ -27,12 +27,11 @@
 
 #include "tame_event.h"
 
-template<class O, class L>
-void report_leaks (L *lst)
+void report_leaks (event_cancel_list_t *lst)
 {
   qhash<str, int> tab;
   vec<str> v;
-  O *p;
+  _event_cancel_base *p;
   for (p = lst.first ; p ; p = lst.next (p)) {
     strbuf b;
     str t = p->loc ();

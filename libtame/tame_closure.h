@@ -52,7 +52,10 @@ public:
 
   // given a line number of the end of scope, perform sanity
   // checks on scoping, etc.
-  void end_of_scope_checks (int line);
+  void end_of_scope_checks (int line)
+  {
+    report_leaks (&_events);
+  }
 
   // Initialize a block environment with the ID of this block
   // within the given function.  Also reset any internal counters.
@@ -85,13 +88,14 @@ public:
   };
   block_t _block;
 
+  list<_event_cancel_base, &_event_cancel_base::_lnk> _events;
+
 };
 
 template<class C>
 class closure_action {
 public:
-  closure_action (ptr<C> c) 
-    : _closure (c) {}
+  closure_action (ptr<C> c) : _closure (c) {}
 
   ~closure_action () {}
 

@@ -311,7 +311,7 @@ private:
       tame_error (loc, s.cstr ());
     } 
     this->_flag->set_dead ();
-    report_leaks (_events);
+    report_leaks (&_events);
     cancel_all_events ();
   }
 
@@ -353,7 +353,7 @@ private:
   // Disallow copying
   rendezvous (const my_type_t &rv) {}
 
-  list<_event_cancel_base, &_event_cancel_base::_lnk> _events;
+  event_cancel_list_t _events;
   vec<my_value_set_t> _pending_values;
   event<>::ptr _join_ev;
   join_method_t _join_method;
