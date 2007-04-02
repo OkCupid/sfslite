@@ -135,6 +135,9 @@ sub do_event_impl_class ($)
 	   "    : ${CN}${tlist} (rs, loc),\n",
 	   "      _action (action) {}\n\n");
 
+    # print the destructor
+    print ("  ~${CNI} () { if (!this->_cleared) clear_action (this); }\n\n");
+
     # print the action functions
     print ("  bool perform_action (${EVCB} *e, const char *loc, bool reuse)\n",
 	   "  { return _action.perform (e, loc, reuse); }\n");
@@ -194,7 +197,7 @@ sub do_mkevent_rs ($$)
 		    arglist (["w%", $w]). ")",
 		    "rs");
 	print ("  return rv.${RVMKEV} (" ,
-	       join (",\n                      ", @args),
+	       join (",\n                        ", @args),
 	       ");\n");
 	print ("}");
     } else {

@@ -83,15 +83,18 @@ public:
   void finalize () { if (_can_recycle) recycle (this); }
   inline bool get (obj_state_t b) { return (_flag & b) == b; }
 
-  inline void set (obj_state_t b) 
+  inline void set (const obj_state_t &b) { _flag = b; }
+
+  inline void set_flag (const obj_state_t &b)
   { _flag = obj_state_t (int (_flag) | b); }
 
   void set_can_recycle (bool b) { _can_recycle = b; }
 
   inline bool is_alive () const { return _flag == OBJ_ALIVE; }
   inline bool is_cancelled () const { return (_flag & OBJ_CANCELLED); }
-  inline void set_dead () { set (OBJ_DEAD); }
-  inline void set_cancelled () { set (OBJ_CANCELLED); }
+  inline void set_dead () { set_flag (OBJ_DEAD); }
+  inline void set_cancelled () { set_flag (OBJ_CANCELLED); }
+
 private:
   obj_state_t _flag;
   bool _can_recycle;

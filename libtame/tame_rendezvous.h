@@ -89,9 +89,11 @@ public:
 
   void clear (_event_cancel_base *e)
   {
-    R *rp = _rv.pointer ();
-    if (rp)
-      clear (rp, e);
+    if (!_cleared) {
+      R *rp = _rv.pointer ();
+      if (rp)
+	clear (rp, e);
+    }
   }
 
   void clear (R *rp, _event_cancel_base *e)
@@ -297,7 +299,17 @@ public:
       ret = false;
     return ret;
   }
-  bool _ti_next_trigger () { return pending (); }
+
+  bool _ti_next_trigger () 
+  { 
+    bool ret = true;
+    if (pending ()) {
+      consume ();
+    } else {
+      ret = false;
+    }
+    return ret;
+  }
 
   // End tame-internal public interface
 

@@ -75,6 +75,7 @@ public:
   // Decremenet the block count; return TRUE if it goes down to 0, signifying
   // contuination inside the function.
   bool block_dec_count (const char *loc);
+  inline void block_inc_count () { _block._count++; }
 
   // Add/remove events to this closure
   inline void remove (_event_cancel_base *e)
@@ -195,6 +196,7 @@ _mkevent_implicit_rv (const ptr<C> &c,
   ptr<_event_impl<closure_action<C>,T1,T2,T3> >  ret;
   ret = New refcounted<_event_impl<closure_action<C>,T1,T2,T3> > 
     (closure_action<C> (c), rs, loc);
+  c->block_inc_count ();
   c->add (ret);
   return ret;
 }

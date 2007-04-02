@@ -7,7 +7,7 @@
 tamed static 
 void try_connect (str h, int port)
 {
-  tvars { int fd; }
+  tvars { int fd (-1); }
   twait { tcpconnect (h, port, mkevent (fd)); }
   if (fd >= 0) {
     warn << "Connection succeeded!\n";

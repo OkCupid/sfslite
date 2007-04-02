@@ -89,7 +89,7 @@ public:
 
   typedef _event_base<T1,T2,T3> my_type_t;
 
-  ~_event_base () { finish (); }
+  ~_event_base () { /* must clear action in subclass */ }
 
   void set_reuse (bool b) { _reuse = b; }
   bool get_reuse () const { return _reuse; }
@@ -128,8 +128,10 @@ public:
 
   void finish ()
   {
-    if (!_cleared)
+    if (!_cleared) {
       clear_action (this);
+      _cleared = true;
+    }
   }
 
   virtual bool perform_action (_event_cancel_base *e, const char *loc,
