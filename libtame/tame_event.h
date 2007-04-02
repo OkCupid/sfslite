@@ -49,12 +49,6 @@ private:
   T4 &_r4;
 };
 
-class cancel_notifier_t {
-public:
-  virtual ~cancel_notifier_t () {}
-  virtual void cancel () = 0;
-};
-
 class weakrefcount {
 public:
   weakrefcount () : _flag (obj_flag_t::alloc (OBJ_ALIVE)) {}
@@ -69,6 +63,9 @@ class weakref {
 public:
   weakref (T *p, obj_flag_ptr_t f) : _pointer (p), _flag (f) {}
   inline T *pointer () { return _flag->is_alive () ? _pointer : NULL; }
+  inline const T *pointer() const 
+  { return _flag->is_alive () ? _pointer : NULL; }
+
   obj_flag_ptr_t flag () { return _flag; }
 private:
   T *_pointer;
@@ -81,23 +78,18 @@ mkweakref (T *p)
   return weakref<T> (p, p->flag ());
 }
 
-class _event_cancel_base : public virtual refcount,
-			   public weakrefcount {
+// Specify 1 extra argument, that way we can do template specialization
+// elsewhere.  We should never have an instatiated event class with
+// 4 templated types, though.
+template<class T1=nil_t, class T2=nil_t, class T3=nil_t, class T4=nil_t> 
+class _event;
+
+class _event_cancel_base : public virtual refcount {
 public:
   _event_cancel_base (const char *loc) : _loc (loc), _cancelled (false) {}
 
-  void set_cancel_notifier (ptr<cancel_notifier_t> c) { _cancel_notifier = c; }
-
-  void cancel ()
-  {
-    _cancelled = true;
-    if (_cancel_notifier) {
-      ptr<_event_cancel_base> hold (mkref (this));
-      _cancel_notifier->cancel ();
-      _cancel_notifier = NULL;
-    }
-  }
-
+  void set_cancel_notifier (ptr<_event<> > e) { _cancel_notifier = e; }
+  void cancel ();
   const char *loc () const { return _loc; }
 
   list_entry<_event_cancel_base> _lnk;
@@ -105,7 +97,7 @@ public:
 protected:
   const char *_loc;
   bool _cancelled;
-  ptr<cancel_notifier_t> _cancel_notifier;
+  ptr<_event<> > _cancel_notifier;
 
 };
 
@@ -114,64 +106,72 @@ event_cancel_list_t;
 
 void report_leaks (event_cancel_list_t *lst);
 
-template<class A, class T1=nil_t, class T2=nil_t, class T3=nil_t>
+template<class T1=nil_t, class T2=nil_t, class T3=nil_t>
 class _event_base : public _event_cancel_base {
 public:
-  _event_base (const A &a, 
-	       const refset_t<T1,T2,T3> &rs,
+  _event_base (const refset_t<T1,T2,T3> &rs,
 	       const char *loc = NULL) :
     _event_cancel_base (loc),
-    _action (a),
     _refset (rs),
     _reuse (false),
-    _cancelled (false) {}
+    _cleared (false) {}
+    
 
-  typedef _event_base<A,T1,T2,T3> my_type_t;
+  typedef _event_base<T1,T2,T3> my_type_t;
 
   ~_event_base () { finish (); }
 
   void set_reuse (bool b) { _reuse = b; }
   bool get_reuse () const { return _reuse; }
 
-  void base_trigger (const T1 &t1, const T2 &t2, const T3 &t3)
+  bool can_trigger ()
   {
+    bool ret = false;
     if (this->_cancelled) {
       tame_error (this->_loc, "event triggered after it was cancelled");
+    } else if (_cleared) {
+      tame_error (this->_loc, "event triggered after it was cleared");
     } else {
+      ret = true;
+    }
+    return ret;
+  }
+
+  void base_trigger (const T1 &t1, const T2 &t2, const T3 &t3)
+  {
+    if (can_trigger ()) {
       _refset.assign (t1, t2, t3);
-      _action.perform (this, this->_loc, _reuse);
+      if (perform_action (this, this->_loc, _reuse))
+	_cleared = true;
     }
   }
 
   void trigger_no_assign ()
   {
-    if (this->_cancelled) {
-      tame_error (this->_loc, "event triggered after it was cancelled");
-    } else {
-      _action.perform (this, this->_loc, _reuse);
+    if (can_trigger ()) {
+      if (perform_action (this, this->_loc, _reuse))
+	_cleared = true;
     }
   }
 
+  refset_t<T1,T2,T3> &refset () { return _refset; }
+
   void finish ()
   {
-    _action.clear (this);
+    if (!_cleared)
+      clear_action (this);
   }
 
+  virtual bool perform_action (_event_cancel_base *e, const char *loc,
+			       bool reuse) = 0;
+  virtual void clear_action (_event_cancel_base *e) = 0;
 
 protected:
-  A _action;
   refset_t<T1,T2,T3> _refset;
   bool _reuse;
-  bool _cancelled;
-
+  bool _cleared;
 };
 
-
-// Specify 1 extra argument, that way we can do template specialization
-// elsewhere.  We should never have an instatiated event class with
-// 4 templated types, though.
-template<class T1=nil_t, class T2=nil_t, class T3=nil_t, class T4=nil_t> 
-class _event;
 
 template<class A, class T1=nil_t, class T2=nil_t, 
 	 class T3=nil_t, class T4=nil_t> 
@@ -191,5 +191,7 @@ public:
 # define CALLBACK_ARGS(x)
 #endif
 
+#define mkevent(...) _mkevent (__cls_g, __FL__, ##__VA_ARGS__)
+#define mkevent_rs(...) _mkevent_rs (__cls_g, __FL__, ##__VA_ARGS__)
 
 #endif /* _LIBTAME_TAME_EVENT_H_ */

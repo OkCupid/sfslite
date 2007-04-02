@@ -57,6 +57,19 @@ private:
   typename callback<R, void>::ref _action;
 };
 
+class thread_implicit_rendezvous_t : public rendezvous_t<>
+{
+public:
+  thread_implicit_rendezvous_t (ptr<closure_t> cl, const char *l) 
+    : rendezvous_t<> (l),
+      _cls (cl) {}
+  ptr<closure_t> closure () { return _cls; }
+
+  ~thread_implicit_rendezvous_t() { waitall (); }
+private:
+  ptr<closure_t> _cls;
+};
+
 template<class R>
 void __tfork (const char *loc, evv_t e, R &r, 
 	      typename callback<R,void>::ref a)
@@ -87,14 +100,14 @@ private:
 
 void __tfork (const char *loc, evv_t e, cbv a);
 
-void _tfork (implicit_rendezvous_t *i, const char *loc, cbv a);
+void _tfork (thread_implicit_rendezvous_t *rv, const char *loc, cbv a);
 void _tfork (ptr<closure_t> c, const char *loc, rendezvous_t<> rv, cbv a);
 
 template<class R>
-void _tfork (implicit_rendezvous_t *i, const char *loc, R &r, 
+void _tfork (ptr<closure_t> c, const char *loc, R &r, 
 	     typename callback<R,void>::ref a)
 {
-  __tfork (loc, _mkevent (i, loc), r, a);
+  __tfork (loc, _mkevent (c, loc), r, a);
 }
 
 #include "tame_tfork_ag.h"

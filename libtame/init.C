@@ -12,7 +12,6 @@ int tame_options;
 
 int tame_global_int;
 u_int64_t closure_serial_number;
-bool tame_collect_rv_flag;
 ptr<closure_t> __cls_g;
 ptr<closure_t> null_closure;
 

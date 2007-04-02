@@ -490,7 +490,8 @@ tame_fn_t::output_reenter (strbuf &b)
     b << ", ";
   }
   b << "mkref (this));\n"
-    << "  }\n\n";
+    << "  }\n;"
+    << "void v_reenter () { reenter (); }\n\n";
 }
 
 void
@@ -836,22 +837,13 @@ tame_block_ev_t::output (outputter_t *o)
 
   output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL);
 
-  // 
-  // We're playing a little game here.  The mkevent macro in async/tame.h
-  // always feeds the symbol __cls_g as the first argument to _mkref,
-  // but we don't want to be able to call mkevent() without a rendezvous
-  // outside of a block {} environment.  Thus, the _mkevent() signatures
-  // that use an implicit rendezvous have special signatures to that effect,
-  // and the mkevent() macro will only do the right thing is an 
-  // implicit_rendezvous_t named __cls_g is accessible.  This will only
-  // happen within a block {} environment.
-  //
   b << "  do {\n";
   b << "    do {\n"
+    << "    ";
+  b.mycat (_fn->closure ().type ().mk_ptr ());
+  b << " " CLOSURE_GENERIC " = " CLOSURE_RFCNT << ";\n"
     << "    " << TAME_CLOSURE_NAME << "->init_block (" 
     << _id << ", " << _lineno << ");\n"
-    << "      closure_implicit_rendezvous_t _irv (" CLOSURE_GENERIC ");\n"
-    << "      implicit_rendezvous_t *" CLOSURE_GENERIC " = &_irv;\n"
     ;
 
   _fn->jump_out (b, _id);
@@ -895,9 +887,8 @@ tame_block_thr_t::output (outputter_t *o)
   output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL);
 
   b << "  do {\n"
-    << "      threaded_implicit_rendezvous_t _irv "
-    << "(__FILE__, __LINE__, " CLOSURE_GENERIC ");\n"
-    << "      implicit_rendezvous_t *" CLOSURE_GENERIC " = &_irv;\n"
+    << "      threaded_implicit_rendezvous_t " 
+    CLOSURE_GENERIC " (" CLOSURE_GENERIC ", __FL__);\n"
     ;
 
   o->output_str (b);
@@ -955,8 +946,7 @@ tame_join_t::output_blocked (my_strbuf_t &b, const str &jgn)
   _fn->jump_out (b, _id);
   
   b << "      " << jgn
-    << ".set_join_cb (wrap (" << CLOSURE_RFCNT
-    << ", &" << _fn->reenter_fn () << "));\n"
+    << "._ti_set_join_cls (" CLOSURE_RFCNT ");\n"
     << "      ";
   b.mycat (_fn->return_expr ());
   b << ";\n";
@@ -974,7 +964,7 @@ tame_wait_t::output (outputter_t *o)
   my_strbuf_t b;
   b.mycat (_fn->label (_id)) << ":\n";
   b << "do {\n"
-    << "  if (!" << jgn << ".next_trigger (";
+    << "  if (!" << jgn << "._ti_next_trigger (";
   for (size_t i = 0; i < n_args (); i++) {
     if (i > 0) b << ", ";
     b << "" << arg (i).name () << "";
@@ -982,7 +972,7 @@ tame_wait_t::output (outputter_t *o)
   b << ")) {\n";
   output_blocked (b, jgn);
   b << "  } else {\n"
-    << "    " << jgn << ".clear_join_method ();\n"
+    << "    " << jgn << "._ti_clear_join_method ();\n"
     << "  }\n"
     << "} while (0);\n";
   

@@ -1,7 +1,6 @@
 
 // -*-c++-*-
 #include "tame.h"
-#include "tame_core.h"
 #include "tame_io.h"
 #include "tame_connectors.h"
 
@@ -114,7 +113,7 @@ proxy (int infd, int outfd, evv_t cb)
   }
 
   // If the parent process gives up on us, then we'll get a callback here
-  cb->set_notify_on_cancel (mkevent (G, ENDPROG));
+  cb->set_cancel_notifier (mkevent (G, ENDPROG));
 
   read.setev (mkevent (G, READ));
   write.setev (mkevent (G, WRITE));

@@ -34,16 +34,13 @@
 // get confused.
 extern u_int64_t closure_serial_number;
 
+class rendezvous_base_t;
 
-class closure_t : public virtual refcount , 
-		  public weakrefcount
-{
+class closure_t : public virtual refcount {
 public:
   closure_t (const char *filename, const char *fun) ;
 
-  // because it is weak_refcounted, a bool will turn to true once
-  // this class is deleted.
-  ~closure_t () {}
+  virtual ~closure_t () {}
 
   // manage function reentry
   inline void set_jumpto (int i) { _jumpto = i; }
@@ -55,9 +52,13 @@ public:
   // checks on scoping, etc.
   inline void end_of_scope_checks (int line)
   {
-    if (tame_check_leaks ())
+    if (tame_check_leaks ()) {
       report_leaks (&_events);
+      report_rv_problems();
+    }
   }
+
+  void report_rv_problems ();
 
   // Initialize a block environment with the ID of this block
   // within the given function.  Also reset any internal counters.
@@ -90,7 +91,6 @@ public:
       _n_events ++;
       _events.insert_head (e);
     }
-	
   }
 
   //
@@ -99,6 +99,14 @@ public:
   // function, as given here.  It won't be called for implicit rvs.
   //
   virtual void v_reenter () = 0;
+
+  //
+  // only called if tame_check_leaks is on
+  //
+  virtual bool is_onstack (const void *p) const = 0;
+
+  void collect_rendezvous ();
+
 
 protected:
 
@@ -116,6 +124,8 @@ public:
   };
   block_t _block;
 
+  
+  vec<weakref<rendezvous_base_t> > _rvs;
   list<_event_cancel_base, &_event_cancel_base::_lnk> _events;
   u_int _n_events;
 
@@ -128,20 +138,23 @@ public:
 
   ~closure_action () {}
 
-  void perform (_event_cancel_base *event, const char *loc, bool _reuse)
+  bool perform (_event_cancel_base *event, const char *loc, bool _reuse)
   {
+    bool ret = false;
     if (!_closure) {
       tame_error (loc, "event reused after deallocation");
     } else {
       maybe_reenter (loc);
       clear (event);
+      ret = true;
     }
+    return ret;
   }
 
   void clear (_event_cancel_base *e) 
   {
     if (_closure) {
-      _closure.remove (e);
+      _closure->remove (e);
       _closure = NULL;
     }
   }
@@ -157,20 +170,26 @@ private:
   ptr<C> _closure;
 };
 
-extern ptr<closure_t> __cls_g;
-extern ptr<closure_t> null_closure;
-
 template<class C, class T1, class T2, class T3>
 typename event<T1,T2,T3>::ptr
 _mkevent_implicit_rv (ptr<C> c, 
 		      const char *loc,
 		      const refset_t<T1,T2,T3> &rs)
 {
-  typename event<T1,T2,T3>::ptr ret;
-  ret = New refcounted<_event<closure_action<C>,T1,T2,T3> > 
+  ptr<_event_impl<closure_action<C>,T1,T2,T3> >  ret;
+  ret = New refcounted<_event_impl<closure_action<C>,T1,T2,T3> > 
     (closure_action<C> (c), rs, loc);
-  c->add_event (ret);
+  c->add (ret);
   return ret;
 }
+
+template<class T> void use_reference (T &i) {}
+
+void start_rendezvous_collection ();
+void collect_rendezvous (weakref<rendezvous_base_t> r);
+
+extern ptr<closure_t> __cls_g;
+extern ptr<closure_t> null_closure;
+#define CLOSURE              ptr<closure_t> __frame = NULL
 
 #endif /* _LIBTAME_CLOSURE_H_ */

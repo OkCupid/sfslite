@@ -24,6 +24,7 @@
 
 #include "tame_run.h"
 #include "tame_event.h"
+#include "tame_closure.h"
 #include "qhash.h"
 
 void report_leaks (event_cancel_list_t *lst)
@@ -59,3 +60,31 @@ void report_leaks (event_cancel_list_t *lst)
     panic ("abort on TAME failure\n");
 }
 
+vec<weakref<rendezvous_base_t> > tame_collect_rv_vec;
+bool tame_collect_rv_flag;
+
+void
+start_rendezvous_collection ()
+{
+  tame_collect_rv_flag = true;
+  tame_collect_rv_vec.clear ();
+}
+
+void
+collect_rendezvous (weakref<rendezvous_base_t> r)
+{
+  if (tame_collect_rv_flag) 
+    tame_collect_rv_vec.push_back (r);
+}
+
+void
+closure_t::collect_rendezvous ()
+{
+  for (u_int i = 0; i < tame_collect_rv_vec.size (); i++) {
+    const weakref<rendezvous_base_t> &rv = tame_collect_rv_vec[i];
+    if (is_onstack (rv.pointer ()))
+      _rvs.push_back (rv);
+  }
+  tame_collect_rv_flag = false;
+  tame_collect_rv_vec.clear ();
+}

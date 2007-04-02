@@ -5,9 +5,11 @@
 #ifndef _LIBTAME_TAME_H_
 #define _LIBTAME_TAME_H_
 
+#include "tame_run.h"
 #include "tame_event.h"
-#include "tame_core.h"
 #include "tame_event_ag.h"
+#include "tame_closure.h"
+#include "tame_rendezvous.h"
 #include "tame_thread.h"
 #include "tame_tfork.h"
 #include "tame_trigger.h"

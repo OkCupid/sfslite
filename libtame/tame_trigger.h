@@ -29,31 +29,30 @@
 #include "async.h"
 #include "tame_event.h"
 #include "tame_event_ag.h"
-#include "tame_core.h"
 
 // For backwards-compat, make the trigger method behave like regular
 // SFS used to work
 #define TRIGGER(cb, ...) (*cb) (__VA_ARGS__)
 
-void dtrigger (event_t<>::ref cb);
+void dtrigger (event<>::ref cb);
 
 template<class T1> void
-dtrigger (typename event_t<T1>::ref cb, const T1 &t1)
+dtrigger (typename event<T1>::ref cb, const T1 &t1)
 {
-  delaycb (0, 0, wrap (cb, &event<T1>::trigger, t1));
+  delaycb (0, 0, wrap (cb, &_event<T1>::trigger, t1));
 }
 
 template<class T1, class T2> void
-dtrigger (typename event_t<T1,T2>::ref cb, const T1 &t1, const T2 &t2)
+dtrigger (typename event<T1,T2>::ref cb, const T1 &t1, const T2 &t2)
 {
-  delaycb (0, 0, wrap (cb, &event<T1,T2>::trigger, t1, t2));
+  delaycb (0, 0, wrap (cb, &_event<T1,T2>::trigger, t1, t2));
 }
 
 template<class T1, class T2, class T3> void
-dtrigger (typename event_t<T1,T2,T3>::ref cb, const T1 &t1, 
+dtrigger (typename event<T1,T2,T3>::ref cb, const T1 &t1, 
 	  const T2 &t2, const T3 &t3)
 {
-  delaycb (0, 0, wrap (cb, &event<T1,T2,T3>::trigger, t1, t2, t3));
+  delaycb (0, 0, wrap (cb, &_event<T1,T2,T3>::trigger, t1, t2, t3));
 }
 
 #endif /* _LIBTAME_TAME_TRIGGER_H_ */

@@ -14,6 +14,7 @@ my $CNI = ${CN} . "_impl";
 my $WCN = "event";
 my $MKEVRS = ${MKEV} . "_rs";
 my $BASE = "_event_base";
+my $EVCB = "_event_cancel_base";
 my $RVMKEV = "_ti_mkevent";
 
 sub mklist ($$)
@@ -87,20 +88,19 @@ sub do_event_class ($)
 
     # print the classname
     print ("class ${CN}", $tlist, " :\n",
-	   "     public callback", $vlist , "\n",
+	   "     public ${BASE}${tlist},\n",
+	   "     public callback${vlist}\n",
 	   "{\n",
 	   "public:\n");
 
     # print the constructor
-    print ("  ${CN} (const char *loc)\n",
-	   "   : callback", $vlist, 
-	   " (CALLBACK_ARGS(loc))\n",
+    print ("  ${CN} (const refset_t$tlist &rs, const char *loc)\n",
+	   "   : ${BASE}${tlist} (rs, loc),\n",
+	   "     callback${vlist} (CALLBACK_ARGS(loc))\n",
 	   "     {}\n");
 
-    print ("  virtual void trigger (",
-	   arglist (["T% t%", $t]),
-	   ") = 0;\n"
-	   );
+    do_trigger_func ("trigger", $t);
+    do_trigger_func ("operator()", $t);
     
     # close the class
     print "};\n\n";
@@ -122,7 +122,6 @@ sub do_event_impl_class ($)
 
     # print the classname
     print ("class ${CNI}", $tlist2, " :\n",
-	   "     public ${BASE}", $tlist2, ",\n",
 	   "     public ${CN}", $tlist , "\n",
 	   "{\n",
 	   "public:\n");
@@ -133,14 +132,18 @@ sub do_event_impl_class ($)
 		    "const refset_t$tlist &rs",
 		    "const char *loc"),
 	   ")\n",
-	   "    : ${BASE}" , $tlist2 , " (action, rs, loc),\n",
-	   "      ${CN}", $tlist, " (loc)\n",
-	   "     {}\n");
+	   "    : ${CN}${tlist} (rs, loc),\n",
+	   "      _action (action) {}\n\n");
 
-    # print the trigger functions
-    do_trigger_func ("operator()", $t);
-    do_trigger_func ("trigger", $t);
-    
+    # print the action functions
+    print ("  bool perform_action (${EVCB} *e, const char *loc, bool reuse)\n",
+	   "  { return _action.perform (e, loc, reuse); }\n");
+    print ("  void clear_action (${EVCB} *e) { _action.clear (e); }\n\n");
+
+    # print the data
+    print ("private:\n",
+	   "  A _action;\n");
+
     # close the class
     print "};\n\n";
 }
