@@ -1,5 +1,6 @@
 
 #include "tame_closure.h"
+#include "tame_rendezvous.h"
 
 
 bool
@@ -23,13 +24,11 @@ closure_t::loc (int l) const
 }
 
 closure_t::closure_t (const char *file, const char *fun)
-  : weak_refcounted_t<closure_t> (this),
-    _jumpto (0), 
+  : _jumpto (0), 
     _id (++closure_serial_number),
     _filename (file),
-    _funcname (fun),
-    _must_deallocate_list (must_deallocate_list_t::alloc ()) 
-  {}
+    _funcname (fun)
+{}
 
 void
 closure_t::error (int lineno, const char *msg)
@@ -51,9 +50,13 @@ void
 closure_t::report_rv_problems ()
 {
   for (u_int i = 0; i < _rvs.size (); i++) {
-    if (_rvs[i]->is_alive ()) {
-      tame_error (_rvs[i]->pointer ()->loc (),
-		  "rendezvous still active after control left function");
+    u_int n;
+    rendezvous_base_t *p = _rvs[i].pointer ();
+    if (p && (n = p->n_triggers_left ())) {
+      strbuf b ("rendezvous still active with %u triggers after control "
+		"left function", n);
+      str s = b;
+      tame_error (p->loc (), s.cstr ());
     }
   }
 }

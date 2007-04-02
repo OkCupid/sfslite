@@ -5,7 +5,7 @@
 #include "parseopt.h"
 #include "tame_io.h"
 
-typedef event_t<int,int>::ref cbii ;
+typedef event<int,int>::ref cbii ;
 
 /**
  * Given a vector of N hosts, connect to all of them on the given port.
@@ -31,7 +31,7 @@ connect (vec<str> hosts, int port, cbii done)
     tcpconnect (hosts[i], port, mkevent (rv,i,fd,*fd));
   }
   
-  while (rv.need_join ()) {
+  while (rv.need_wait ()) {
     twait (rv, i, fd);
     warn << hosts[i]  << ":" << port << ": ";
     if (*fd >= 0) {

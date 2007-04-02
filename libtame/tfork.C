@@ -19,3 +19,10 @@ void _tfork (ptr<closure_t> c, const char *loc, rendezvous_t<> rv, cbv a)
 {
   __tfork (loc, _mkevent (c, loc, rv), a);
 }
+
+
+event<>::ref
+_mkevent (thread_implicit_rendezvous_t *r, const char *loc)
+{
+  return _mkevent (r->closure (), loc, *r);
+}

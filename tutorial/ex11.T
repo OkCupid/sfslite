@@ -53,8 +53,8 @@ bool dostuff (str h, int port, cbb cb)
       launch_call (&window, i, cli);
     }
 
-    // a join is needed for every call that returns
-    while (window.need_join ()) {
+    // a wait is needed for every call that returns
+    while (window.need_wait ()) {
 
       // Block until a call has returned; when it has, get
       // the index variable associated with the call, and assign

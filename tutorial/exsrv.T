@@ -28,7 +28,7 @@ exsrv_t::runloop ()
 {
   tvars {
     rendezvous_t<> rv (__FILE__, __LINE__);
-    event_t<svccb *>::ptr ev;
+    event<svccb *>::ptr ev;
     svccb *sbp;
   }
 
@@ -140,7 +140,7 @@ run_server (u_int port, evb_t done)
 {
   tvars {
     int fd;
-    event_t<>::ptr ev;
+    event<>::ptr ev;
     bool ret (false);
     bool go (true);
     rendezvous_t<bool> rv (__FILE__, __LINE__);

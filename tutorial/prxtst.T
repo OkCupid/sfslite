@@ -65,7 +65,7 @@ listen_loop (int lport, str hn, int port, evv_t cb)
 
   if ((lfd = listen_on (lport)) >= 0) {
 
-    cb->set_notify_on_cancel (mkevent (G, PROXY_END));
+    cb->set_cancel_notifier (mkevent (G, PROXY_END));
 
     while (go || proxies_out > 0 ) {
 

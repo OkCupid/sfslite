@@ -171,9 +171,24 @@ private:
   ptr<C> _closure;
 };
 
+/*
+ * Need to disambiguate between explicit rendezvous and implicit rendezvous
+ * cases.  In the implicit case, we wrap a ptr<C> (C = some closure) in
+ * a closure_wrapper, so that we pick up the right templated version
+ * of _mkevent.
+ */
+template<class C>
+class closure_wrapper {
+public:
+  closure_wrapper (const ptr<C> &c) : _closure (c) {}
+  const ptr<C> &closure () const { return _closure; }
+private:
+  const ptr<C> &_closure;
+};
+
 template<class C, class T1, class T2, class T3>
 typename event<T1,T2,T3>::ptr
-_mkevent_implicit_rv (ptr<C> c, 
+_mkevent_implicit_rv (const ptr<C> &c, 
 		      const char *loc,
 		      const refset_t<T1,T2,T3> &rs)
 {

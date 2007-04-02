@@ -840,9 +840,14 @@ tame_block_ev_t::output (outputter_t *o)
   b << "  do {\n";
   b << "    do {\n"
     << "    ";
-  b.mycat (_fn->closure ().type ().mk_ptr ());
-  b << " " CLOSURE_GENERIC " = " CLOSURE_RFCNT << ";\n"
-    << "    " << TAME_CLOSURE_NAME << "->init_block (" 
+
+  // Make a closure container named __cls_g, the first argument
+  // insert by the mkevent() macro
+  b << "  closure_wrapper<";
+  b.mycat (_fn->closure ().type ().to_str_w_template_args (false));
+  b << "> " CLOSURE_GENERIC " (" CLOSURE_RFCNT ");\n";
+
+  b << "    " << TAME_CLOSURE_NAME << "->init_block (" 
     << _id << ", " << _lineno << ");\n"
     ;
 
@@ -887,8 +892,9 @@ tame_block_thr_t::output (outputter_t *o)
   output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL);
 
   b << "  do {\n"
-    << "      threaded_implicit_rendezvous_t " 
-    CLOSURE_GENERIC " (" CLOSURE_GENERIC ", __FL__);\n"
+    << "      thread_implicit_rendezvous_t " 
+    << " _tirv (" CLOSURE_GENERIC ", __FL__);\n"
+    << "  thread_implicit_rendezvous_t *" CLOSURE_GENERIC " = &_tirv;\n"
     ;
 
   o->output_str (b);

@@ -256,24 +256,53 @@ sub do_mkevent_block ($)
     print "typename ";
     print "${WCN}<" . arglist (["T%", $t]) . ">::ref\n";
     print ("${MKEV} (" ,
-	   arglist ("ptr<C> c",
+	   arglist ("const closure_wrapper<C> &c",
 		    "const char *loc",
 		    [ "T% &t%", $t ]),
 	   ")\n");
     print "{\n";
     print ("  return _mkevent_implicit_rv (",
-	   arglist ("c", "loc", 
+	   arglist ("c.closure ()", "loc", 
 		    "refset_t<" . arglist (["T%", $t]) 
 		    ."> (" . arglist (["t%", $t]) . ")" ),
 	   ");\n");
     print "}\n\n";
 }
 
-sub do_block ($)
+#
+# do a makeevent on a thread-implicit-rendezvous
+#
+# Right now not being used.
+#
+sub do_mkevent_tir ($)
 {
     my ($t) = @_;
-    do_mkevent_block ($t);
+    my $tlist = "<" . arglist (["class T%", $t]) . ">";
+    print "template${tlist}\n";
+    if ($t > 0) {
+	print "typename ";
+    }
+    print "${WCN}${tlist}::ref\n";
+    print ("${MKEV} (",
+	   arglist ("thread_implicit_rendezvous_t *r",
+		    "const char *loc",
+		    [ "T% &t%", $t] ),
+	   ")\n");
+    if ($t > 0) {
+	print ("{\n",
+	       "   return _mkevent (",
+	       arglist ("r->closure ()",
+			"loc",
+			"*r",
+			[ "t%", $t ]),
+	       ");\n",
+	       "}");
+    } else {
+	print ";";
+    }
+    print "\n\n";
 }
+
 
 print <<EOF;
 // -*-c++-*-
@@ -288,13 +317,12 @@ print <<EOF;
 #include "tame_closure.h"
 #include "tame_rendezvous.h"
 
-
 EOF
 
 for (my $t = 0; $t <= $N_tv; $t++) {
     do_event_class ($t);
     do_event_impl_class ($t);
-    do_block ($t);
+    do_mkevent_block ($t);
     for (my $w = 0; $w <= $N_wv; $w++) {
 	do_generic ($t, $w);
     }

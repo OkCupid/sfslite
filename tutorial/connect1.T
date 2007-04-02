@@ -10,7 +10,7 @@
 int count = 0;
 
 tamed static void
-__toconn (event_t<int>::ptr *out, int n, event_t<int>::ref in)
+__toconn (event<int>::ptr *out, int n, event<int>::ref in)
 {
   tvars {
     rendezvous_t<outcome_t> rv (__FILE__, __LINE__);
@@ -23,7 +23,7 @@ __toconn (event_t<int>::ptr *out, int n, event_t<int>::ref in)
   warn << "connector(" << serial << "): timeout in " << n << " seconds..\n";
 
   tcb = delaycb (n, 0, mkevent (rv, OUTCOME_TIMEDOUT));
-  in->set_notify_on_cancel (mkevent (rv, OUTCOME_DISCARDED));
+  in->set_cancel_notifier (mkevent (rv, OUTCOME_DISCARDED));
   *out = mkevent_rs (in->refset (), rv, OUTCOME_SUCC);
   
   twait (rv, outcome);
@@ -35,13 +35,13 @@ __toconn (event_t<int>::ptr *out, int n, event_t<int>::ref in)
   }
   
   rv.cancel ();
-  in->rawtrig ();
+  in->trigger_no_assign ();
 }
 
-static event_t<int>::ptr
-toconn (int n, event_t<int>::ref e)
+static event<int>::ptr
+toconn (int n, event<int>::ref e)
 {
-  event_t<int>::ptr out;
+  event<int>::ptr out;
   __toconn (&out, n, e);
   return out;
 }
@@ -59,8 +59,8 @@ int myrand (int lo, int hi)
 }
 
 
-event_t<int>::ref
-mk_chain (event_t<int>::ref e, int n, int lo, int hi)
+event<int>::ref
+mk_chain (event<int>::ref e, int n, int lo, int hi)
 {
   int i;
 

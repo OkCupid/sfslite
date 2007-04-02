@@ -27,12 +27,12 @@
 #define _LIBTAME_TAME_CFORK_H_
 
 #include "tame_event.h"
-#include "tame_event_ag.h"
 #include "tame_closure.h"
 #include "tame_rendezvous.h"
 #include "tame_thread.h"
 #include "tame_typedefs.h"
 #include "async.h"
+#include "tame_event_ag.h"
 
 template<class R>
 class cthread_t {
@@ -60,10 +60,10 @@ private:
 class thread_implicit_rendezvous_t : public rendezvous_t<>
 {
 public:
-  thread_implicit_rendezvous_t (ptr<closure_t> cl, const char *l) 
+  thread_implicit_rendezvous_t (const ptr<closure_t> &cl, const char *l) 
     : rendezvous_t<> (l),
       _cls (cl) {}
-  ptr<closure_t> closure () { return _cls; }
+  const ptr<closure_t> &closure () { return _cls; }
 
   ~thread_implicit_rendezvous_t() { waitall (); }
 private:
@@ -100,11 +100,59 @@ private:
 
 void __tfork (const char *loc, evv_t e, cbv a);
 
+/*
+ * This _tfork is for a situation such as:
+ *    
+ *   twait { 
+ *     tfork (wrap (foo)); 
+ *     tfork (wrap (bar));
+ *   }
+ *
+ * in a **TAMED** function.
+ */
+template<class C>
+void _tfork (const closure_wrapper<C> &c, const char *loc, cbv a)
+{
+  __tfork (loc, _mkevent (c, loc), a);
+}
+
+/*
+ * This _tfork is for a situation such as:
+ *
+ *   twait {  
+ *     tfork (wrap (foo)); 
+ *     bar (mkevent ());
+ *   }
+ * 
+ * in a non-tamed (i.e., THREADED) function.  In this case, we'll
+ * allocate an actual rendezvous in the twait{} block, and wait on
+ * all threads to finish before leaving the block (control flow
+ * stops in the thread_implicit_rendezvous_t destructor).
+ */
 void _tfork (thread_implicit_rendezvous_t *rv, const char *loc, cbv a);
+
+/*
+ * ...and a version of the above for a function that returns an 
+ * argument
+ */
+template<class R>
+void _tfork (thread_implicit_rendezvous_t *rv, const char *loc,
+	     R &r, typename callback<R,void>::ref a)
+{
+  __tfork (loc, 
+	   _mkevent (rv->closure (), loc,
+		     *static_cast<rendezvous_t<> *> (rv)),
+	   r, a);
+}
+
+/*
+ * This _fork is for any situation with an explicit rendezvous, be it
+ * in a threaded or TAMED function.
+ */
 void _tfork (ptr<closure_t> c, const char *loc, rendezvous_t<> rv, cbv a);
 
-template<class R>
-void _tfork (ptr<closure_t> c, const char *loc, R &r, 
+template<class C, class R>
+void _tfork (const closure_wrapper<C> &c, const char *loc, R &r, 
 	     typename callback<R,void>::ref a)
 {
   __tfork (loc, _mkevent (c, loc), r, a);
@@ -114,6 +162,31 @@ void _tfork (ptr<closure_t> c, const char *loc, R &r,
 
 #define tfork(...) _tfork (__cls_g, __FL__, ##__VA_ARGS__)
 
+
+event<>::ref
+_mkevent (thread_implicit_rendezvous_t *r, const char *loc);
+
+template<class T1>
+typename event<T1>::ref
+_mkevent (thread_implicit_rendezvous_t *r, const char *loc, T1 &t1)
+{
+  return _mkevent (r->closure (), loc, *r, t1);
+}
+
+template<class T1, class T2>
+typename event<T1,T2>::ref
+_mkevent (thread_implicit_rendezvous_t *r, const char *loc, T1 &t1, T2 &t2)
+{
+  return _mkevent (r->closure (), loc, *r, t1, t2);
+}
+
+template<class T1, class T2, class T3>
+typename event<T1,T2,T3>::ref
+_mkevent (thread_implicit_rendezvous_t *r, const char *loc, 
+	  T1 &t1, T2 &t2, T3 &t3)
+{
+  return _mkevent (r->closure (), loc, *r, t1, t2, t3);
+}
 
 
 #endif /* _LIBTAME_TAME_CFORK_H_ */

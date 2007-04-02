@@ -12,7 +12,7 @@ void dostuff (vec<str> hosts, int port, cbi done)
   tvars {
     ptr<int> fd;
     u_int i;
-    rendezvous_t<u_int, ptr<int> > rv (__FILE__, __LINE__);
+    rendezvous_t<u_int, ptr<int> > rv (__FL__);
   }
 
   for (i = 0; i < hosts.size (); i++) {
@@ -20,7 +20,7 @@ void dostuff (vec<str> hosts, int port, cbi done)
     tcpconnect (hosts[i], port, mkevent (rv,i,fd,*fd) ); 
   }
   
-  while (rv.need_join () && fd < 0) {
+  while (rv.need_wait () && fd < 0) {
     twait (rv, i, fd);
     warn << hosts[i]  << ":" << port << ": ";
     if (*fd > 0) {

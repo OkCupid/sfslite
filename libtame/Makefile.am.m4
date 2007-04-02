@@ -87,6 +87,7 @@ tame_tfork_ag.h: $(srcdir)/mktfork_ag.pl
 
 libtame_la_SOURCES = \
 	recycle.C \
+	closure.C \
 	leak.C \
 	init.C \
 	run.C \
@@ -94,6 +95,7 @@ libtame_la_SOURCES = \
 	tfork.C \
 	thread.C \
 	trigger.C \
+	event.C \
 	tame_out 
 
 .PHONY: tameclean

@@ -50,7 +50,7 @@ sub do_tfork ($$) {
 	   "${name} (",
 	   arglist ("ptr<closure_t> c",
 		    "const char *loc",
-		    "rendezvous_t<" . arglist (["W%", $w]) . "> rv",
+		    "rendezvous_t<" . arglist (["W%", $w]) . "> &rv",
 		    ["const W% &w%", $w],
 		    ["R% &r%", $r],
 		    "typename callback<" . 
