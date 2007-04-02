@@ -9,7 +9,6 @@
 #include "vec.h"
 #include "init.h"
 #include "async.h"
-#include "tame_recycle.h"
 #include "list.h"
 
 struct nil_t {};
@@ -48,35 +47,6 @@ private:
   T3 &_r3;
   T4 &_r4;
 };
-
-class weakrefcount {
-public:
-  weakrefcount () : _flag (obj_flag_t::alloc (OBJ_ALIVE)) {}
-  obj_flag_ptr_t flag () { return _flag; }
-  ~weakrefcount () { _flag->set_dead (); }
-private:
-  obj_flag_ptr_t _flag;
-};
-
-template<class T>
-class weakref {
-public:
-  weakref (T *p, obj_flag_ptr_t f) : _pointer (p), _flag (f) {}
-  inline T *pointer () { return _flag->is_alive () ? _pointer : NULL; }
-  inline const T *pointer() const 
-  { return _flag->is_alive () ? _pointer : NULL; }
-
-  obj_flag_ptr_t flag () { return _flag; }
-private:
-  T *_pointer;
-  obj_flag_ptr_t _flag;
-};
-
-template<class T> weakref<T>
-mkweakref (T *p)
-{
-  return weakref<T> (p, p->flag ());
-}
 
 // Specify 1 extra argument, that way we can do template specialization
 // elsewhere.  We should never have an instatiated event class with

@@ -4,24 +4,25 @@ $(PROGRAMS): $(LDEPS)
 sfslib_LTLIBRARIES = libtame.la
 
 sfsinclude_HEADERS = \
-	tame_recycle.h \
 	tame_event.h \
 	tame_run.h \
+	tame_recycle.h \
+	tame_weakref.h \
 	tame_closure.h \
 	tame_rendezvous.h \
 	tame_event_ag.h \
+	tame_tfork.h \
+	tame_tfork_ag.h \
+	tame_thread.h \
+	tame_typedefs.h \
 	tame.h \
 	tame_pipeline.h \
 	tame_lock.h \
 	tame_autocb.h \
-	tame_tfork.h \
-	tame_tfork_ag.h \
-	tame_thread.h \
 	tame_trigger.h \
 	tame_pc.h \
-	tame_io.h \
-	tame_typedefs.h \
 	tame_connectors.h \
+	tame_io.h \
 	tame_aio.h \
 	tame_nlock.h
 

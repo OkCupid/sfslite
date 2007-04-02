@@ -28,6 +28,7 @@
 
 #include "tame_event.h"
 #include "tame_run.h"
+#include "tame_weakref.h"
 
 
 // All closures are numbered serially so that our accounting does not
