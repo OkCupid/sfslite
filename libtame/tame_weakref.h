@@ -1,8 +1,8 @@
 // -*-c++-*-
 /* $Id: tame_event.h 2666 2007-04-02 03:15:22Z max $ */
 
-#ifndef _LIBTAME_TAME_RECYCLE_H_
-#define _LIBTAME_TAME_RECYCLE_H_
+#ifndef _LIBTAME_TAME_WEAKREF_H_
+#define _LIBTAME_TAME_WEAKREF_H_
 
 #include "refcnt.h"
 #include "tame_recycle.h"
@@ -36,4 +36,4 @@ mkweakref (T *p)
   return weakref<T> (p, p->flag ());
 }
 
-#endif // _LIBTAME_TAME_RECYCLE_
+#endif // _LIBTAME_TAME_WEAKREF_
