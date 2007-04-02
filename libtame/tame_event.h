@@ -57,7 +57,7 @@ public:
 
 class weakrefcount {
 public:
-  weakrefcount () : _state (obj_flag_t::alloc (OBJ_ALIVE)) {}
+  weakrefcount () : _flag (obj_flag_t::alloc (OBJ_ALIVE)) {}
   obj_flag_ptr_t flag () { return _flag; }
   ~weakrefcount () { _flag->set_dead (); }
 private:
@@ -68,14 +68,14 @@ template<class T>
 class weakref {
 public:
   weakref (T *p, obj_flag_ptr_t f) : _pointer (p), _flag (f) {}
-  inline T *pointer () { _flag->is_alive () ? _pointer : NULL; }
+  inline T *pointer () { return _flag->is_alive () ? _pointer : NULL; }
   obj_flag_ptr_t flag () { return _flag; }
 private:
   T *_pointer;
   obj_flag_ptr_t _flag;
 };
 
-template<class T>
+template<class T> weakref<T>
 mkweakref (T *p)
 {
   return weakref<T> (p, p->flag ());
@@ -92,14 +92,13 @@ public:
   {
     _cancelled = true;
     if (_cancel_notifier) {
-      ptr<my_type_t> hold (mkref (this));
+      ptr<_event_cancel_base> hold (mkref (this));
       _cancel_notifier->cancel ();
       _cancel_notifier = NULL;
     }
   }
 
   const char *loc () const { return _loc; }
-  const char *typ () const { return "event"; }
 
   list_entry<_event_cancel_base> _lnk;
 
@@ -113,14 +112,15 @@ protected:
 typedef list<_event_cancel_base, &_event_cancel_base::_lnk> 
 event_cancel_list_t;
 
+void report_leaks (event_cancel_list_t *lst);
+
 template<class A, class T1=nil_t, class T2=nil_t, class T3=nil_t>
-class _event_base : public _event_cancel_base,
-		    public weakrefcount {
+class _event_base : public _event_cancel_base {
 public:
   _event_base (const A &a, 
-		const refset_t<T1,T2,T3> &rs,
-		const char *loc = NULL) :
-    _event_cancel_base (loc)
+	       const refset_t<T1,T2,T3> &rs,
+	       const char *loc = NULL) :
+    _event_cancel_base (loc),
     _action (a),
     _refset (rs),
     _reuse (false),
@@ -133,7 +133,7 @@ public:
   void set_reuse (bool b) { _reuse = b; }
   bool get_reuse () const { return _reuse; }
 
-  void trigger (const T1 &t1, const T2 &t2, const T3 &t3)
+  void base_trigger (const T1 &t1, const T2 &t2, const T3 &t3)
   {
     if (this->_cancelled) {
       tame_error (this->_loc, "event triggered after it was cancelled");
@@ -162,6 +162,7 @@ protected:
   A _action;
   refset_t<T1,T2,T3> _refset;
   bool _reuse;
+  bool _cancelled;
 
 };
 
@@ -171,6 +172,10 @@ protected:
 // 4 templated types, though.
 template<class T1=nil_t, class T2=nil_t, class T3=nil_t, class T4=nil_t> 
 class _event;
+
+template<class A, class T1=nil_t, class T2=nil_t, 
+	 class T3=nil_t, class T4=nil_t> 
+class _event_impl;
 
 template<class T1=nil_t, class T2=nil_t, class T3=nil_t>
 class event {

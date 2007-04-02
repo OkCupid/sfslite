@@ -22,7 +22,9 @@
  *
  */
 
+#include "tame_run.h"
 #include "tame_event.h"
+#include "qhash.h"
 
 void report_leaks (event_cancel_list_t *lst)
 {
@@ -30,10 +32,10 @@ void report_leaks (event_cancel_list_t *lst)
   qhash<str, int> tab;
   vec<str> v;
   _event_cancel_base *p;
-  for (p = lst.first ; p ; p = lst.next (p)) {
+  for (p = lst->first ; p ; p = lst->next (p)) {
     strbuf b;
     str t = p->loc ();
-    b << t << ": Object of type '" << p->object_typ () << "' leaked";
+    b << t << ": event object leaked\n";
     str s = b;
     int *n = tab[s];
     if (n) { (*n)++; }

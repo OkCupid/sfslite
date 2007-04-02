@@ -8,11 +8,13 @@ use strict;
 
 my $N_tv = 3;
 my $N_wv = 3;
-my $name = "_mkevent";
-my $CN = "event";
-my $WCN = "event_t";
-my $mkrs = $name . "_rs";
-my $evbg = "event_generic_base_t";
+my $MKEV = "_mkevent";
+my $CN = "_event";
+my $CNI = ${CN} . "_impl";
+my $WCN = "event";
+my $MKEVRS = ${MKEV} . "_rs";
+my $BASE = "_event_base";
+my $RVMKEV = "_ti_mkevent";
 
 sub mklist ($$)
 {
@@ -58,14 +60,14 @@ sub template_arglist (@)
     }
 }
 
-sub do_trigger_func ($$$)
+sub do_trigger_func ($$)
 {
-    my ($fn, $arg1, $t) = @_;
+    my ($fn, $t) = @_;
 
     print ("  void $fn (",
 	   arglist (["T% t%", $t]), ")",
-	   " { dotrig (",
-	   arglist ($arg1, ["t%", $t], ["nil_t()", $N_tv - $t]),
+	   " { this->base_trigger (",
+	   arglist (["t%", $t], ["nil_t()", $N_tv - $t]),
 	   " ); }\n");
 }
 
@@ -80,36 +82,68 @@ sub do_event_class ($)
 
     print ("template<", arglist (["class T%", $t]), ">\n");
     $tlist = "<" . arglist (["T%", $t]) . ">";
-    $tlist2 = $tlist;
 
     my $vlist = "<" . arglist ("void", ["T%", $t]) . ">";
 
     # print the classname
-    print ("class event", $tlist, " :\n",
-	   "     public ${evbg}", $tlist2, ",\n",
+    print ("class ${CN}", $tlist, " :\n",
 	   "     public callback", $vlist , "\n",
 	   "{\n",
 	   "public:\n");
 
     # print the constructor
-    print ("  event (",
-	   arglist ("event_action_ptr_t a",
-		    "const refset_t$tlist2 &rs",
-		    "const char *loc"),
-	   ")\n",
-	   "    : ${evbg}" , $tlist2 , " (a, rs, loc),\n",
-	   "      callback", $vlist, 
+    print ("  ${CN} (const char *loc)\n",
+	   "   : callback", $vlist, 
 	   " (CALLBACK_ARGS(loc))\n",
 	   "     {}\n");
 
-    # print the trigger functions
-    do_trigger_func ("operator()", "true", $t);
-    do_trigger_func ("trigger", "false", $t);
+    print ("  virtual void trigger (",
+	   arglist (["T% t%", $t]),
+	   ") = 0;\n"
+	   );
     
     # close the class
     print "};\n\n";
 }
 
+#
+# make a class of type event, the inherits from libasync's callback,
+# for each number of trigger values.
+#
+sub do_event_impl_class ($)
+{
+    my ($t) = @_;
+    my ($tlist, $tlist2);
+
+    print ("template<", arglist ("class A", ["class T%", $t]), ">\n");
+    $tlist = "<" . arglist (["T%", $t]) . ">";
+    $tlist2 = "<" . arglist ("A", ["T%", $t]) . ">";
+
+
+    # print the classname
+    print ("class ${CNI}", $tlist2, " :\n",
+	   "     public ${BASE}", $tlist2, ",\n",
+	   "     public ${CN}", $tlist , "\n",
+	   "{\n",
+	   "public:\n");
+
+    # print the constructor
+    print ("  ${CNI} (",
+	   arglist ("A action",
+		    "const refset_t$tlist &rs",
+		    "const char *loc"),
+	   ")\n",
+	   "    : ${BASE}" , $tlist2 , " (action, rs, loc),\n",
+	   "      ${CN}", $tlist, " (loc)\n",
+	   "     {}\n");
+
+    # print the trigger functions
+    do_trigger_func ("operator()", $t);
+    do_trigger_func ("trigger", $t);
+    
+    # close the class
+    print "};\n\n";
+}
 #
 # Return:
 #
@@ -139,11 +173,11 @@ sub do_mkevent_rs ($$)
     my $prfx = mkevent_prefix ($t, $w);
     
     print ("$prfx\n",
-	   "${mkrs} (" ,
+	   "${MKEVRS} (" ,
 	   arglist ("ptr<closure_t> c",
 		    "const char *loc",
 		    "const refset_t<" .arglist (["T%", $t]). "> &rs",
-		    "rendezvous_t<" . arglist (["W%", $w]). "> rv",
+		    "rendezvous_t<" . arglist (["W%", $w]). "> &rv",
 		    ["const W% &w%", $w]
 		    ),
 	   ")\n"
@@ -156,7 +190,7 @@ sub do_mkevent_rs ($$)
 		    "value_set_t<" . arglist (["W%", $w]) . "> (".
 		    arglist (["w%", $w]). ")",
 		    "rs");
-	print ("  return rv._mkevent (" ,
+	print ("  return rv.${RVMKEV} (" ,
 	       join (",\n                      ", @args),
 	       ");\n");
 	print ("}");
@@ -173,10 +207,10 @@ sub do_mkevent ($$)
     my $prfx = mkevent_prefix ($t, $w);
     
     print ("$prfx\n",
-	   "${name} (" , 
+	   "${MKEV} (" , 
 	   arglist ("ptr<closure_t> c",
 		    "const char *loc",
-		    "rendezvous_t<" . arglist (["W%", $w]) . "> rv",
+		    "rendezvous_t<" . arglist (["W%", $w]) . "> &rv",
 		    ["const W% &w%", $w],
 		    ["T% &t%", $t]
 		    ),
@@ -192,7 +226,7 @@ sub do_mkevent ($$)
 		    "rv",
 		    ["w%", $w]
 		    );
-	print ("  return ${mkrs} (" , 
+	print ("  return ${MKEVRS} (" , 
 	       join (",\n                      ", 
 		     mklist_multi (@args)),
 	       ");\n");
@@ -214,31 +248,22 @@ sub do_generic ($$)
 sub do_mkevent_block ($)
 {
     my ($t) = @_;
-    if ($t > 0) {
-	print "template<" . arglist (["class T%", $t]) . ">\n";
-	print "typename ";
-    }
+
+    print "template<" . arglist ("class C", ["class T%", $t]) . ">\n";
+    print "typename ";
     print "${WCN}<" . arglist (["T%", $t]) . ">::ref\n";
-    print ("${name} (" ,
-	   arglist ("implicit_rendezvous_t *r",
+    print ("${MKEV} (" ,
+	   arglist ("ptr<C> c",
 		    "const char *loc",
 		    [ "T% &t%", $t ]),
 	   ")\n");
-    if ($t > 0) {
-	print "{\n";
-	print ("  return New refcounted<${CN}<" .
-	       arglist (["T%", $t]) . "> >\n" .
-	       "   (",
-	       arglist ( "r->make_reenter (loc)",
-			 "refset_t<" . arglist (["T%", $t]) 
-			 ."> (" . arglist (["t%", $t]) . ")",
-			 "loc"
-			 ),
-	       ");\n");
-	print "}\n\n";
-    } else {
-	print ";\n\n";
-    }
+    print "{\n";
+    print ("  return _mkevent_implicit_rv (",
+	   arglist ("c", "loc", 
+		    "refset_t<" . arglist (["T%", $t]) 
+		    ."> (" . arglist (["t%", $t]) . ")" ),
+	   ");\n");
+    print "}\n\n";
 }
 
 sub do_block ($)
@@ -257,13 +282,15 @@ print <<EOF;
 #define _LIBTAME_EVENT_AG_H_
 
 #include "tame_event.h"
-#include "tame_core.h"
+#include "tame_closure.h"
+#include "tame_rendezvous.h"
 
 
 EOF
 
 for (my $t = 0; $t <= $N_tv; $t++) {
     do_event_class ($t);
+    do_event_impl_class ($t);
     do_block ($t);
     for (my $w = 0; $w <= $N_wv; $w++) {
 	do_generic ($t, $w);

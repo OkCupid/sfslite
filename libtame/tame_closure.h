@@ -27,6 +27,7 @@
 #define _LIBTAME_CLOSURE_H_
 
 #include "tame_event.h"
+#include "tame_run.h"
 
 
 // All closures are numbered serially so that our accounting does not
@@ -45,16 +46,17 @@ public:
   ~closure_t () {}
 
   // manage function reentry
-  void set_jumpto (int i) { _jumpto = i; }
-  u_int jumpto () const { return _jumpto; }
+  inline void set_jumpto (int i) { _jumpto = i; }
+  inline u_int jumpto () const { return _jumpto; }
 
-  u_int64_t id () { return _id; }
+  inline u_int64_t id () { return _id; }
 
   // given a line number of the end of scope, perform sanity
   // checks on scoping, etc.
-  void end_of_scope_checks (int line)
+  inline void end_of_scope_checks (int line)
   {
-    report_leaks (&_events);
+    if (tame_check_leaks ())
+      report_leaks (&_events);
   }
 
   // Initialize a block environment with the ID of this block
@@ -71,6 +73,32 @@ public:
   // Decremenet the block count; return TRUE if it goes down to 0, signifying
   // contuination inside the function.
   bool block_dec_count (const char *loc);
+
+  // Add/remove events to this closure
+  inline void remove (_event_cancel_base *e)
+  {
+    if (tame_check_leaks ()) {
+      assert (_n_events > 0);
+      _n_events --;
+      _events.remove (e);
+    }
+  }
+
+  inline void add (_event_cancel_base *e)
+  {
+    if (tame_check_leaks ()) {
+      _n_events ++;
+      _events.insert_head (e);
+    }
+	
+  }
+
+  //
+  // Rendezvous can't statically type what kind of closure they
+  // need to jump back into; therefore, we need a virtual reentry
+  // function, as given here.  It won't be called for implicit rvs.
+  //
+  virtual void v_reenter () = 0;
 
 protected:
 
@@ -89,6 +117,7 @@ public:
   block_t _block;
 
   list<_event_cancel_base, &_event_cancel_base::_lnk> _events;
+  u_int _n_events;
 
 };
 
@@ -105,7 +134,7 @@ public:
       tame_error (loc, "event reused after deallocation");
     } else {
       maybe_reenter (loc);
-      clear (e);
+      clear (event);
     }
   }
 
@@ -129,7 +158,19 @@ private:
 };
 
 extern ptr<closure_t> __cls_g;
-extern ptr<closure_t null_closure;
+extern ptr<closure_t> null_closure;
 
+template<class C, class T1, class T2, class T3>
+typename event<T1,T2,T3>::ptr
+_mkevent_implicit_rv (ptr<C> c, 
+		      const char *loc,
+		      const refset_t<T1,T2,T3> &rs)
+{
+  typename event<T1,T2,T3>::ptr ret;
+  ret = New refcounted<_event<closure_action<C>,T1,T2,T3> > 
+    (closure_action<C> (c), rs, loc);
+  c->add_event (ret);
+  return ret;
+}
 
 #endif /* _LIBTAME_CLOSURE_H_ */

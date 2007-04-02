@@ -64,7 +64,7 @@ private:
   size_t       _cursor;
 };
 
-INIT(recyel_init);
+INIT(recycle_init);
 
 typedef enum { OBJ_ALIVE = 0, 
 	       OBJ_SICK = 0x1, 
@@ -73,16 +73,19 @@ typedef enum { OBJ_ALIVE = 0,
 
 class obj_flag_t : virtual public refcount {
 public:
-  ref_flag_t (const obj_state_t &b) : _flag (b), _can_recycle (true) {}
-  ~ref_flag_t () { }
+  obj_flag_t (const obj_state_t &b) : _flag (b), _can_recycle (true) {}
+  ~obj_flag_t () { }
 
-  static void recycle (ref_flag_t *p);
+  static void recycle (obj_flag_t *p);
   static ptr<obj_flag_t> alloc (const obj_state_t &b);
   static recycle_bin_t<obj_flag_t> *get_recycle_bin ();
 
   void finalize () { if (_can_recycle) recycle (this); }
   inline bool get (obj_state_t b) { return (_flag & b) == b; }
-  inline void set (obj_state_t b) { _flag |= b; }
+
+  inline void set (obj_state_t b) 
+  { _flag = obj_state_t (int (_flag) | b); }
+
   void set_can_recycle (bool b) { _can_recycle = b; }
 
   inline bool is_alive () const { return _flag == OBJ_ALIVE; }
