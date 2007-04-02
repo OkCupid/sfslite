@@ -56,6 +56,18 @@ typedef enum { JOIN_NONE = 0,
 	       JOIN_EVENTS = 1,
 	       JOIN_THREADS = 2 } join_method_t;
 
+/*
+ * An "action" is a type of activity to take internally to a "trigger".
+ * In the case of rendezvous, this means joining with the rendezvous 
+ * and potentially reentering the function (if twait(); was called).
+ * The "action" concept is a workaround virtual method calls, so by
+ * convention, "actions" such as the one below must implement the
+ * clear() and perform() methods.
+ *
+ * Template parameters: 
+ *   R={type of rendezvous}
+ *   V={type of wait value set}
+ */
 template<class R, class V>
 class rendezvous_action {
 public:
@@ -96,6 +108,7 @@ public:
     }
   }
 
+private:
   void clear (R *rp, _event_cancel_base *e)
   {
     _cls = NULL;
@@ -103,7 +116,6 @@ public:
     rp->remove (e);
   }
 
-private:
   weakref<R> _rv;
   ptr<closure_t> _cls;
   V _value_set;
@@ -208,7 +220,7 @@ public:
   _ti_mkevent (ptr<closure_t> cls, 
 	       const char *eloc,
 	       const my_value_set_t &vs,
-	       const refset_t<T1,T2,T3> &rs)
+	       const ref_set_t<T1,T2,T3> &rs)
   {
     ptr<_event_impl<my_action_t,T1,T2,T3> > ret;
     if (!this->flag ()->is_alive ()) {

@@ -24,7 +24,7 @@ __toconn (event<int>::ptr *out, int n, event<int>::ref in)
 
   tcb = delaycb (n, 0, mkevent (rv, OUTCOME_TIMEDOUT));
   in->set_cancel_notifier (mkevent (rv, OUTCOME_DISCARDED));
-  *out = mkevent_rs (in->refset (), rv, OUTCOME_SUCC);
+  *out = mkevent_rs (in->ref_set (), rv, OUTCOME_SUCC);
   
   twait (rv, outcome);
 

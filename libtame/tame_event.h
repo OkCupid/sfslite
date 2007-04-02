@@ -17,17 +17,17 @@ void tame_error (const char *loc, const char *msg);
 
 // A set of references
 template<class T1=nil_t, class T2=nil_t, class T3=nil_t, class T4=nil_t>
-class refset_t {
+class ref_set_t {
 public:
-  refset_t (T1 &r1, T2 &r2, T3 &r3, T4 &r4) 
+  ref_set_t (T1 &r1, T2 &r2, T3 &r3, T4 &r4) 
     :  _r1 (r1), _r2 (r2), _r3 (r3), _r4 (r4) {}
-  refset_t (T1 &r1, T2 &r2, T3 &r3)
+  ref_set_t (T1 &r1, T2 &r2, T3 &r3)
     : _r1 (r1), _r2 (r2), _r3 (r3), _r4 (_dummy) {}
-  refset_t (T1 &r1, T2 &r2)
+  ref_set_t (T1 &r1, T2 &r2)
     : _r1 (r1), _r2 (r2), _r3 (_dummy), _r4 (_dummy) {}
-  refset_t (T1 &r1)
+  ref_set_t (T1 &r1)
     : _r1 (r1), _r2 (_dummy), _r3 (_dummy), _r4 (_dummy) {}
-  refset_t ()
+  ref_set_t ()
     : _r1 (_dummy), _r2 (_dummy), _r3 (_dummy), _r4 (_dummy) {}
 
   void assign (const T1 &v1, const T2 &v2, const T3 &v3, const T4 &v4) 
@@ -79,10 +79,10 @@ void report_leaks (event_cancel_list_t *lst);
 template<class T1=nil_t, class T2=nil_t, class T3=nil_t>
 class _event_base : public _event_cancel_base {
 public:
-  _event_base (const refset_t<T1,T2,T3> &rs,
+  _event_base (const ref_set_t<T1,T2,T3> &rs,
 	       const char *loc = NULL) :
     _event_cancel_base (loc),
-    _refset (rs),
+    _ref_set (rs),
     _reuse (false),
     _cleared (false) {}
     
@@ -110,7 +110,7 @@ public:
   void base_trigger (const T1 &t1, const T2 &t2, const T3 &t3)
   {
     if (can_trigger ()) {
-      _refset.assign (t1, t2, t3);
+      _ref_set.assign (t1, t2, t3);
       if (perform_action (this, this->_loc, _reuse))
 	_cleared = true;
     }
@@ -124,7 +124,7 @@ public:
     }
   }
 
-  refset_t<T1,T2,T3> &refset () { return _refset; }
+  ref_set_t<T1,T2,T3> &ref_set () { return _ref_set; }
 
   void finish ()
   {
@@ -139,7 +139,7 @@ public:
   virtual void clear_action (_event_cancel_base *e) = 0;
 
 protected:
-  refset_t<T1,T2,T3> _refset;
+  ref_set_t<T1,T2,T3> _ref_set;
   bool _reuse;
   bool _cleared;
 };

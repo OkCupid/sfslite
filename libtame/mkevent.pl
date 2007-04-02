@@ -94,7 +94,7 @@ sub do_event_class ($)
 	   "public:\n");
 
     # print the constructor
-    print ("  ${CN} (const refset_t$tlist &rs, const char *loc)\n",
+    print ("  ${CN} (const ref_set_t$tlist &rs, const char *loc)\n",
 	   "   : ${BASE}${tlist} (rs, loc),\n",
 	   "     callback${vlist} (CALLBACK_ARGS(loc))\n",
 	   "     {}\n");
@@ -129,7 +129,7 @@ sub do_event_impl_class ($)
     # print the constructor
     print ("  ${CNI} (",
 	   arglist ("A action",
-		    "const refset_t$tlist &rs",
+		    "const ref_set_t$tlist &rs",
 		    "const char *loc"),
 	   ")\n",
 	   "    : ${CN}${tlist} (rs, loc),\n",
@@ -182,7 +182,7 @@ sub do_mkevent_rs ($$)
 	   "${MKEVRS} (" ,
 	   arglist ("ptr<closure_t> c",
 		    "const char *loc",
-		    "const refset_t<" .arglist (["T%", $t]). "> &rs",
+		    "const ref_set_t<" .arglist (["T%", $t]). "> &rs",
 		    "rendezvous_t<" . arglist (["W%", $w]). "> &rv",
 		    ["const W% &w%", $w]
 		    ),
@@ -227,7 +227,7 @@ sub do_mkevent ($$)
 	
 	my @args = ("c", 
 		    "loc",
-		    "refset_t<" . arglist (["T%", $t]) . "> (" .
+		    "ref_set_t<" . arglist (["T%", $t]) . "> (" .
 		    arglist (["t%", $t]) . ")",
 		    "rv",
 		    ["w%", $w]
@@ -266,7 +266,7 @@ sub do_mkevent_block ($)
     print "{\n";
     print ("  return _mkevent_implicit_rv (",
 	   arglist ("c.closure ()", "loc", 
-		    "refset_t<" . arglist (["T%", $t]) 
+		    "ref_set_t<" . arglist (["T%", $t]) 
 		    ."> (" . arglist (["t%", $t]) . ")" ),
 	   ");\n");
     print "}\n\n";

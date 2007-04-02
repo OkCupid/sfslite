@@ -86,7 +86,7 @@ connector_t<T1,T2,T3>::__sig (typename event<T1,T2,T3>::ptr *out,
   for (i = 0; i < sigs.size (); i++) {
     sigcb (sigs[i], mkevent (rv, sigs[i]));
   }
-  *out = mkevent_rs (in->refset (), rv, 0);
+  *out = mkevent_rs (in->ref_set (), rv, 0);
   (*out)->set_cancel_notifiers (mkevent (rv, -2));
 
   twait (rv, sig);
@@ -124,7 +124,7 @@ connector_t<T1,T2,T3>::__cnc (typename event<T1,T2,T3>::ptr *out,
     tcb = delaycb (to_s, to_ns, mkevent (rv, OUTCOME_TIMEDOUT));
   }
 
-  *out = mkevent_rs (in->refset (), rv, OUTCOME_SUCC);
+  *out = mkevent_rs (in->ref_set (), rv, OUTCOME_SUCC);
   (*out)->set_cancel_notifier (mkevent (rv, OUTCOME_DISCARDED));
   twait (rv, outc);
 
