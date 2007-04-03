@@ -238,7 +238,7 @@ public:
   _ti_mkevent (ptr<closure_t> cls, 
 	       const char *eloc,
 	       const my_value_set_t &vs,
-	       const ref_set_t<T1,T2,T3> &rs)
+	       const _tame_slot_set<T1,T2,T3> &rs)
   {
     ptr<_event_impl<my_action_t,T1,T2,T3> > ret;
     if (!this->flag ()->is_alive () || _is_cancelling) {

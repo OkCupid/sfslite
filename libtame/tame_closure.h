@@ -183,7 +183,7 @@ template<class C, class T1, class T2, class T3>
 typename event<T1,T2,T3>::ptr
 _mkevent_implicit_rv (const ptr<C> &c, 
 		      const char *loc,
-		      const ref_set_t<T1,T2,T3> &rs)
+		      const _tame_slot_set<T1,T2,T3> &rs)
 {
   ptr<_event_impl<closure_action<C>,T1,T2,T3> >  ret;
   ret = New refcounted<_event_impl<closure_action<C>,T1,T2,T3> > 

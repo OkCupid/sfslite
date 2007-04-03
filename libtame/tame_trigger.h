@@ -39,20 +39,20 @@ void dtrigger (event<>::ref cb);
 template<class T1> void
 dtrigger (typename event<T1>::ref cb, const T1 &t1)
 {
-  delaycb (0, 0, wrap (cb, &_event<T1>::trigger, t1));
+    delaycb (0, 0, wrap (cb, &_event<T1>::operator(), t1));
 }
 
 template<class T1, class T2> void
 dtrigger (typename event<T1,T2>::ref cb, const T1 &t1, const T2 &t2)
 {
-  delaycb (0, 0, wrap (cb, &_event<T1,T2>::trigger, t1, t2));
+    delaycb (0, 0, wrap (cb, &_event<T1,T2>::operator(), t1, t2));
 }
 
 template<class T1, class T2, class T3> void
 dtrigger (typename event<T1,T2,T3>::ref cb, const T1 &t1, 
 	  const T2 &t2, const T3 &t3)
 {
-  delaycb (0, 0, wrap (cb, &_event<T1,T2,T3>::trigger, t1, t2, t3));
+    delaycb (0, 0, wrap (cb, &_event<T1,T2,T3>::operator(), t1, t2, t3));
 }
 
 #endif /* _LIBTAME_TAME_TRIGGER_H_ */

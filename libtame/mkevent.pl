@@ -9,11 +9,12 @@ use strict;
 my $N_tv = 3;
 my $N_wv = 3;
 my $MKEV = "_mkevent";
+my $MKEVCOPY = "_mkeventcopy";
 my $CN = "_event";
 my $CNI = ${CN} . "_impl";
 my $WCN = "event";
 my $MKEVRS = ${MKEV} . "_rs";
-my $BASE = "_event_base";
+my $BASE = "_event_cancel_base";
 my $EVCB = "_event_cancel_base";
 my $RVMKEV = "_ti_mkevent";
 
@@ -61,15 +62,26 @@ sub template_arglist (@)
     }
 }
 
-sub do_trigger_func ($$)
+sub do_trigger_funcs ($)
 {
-    my ($fn, $t) = @_;
+    my ($t) = @_;
 
-    print ("  void $fn (",
+    print ("  void trigger (",
+	   arglist (["const T% &t%", $t]), ")",
+	   "\n  {
+    if (can_trigger ()) {\n");
+
+    if ($t) {
+	print ("_ref_set.assign (", arglist(["t%", $t]), ");\n");
+    }
+
+    print ("      if (perform_action (this, this->_loc, _reuse))
+        _cleared = true;
+    }
+  }\n");
+    print ("  void operator() (",
 	   arglist (["T% t%", $t]), ")",
-	   " { this->base_trigger (",
-	   arglist (["t%", $t], ["nil_t()", $N_tv - $t]),
-	   " ); }\n");
+	   " { trigger (", arglist(["t%", $t]), "); }\n");
 }
 
 #
@@ -88,22 +100,34 @@ sub do_event_class ($)
 
     # print the classname
     print ("class ${CN}", $tlist, " :\n",
-	   "     public ${BASE}${tlist},\n",
+	   "     public ${BASE},\n",
 	   "     public callback${vlist}\n",
 	   "{\n",
 	   "public:\n");
 
-    # print the constructor
-    print ("  ${CN} (const ref_set_t$tlist &rs, const char *loc)\n",
-	   "   : ${BASE}${tlist} (rs, loc),\n",
-	   "     callback${vlist} (CALLBACK_ARGS(loc))\n",
-	   "     {}\n");
+    # print the constructors
+    print ("  ${CN} (const _tame_slot_set$tlist &rs, const char *loc)\n",
+	   "   : ${BASE} (loc),\n",
+	   "     callback${vlist} (CALLBACK_ARGS(loc))");
+    if ($t) {
+	print (",\n     _ref_set (rs)");
+    }
+    print ("\n     {}\n");
 
-    do_trigger_func ("trigger", $t);
-    do_trigger_func ("operator()", $t);
+    if ($t) {
+	print ("  const _tame_slot_set$tlist &ref_set() const { return _ref_set; }\n");
+    } else {
+	print ("  _tame_slot_set$tlist ref_set() const { return _tame_slot_set$tlist (); }\n");
+    }
+
+    do_trigger_funcs ($t);
     
     # close the class
-    print "};\n\n";
+    if ($t) {
+	print ("  private:
+    _tame_slot_set$tlist _ref_set;\n");
+    }
+    print ("\n};\n\n");
 }
 
 #
@@ -129,7 +153,7 @@ sub do_event_impl_class ($)
     # print the constructor
     print ("  ${CNI} (",
 	   arglist ("A action",
-		    "const ref_set_t$tlist &rs",
+		    "const _tame_slot_set$tlist &rs",
 		    "const char *loc"),
 	   ")\n",
 	   "    : ${CN}${tlist} (rs, loc),\n",
@@ -182,7 +206,7 @@ sub do_mkevent_rs ($$)
 	   "${MKEVRS} (" ,
 	   arglist ("ptr<closure_t> c",
 		    "const char *loc",
-		    "const ref_set_t<" .arglist (["T%", $t]). "> &rs",
+		    "const _tame_slot_set<" .arglist (["T%", $t]). "> &rs",
 		    "rendezvous_t<" . arglist (["W%", $w]). "> &rv",
 		    ["const W% &w%", $w]
 		    ),
@@ -227,8 +251,8 @@ sub do_mkevent ($$)
 	
 	my @args = ("c", 
 		    "loc",
-		    "ref_set_t<" . arglist (["T%", $t]) . "> (" .
-		    arglist (["t%", $t]) . ")",
+		    "_tame_slot_set<" . arglist (["T%", $t]) . "> (" .
+		    arglist (["&t%", $t]) . ")",
 		    "rv",
 		    ["w%", $w]
 		    );
@@ -266,8 +290,8 @@ sub do_mkevent_block ($)
     print "{\n";
     print ("  return _mkevent_implicit_rv (",
 	   arglist ("c.closure ()", "loc", 
-		    "ref_set_t<" . arglist (["T%", $t]) 
-		    ."> (" . arglist (["t%", $t]) . ")" ),
+		    "_tame_slot_set<" . arglist (["T%", $t]) 
+		    ."> (" . arglist (["&t%", $t]) . ")" ),
 	   ");\n");
     print "}\n\n";
 }
@@ -306,7 +330,6 @@ sub do_mkevent_tir ($)
     print "\n\n";
 }
 
-
 print <<EOF;
 // -*-c++-*-
 //
@@ -330,7 +353,6 @@ for (my $t = 0; $t <= $N_tv; $t++) {
 	do_generic ($t, $w);
     }
 }
-
 
 print <<EOF;
 #endif // _LIBTAME_EVENT_AG_H_ 

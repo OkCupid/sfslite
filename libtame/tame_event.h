@@ -10,47 +10,13 @@
 #include "init.h"
 #include "async.h"
 #include "list.h"
+#include "tame_valueset.h"
 #include "tame_run.h"
-
-struct nil_t {};
-
-// A set of references
-template<class T1=nil_t, class T2=nil_t, class T3=nil_t, class T4=nil_t>
-class ref_set_t {
-public:
-  ref_set_t (T1 &r1, T2 &r2, T3 &r3, T4 &r4) 
-    :  _r1 (r1), _r2 (r2), _r3 (r3), _r4 (r4) {}
-  ref_set_t (T1 &r1, T2 &r2, T3 &r3)
-    : _r1 (r1), _r2 (r2), _r3 (r3), _r4 (_dummy) {}
-  ref_set_t (T1 &r1, T2 &r2)
-    : _r1 (r1), _r2 (r2), _r3 (_dummy), _r4 (_dummy) {}
-  ref_set_t (T1 &r1)
-    : _r1 (r1), _r2 (_dummy), _r3 (_dummy), _r4 (_dummy) {}
-  ref_set_t ()
-    : _r1 (_dummy), _r2 (_dummy), _r3 (_dummy), _r4 (_dummy) {}
-
-  void assign (const T1 &v1, const T2 &v2, const T3 &v3, const T4 &v4) 
-  { _r1 = v1; _r2 = v2; _r3 = v3; _r4 = v4; }
-  void assign (const T1 &v1, const T2 &v2, const T3 &v3)
-  { _r1 = v1; _r2 = v2; _r3 = v3; }
-  void assign (const T1 &v1, const T2 &v2) 
-  { _r1 = v1; _r2 = v2; }
-  void assign (const T1 &v1) { _r1 = v1; }
-  void assign () { }
-
-private:
-  nil_t _dummy;
-
-  T1 &_r1;
-  T2 &_r2;
-  T3 &_r3;
-  T4 &_r4;
-};
 
 // Specify 1 extra argument, that way we can do template specialization
 // elsewhere.  We should never have an instatiated event class with
 // 4 templated types, though.
-template<class T1=nil_t, class T2=nil_t, class T3=nil_t, class T4=nil_t> 
+template<class T1=void, class T2=void, class T3=void, class T4=void> 
 class _event;
 
 class _event_cancel_base : public virtual refcount {
@@ -58,45 +24,13 @@ public:
   _event_cancel_base (const char *loc) : 
     _loc (loc), 
     _cancelled (false),
-    _cleared (false) {}
+    _cleared (false),
+    _reuse (false) {}
 
   void set_cancel_notifier (ptr<_event<> > e) { _cancel_notifier = e; }
   void cancel ();
   const char *loc () const { return _loc; }
   bool cancelled () const { return _cancelled; }
-
-
-  list_entry<_event_cancel_base> _lnk;
-
-protected:
-  virtual void clear_action () = 0;
-  void clear ();
-
-  const char *_loc;
-  bool _cancelled;
-  bool _cleared;
-  ptr<_event<> > _cancel_notifier;
-
-};
-
-typedef list<_event_cancel_base, &_event_cancel_base::_lnk> 
-event_cancel_list_t;
-
-void report_leaks (event_cancel_list_t *lst);
-
-template<class T1=nil_t, class T2=nil_t, class T3=nil_t>
-class _event_base : public _event_cancel_base {
-public:
-  _event_base (const ref_set_t<T1,T2,T3> &rs,
-	       const char *loc = NULL) :
-    _event_cancel_base (loc),
-    _ref_set (rs),
-    _reuse (false) {}
-    
-
-  typedef _event_base<T1,T2,T3> my_type_t;
-
-  ~_event_base () { /* must clear action in subclass */ }
 
   void set_reuse (bool b) { _reuse = b; }
   bool get_reuse () const { return _reuse; }
@@ -115,15 +49,6 @@ public:
     return ret;
   }
 
-  void base_trigger (const T1 &t1, const T2 &t2, const T3 &t3)
-  {
-    if (can_trigger ()) {
-      _ref_set.assign (t1, t2, t3);
-      if (perform_action (this, this->_loc, _reuse))
-	this->_cleared = true;
-    }
-  }
-
   void trigger_no_assign ()
   {
     if (can_trigger ()) {
@@ -132,24 +57,34 @@ public:
     }
   }
 
-  ref_set_t<T1,T2,T3> &ref_set () { return _ref_set; }
-
   void finish () { clear (); }
 
-  virtual bool perform_action (_event_cancel_base *e, const char *loc,
-			       bool reuse) = 0;
+  list_entry<_event_cancel_base> _lnk;
 
 protected:
-  ref_set_t<T1,T2,T3> _ref_set;
+  virtual bool perform_action (_event_cancel_base *e, const char *loc,
+			       bool reuse) = 0;
+  virtual void clear_action () = 0;
+  void clear ();
+
+  const char *_loc;
+  bool _cancelled;
+  bool _cleared;
   bool _reuse;
+  ptr<_event<> > _cancel_notifier;
+
 };
 
+typedef list<_event_cancel_base, &_event_cancel_base::_lnk> 
+event_cancel_list_t;
 
-template<class A, class T1=nil_t, class T2=nil_t, 
-	 class T3=nil_t, class T4=nil_t> 
+void report_leaks (event_cancel_list_t *lst);
+
+template<class A, class T1=void, class T2=void, 
+	 class T3=void, class T4=void> 
 class _event_impl;
 
-template<class T1=nil_t, class T2=nil_t, class T3=nil_t>
+template<class T1=void, class T2=void, class T3=void>
 class event {
 public:
   typedef ref<_event<T1,T2,T3> > ref;

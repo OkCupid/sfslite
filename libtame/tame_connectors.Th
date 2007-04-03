@@ -18,7 +18,7 @@ inline bool valid_timeout (int s, int ns)
   return (s >= 0 && ns >= 0 && (s > 0 || ns > 0));
 }
 
-template<class T1=nil_t, class T2=nil_t, class T3=nil_t>
+template<class T1=void, class T2=void, class T3=void>
 class connector_t {
 public:
 
