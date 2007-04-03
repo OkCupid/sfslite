@@ -36,7 +36,7 @@ void report_leaks (event_cancel_list_t *lst)
   for (p = lst->first ; p ; p = lst->next (p)) {
     strbuf b;
     str t = p->loc ();
-    b << t << ": event object leaked\n";
+    b << t << ": event object leaked";
     str s = b;
     int *n = tab[s];
     if (n) { (*n)++; }

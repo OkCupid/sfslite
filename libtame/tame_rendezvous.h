@@ -162,7 +162,8 @@ public:
   rendezvous_t (const char *loc, int line)
     : rendezvous_base_t (loc, line),
       _join_method (JOIN_NONE),
-      _n_events (0)
+      _n_events (0),
+      _is_cancelling (false)
   {
     pth_init ();
   }
@@ -170,7 +171,8 @@ public:
   rendezvous_t (const char *loc = NULL)
     : rendezvous_base_t (loc),
       _join_method (JOIN_NONE),
-      _n_events (0) 
+      _n_events (0),
+      _is_cancelling (false)
   {
     pth_init ();
   }
@@ -180,8 +182,15 @@ public:
   // Public Interface to Rendezvous Class
   void cancel ()
   {
-    this->flag()->set_cancelled ();
+    // setting this flag prevents more events from being added on
+    // to this rendezvous.
+    _is_cancelling = true;
+
     cancel_all_events ();
+
+    // must set flag after cancelling all events, since events cannot
+    // access this object if it's cancelled.
+    this->flag()->set_cancelled ();
   }
 
   u_int n_pending () const { return _pending_values.size (); }
@@ -232,7 +241,7 @@ public:
 	       const ref_set_t<T1,T2,T3> &rs)
   {
     ptr<_event_impl<my_action_t,T1,T2,T3> > ret;
-    if (!this->flag ()->is_alive ()) {
+    if (!this->flag ()->is_alive () || _is_cancelling) {
       strbuf b;
       b.fmt ("Attempted to add an event to a rendezvous (allocated %s) "
 	     "this is no longer active", loc ());
@@ -423,6 +432,8 @@ private:
   pth_cond_t _cond;
   pth_mutex_t _mutex;
 #endif /* HAVE_TAME_PTH */
+
+  bool _is_cancelling;
 
 };
 

@@ -51,15 +51,7 @@ public:
 
   // given a line number of the end of scope, perform sanity
   // checks on scoping, etc.
-  inline void end_of_scope_checks (int line)
-  {
-    if (tame_check_leaks ()) {
-      report_leaks (&_events);
-      report_rv_problems();
-    }
-  }
-
-  void report_rv_problems ();
+  void end_of_scope_checks (int line);
 
   // Initialize a block environment with the ID of this block
   // within the given function.  Also reset any internal counters.
@@ -83,7 +75,7 @@ public:
     if (tame_check_leaks ()) {
       assert (_n_events > 0);
       _n_events --;
-      _events.remove (e);
+      _events->remove (e);
     }
   }
 
@@ -91,7 +83,7 @@ public:
   {
     if (tame_check_leaks ()) {
       _n_events ++;
-      _events.insert_head (e);
+      _events->insert_head (e);
     }
   }
 
@@ -128,7 +120,7 @@ public:
 
   
   vec<weakref<rendezvous_base_t> > _rvs;
-  list<_event_cancel_base, &_event_cancel_base::_lnk> _events;
+  ptr<event_cancel_list_t> _events;
   u_int _n_events;
 
 };

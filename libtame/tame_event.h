@@ -55,18 +55,26 @@ class _event;
 
 class _event_cancel_base : public virtual refcount {
 public:
-  _event_cancel_base (const char *loc) : _loc (loc), _cancelled (false) {}
+  _event_cancel_base (const char *loc) : 
+    _loc (loc), 
+    _cancelled (false),
+    _cleared (false) {}
 
   void set_cancel_notifier (ptr<_event<> > e) { _cancel_notifier = e; }
   void cancel ();
   const char *loc () const { return _loc; }
   bool cancelled () const { return _cancelled; }
 
+
   list_entry<_event_cancel_base> _lnk;
 
 protected:
+  virtual void clear_action () = 0;
+  void clear ();
+
   const char *_loc;
   bool _cancelled;
+  bool _cleared;
   ptr<_event<> > _cancel_notifier;
 
 };
@@ -83,8 +91,7 @@ public:
 	       const char *loc = NULL) :
     _event_cancel_base (loc),
     _ref_set (rs),
-    _reuse (false),
-    _cleared (false) {}
+    _reuse (false) {}
     
 
   typedef _event_base<T1,T2,T3> my_type_t;
@@ -97,11 +104,11 @@ public:
   bool can_trigger ()
   {
     bool ret = false;
-    if (_cleared) {
-      tame_error (this->_loc, "event triggered after it was cleared");
-    } else if (this->_cancelled) {
+    if (this->_cancelled) {
       if (tame_strict_mode ()) 
 	tame_error (this->_loc, "event triggered after it was cancelled");
+    } else if (this->_cleared) {
+      tame_error (this->_loc, "event triggered after it was cleared");
     } else {
       ret = true;
     }
@@ -113,7 +120,7 @@ public:
     if (can_trigger ()) {
       _ref_set.assign (t1, t2, t3);
       if (perform_action (this, this->_loc, _reuse))
-	_cleared = true;
+	this->_cleared = true;
     }
   }
 
@@ -121,28 +128,20 @@ public:
   {
     if (can_trigger ()) {
       if (perform_action (this, this->_loc, _reuse))
-	_cleared = true;
+	this->_cleared = true;
     }
   }
 
   ref_set_t<T1,T2,T3> &ref_set () { return _ref_set; }
 
-  void finish ()
-  {
-    if (!_cleared) {
-      clear_action (this);
-      _cleared = true;
-    }
-  }
+  void finish () { clear (); }
 
   virtual bool perform_action (_event_cancel_base *e, const char *loc,
 			       bool reuse) = 0;
-  virtual void clear_action (_event_cancel_base *e) = 0;
 
 protected:
   ref_set_t<T1,T2,T3> _ref_set;
   bool _reuse;
-  bool _cleared;
 };
 
 

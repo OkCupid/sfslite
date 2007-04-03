@@ -136,12 +136,12 @@ sub do_event_impl_class ($)
 	   "      _action (action) {}\n\n");
 
     # print the destructor
-    print ("  ~${CNI} () { if (!this->_cleared) clear_action (this); }\n\n");
+    print ("  ~${CNI} () { if (!this->_cleared) clear_action (); }\n\n");
 
     # print the action functions
     print ("  bool perform_action (${EVCB} *e, const char *loc, bool reuse)\n",
 	   "  { return _action.perform (e, loc, reuse); }\n");
-    print ("  void clear_action (${EVCB} *e) { _action.clear (e); }\n\n");
+    print ("  void clear_action () { _action.clear (this); }\n\n");
 
     # print the data
     print ("private:\n",

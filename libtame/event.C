@@ -10,6 +10,7 @@ void
 _event_cancel_base::cancel ()
 {
   _cancelled = true;
+  clear ();
   if (_cancel_notifier) {
     ptr<_event_cancel_base> hold;
     if (!_cancel_notifier->cancelled ()) {
@@ -18,4 +19,15 @@ _event_cancel_base::cancel ()
     }
     _cancel_notifier = NULL;
   }
+}
+
+
+void
+_event_cancel_base::clear ()
+{
+  if (!_cleared) {
+    clear_action ();
+    _cleared = true;
+  }
+
 }
