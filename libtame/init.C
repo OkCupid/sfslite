@@ -40,6 +40,9 @@ tame_init::start ()
   char *e = safegetenv (TAME_OPTIONS);
   for (char *cp = e; cp && *cp; cp++) {
     switch (*cp) {
+    case 'S':
+      tame_options |= TAME_STRICT;
+      break;
     case 'Q':
       tame_options |= TAME_ERROR_SILENT;
       break;

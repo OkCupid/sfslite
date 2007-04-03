@@ -35,11 +35,14 @@
 #define   TAME_ERROR_FATAL       (1 << 1)
 #define   TAME_CHECK_LEAKS       (1 << 2)
 #define   TAME_OPTIMIZE          (1 << 3)
+#define   TAME_STRICT            (1 << 4)
 
 extern bool tame_collect_rv_flag;
 extern int tame_options;
 inline bool tame_check_leaks () { return tame_options & TAME_CHECK_LEAKS ; }
 inline bool tame_optimized () { return tame_options & TAME_OPTIMIZE; }
+inline bool tame_strict_mode () { return tame_options & TAME_STRICT; }
+void tame_error (const char *loc, const char *msg);
 
 /**
  * functions defined in tame.C, mainly for reporting errors, and

@@ -490,7 +490,7 @@ tame_fn_t::output_reenter (strbuf &b)
     b << ", ";
   }
   b << "mkref (this));\n"
-    << "  }\n;"
+    << "  }\n"
     << "void v_reenter () { reenter (); }\n\n";
 }
 

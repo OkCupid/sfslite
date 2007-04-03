@@ -35,7 +35,8 @@ __toconn (event<int>::ptr *out, int n, event<int>::ref in)
   }
   
   rv.cancel ();
-  in->trigger_no_assign ();
+  if (outcome != OUTCOME_DISCARDED)
+    in->trigger_no_assign ();
 }
 
 static event<int>::ptr

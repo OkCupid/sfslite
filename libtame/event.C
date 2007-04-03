@@ -11,8 +11,11 @@ _event_cancel_base::cancel ()
 {
   _cancelled = true;
   if (_cancel_notifier) {
-    ptr<_event_cancel_base> hold (mkref (this));
-    _cancel_notifier->trigger ();
+    ptr<_event_cancel_base> hold;
+    if (!_cancel_notifier->cancelled ()) {
+      hold = mkref (this);
+      _cancel_notifier->trigger ();
+    }
     _cancel_notifier = NULL;
   }
 }

@@ -125,16 +125,25 @@ private:
 class rendezvous_base_t : public weakrefcount {
 public:
   rendezvous_base_t (const char *loc)
-    : _loc (loc ? loc : "(unknown)") {}
+    : _loc (loc ? loc : "(unknown)") 
+  { collect_self (); }
 
   rendezvous_base_t (const char *loc, int line)
     : _loc_s (strbuf ("%s:%d", loc, line)),
-      _loc (_loc_s.cstr ()) {}
+      _loc (_loc_s.cstr ()) 
+  { collect_self (); }
 
   virtual ~rendezvous_base_t () {}
 
   inline const char *loc () const { return _loc; }
   virtual u_int n_triggers_left () const = 0;
+
+  inline void collect_self ()
+  {
+    if (tame_check_leaks ()) {
+      collect_rendezvous (mkweakref (this));
+    }
+  }
 
 private:
   str _loc_s;

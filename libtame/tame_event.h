@@ -10,10 +10,9 @@
 #include "init.h"
 #include "async.h"
 #include "list.h"
+#include "tame_run.h"
 
 struct nil_t {};
-
-void tame_error (const char *loc, const char *msg);
 
 // A set of references
 template<class T1=nil_t, class T2=nil_t, class T3=nil_t, class T4=nil_t>
@@ -61,6 +60,7 @@ public:
   void set_cancel_notifier (ptr<_event<> > e) { _cancel_notifier = e; }
   void cancel ();
   const char *loc () const { return _loc; }
+  bool cancelled () const { return _cancelled; }
 
   list_entry<_event_cancel_base> _lnk;
 
@@ -97,10 +97,11 @@ public:
   bool can_trigger ()
   {
     bool ret = false;
-    if (this->_cancelled) {
-      tame_error (this->_loc, "event triggered after it was cancelled");
-    } else if (_cleared) {
+    if (_cleared) {
       tame_error (this->_loc, "event triggered after it was cleared");
+    } else if (this->_cancelled) {
+      if (tame_strict_mode ()) 
+	tame_error (this->_loc, "event triggered after it was cancelled");
     } else {
       ret = true;
     }
