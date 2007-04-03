@@ -49,6 +49,15 @@ public:
     return ncb;
   }
 
+  static typename event<T1,T2,T3>::ptr
+  first (typename event<T1,T2,T3>::ref *es, size_t sz)
+  {
+    typename event<T1,T2,T3>::ptr ncb;
+    connector_t<T1,T2,T3> c;
+    c.__first (es, sz);
+    return ncb;
+  }
+
 private:
   void __cnc (typename event<T1,T2,T3>::ptr *out, 
 	      typename event<T1,T2,T3>::ref in, 
@@ -86,7 +95,7 @@ connector_t<T1,T2,T3>::__sig (typename event<T1,T2,T3>::ptr *out,
   for (i = 0; i < sigs.size (); i++) {
     sigcb (sigs[i], mkevent (rv, sigs[i]));
   }
-  *out = mkevent_rs (in->ref_set (), rv, 0);
+  *out = mkevent_rs (in->slot_set (), rv, 0);
   (*out)->set_cancel_notifiers (mkevent (rv, -2));
 
   twait (rv, sig);
@@ -124,7 +133,7 @@ connector_t<T1,T2,T3>::__cnc (typename event<T1,T2,T3>::ptr *out,
     tcb = delaycb (to_s, to_ns, mkevent (rv, OUTCOME_TIMEDOUT));
   }
 
-  *out = mkevent_rs (in->ref_set (), rv, OUTCOME_SUCC);
+  *out = mkevent_rs (in->slot_set (), rv, OUTCOME_SUCC);
   (*out)->set_cancel_notifier (mkevent (rv, OUTCOME_DISCARDED));
   twait (rv, outc);
 
@@ -174,6 +183,13 @@ namespace connector {
        _event_cancel_base *cobj = NULL)
   {
     return connector_t<T1,T2,T3>::sig (in, sigs, sigp, cobj);
+  }
+
+  template<typename T1, typename T2, typename T3>
+  ref<_event<T1,T2,T3> >
+  first (ref<_event<T1,T2,T3> > *es, size_t sz)
+  {
+    return connector_t<T1,T2,T3>::first (es, sz);
   }
 
 };

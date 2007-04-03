@@ -67,18 +67,19 @@ sub do_trigger_funcs ($)
     my ($t) = @_;
 
     print ("  void trigger (",
-	   arglist (["const T% &t%", $t]), ")",
-	   "\n  {
-    if (can_trigger ()) {\n");
+	   arglist (["const T% &t%", $t]), ")\n",
+	   "  {\n",
+	   "    if (can_trigger ()) {\n");
 
     if ($t) {
-	print ("_ref_set.assign (", arglist(["t%", $t]), ");\n");
+	print ("      _slot_set.assign (", arglist(["t%", $t]), ");\n");
     }
 
-    print ("      if (perform_action (this, this->_loc, _reuse))
-        _cleared = true;
-    }
-  }\n");
+    print ("      if (perform_action (this, this->_loc, _reuse))\n",
+	   "        _cleared = true;\n",
+	   "    }\n",
+	   "  }\n");
+
     print ("  void operator() (",
 	   arglist (["T% t%", $t]), ")",
 	   " { trigger (", arglist(["t%", $t]), "); }\n");
@@ -110,22 +111,27 @@ sub do_event_class ($)
 	   "   : ${BASE} (loc),\n",
 	   "     callback${vlist} (CALLBACK_ARGS(loc))");
     if ($t) {
-	print (",\n     _ref_set (rs)");
+	print (",\n",
+	       "    _slot_set (rs)");
     }
-    print ("\n     {}\n");
+    print ("\n",
+	   "    {}\n\n");
 
     if ($t) {
-	print ("  const _tame_slot_set$tlist &ref_set() const { return _ref_set; }\n");
+	print ("  const _tame_slot_set$tlist &slot_set() const\n",
+	       "  { return _slot_set; }");
     } else {
-	print ("  _tame_slot_set$tlist ref_set() const { return _tame_slot_set$tlist (); }\n");
+	print ("  _tame_slot_set$tlist slot_set() const\n",
+	       "  { return _tame_slot_set$tlist (); }");
     }
+    print ("\n\n");
 
     do_trigger_funcs ($t);
     
     # close the class
     if ($t) {
-	print ("  private:
-    _tame_slot_set$tlist _ref_set;\n");
+	print ("private:\n",
+	       "  _tame_slot_set$tlist _slot_set;\n");
     }
     print ("\n};\n\n");
 }
@@ -152,7 +158,7 @@ sub do_event_impl_class ($)
 
     # print the constructor
     print ("  ${CNI} (",
-	   arglist ("A action",
+	   arglist ("const A &action",
 		    "const _tame_slot_set$tlist &rs",
 		    "const char *loc"),
 	   ")\n",
