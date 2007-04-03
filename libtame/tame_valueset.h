@@ -4,16 +4,18 @@
 #ifndef _LIBTAME_TAME_VALUESET_H_
 #define _LIBTAME_TAME_VALUESET_H_
 
-template <typename T1=void, typename T2=void, typename T3=void, typename T4=void>
+template <typename T1=void, typename T2=void, typename T3=void, 
+	  typename T4=void>
 struct _tame_slot_set {
-    _tame_slot_set(T1 *p1_, T2 *p2_, T3 *p3_, T4 *p4_) : p1(p1_), p2(p2_), p3(p3_), p4(p4_) { }
-    void assign(const T1 &v1, const T2 &v2, const T3 &v3, const T4 &v4) {
-	*p1 = v1; *p2 = v2; *p3 = v3; *p4 = v4;
-    }
-    T1 *p1;
-    T2 *p2;
-    T3 *p3;
-    T4 *p4;
+  _tame_slot_set(T1 *p1_, T2 *p2_, T3 *p3_, T4 *p4_) 
+    : p1(p1_), p2(p2_), p3(p3_), p4(p4_) { }
+  void assign(const T1 &v1, const T2 &v2, const T3 &v3, const T4 &v4) {
+    *p1 = v1; *p2 = v2; *p3 = v3; *p4 = v4;
+  }
+  T1 *p1;
+  T2 *p2;
+  T3 *p3;
+  T4 *p4;
 };
 
 template <typename T1, typename T2, typename T3>

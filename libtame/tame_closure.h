@@ -130,6 +130,13 @@ class closure_action {
 public:
   closure_action (ptr<C> c) : _closure (c) {}
 
+  //
+  // One would like to assert (!_closure) in the destructor,
+  // but we cannot, unfortunately, since there are short-lived
+  // copies of a closure_action that don't ever use their
+  // _closure field aside from just passing it onto other 
+  // closure_actions
+  //
   ~closure_action () {}
 
   bool perform (_event_cancel_base *event, const char *loc, bool _reuse)
@@ -145,6 +152,12 @@ public:
     return ret;
   }
 
+  //
+  // Invariant: as long as this object has a reference to the closure,
+  // the associated event appears in the closure's list of outstanding 
+  // events.  Of course the closure cannot go out of scope as long as this 
+  // reference exists, so this arrangement should prevent dangling pointers.
+  //
   void clear (_event_cancel_base *e) 
   {
     if (_closure) {

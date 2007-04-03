@@ -377,7 +377,7 @@ private:
       strbuf b;
       b.fmt ("rendezvous went out of scope when expecting %u trigger(s)",
 	     n_triggers_left ());
-      str s;
+      str s = b;
       tame_error (loc(), s.cstr ());
     } 
     this->flag()->set_dead ();
