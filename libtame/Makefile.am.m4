@@ -20,12 +20,13 @@ define(`tame_in', tame_in $1.T)dnl
 define(`tame_out', tame_out $1.C)dnl
 $1.o: $1.C
 $1.lo: $1.C
+$1.C: $1.T $(TAME)
 ]]changequote)dnl
 
 define(`tame_hdr',
 changequote([[, ]])dnl
 [[dnl
-$1.h: $1.Th
+$1.h: $1.Th $(TAME)
 define(`tame_out_h', tame_out_h $1.h)dnl
 ]]changequote)dnl
 

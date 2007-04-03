@@ -34,7 +34,7 @@ changequote([[, ]])dnl
 define(`tame_exes', tame_exes $1)dnl
 define(`tame_dist', tame_dist $1.T)dnl
 define(`tame_clean', tame_clean $1.C)dnl
-$1.C: $(srcdir)/$1.T
+$1.C: $(srcdir)/$1.T $(TAME)
 ]]changequote)dnl
 
 define(`tame_standalone',
