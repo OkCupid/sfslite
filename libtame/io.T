@@ -191,13 +191,12 @@ namespace tame {
     tvars {
       int rc;
     }
+
     twait { fdcb (sockfd, selread, mkevent ()); }
     fdcb (sockfd, selread, NULL);
     rc = ::accept (sockfd, addr, addrlen);
     ev->trigger (rc);
   }
-
-
 
 
 };

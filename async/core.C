@@ -32,6 +32,7 @@
 
 #include "litetime.h"
 #include "select.h"
+#include <stdio.h>
 
 bool amain_panic;
 int maxfd;
@@ -309,7 +310,7 @@ fdcb (int fd, selop op, cbv::ptr cb)
     epoll_event ev;
     int epoll_op;
     epoll_state* es = &epoll_states[fd];
-
+    
     fdcbs[op][fd] = cb;
 
     // keep gcc4 happy
@@ -358,14 +359,14 @@ fdcb_check (void)
 	 * earlier event handler could have unreg'ed the handler for the
 	 * current socket fd). */
 	if ( (eventp->events & EV_READ_EVENTS) && (*interest & EV_READ_BIT)) 
-	    (*fdcbs[selread][fd]) ();
+	  (*fdcbs[selread][fd]) ();
 
 	if ( (eventp->events & EV_WRITE_EVENTS) && (*interest & EV_WRITE_BIT))
 	    (*fdcbs[selwrite][fd]) ();
     }
 }
 
-#else /* USE_EPOLL */
+#else /* !USE_EPOLL */
 
 void
 fdcb (int fd, selop op, cbv::ptr cb)

@@ -25,7 +25,10 @@ public:
     _loc (loc), 
     _cancelled (false),
     _cleared (false),
-    _reuse (false) {}
+    _reuse (false) 
+  {}
+
+  ~_event_cancel_base () {}
 
   void set_cancel_notifier (ptr<_event<> > e) { _cancel_notifier = e; }
   void cancel ();
@@ -74,6 +77,8 @@ protected:
   ptr<_event<> > _cancel_notifier;
 
 };
+
+typedef ptr<_event_cancel_base> _event_hold_t;
 
 typedef list<_event_cancel_base, &_event_cancel_base::_lnk> 
 event_cancel_list_t;

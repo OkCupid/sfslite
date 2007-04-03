@@ -69,7 +69,9 @@ sub do_trigger_funcs ($)
     print ("  void trigger (",
 	   arglist (["const T% &t%", $t]), ")\n",
 	   "  {\n",
-	   "    if (can_trigger ()) {\n");
+	   "    if (can_trigger ()) {\n",
+	   "      _event_hold_t hold = mkref (this);\n"
+	   );
 
     if ($t) {
 	print ("      _slot_set.assign (", arglist(["t%", $t]), ");\n");
