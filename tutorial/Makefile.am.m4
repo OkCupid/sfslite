@@ -89,6 +89,7 @@ tame_standalone(cnc)
 tame_standalone(connect1)
 tame_rpcclient(exsrv)
 tame_standalone(nlock)
+tame_standalone(ex14)
 
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl

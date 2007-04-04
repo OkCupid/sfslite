@@ -606,6 +606,9 @@ bool do_corebench = false;
 static inline void
 _acheck ()
 {
+  
+  sfs_leave_sel_loop ();
+
   START_ACHECK_TIMER();
   // warn << "in acheck...\n";
   if (amain_panic)

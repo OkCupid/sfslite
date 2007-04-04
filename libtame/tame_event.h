@@ -30,6 +30,14 @@ public:
 
   ~_event_cancel_base () {}
 
+  void reinit (const char *loc)
+  {
+    _loc = loc;
+    _cancelled = false;
+    _cleared = false;
+    _reuse = false;
+  }
+
   void set_cancel_notifier (ptr<_event<> > e) { _cancel_notifier = e; }
   void cancel ();
   const char *loc () const { return _loc; }

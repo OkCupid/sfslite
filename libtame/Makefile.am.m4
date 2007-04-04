@@ -47,6 +47,9 @@ dnl
 dnl
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
 
+recycle.o:  tame_event_ag.h recycle.C
+recycle.lo: tame_event_ag.h recycle.C
+
 mkevent.o:  tame_event_ag.h mkevent.C
 mkevent.lo: tame_event_ag.h mkevent.C
 
@@ -74,6 +77,7 @@ libtame_la_SOURCES = \
 	thread.C \
 	trigger.C \
 	event.C \
+	event_opt.C \
 	tame_out 
 
 dnl
@@ -93,6 +97,7 @@ sfsinclude_HEADERS = \
 	tame_thread.h \
 	tame_typedefs.h \
 	tame_valueset.h \
+	tame_event_opt.h \
 	tame.h \
 	tame_pipeline.h \
 	tame_lock.h \

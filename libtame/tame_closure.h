@@ -125,6 +125,8 @@ public:
 
 };
 
+typedef ptr<closure_t> closure_ptr_t;
+
 template<class C>
 class closure_action {
 public:

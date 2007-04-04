@@ -287,6 +287,10 @@ sub do_mkevent_block ($)
 {
     my ($t) = @_;
 
+    if ($t == 0) {
+	return;
+    }
+
     print "template<" . arglist ("class C", ["class T%", $t]) . ">\n";
     print "typename ";
     print "${WCN}<" . arglist (["T%", $t]) . ">::ref\n";
@@ -296,6 +300,7 @@ sub do_mkevent_block ($)
 		    [ "T% &t%", $t ]),
 	   ")\n");
     print "{\n";
+
     print ("  return _mkevent_implicit_rv (",
 	   arglist ("c.closure ()", "loc", 
 		    "_tame_slot_set<" . arglist (["T%", $t]) 
