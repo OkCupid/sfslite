@@ -45,11 +45,6 @@ int fd_set_bytes;		// Size in bytes of a [wide] fd_set
 static int nselfd;
 #endif /* USE_EPOLL */
 
-// initialize this in case we access tsnow before calling amain()
-timespec tsnow;
-
-const time_t &timenow = tsnow.tv_sec;
-
 static timeval selwait;
 
 #ifdef WRAP_DEBUG
@@ -64,12 +59,16 @@ static bool callback_time;
 static inline const char *
 timestring ()
 {
+
   if (!callback_time)
     return "";
 
-  my_clock_gettime (&tsnow);
+  struct timespec ts;
+
+  sfs_get_tsnow (&ts, true);
+
   static str buf;
-  buf = strbuf ("%d.%06d ", int (tsnow.tv_sec), int (tsnow.tv_nsec/1000));
+  buf = strbuf ("%d.%06d ", int (ts.tv_sec), int (ts.tv_nsec/1000));
   return buf;
 }
 #endif /* WRAP_DEBUG */
@@ -81,7 +80,6 @@ struct child {
   child (pid_t p, cbi c) : pid (p), cb (c) {}
 };
 static ihash<pid_t, child, &child::pid, &child::link> chldcbs;
-static time_t chldcb_check_last;
 
 struct timecb_t {
   timespec ts;
@@ -170,12 +168,12 @@ chldcb_check ()
 	      timestring (), pid, status, c->cb->dest, c->cb->line);
 #endif /* WRAP_DEBUG */
       STOP_ACHECK_TIMER ();
+      sfs_leave_sel_loop ();
       (*c->cb) (status);
       START_ACHECK_TIMER ();
       delete c;
     }
   }
-  chldcb_check_last = timenow;
 }
 
 timecb_t *
@@ -191,12 +189,19 @@ timecb_t *
 delaycb (time_t sec, u_int32_t nsec, cbv cb)
 {
   timespec ts;
-  my_clock_gettime (&ts);
-  ts.tv_sec += sec;
-  ts.tv_nsec += nsec;
-  if (ts.tv_nsec >= 1000000000) {
-    ts.tv_nsec -= 1000000000;
-    ts.tv_sec++;
+  if (sec == 0 && nsec == 0) {
+    ts.tv_sec = 0;
+    ts.tv_nsec = 0;
+  } else {
+    sfs_get_tsnow (&ts, true);
+
+    ts.tv_sec += sec;
+    ts.tv_nsec += nsec;
+    if (ts.tv_nsec >= 1000000000) {
+      ts.tv_nsec -= 1000000000;
+      ts.tv_sec++;
+    }
+
   }
   return timecb (ts, cb);
 }
@@ -218,40 +223,51 @@ timecb_remove (timecb_t *to)
 void
 timecb_check ()
 {
-  my_clock_gettime (&tsnow);
+  struct timespec my_ts;
+
   timecb_t *tp, *ntp;
 
-  // warn ("Check timecbs: %p\n", &timecbs);
+  if (timecbs.first ()) {
+    sfs_set_global_timestamp ();
+    my_ts = sfs_get_tsnow ();
 
-  for (tp = timecbs.first (); tp && tp->ts <= tsnow;
-       tp = timecbs_altered ? timecbs.first () : ntp) {
-    ntp = timecbs.next (tp);
-    timecbs.remove (tp);
-    timecbs_altered = false;
+    for (tp = timecbs.first (); tp && tp->ts <= my_ts;
+	 tp = timecbs_altered ? timecbs.first () : ntp) {
+      ntp = timecbs.next (tp);
+      timecbs.remove (tp);
+      timecbs_altered = false;
 #ifdef WRAP_DEBUG
-    if (callback_trace & CBTR_TIME)
-      warn ("CALLBACK_TRACE: %stimecb %s <- %s\n", timestring (),
-	    tp->cb->dest, tp->cb->line);
+      if (callback_trace & CBTR_TIME)
+	warn ("CALLBACK_TRACE: %stimecb %s <- %s\n", timestring (),
+	      tp->cb->dest, tp->cb->line);
 #endif /* WRAP_DEBUG */
-    STOP_ACHECK_TIMER ();
-    (*tp->cb) ();
-    START_ACHECK_TIMER ();
-    delete tp;
+      STOP_ACHECK_TIMER ();
+      sfs_leave_sel_loop ();
+      (*tp->cb) ();
+      START_ACHECK_TIMER ();
+      delete tp;
+    }
   }
+
   selwait.tv_usec = 0;
   if (!(tp = timecbs.first ()))
     selwait.tv_sec = 86400;
   else {
-    my_clock_gettime (&tsnow);
-    if (tp->ts < tsnow)
+    if (tp->ts.tv_sec == 0) {
       selwait.tv_sec = 0;
-    else if (tp->ts.tv_nsec >= tsnow.tv_nsec) {
-      selwait.tv_sec = tp->ts.tv_sec - tsnow.tv_sec;
-      selwait.tv_usec = (tp->ts.tv_nsec - tsnow.tv_nsec) / 1000;
-    }
-    else {
-      selwait.tv_sec = tp->ts.tv_sec - tsnow.tv_sec - 1;
-      selwait.tv_usec = (1000000000 + tp->ts.tv_nsec - tsnow.tv_nsec) / 1000;
+    } else {
+      sfs_set_global_timestamp ();
+      my_ts = sfs_get_tsnow ();
+      if (tp->ts < my_ts)
+	selwait.tv_sec = 0;
+      else if (tp->ts.tv_nsec >= my_ts.tv_nsec) {
+	selwait.tv_sec = tp->ts.tv_sec - my_ts.tv_sec;
+	selwait.tv_usec = (tp->ts.tv_nsec - my_ts.tv_nsec) / 1000;
+      }
+      else {
+	selwait.tv_sec = tp->ts.tv_sec - my_ts.tv_sec - 1;
+	selwait.tv_usec = (1000000000 + tp->ts.tv_nsec - my_ts.tv_nsec) / 1000;
+      }
     }
   }
   if (sigdocheck)
@@ -335,35 +351,39 @@ fdcb (int fd, selop op, cbv::ptr cb)
 static void
 fdcb_check (void)
 {
-    int timeout_ms = selwait.tv_usec / 1000 + selwait.tv_sec * 1000;
-    int n = epoll_wait(epfd, ret_events, maxevents, timeout_ms);
-
-    if (n < 0 && errno != EINTR)
-	panic ("epoll_wait: %m\n");
+  int timeout_ms = selwait.tv_usec / 1000 + selwait.tv_sec * 1000;
+  int n = epoll_wait(epfd, ret_events, maxevents, timeout_ms);
+  
+  if (n < 0 && errno != EINTR)
+    panic ("epoll_wait: %m\n");
+  
+  sfs_set_global_timestamp ();
+  if (sigdocheck)
+    sigcb_check();
+  
+  if (n < 0) return;
+  
+  for (int i = 0; i < n; i++) {
     
-    my_clock_gettime (&tsnow);
-    if (sigdocheck)
-	sigcb_check();
-
-    if (n < 0) return;
-
-    for (int i = 0; i < n; i++) {
-
-	epoll_event* eventp = &ret_events[i];
-	int fd = eventp->data.fd;
-	int* interest = &epoll_states[fd].user_events;
-
-	/* analogous to calling FD_ISSET on the returned fd_set. second
-	 * condition is analogous to calling FD_ISSET on the 'master
-	 * copy'; we need to make sure that the event is still set (an
-	 * earlier event handler could have unreg'ed the handler for the
-	 * current socket fd). */
-	if ( (eventp->events & EV_READ_EVENTS) && (*interest & EV_READ_BIT)) 
-	  (*fdcbs[selread][fd]) ();
-
-	if ( (eventp->events & EV_WRITE_EVENTS) && (*interest & EV_WRITE_BIT))
-	    (*fdcbs[selwrite][fd]) ();
+    epoll_event* eventp = &ret_events[i];
+    int fd = eventp->data.fd;
+    int* interest = &epoll_states[fd].user_events;
+    
+    /* analogous to calling FD_ISSET on the returned fd_set. second
+     * condition is analogous to calling FD_ISSET on the 'master
+     * copy'; we need to make sure that the event is still set (an
+     * earlier event handler could have unreg'ed the handler for the
+     * current socket fd). */
+    if ( (eventp->events & EV_READ_EVENTS) && (*interest & EV_READ_BIT)) {
+      sfs_leave_sel_loop ();
+      (*fdcbs[selread][fd]) ();
     }
+    
+    if ( (eventp->events & EV_WRITE_EVENTS) && (*interest & EV_WRITE_BIT)) {
+      sfs_leave_sel_loop ();
+      (*fdcbs[selwrite][fd]) ();
+    }
+  }
 }
 
 #else /* !USE_EPOLL */
@@ -407,7 +427,8 @@ fdcb_check (void)
     }
     panic ("Aborting due to select() failure\n");
   }
-  my_clock_gettime (&tsnow);
+  sfs_set_global_timestamp ();
+
   if (sigdocheck)
     sigcb_check ();
   for (int fd = 0; fd < maxfd && n > 0; fd++)
@@ -423,6 +444,7 @@ fdcb_check (void)
 		  fdcbs[i][fd]->dest, fdcbs[i][fd]->line);
 #endif /* WRAP_DEBUG */
 	  STOP_ACHECK_TIMER ();
+	  sfs_leave_sel_loop ();
 	  (*fdcbs[i][fd]) ();
 	  START_ACHECK_TIMER ();
 	}
@@ -490,6 +512,7 @@ sigcb_check ()
 	  }
 #endif /* WRAP_DEBUG */
 	  STOP_ACHECK_TIMER ();
+	  sfs_leave_sel_loop ();
 	  (*cb) ();
 	  START_ACHECK_TIMER ();
 	}
@@ -498,7 +521,7 @@ sigcb_check ()
 }
 
 lazycb_t::lazycb_t (time_t i, cbv c)
-  : interval (i), next (timenow + interval), cb (c)
+  : interval (i), next (sfs_get_timenow(true) + interval), cb (c)
 {
   lazylist->insert_head (this);
 }
@@ -524,19 +547,27 @@ lazycb_remove (lazycb_t *lazy)
 void
 lazycb_check ()
 {
-  my_clock_gettime (&tsnow);
+  time_t my_timenow = 0;
+
  restart:
   lazycb_removed = false;
   for (lazycb_t *lazy = lazylist->first; lazy; lazy = lazylist->next (lazy)) {
-    if (timenow < lazy->next)
+
+    if (my_timenow == 0) {
+      sfs_set_global_timestamp ();
+      my_timenow = sfs_get_timenow ();
+    }
+
+    if (my_timenow < lazy->next)
       continue;
-    lazy->next = timenow + lazy->interval;
+    lazy->next = my_timenow + lazy->interval;
 #ifdef WRAP_DEBUG
     if (callback_trace & CBTR_LAZY)
       warn ("CALLBACK_TRACE: %slazy %s <- %s\n", timestring (),
 	    lazy->cb->dest, lazy->cb->line);
 #endif /* WRAP_DEBUG */
     STOP_ACHECK_TIMER ();
+    sfs_leave_sel_loop ();
     (*lazy->cb) ();
     START_ACHECK_TIMER ();
     if (lazycb_removed)
@@ -582,20 +613,6 @@ _acheck ()
   lazycb_check ();
   fdcb_check ();
   sigcb_check ();
-
-#if 0
-  /*
-   * On planet-lab's weird Linux kernel, sometimes processes stop
-   * receiving SIGCHLD signals.  To avoid endlessly accumulating
-   * Zombie children, we periodically try to reap children anyway,
-   * even when we haven't received a SIGCHLD.  This is kind of gross,
-   * but without the workaround one can end up completely filling the
-   * process table with zombies (making it hard to log in and fix the
-   * problem).
-   */
-  if (timenow > chldcb_check_last + 60)
-    chldcb_check ();
-#endif
 
   timecb_check ();
   STOP_ACHECK_TIMER ();

@@ -7,12 +7,12 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include "parseopt.h"
 
 //-----------------------------------------------------------------------
 // Begin Global Clock State
 //
-bool timer_enabled = false;
-sfs_clock_t sfs_clock = SFS_CLOCK_GETTIME;
+
 
 struct mmap_clock_t {
   mmap_clock_t (const str &fn) 
@@ -36,43 +36,75 @@ struct mmap_clock_t {
   const size_t mmp_sz;  // size of the mmaped region
   
 };
-mmap_clock_t *mmap_clock;
+
+struct sfs_clock_state_t {
+  sfs_clock_state_t () {}
+
+  void clear ();
+  void init_from_env ();
+  void set (sfs_clock_t t, const str &arg, bool lzy);
+
+  bool enable_mmap_clock (const str &arg);
+  void disable_mmap_clock ();
+  bool enable_timer ();
+  bool disable_timer ();
+  void mmap_clock_fail ();
+  int my_clock_gettime (struct timespec *tp);
+  void get_tsnow (struct timespec *ts, bool frc);
+  time_t get_timenow (bool frc);
+  void set_timestamp ();
+  void refresh_timestamp ();
+
+  inline void left_sel_loop () { _left_sel_loop = true; }
+
+  bool _timer_enabled;
+  sfs_clock_t _type;
+  bool _lazy_clock;
+  str _mmap_clock_loc;
+  mmap_clock_t *_mmap_clock;
+  int _timer_res;
+  bool _need_refresh;
+  bool _left_sel_loop;
+
+  struct timespec _tsnow;
+};
+
+sfs_clock_state_t g_clockstate;
 
 //
 // End Global Clock State
 //-----------------------------------------------------------------------
 
 
-
 //-----------------------------------------------------------------------
 // Mmap Clock Type
 //
 
-static bool
-enable_mmap_clock (const str &arg)
+bool
+sfs_clock_state_t::enable_mmap_clock (const str &arg)
 {
-  if (mmap_clock) 
+  if (_mmap_clock) 
     return true;
 
-  mmap_clock = New mmap_clock_t (arg);
-  return mmap_clock->init ();
+  _mmap_clock = New mmap_clock_t (arg);
+  return _mmap_clock->init ();
 }
 
-static void
-disable_mmap_clock ()
+void
+sfs_clock_state_t::disable_mmap_clock ()
 {
-  if (mmap_clock) {
-    delete mmap_clock;
-    mmap_clock = NULL;
+  if (_mmap_clock) {
+    delete _mmap_clock;
+    _mmap_clock = NULL;
   }
 }
 
 void
-mmap_clock_fail ()
+sfs_clock_state_t::mmap_clock_fail ()
 {
   warn << "*mmap clock failed: reverting to stable clock\n";
   disable_mmap_clock ();
-  sfs_clock = SFS_CLOCK_GETTIME;
+  _type =  SFS_CLOCK_GETTIME;
 }
 
 
@@ -127,8 +159,6 @@ mmap_clock_t::clock_gettime (struct timespec *out)
 {
   struct timespec tmp;
 
-  assert (mmap_clock);
-
   *out = mmp[0];
   tmp = mmp[1];
 
@@ -163,7 +193,7 @@ mmap_clock_t::clock_gettime (struct timespec *out)
 
   if (nbad > stale_threshhold) 
     // will delete this, so be careful
-    mmap_clock_fail ();
+    g_clockstate.mmap_clock_fail ();
 
   return 0;
 }
@@ -180,13 +210,13 @@ mmap_clock_t::clock_gettime (struct timespec *out)
 // TIMER clock type
 //
 static void 
-clock_set_timer ()
+clock_set_timer (int i)
 {
   struct itimerval val;
   val.it_value.tv_sec = 0;
-  val.it_value.tv_usec = 10000; // 10 milliseconds
+  val.it_value.tv_usec = i;
   val.it_interval.tv_sec = 0;
-  val.it_interval.tv_usec = 10000; // 10 milliseconds
+  val.it_interval.tv_usec = i;
 
   setitimer (ITIMER_REAL, &val, 0);
 }
@@ -194,32 +224,33 @@ clock_set_timer ()
 static void
 clock_timer_event ()
 {
-  clock_gettime (CLOCK_REALTIME, &tsnow);
+  clock_gettime (CLOCK_REALTIME, &g_clockstate._tsnow);
 }
 
-static bool
-enable_timer ()
+bool
+sfs_clock_state_t::enable_timer ()
 {
-  if (!timer_enabled) {
+  if (!_timer_enabled) {
     warn << "*unstable: enabling hardware timer\n";
     clock_timer_event ();
-    timer_enabled = true;
+    _timer_enabled = true;
     sigcb (SIGALRM, wrap (clock_timer_event));
-    clock_set_timer ();
+    clock_set_timer (_timer_res);
   }
   return true;
 }
 
-static void
-disable_timer ()
+bool
+sfs_clock_state_t::disable_timer ()
 {
-  if (timer_enabled) {
+  if (_timer_enabled) {
     warn << "disabling timer\n";
     struct itimerval val;
     memset (&val, 0, sizeof (val));
     setitimer (ITIMER_REAL, &val, 0);
-    timer_enabled = false;
+    _timer_enabled = false;
   }
+  return true;
 }
 //
 // End TIMER clock type
@@ -233,25 +264,94 @@ disable_timer ()
 //
 
 //
+// set_sfs_clock
+//
+//    Set the core timing discipline for SFS.
+//
+void
+sfs_set_clock (sfs_clock_t typ, const str &arg, bool lzy)
+{
+  g_clockstate.set (typ, arg, lzy);
+}
+
+//
+// sfs_get_timenow
+//
+//    Get the # of seconds since 1970, and specify a "force" flag if
+//    we need to real answer (and not the guestimated version based on
+//    our last estimate).
+//
+time_t 
+sfs_get_timenow (bool frc)
+{
+  return g_clockstate.get_timenow (frc);
+}
+
+//
+// sfs_get_tsnow
+//
+//    Same as above, but get the whole timespec.
+//
+struct timespec 
+sfs_get_tsnow (bool frc)
+{
+  struct timespec ts;
+  g_clockstate.get_tsnow (&ts, frc);
+  return ts;
+}
+
+void
+sfs_get_tsnow (struct timespec *ts, bool frc)
+{
+  g_clockstate.get_tsnow (ts, frc);
+}
+
+//
+// sfs_set_global_timestamp
+//
+//   Place a barrier in the code, after which, all calls to sfs_get_tsnow
+//   etc are at least as accurate as when this function was called.
+//
+void
+sfs_set_global_timestamp ()
+{
+  g_clockstate.set_timestamp ();
+}
+
+void
+sfs_leave_sel_loop ()
+{
+  g_clockstate.left_sel_loop ();
+}
+
+
+//
+// end of the public interface
+//-----------------------------------------------------------------------
+
+//-----------------------------------------------------------------------
+// Time management
+
+//
 // my_clock_gettime
 //
 //    Function that is called many times through the event loop, and
 //    thus, we might want to optimize it for our needes.
 //
 int
-my_clock_gettime (struct timespec *tp)
+sfs_clock_state_t::my_clock_gettime (struct timespec *tp)
 {
   int r = 0;
-  switch (sfs_clock) {
+  switch (_type) {
   case SFS_CLOCK_GETTIME:
     r = clock_gettime (CLOCK_REALTIME, tp);
     break;
   case SFS_CLOCK_TIMER:
-    tsnow.tv_nsec ++;
-    *tp = tsnow;
+    _tsnow.tv_nsec ++;
+    *tp = _tsnow;
     break;
   case SFS_CLOCK_MMAP:
-    r = mmap_clock->clock_gettime (tp);
+    r = _mmap_clock->clock_gettime (tp);
     break;
   default:
     break;
@@ -259,32 +359,154 @@ my_clock_gettime (struct timespec *tp)
   return r;
 }
 
-//
-// set_sfs_clock
-//
-//    Set the core timing discipline for SFS.
-//
 void
-sfs_set_clock (sfs_clock_t typ, const str &arg)
+sfs_clock_state_t::set_timestamp ()
+{
+  _need_refresh = true;
+}
+
+void
+sfs_clock_state_t::get_tsnow (struct timespec *ts, bool frc)
+{
+  if (frc || (_need_refresh && _left_sel_loop)) {
+    refresh_timestamp ();
+  }
+  *ts = _tsnow;
+}
+
+time_t
+sfs_clock_state_t::get_timenow (bool frc)
+{
+  if (frc || (_need_refresh && _left_sel_loop)) {
+    refresh_timestamp ();
+  }
+  return _tsnow.tv_sec;
+}
+
+void
+sfs_clock_state_t::refresh_timestamp ()
+{
+  my_clock_gettime (&_tsnow);
+  _need_refresh = false;
+  _left_sel_loop = false;
+}
+
+// end time management
+//-----------------------------------------------------------------------
+
+//-----------------------------------------------------------------------
+// Internal state management functions
+//
+
+void
+sfs_clock_state_t::set (sfs_clock_t typ, const str &arg, bool lzy)
 {
   switch (typ) {
   case SFS_CLOCK_TIMER:
     disable_mmap_clock ();
-    sfs_clock = enable_timer () ? SFS_CLOCK_TIMER : SFS_CLOCK_GETTIME;
+    _type = enable_timer () ? SFS_CLOCK_TIMER : SFS_CLOCK_GETTIME;
     break;
   case SFS_CLOCK_MMAP:
     disable_timer ();
     if (enable_mmap_clock (arg))
-      sfs_clock = typ;
+      _type = typ;
     else
       mmap_clock_fail ();
     break;
   case SFS_CLOCK_GETTIME:
     disable_timer ();
     disable_mmap_clock ();
-    sfs_clock = typ;
+    _type = typ;
     break;
   default:
     assert (false);
   }
+  _lazy_clock = lzy;
 }
+
+//
+//-----------------------------------------------------------------------
+
+//-----------------------------------------------------------------------
+// Runtime Initialization
+
+int litetime_init::count;
+
+void
+litetime_init::start ()
+{
+  static bool initialized;
+  if (initialized)
+    panic ("litetime_init called twice\n");
+  initialized = true;
+
+  g_clockstate.clear ();
+  g_clockstate.init_from_env ();
+}
+
+void litetime_init::stop () {}
+
+void
+sfs_clock_state_t::clear ()
+{
+  _timer_enabled = false;
+  _type = SFS_CLOCK_GETTIME;
+  _lazy_clock = false;
+  _mmap_clock = NULL;
+  _timer_res = 10000; // 10 ms
+  _need_refresh = true;
+  _left_sel_loop = true;
+}
+
+void
+sfs_clock_state_t::init_from_env ()
+{
+  const char *p = getenv ("SFS_CLOCK_OPTIONS");
+  if (p) {
+    sfs_clock_t t = SFS_CLOCK_GETTIME;
+    bool lzy = false;
+    str arg;
+    for (const char *c = p; c; c++) {
+      switch (*c) {
+      case 'T':
+      case 't':
+	t = SFS_CLOCK_TIMER;
+	break;
+      case 'l':
+      case 'L':
+	lzy = true;
+	break;
+      case 'm':
+      case 'M':
+	t = SFS_CLOCK_MMAP;
+	break;
+      default:
+	warn ("Unknown SFS_CLOCK_OPTION: '%c'\n", *c);
+	break;
+      }
+    }
+    if (t == SFS_CLOCK_MMAP) {
+      const char *p = getenv ("SFS_CLOCK_MMAP_FILE");
+      if (!p) {
+	warn ("Must provide SFS_CLOCK_MMAP_FILE location for mmap clock\n");
+	t = SFS_CLOCK_GETTIME;
+      } else {
+	arg = p;
+      }
+    }
+
+    if (t == SFS_CLOCK_TIMER) {
+      const char *p = getenv ("SFS_CLOCK_TIMER_RESOLUTION");
+      int res;
+      if (p && convertint (p, &res)) {
+	_timer_res = res;
+      } else {
+	warn ("Bad timer resolution specified.\n");
+      }
+    }
+    set (t, arg, lzy);
+  }
+}
+
+//
+//-----------------------------------------------------------------------

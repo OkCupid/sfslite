@@ -48,7 +48,7 @@ getportno (int fd)
 sfsserver::sfsserver (const sfsserverargs &a)
   : lock_flag (true), condemn_flag (false), destroyed (false),
     recon_backoff (1), recon_tmo (NULL), ns (a.ns), prog (*a.p),
-    carg (a.ma->carg), fsinfo (NULL), lastuse (timenow)
+    carg (a.ma->carg), fsinfo (NULL), lastuse (sfs_get_timenow())
 {
   si = sfs_servinfo_w::alloc (a.ma->cres->servinfo);
   refcount_inc ();
@@ -105,7 +105,7 @@ sfsserver::setfd (int fd)
 void
 sfsserver::touch ()
 {
-  lastuse = timenow;
+  lastuse = sfs_get_timenow();
   prog.idleq.remove (this);
   prog.idleq.insert_tail (this);
 }
@@ -464,9 +464,9 @@ sfsprog::tmosched (bool expired)
     idletmo = NULL;
   sfsserver *si;
   while ((si = idleq.first)) {
-    if (si->lastuse + mount_idletime > timenow) {
+    if (si->lastuse + mount_idletime > sfs_get_timenow()) {
       if (!idletmo)
-	idletmo = delaycb (si->lastuse + mount_idletime - timenow,
+	idletmo = delaycb (si->lastuse + mount_idletime - sfs_get_timenow(),
 			   wrap (this, &sfsprog::tmosched, true));
       return;
     }

@@ -235,7 +235,7 @@ resolver::setsock (bool failure)
     failure = true;
     nbump++;
     last_resp = 0;
-    last_bump = timenow;
+    last_bump = sfs_get_timenow();
     tcpsock = NULL;
   } while (!udpinit () || !tcpinit ());
 
@@ -306,7 +306,7 @@ resolver::pktready (bool tcp, u_char *qb, ssize_t n)
   }
 
   nbump = 0;
-  last_resp = timenow;
+  last_resp = sfs_get_timenow();
 
   dnsparse reply (qb, n);
   question q;
@@ -413,7 +413,7 @@ resolv_conf::reload_cb (ref<bool> d, bool failure, str newres)
 
   nbump = 0;
   reload_lock = false;
-  last_reload = timenow;
+  last_reload = sfs_get_timenow();
   if (!newres) {
     warn ("resolv_conf::reload_cb: fork: %m\n");
     setsock (true);
@@ -432,7 +432,7 @@ resolv_conf::reload_cb (ref<bool> d, bool failure, str newres)
     warn ("reloaded DNS configuration (resolv.conf)\n");
     ns_idx =  _res.nscount ? _res.nscount - 1 : 0;
     //nbump = 0;
-    last_reload = timenow;
+    last_reload = sfs_get_timenow();
     setsock (true);
   }
   else
@@ -444,7 +444,7 @@ resolv_conf::bumpsock (bool failure)
 {
   if (reload_lock)
     return false;
-  if (timenow > last_reload + 60) {
+  if (sfs_get_timenow() > last_reload + 60) {
     reload (failure);
     return false;
   }
@@ -560,7 +560,7 @@ void
 dnsreq::timeout ()
 {
   assert (!usetcp);
-  if (timenow - resp->last_resp < 90 || !name.len ())
+  if (sfs_get_timenow() - resp->last_resp < 90 || !name.len ())
     fail (ARERR_TIMEOUT);
   else {
     resp->reqtoq.keeptrying (this);

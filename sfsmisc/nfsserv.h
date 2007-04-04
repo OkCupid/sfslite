@@ -239,7 +239,8 @@ public:
     ~attr_dat ();
     void touch ();
     void set (const fattr3exp *a, const wcc_attr *w);
-    bool valid () { return timenow < implicit_cast<time_t> (attr.expire); }
+    bool valid () 
+    { return sfs_get_timenow() < implicit_cast<time_t> (attr.expire); }
   };
 
 private:

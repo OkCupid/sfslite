@@ -96,7 +96,7 @@ fileq::fhclean (bool istmo)
 
   cleanlock = true;
   fhtimer *fht = NULL;
-  if (minopen < 0 && (fht = timeq.first ()) && fht->expire < timenow)
+  if (minopen < 0 && (fht = timeq.first ()) && fht->expire < sfs_get_timenow())
     do {
       fhtimer *nfht = timeq.next (fht);
       nfs_fh3 *fhp = New nfs_fh3 (fht->fh);
@@ -105,11 +105,11 @@ fileq::fhclean (bool istmo)
       vNew nfscall_cb<NFSPROC_CLOSE> (NULL, fhp,
 				      wrap (fhcleancb, fhp), serv);
       fht = nfht;
-    } while (minopen < 0 && fht->expire < timenow);
+    } while (minopen < 0 && fht->expire < sfs_get_timenow());
   cleanlock = false;
 
   if (!tmo && minopen < 0 && fht)
-    tmo = timecb (min<time_t> (timenow + 10, fht->expire),
+    tmo = timecb (min<time_t> (sfs_get_timenow() + 10, fht->expire),
 		  wrap (this, &fileq::fhclean, true));
 }
 
@@ -118,7 +118,7 @@ fhtimer *
 closesim::fhalloc (const nfs_fh3 &fh)
 {
   fhtimer *fht = New fhtimer (this, fh);
-  fht->expire = timenow + closesim_minlife;
+  fht->expire = sfs_get_timenow() + closesim_minlife;
   fq->minopen--;
   fq->timeq.insert (fht);
   fhtab.insert (fht);
@@ -147,7 +147,8 @@ void
 closesim::fhtouch (fhtimer *fht)
 {
   fq->timeq.remove (fht);
-  fht->expire = timenow + (fht->opened ? closesim_openlife : closesim_minlife);
+  fht->expire = sfs_get_timenow() + 
+    (fht->opened ? closesim_openlife : closesim_minlife);
   fq->timeq.insert (fht);
 }
 

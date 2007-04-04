@@ -32,8 +32,6 @@
 /* core.C */
 struct timecb_t;
 struct lazycb_t;
-extern timespec tsnow;
-extern const time_t &timenow;
 INIT (async_init);
 void amain () __attribute__ ((noreturn));
 void acheck ();

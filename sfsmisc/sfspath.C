@@ -388,7 +388,8 @@ sfs_pathrevoke_w::check (sfs_hash *hidp)
 
   if (rsi
       && (!rsi->mkhostid (&hostid)
-	  || (rev.msg.redirect->expire >= implicit_cast<sfs_time> (timenow))))
+	  || (rev.msg.redirect->expire >= 
+	      implicit_cast<sfs_time> (sfs_get_timenow ()))))
     return false;
   
   return true;
