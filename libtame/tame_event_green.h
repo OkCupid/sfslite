@@ -12,7 +12,9 @@
 #include "tame_recycle.h"
 
 //
-// An experimental optimization for events are void
+// An experimental optimization; recycle events instead of reallocating
+// them every time.  Unclear if this is faster or not, since it does cost
+// and extra virtual call on the critical path.
 //
 template<class T>
 class green_event_t : public _event<T>
@@ -102,12 +104,16 @@ template<class C>
 typename event<>::ref
 _mkevent (const closure_wrapper<C> &c, const char *loc)
 {
-  return green_event::alloc (green_event::vrb (), 
-			     _tame_slot_set<> (), 
-			     c.closure (), loc);
+  if (tame_recycle_events ()) {
+    return green_event::alloc (green_event::vrb (), 
+			       _tame_slot_set<> (), 
+			       c.closure (), loc); 
+  } else {
+    return _mkevent_implicit_rv (c.closure (), loc, _tame_slot_set<> ());
+  }
 }
 
-#define RECYCLE_EVENT_H(Typ,Sz,Nm)                                   \
+#define RECYCLE_EVENT_H(Typ,Sz,Nm,Always)                            \
 namespace green_event {                                              \
   extern recycle_bin_t<green_event_t<Typ> > * _rb_##Nm;              \
 }                                                                    \
@@ -115,12 +121,17 @@ template<class C>                                                    \
 typename event<Typ>::ref                                             \
 _mkevent (const closure_wrapper<C> &c, const char *loc, Typ &t)      \
 {                                                                    \
-  if (!green_event::_rb_##Nm)                                        \
-    green_event::_rb_##Nm =                                          \
-      New recycle_bin_t<green_event_t<Typ> > (Sz);                   \
-  return green_event::alloc (green_event::_rb_##Nm,                  \
-			     _tame_slot_set<Typ> (&t),               \
-                             c.closure (), loc);                     \
+  if (tame_recycle_events () || Always) {                            \
+    if (!green_event::_rb_##Nm)                                      \
+      green_event::_rb_##Nm =                                        \
+        New recycle_bin_t<green_event_t<Typ> > (Sz);                 \
+    return green_event::alloc (green_event::_rb_##Nm,                \
+                               _tame_slot_set<Typ> (&t),             \
+                               c.closure (), loc);                   \
+  } else {                                                           \
+    return _mkevent_implicit_rv (c.closure (), loc,                  \
+                                 _tame_slot_set<Typ> (&t));          \
+  }                                                                  \
 }
 
 #define RECYCLE_EVENT_C(Type,Nm)                                     \
@@ -128,7 +139,7 @@ namespace green_event {                                              \
    recycle_bin_t<green_event_t<Type> > *_rb_##Nm;                    \
 }
 
-RECYCLE_EVENT_H(bool, 0x10000, bool)
-RECYCLE_EVENT_H(int, 0x10000, int)
+RECYCLE_EVENT_H(bool, 0x10000, bool, false)
+RECYCLE_EVENT_H(int, 0x10000, int, false)
 
 #endif /* _LIBTAME_TAME_EVENT_OPT_H_ */

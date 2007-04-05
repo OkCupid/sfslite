@@ -37,12 +37,16 @@
 #define   TAME_CHECK_LEAKS       (1 << 2)
 #define   TAME_OPTIMIZE          (1 << 3)
 #define   TAME_STRICT            (1 << 4)
+#define   TAME_RECYCLE_EVENTS    (1 << 5)
 
 extern bool tame_collect_rv_flag;
 extern int tame_options;
 inline bool tame_check_leaks () { return tame_options & TAME_CHECK_LEAKS ; }
 inline bool tame_optimized () { return tame_options & TAME_OPTIMIZE; }
 inline bool tame_strict_mode () { return tame_options & TAME_STRICT; }
+inline bool tame_recycle_events() 
+{ return tame_options & TAME_RECYCLE_EVENTS; }
+
 void tame_error (const char *loc, const char *msg);
 
 /**

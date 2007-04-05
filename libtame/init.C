@@ -38,9 +38,14 @@ tame_init::start ()
 
   tame_thread_init ();
 
+  tame_options = TAME_RECYCLE_EVENTS;
+
   char *e = safegetenv (TAME_OPTIONS);
   for (char *cp = e; cp && *cp; cp++) {
     switch (*cp) {
+    case 'R':
+      tame_options &= ~int(TAME_RECYCLE_EVENTS);
+      break;
     case 'S':
       tame_options |= TAME_STRICT;
       break;

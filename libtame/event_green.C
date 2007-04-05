@@ -1,6 +1,6 @@
 
 #include "tame_recycle.h"
-#include "tame_event_opt.h"
+#include "tame_event_green.h"
 
 static recycle_bin_t<green_event_t<void> > *_vrb;
 

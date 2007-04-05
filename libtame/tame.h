@@ -13,7 +13,7 @@
 #include "tame_thread.h"
 #include "tame_tfork.h"
 #include "tame_trigger.h"
-#include "tame_event_opt.h"
+#include "tame_event_green.h"
 #include "tame_typedefs.h"
 
 #endif /* _LIBTAME_TAME_H_ */
