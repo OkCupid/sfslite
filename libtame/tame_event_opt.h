@@ -67,6 +67,8 @@ public:
 
   ~green_event_t () {}
 
+  list_entry<green_event_t<T> > _lnk;
+
 private:
   recycle_bin_t<green_event_t<T> > *_rb;
   closure_ptr_t _closure;

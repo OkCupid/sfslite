@@ -6,9 +6,11 @@
 #ifndef _LIBTAME_RECYCLE_H_
 #define _LIBTAME_RECYCLE_H_
 
+#include "async.h"
 #include "refcnt.h"
 #include "vec.h"
 #include "init.h"
+#include "list.h"
 
 template<class C>
 class container_t {
@@ -34,35 +36,34 @@ template<class T>
 class recycle_bin_t {
 public:
   enum { defsz = 8192 };
-  recycle_bin_t (size_t s = defsz) : _capacity (s), _cursor (0)  {}
+  recycle_bin_t (size_t s = defsz) : _capacity (s), _n (0)  {}
   void expand (size_t s) { if (_capacity < s) _capacity = s; }
   void recycle (T *obj)
   {
-    int nobj = 1;
-    if (_cursor < _objects.size ()) {
-      _objects[_cursor] = mkref (obj);
-    } else if (_objects.size () < _capacity) {
-      _objects.push_back (mkref (obj));
+    if (_n < _capacity) {
+      _objects.insert_head (obj);
+      _n++;
     } else {
-      delete obj;
-      nobj = 0;
+      delete this;
     }
-    _cursor += nobj;
   }
 
   ptr<T> get () 
   {
     ptr<T> ret;
-    if (_cursor > 0) {
-      ret = _objects[--_cursor];
-      _objects[_cursor] = NULL;
+    if (_objects.first) {
+      T *o = _objects.first;
+      _objects.remove (o);
+      _n--;
+      ret = mkref (o);
     }
     return ret;
   }
+
 private:
-  vec<ptr<T> > _objects;
+  list<T, &T::_lnk> _objects;
   size_t       _capacity;
-  size_t       _cursor;
+  size_t       _n;
 };
 
 INIT(recycle_init);
@@ -93,6 +94,8 @@ public:
   inline bool is_cancelled () const { return (_flag & OBJ_CANCELLED); }
   inline void set_dead () { set_flag (OBJ_DEAD); }
   inline void set_cancelled () { set_flag (OBJ_CANCELLED); }
+
+  list_entry<obj_flag_t> _lnk;
 
 private:
   obj_state_t _flag;
