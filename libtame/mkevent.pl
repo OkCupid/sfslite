@@ -101,6 +101,8 @@ sub do_event_class ($)
 
     my $vlist = "<" . arglist ("void", ["T%", $t]) . ">";
 
+    my $ctss = "const _tame_slot_set$tlist &";
+
     # print the classname
     print ("class ${CN}", $tlist, " :\n",
 	   "     public ${BASE},\n",
@@ -120,11 +122,13 @@ sub do_event_class ($)
 	   "    {}\n\n");
 
     if ($t) {
-	print ("  const _tame_slot_set$tlist &slot_set() const\n",
-	       "  { return _slot_set; }");
+	print ("  ${ctss}slot_set() const\n",
+	       "  { return _slot_set; }\n");
+	print ("  void slot_set_reassign (${ctss}ss) { _slot_set = ss; }");
     } else {
 	print ("  _tame_slot_set$tlist slot_set() const\n",
 	       "  { return _tame_slot_set$tlist (); }");
+	print ("  void slot_set_reassign (${ctss}ss) {}");
     }
     print ("\n\n");
 

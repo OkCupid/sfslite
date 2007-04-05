@@ -27,6 +27,7 @@
 #define _LIBTAME_RUN_H_
 
 #include "async.h"
+#include "qhash.h"
 
 /*
  * tame runtime flags
@@ -51,6 +52,31 @@ void tame_error (const char *loc, const char *msg);
  */
 INIT(tame_init);
 #define TAME_OPTIONS         "TAME_OPTIONS"
+
+class tame_stats_t {
+public:
+  tame_stats_t ();
+
+  void dump ();
+  void enable () { _collect = true; }
+  void disable () { _collect = false; }
+  inline void evv_rec_hit () { if (_collect) _evv_rec_hit (); }
+  inline void evv_rec_miss() { if (_collect) _evv_rec_miss(); }
+  inline void mkevent_impl_rv_alloc(const char *loc)
+  { if (_collect) _mkevent_impl_rv_alloc (loc); }
+
+private:
+
+  void _evv_rec_hit () { _n_evv_rec_hit ++; }
+  void _evv_rec_miss () { _n_evv_rec_miss ++; }
+  void _mkevent_impl_rv_alloc (const char *loc);
+
+  bool _collect;
+  int _n_evv_rec_hit, _n_evv_rec_miss;
+  qhash<const char *, int> _mkevent_impl_rv;
+};
+
+extern tame_stats_t *g_stats;
 
 
 #endif /* _LIBTAME_RUN_H_ */

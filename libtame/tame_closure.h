@@ -205,16 +205,8 @@ _mkevent_implicit_rv (const ptr<C> &c,
     (closure_action<C> (c), rs, loc);
   c->block_inc_count ();
   c->add (ret);
-  
-  /*
-  warn ("%s: new event %p\n", loc, static_cast<_event<T1,T2,T3> *> (ret));
 
-  typename callback<void,T1,T2,T3>::ptr t1 = ret;
-  callback<void,T1,T2,T3> *cp = t1;
-
-  warn ("  - callback: %p\n", cp);
-  warn ("  - dyncast: %p\n", dynamic_cast<_event<T1,T2,T3> *> (cp));
-  */
+  g_stats->mkevent_impl_rv_alloc (loc);
   return ret;
 }
 

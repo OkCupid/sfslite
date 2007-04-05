@@ -4,6 +4,12 @@
 #include "tame.h"
 #include "parseopt.h"
 
+static void
+foo (evi_t ev)
+{
+  ev->trigger (10);
+}
+
 tamed static void 
 main2()
 {
@@ -21,6 +27,8 @@ main2()
   for (i = 0; i < 1000; i++) {
     twait { delaycb (0, 0, mkevent ()); }
   }
+
+  twait { foo (mkevent (i)); }
 
   exit (0);
 }

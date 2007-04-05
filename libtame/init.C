@@ -34,6 +34,7 @@ tame_init::start ()
   tame_collect_rv_flag = false;
   __cls_g = NULL;
   null_closure = NULL;
+  g_stats = New tame_stats_t ();
 
   tame_thread_init ();
 
@@ -55,6 +56,9 @@ tame_init::start ()
     case 'O':
       tame_options |= TAME_OPTIMIZE;
       break;
+    case 's':
+      g_stats->enable ();
+      break;
     }
   }
 }
@@ -62,4 +66,5 @@ tame_init::start ()
 void
 tame_init::stop ()
 {
+  g_stats->dump ();
 }

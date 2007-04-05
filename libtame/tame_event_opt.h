@@ -9,24 +9,27 @@
 #include "tame_event.h"
 #include "tame_event_ag.h"
 #include "tame_closure.h"
-
-class event_v_opt_t;
-typedef ptr<event_v_opt_t> event_v_opt_ptr_t;
+#include "tame_recycle.h"
 
 //
 // An experimental optimization for events are void
 //
-class event_v_opt_t : public _event<>
+template<class T>
+class green_event_t : public _event<T>
 {
 public:
-  event_v_opt_t (closure_ptr_t c, const char *loc) 
-    : _event<> (_tame_slot_set<> (), loc),
+  green_event_t (recycle_bin_t<green_event_t<T> > *rb,
+		 const _tame_slot_set<T> &ss, closure_ptr_t c, 
+		 const char *loc) 
+    : _event<T> (ss, loc),
+      _rb (rb),
       _closure (c)
   {}
 
-  void reinit (closure_ptr_t c, const char *loc) 
+  void reinit (const _tame_slot_set<T> &ss, closure_ptr_t c, const char *loc) 
   {
     _event_cancel_base::reinit (loc);
+    slot_set_reassign (ss);
     _closure = c;
   }
 
@@ -34,6 +37,9 @@ public:
   {
     closure_ptr_t p = _closure;
     _closure = NULL;
+    if (p) {
+      p->remove (this);
+    }
     p = NULL;
   }
 
@@ -52,21 +58,75 @@ public:
     return ret;
   }
 
-  static event_v_opt_ptr_t alloc (closure_ptr_t c, const char *loc);
 
-  void finalize ();
+  void finalize () { 
+    clear_action ();
+    _rb->recycle (this);
+  }
 
-  ~event_v_opt_t () {}
+
+  ~green_event_t () {}
 
 private:
+  recycle_bin_t<green_event_t<T> > *_rb;
   closure_ptr_t _closure;
 };
+
+namespace green_event {
+
+  recycle_bin_t<green_event_t<void> > *vrb ();
+
+  template<class T>
+  typename event<T>::ref
+  alloc (recycle_bin_t<green_event_t<T> > *rb,
+	 const _tame_slot_set<T> &ss,
+	 ptr<closure_t> c, const char *loc)
+  {
+    ptr<green_event_t<T> > ret = rb->get ();
+    if (ret) {
+      ret->reinit (ss, c, loc);
+      g_stats->evv_rec_hit ();
+    } else {
+      ret = New refcounted<green_event_t<T> > (rb, ss, c, loc);
+      g_stats->evv_rec_miss ();
+    }
+    c->block_inc_count ();
+    c->add (ret);
+    return ret;
+  }
+}
 
 template<class C>
 typename event<>::ref
 _mkevent (const closure_wrapper<C> &c, const char *loc)
 {
-  return event_v_opt_t::alloc (c.closure (), loc);
+  return green_event::alloc (green_event::vrb (), 
+			     _tame_slot_set<> (), 
+			     c.closure (), loc);
 }
+
+#define RECYCLE_EVENT_H(Typ,Sz,Nm)                                   \
+namespace green_event {                                              \
+  extern recycle_bin_t<green_event_t<Typ> > * _rb_##Nm;              \
+}                                                                    \
+template<class C>                                                    \
+typename event<Typ>::ref                                             \
+_mkevent (const closure_wrapper<C> &c, const char *loc, Typ &t)      \
+{                                                                    \
+  if (!green_event::_rb_##Nm)                                        \
+    green_event::_rb_##Nm =                                          \
+      New recycle_bin_t<green_event_t<Typ> > (Sz);                   \
+  return green_event::alloc (green_event::_rb_##Nm,                  \
+			     _tame_slot_set<Typ> (&t),               \
+                             c.closure (), loc);                     \
+}
+
+#define RECYCLE_EVENT_C(Type,Nm)                                     \
+namespace green_event {                                              \
+   recycle_bin_t<green_event_t<Type> > *_rb_##Nm;                    \
+}
+
+RECYCLE_EVENT_H(bool, 0x10000, bool)
+RECYCLE_EVENT_H(int, 0x10000, int)
 
 #endif /* _LIBTAME_TAME_EVENT_OPT_H_ */
