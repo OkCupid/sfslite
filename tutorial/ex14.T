@@ -1,0 +1,22 @@
+// -*-c++-*-
+/* $Id: ex1.T 2670 2007-04-02 20:23:42Z max $ */
+
+#include "tame.h"
+#include "parseopt.h"
+
+tamed static void 
+main2()
+{
+  warn << "Cb1\n";
+  twait { delaycb (1, 0, mkevent ()); }
+  warn << "Cb2\n";
+  twait { delaycb (1, 0, mkevent ()); }
+  warn << "Cb3\n";
+  exit (0);
+}
+
+int main (int argc, char *argv[])
+{
+  main2 ();
+  amain ();
+}
