@@ -60,12 +60,10 @@ public:
     return ret;
   }
 
-
   void finalize () { 
     clear_action ();
     _rb->recycle (this);
   }
-
 
   ~green_event_t () {}
 

@@ -173,9 +173,13 @@ private:
   void maybe_reenter (const char *loc)
   {
     if (_closure->block_dec_count (loc))
-      _closure->reenter ();
+      if (tame_always_virtual ()) {
+	_closure->v_reenter ();
+      } else {
+	_closure->reenter ();
+      }
   }
-
+  
   ptr<C> _closure;
 };
 

@@ -38,6 +38,7 @@
 #define   TAME_OPTIMIZE          (1 << 3)
 #define   TAME_STRICT            (1 << 4)
 #define   TAME_RECYCLE_EVENTS    (1 << 5)
+#define   TAME_ALWAYS_VIRTUAL    (1 << 6)
 
 extern bool tame_collect_rv_flag;
 extern int tame_options;
@@ -46,6 +47,8 @@ inline bool tame_optimized () { return tame_options & TAME_OPTIMIZE; }
 inline bool tame_strict_mode () { return tame_options & TAME_STRICT; }
 inline bool tame_recycle_events() 
 { return tame_options & TAME_RECYCLE_EVENTS; }
+inline bool tame_always_virtual()
+{ return tame_options & TAME_ALWAYS_VIRTUAL; }
 
 void tame_error (const char *loc, const char *msg);
 
