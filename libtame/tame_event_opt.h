@@ -21,14 +21,13 @@ class event_v_opt_t : public _event<>
 public:
   event_v_opt_t (closure_ptr_t c, const char *loc) 
     : _event<> (_tame_slot_set<> (), loc),
-      _closure (c),
-      _can_recycle (true) {}
+      _closure (c)
+  {}
 
   void reinit (closure_ptr_t c, const char *loc) 
   {
     _event_cancel_base::reinit (loc);
     _closure = c;
-    _can_recycle = true;
   }
 
   void clear_action ()
@@ -61,7 +60,6 @@ public:
 
 private:
   closure_ptr_t _closure;
-  bool _can_recycle;
 };
 
 template<class C>

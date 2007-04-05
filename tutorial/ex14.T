@@ -7,11 +7,21 @@
 tamed static void 
 main2()
 {
+  tvars {
+    int i;
+  }
+
   warn << "Cb1\n";
   twait { delaycb (1, 0, mkevent ()); }
   warn << "Cb2\n";
   twait { delaycb (1, 0, mkevent ()); }
   warn << "Cb3\n";
+
+
+  for (i = 0; i < 1000; i++) {
+    twait { delaycb (0, 0, mkevent ()); }
+  }
+
   exit (0);
 }
 

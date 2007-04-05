@@ -13,11 +13,7 @@ recycle_bin_t<obj_flag_t> * obj_flag_t::get_recycle_bin () { return rfrb; }
 void
 obj_flag_t::recycle (obj_flag_t *p)
 {
-  if (get_recycle_bin ()->add (p)) {
-    p->set_can_recycle (false);
-  } else {
-    delete p;
-  }
+  get_recycle_bin ()->recycle (p);
 }
 
 ptr<obj_flag_t>
@@ -25,7 +21,6 @@ obj_flag_t::alloc (const obj_state_t &b)
 {
   ptr<obj_flag_t> ret = get_recycle_bin ()->get ();
   if (ret) {
-    ret->set_can_recycle (true);
     ret->set (b);
   } else {
     ret = New refcounted<obj_flag_t> (b);

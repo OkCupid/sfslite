@@ -20,13 +20,9 @@ rb ()
 void
 event_v_opt_t::finalize ()
 {
-  if (_can_recycle) {
-    clear_action ();
-    _can_recycle = false;
-    rb ()->add (this);
-  } else {
-    delete this;
-  }
+  clear_action ();
+  warn << "recyling...\n";
+  rb ()->recycle (this);
 }
 
 event_v_opt_ptr_t
@@ -35,8 +31,10 @@ event_v_opt_t::alloc (closure_ptr_t c, const char *loc)
   event_v_opt_ptr_t ret = rb ()->get ();
   if (ret) {
     ret->reinit (c, loc);
+    warn << "reuse....\n";
   } else {
     ret = New refcounted<event_v_opt_t> (c, loc);
+    warn << "recreate...\n";
   }
   c->block_inc_count ();
   c->add (ret);
