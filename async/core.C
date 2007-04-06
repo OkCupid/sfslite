@@ -47,6 +47,8 @@ static int nselfd;
 
 static timeval selwait;
 
+static bool sfs_busy_wait;
+
 #ifdef WRAP_DEBUG
 #define CBTR_FD    0x0001
 #define CBTR_TIME  0x0002
@@ -250,28 +252,30 @@ timecb_check ()
   }
 
   selwait.tv_usec = 0;
-  if (!(tp = timecbs.first ()))
-    selwait.tv_sec = 86400;
-  else {
-    if (tp->ts.tv_sec == 0) {
-      selwait.tv_sec = 0;
-    } else {
-      sfs_set_global_timestamp ();
-      my_ts = sfs_get_tsnow ();
-      if (tp->ts < my_ts)
+  selwait.tv_sec = 0;
+  if (!sfs_busy_wait && !sigdocheck) {
+    if (!(tp = timecbs.first ()))
+      selwait.tv_sec = 86400;
+    else {
+      if (tp->ts.tv_sec == 0) {
 	selwait.tv_sec = 0;
-      else if (tp->ts.tv_nsec >= my_ts.tv_nsec) {
-	selwait.tv_sec = tp->ts.tv_sec - my_ts.tv_sec;
-	selwait.tv_usec = (tp->ts.tv_nsec - my_ts.tv_nsec) / 1000;
-      }
-      else {
-	selwait.tv_sec = tp->ts.tv_sec - my_ts.tv_sec - 1;
-	selwait.tv_usec = (1000000000 + tp->ts.tv_nsec - my_ts.tv_nsec) / 1000;
+      } else {
+	sfs_set_global_timestamp ();
+	my_ts = sfs_get_tsnow ();
+	if (tp->ts < my_ts)
+	  selwait.tv_sec = 0;
+	else if (tp->ts.tv_nsec >= my_ts.tv_nsec) {
+	  selwait.tv_sec = tp->ts.tv_sec - my_ts.tv_sec;
+	  selwait.tv_usec = (tp->ts.tv_nsec - my_ts.tv_nsec) / 1000;
+	}
+	else {
+	  selwait.tv_sec = tp->ts.tv_sec - my_ts.tv_sec - 1;
+	  selwait.tv_usec = (1000000000 + tp->ts.tv_nsec - 
+			     my_ts.tv_nsec) / 1000;
+	}
       }
     }
   }
-  if (sigdocheck)
-    selwait.tv_sec = selwait.tv_usec = 0;
 }
 
 #ifdef USE_EPOLL
@@ -411,6 +415,7 @@ fdcb_check (void)
     memcpy (fdspt[i], fdsp[i], fd_set_bytes);
 
   int n = SFS_SELECT (nselfd, fdspt[0], fdspt[1], NULL, &selwait);
+  //int n = SFS_SELECT (nselfd, fdspt[0], fdspt[1], NULL, NULL);
 
   // warn << "select exit rc=" << n << "\n";
   if (n < 0 && errno != EINTR) {
@@ -741,6 +746,16 @@ async_init::start ()
       callback_time = true;
   }
 #endif /* WRAP_DEBUG */
+
+  if (char *p = getenv ("SFS_OPTIONS")) {
+    for (const char *cp = p; *cp; cp++) {
+      switch (*cp) {
+      case 'b':
+	sfs_busy_wait = true;
+	break;
+      }
+    }
+  }
 }
 
 void
