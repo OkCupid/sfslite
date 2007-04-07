@@ -6,6 +6,8 @@
 #include "tame_event_ag.h"
 #include "async.h"
 
+nil_t g_nil;
+
 void 
 _event_cancel_base::cancel ()
 {

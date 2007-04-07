@@ -6,6 +6,7 @@
 
 tame_stats_t *g_stats;
 
+
 void 
 tame_error (const char *loc, const char *msg)
 {

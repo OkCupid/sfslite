@@ -32,6 +32,8 @@
 # include <pth.h>
 #endif /* HAVE_TAME_PTH */
 
+extern nil_t g_nil;
+
 
 template<class T1=nil_t, class T2=nil_t, class T3=nil_t, class T4=nil_t>
 struct value_set_t {
@@ -200,45 +202,13 @@ public:
 
   // Threaded interface
 
-  void wait (W1 &r1, W2 &r2, W3 &r3, W4 &r4)
+  void wait (W1 &r1 = g_nil, W2 &r2 = g_nil, W3 &r3 = g_nil, W4 &r4 = g_nil)
   { 
     thread_lock_acquire ();
     while (!_ti_next_trigger (r1, r2, r3, r4)) 
       threadwait (); 
     thread_lock_release ();
     
-  }
-
-  void wait (W1 &r1, W2 &r2, W3 &r3)
-  { 
-    thread_lock_acquire ();
-    while (!_ti_next_trigger (r1, r2, r3)) 
-      threadwait (); 
-    thread_lock_release ();
-  }
-
-  void wait (W1 &r1, W2 &r2)
-  { 
-    thread_lock_acquire ();
-    while (!_ti_next_trigger (r1, r2)) 
-      threadwait (); 
-    thread_lock_release ();
-  }
-
-  void wait (W1 &r1)
-  { 
-    thread_lock_acquire ();
-    while (!_ti_next_trigger (r1)) 
-      threadwait (); 
-    thread_lock_release ();
-  }
-
-  void wait ()
-  { 
-    thread_lock_acquire ();
-    while (!_ti_next_trigger ()) 
-      threadwait (); 
-    thread_lock_release ();
   }
 
   void waitall () 
@@ -320,7 +290,8 @@ public:
     thread_lock_release ();
   }
 
-  bool _ti_next_trigger (W1 &r1, W2 &r2, W3 &r3, W4 &r4)
+  bool _ti_next_trigger (W1 &r1 = g_nil, W2 &r2 = g_nil, 
+			 W3 &r3 = g_nil, W4 &r4 = g_nil)
   {
     bool ret = true;
     thread_lock_acquire ();
@@ -333,64 +304,6 @@ public:
       consume ();
     } else
       ret = false;
-    thread_lock_release ();
-    return ret;
-  }
-
-  bool _ti_next_trigger (W1 &r1, W2 &r2, W3 &r3)
-  {
-    bool ret = true;
-    thread_lock_acquire ();
-    value_set_t<W1,W2,W3> *v;
-    if (pending (&v)) {
-      r1 = v->v1;
-      r2 = v->v2;
-      r3 = v->v3;
-      consume ();
-    } else
-      ret = false;
-    thread_lock_release ();
-    return ret;
-  }
-
-  bool _ti_next_trigger (W1 &r1, W2 &r2)
-  {
-    bool ret = true;
-    thread_lock_acquire ();
-    value_set_t<W1,W2> *v;
-    if (pending (&v)) {
-      r1 = v->v1;
-      r2 = v->v2;
-      consume ();
-    } else
-      ret = false;
-    thread_lock_release ();
-    return ret;
-  }
-
-  bool _ti_next_trigger (W1 &r1)
-  {
-    bool ret = true;
-    thread_lock_acquire ();
-    value_set_t<W1> *v;
-    if (pending (&v)) {
-      r1 = v->v1;
-      consume ();
-    } else
-      ret = false;
-    thread_lock_release ();
-    return ret;
-  }
-
-  bool _ti_next_trigger () 
-  { 
-    bool ret = true;
-    thread_lock_acquire ();
-    if (pending ()) {
-      consume ();
-    } else {
-      ret = false;
-    }
     thread_lock_release ();
     return ret;
   }
