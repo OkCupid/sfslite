@@ -198,17 +198,59 @@ public:
   u_int n_triggers_left () const { return n_events_out () + n_pending (); }
   bool need_wait () const { return n_triggers_left () > 0; }
 
+  // Threaded interface
+
   void wait (W1 &r1, W2 &r2, W3 &r3, W4 &r4)
-  { while (!_ti_next_trigger (r1, r2, r3, r4)) threadjoin (); }
+  { 
+    thread_lock_acquire ();
+    while (!_ti_next_trigger (r1, r2, r3, r4)) 
+      threadwait (); 
+    thread_lock_release ();
+    
+  }
+
   void wait (W1 &r1, W2 &r2, W3 &r3)
-  { while (!_ti_next_trigger (r1, r2, r3)) threadjoin (); }
+  { 
+    thread_lock_acquire ();
+    while (!_ti_next_trigger (r1, r2, r3)) 
+      threadwait (); 
+    thread_lock_release ();
+  }
+
   void wait (W1 &r1, W2 &r2)
-  { while (!_ti_next_trigger (r1, r2)) threadjoin (); }
+  { 
+    thread_lock_acquire ();
+    while (!_ti_next_trigger (r1, r2)) 
+      threadwait (); 
+    thread_lock_release ();
+  }
+
   void wait (W1 &r1)
-  { while (!_ti_next_trigger (r1)) threadjoin (); }
+  { 
+    thread_lock_acquire ();
+    while (!_ti_next_trigger (r1)) 
+      threadwait (); 
+    thread_lock_release ();
+  }
+
   void wait ()
-  { while (!_ti_next_trigger ()) threadjoin (); }
-  void waitall () { while (need_wait ()) wait (); }
+  { 
+    thread_lock_acquire ();
+    while (!_ti_next_trigger ()) 
+      threadwait (); 
+    thread_lock_release ();
+  }
+
+  void waitall () 
+  { 
+    thread_lock_acquire ();
+    while (need_wait ()) 
+      while (!_ti_next_trigger ())
+	threadwait ();
+    thread_lock_release ();
+  }
+
+  // End threaded interface
 
   // End Public Interface
 
@@ -258,6 +300,7 @@ public:
   
   void _ti_join (const my_value_set_t &v)
   {
+    thread_lock_acquire ();
     _pending_values.push_back (v);
     if (_join_method == JOIN_EVENTS) {
       assert (_join_cls);
@@ -274,11 +317,13 @@ public:
     } else {
       /* called join before a waiter; we can just queue */
     }
+    thread_lock_release ();
   }
 
   bool _ti_next_trigger (W1 &r1, W2 &r2, W3 &r3, W4 &r4)
   {
     bool ret = true;
+    thread_lock_acquire ();
     value_set_t<W1,W2,W3,W4> *v;
     if (pending (&v)) {
       r1 = v->v1;
@@ -288,12 +333,14 @@ public:
       consume ();
     } else
       ret = false;
+    thread_lock_release ();
     return ret;
   }
 
   bool _ti_next_trigger (W1 &r1, W2 &r2, W3 &r3)
   {
     bool ret = true;
+    thread_lock_acquire ();
     value_set_t<W1,W2,W3> *v;
     if (pending (&v)) {
       r1 = v->v1;
@@ -302,12 +349,14 @@ public:
       consume ();
     } else
       ret = false;
+    thread_lock_release ();
     return ret;
   }
 
   bool _ti_next_trigger (W1 &r1, W2 &r2)
   {
     bool ret = true;
+    thread_lock_acquire ();
     value_set_t<W1,W2> *v;
     if (pending (&v)) {
       r1 = v->v1;
@@ -315,29 +364,34 @@ public:
       consume ();
     } else
       ret = false;
+    thread_lock_release ();
     return ret;
   }
 
   bool _ti_next_trigger (W1 &r1)
   {
     bool ret = true;
+    thread_lock_acquire ();
     value_set_t<W1> *v;
     if (pending (&v)) {
       r1 = v->v1;
       consume ();
     } else
       ret = false;
+    thread_lock_release ();
     return ret;
   }
 
   bool _ti_next_trigger () 
   { 
     bool ret = true;
+    thread_lock_acquire ();
     if (pending ()) {
       consume ();
     } else {
       ret = false;
     }
+    thread_lock_release ();
     return ret;
   }
 
@@ -345,20 +399,36 @@ public:
 
 private:
 
-  void threadjoin ()
-  {
-    _ti_set_join_method (JOIN_THREADS);
-    thread_wait ();
-    _ti_clear_join_method ();
-  }
-
-  void thread_wait ()
+  inline void thread_lock_acquire ()
   {
 #ifdef HAVE_TAME_PTH
-    pth_mutex_acquire (&_mutex, 0, NULL);
-    pth_cond_await (&_cond, &_mutex, NULL);
+    if (!_has_lock) {
+      pth_mutex_acquire (&_mutex, 0, NULL);
+      _has_lock = true;
+    }
+#else /* ! HAVE_TAME_PTH */
+    /* noop */
+#endif /* HAVE_TAME_PTH */
+  }
+
+  inline void thread_lock_release ()
+  {
+#ifdef HAVE_TAME_PTH
+    assert (_has_lock);
+    _has_lock = false;
     pth_mutex_release (&_mutex);
-#else
+#else /* ! HAVE_TAME_PTH */
+    /* noop */
+#endif /* HAVE_TAME_PTH */
+  }
+
+  void threadwait ()
+  {
+#ifdef HAVE_TAME_PTH
+    _ti_set_join_method (JOIN_THREADS);
+    pth_cond_await (&_cond, &_mutex, NULL);
+    _ti_clear_join_method ();
+#else /* ! HAVE_TAME_PTH */
     panic ("no PTH available...\n");
 #endif
   }
@@ -368,6 +438,7 @@ private:
 #ifdef HAVE_TAME_PTH
     pth_mutex_init (&_mutex);
     pth_cond_init (&_cond);
+    _has_lock = false;
 #endif /* HAVE_TAME_PTH */
   }
 
@@ -431,6 +502,7 @@ private:
 #ifdef HAVE_TAME_PTH
   pth_cond_t _cond;
   pth_mutex_t _mutex;
+  bool _has_lock;
 #endif /* HAVE_TAME_PTH */
 
   bool _is_cancelling;
