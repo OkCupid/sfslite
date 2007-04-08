@@ -1,8 +1,8 @@
 // -*-c++-*-
 /* $Id: tame_valueset.h 2673 2007-04-03 04:59:39Z max $ */
 
-#ifndef _LIBTAME_TAME_VALUESET_H_
-#define _LIBTAME_TAME_VALUESET_H_
+#ifndef _LIBTAME_TAME_SLOTSET_H_
+#define _LIBTAME_TAME_SLOTSET_H_
 
 template <typename T1=void, typename T2=void, typename T3=void, 
 	  typename T4=void>
@@ -57,4 +57,4 @@ struct _tame_slot_set<void, void, void, void> {
 
 struct nil_t {};
 
-#endif /* _LIBTAME_TAME_VALUESET_H_ */
+#endif /* _LIBTAME_TAME_SLOTSET_H_ */

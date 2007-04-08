@@ -96,7 +96,7 @@ sfsinclude_HEADERS = \
 	tame_tfork_ag.h \
 	tame_thread.h \
 	tame_typedefs.h \
-	tame_valueset.h \
+	tame_slotset.h \
 	tame_event_green.h \
 	tame.h \
 	tame_pipeline.h \

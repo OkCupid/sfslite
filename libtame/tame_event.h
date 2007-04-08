@@ -10,7 +10,7 @@
 #include "init.h"
 #include "async.h"
 #include "list.h"
-#include "tame_valueset.h"
+#include "tame_slotset.h"
 #include "tame_run.h"
 
 // Specify 1 extra argument, that way we can do template specialization
