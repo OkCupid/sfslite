@@ -7,6 +7,10 @@
 
 #include "tame.h"
 
+//
+// Connectors that combine different events in useful ways.
+//
+
 typedef enum { OUTCOME_SUCC = 0,
 	       OUTCOME_TIMEDOUT = 1,
 	       OUTCOME_CANCELLED = 2,

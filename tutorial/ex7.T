@@ -94,7 +94,7 @@ get_fastest_web_page (vec<str> hosts, int port, cbb cb)
     // Wait on fd to become writable, and get called back when so.
     // Unlike libasync's fdcb, waitwrite (and waitread) are not
     // "sticky" --- they're one-shots.
-    twait { waitwrite (fd, mkevent ()); }
+    twait { tame::waitwrite (fd, mkevent ()); }
 
     //
     // Use this syntax to output the results of the string buffer
@@ -118,7 +118,7 @@ get_fastest_web_page (vec<str> hosts, int port, cbb cb)
   // writing loop above.
   //
   while (true) {
-    twait { waitread (fd, mkevent ()); }
+    twait { tame::waitread (fd, mkevent ()); }
     if ((rc = resp.tosuio ()->input (fd)) < 0 && errno != EAGAIN) {
       ret = false;
       goto done;

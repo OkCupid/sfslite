@@ -2,6 +2,8 @@
 // -*-c++-*-
 #include "tame_lock.h"
 
+namespace tame {
+
 lock_t::waiter_t *
 lock_t::acquire (lock_t::mode_t m, evv_t cb)
 {
@@ -133,3 +135,5 @@ lock_t::timed_acquire (lock_t::mode_t m, u_int s, u_int ms, evb_t cb)
   else timecb_remove (tcb);
   cb->trigger (ok);
 }
+
+};

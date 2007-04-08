@@ -51,8 +51,8 @@ dostuff (str h, int port, cbb cb)
     x = axprt_stream::alloc (fd);
     cli = aclnt::alloc (x, ex_prog_1);
 
-    twait { do_pipeline (window_sz, n_tot, 
-			 wrap (do_rpc, cli, &err), mkevent()); }
+    twait { tame::do_pipeline (window_sz, n_tot, 
+			       wrap (do_rpc, cli, &err), mkevent()); }
 
     warn << "All done...\n";
   }

@@ -43,7 +43,7 @@ get_web_page (str host, int port, strbuf *resp, cbb cb)
   
   // suio::resid() returns the # of bytes left to write. 
   while (req.tosuio ()->resid () ) {
-    twait { waitwrite (fd, mkevent ()); }
+    twait { tame::waitwrite (fd, mkevent ()); }
 
     //
     // Use this syntax to output the results of the string buffer
@@ -68,7 +68,7 @@ get_web_page (str host, int port, strbuf *resp, cbb cb)
   //
   while (true) {
 
-    twait { waitread (fd, mkevent ()); }
+    twait { tame::waitread (fd, mkevent ()); }
 
     if ((rc = resp->tosuio ()->input (fd)) < 0 && errno != EAGAIN) {
       warn << "read failed...\n";

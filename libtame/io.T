@@ -4,6 +4,7 @@
 #include "tame_io.h"
 #include "tame_connectors.h"
 
+namespace tame {
 
 void
 clearread (int fd)
@@ -159,6 +160,8 @@ proxy (int infd, int outfd, evv_t cb)
   G.cancel (); // for the timer (if necessary )
 }
 
+};
+
 namespace tame {
 
   tamed void
@@ -197,6 +200,5 @@ namespace tame {
     rc = ::accept (sockfd, addr, addrlen);
     ev->trigger (rc);
   }
-
 
 };
