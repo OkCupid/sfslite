@@ -360,9 +360,10 @@ bench1_twait_explicit (int niter, cbv done)
 }
 
 static void
-bench1_sfs2 (ptr<int> i, cbv done)
+bench1_sfs2 (int *i, cbv done)
 {
   if (*i <= 0) {
+    delete i;
     (*done) ();
   } else {
     (*i) --;
@@ -373,7 +374,7 @@ bench1_sfs2 (ptr<int> i, cbv done)
 void
 bench1_sfs (int niter, cbv done)
 {
-  ptr<int> i = New refcounted<int> (niter);
+  int *i = New int (niter);
   bench1_sfs2 (i, done);
 }
 
