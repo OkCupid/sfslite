@@ -30,10 +30,10 @@
 
 #ifdef HAVE_TAME_PTH
 # include <pth.h>
+
 #endif /* HAVE_TAME_PTH */
 
 extern nil_t g_nil;
-
 
 template<class T1=nil_t, class T2=nil_t, class T3=nil_t, class T4=nil_t>
 struct value_set_t {
@@ -83,6 +83,12 @@ public:
   {
   }
 
+  //
+  // Perform the "action" required by this trigger. In this case, attempt
+  // to rejoin the rendezvous. If the event is not reusable, then clear
+  // the event in the process, and return 'true.'  If the event is
+  // reusable, then don't clear, and return 'false.'
+  //
   bool perform (_event_cancel_base *event, const char *loc, bool _reuse)
   {
     R *rp;
@@ -90,10 +96,10 @@ public:
     if (_cleared) {
       tame_error (loc, "event reused after deallocation");
     } else if ((rp = _rv.pointer ())) {
-      rp->_ti_join (_value_set);
+      rp->_ti_join (_value_set, event, !_reuse);
       if (!_reuse) {
+	clear ();
 	ret = true;
-	clear (rp, event);
       }
     } else if (!_rv.flag ()->is_cancelled ()) {
       tame_error (loc, "event triggered after rendezvous was deallocated");
@@ -104,18 +110,18 @@ public:
   void clear (_event_cancel_base *e)
   {
     if (!_cleared) {
-      R *rp = _rv.pointer ();
-      if (rp)
-	clear (rp, e);
+      if (R *rp = _rv.pointer ()) {
+	rp->remove (e);
+      }
+      clear ();
     }
   }
 
 private:
-  void clear (R *rp, _event_cancel_base *e)
+  void clear () 
   {
     _cls = NULL;
     _cleared = true;
-    rp->remove (e);
   }
 
   weakref<R> _rv;
@@ -204,20 +210,21 @@ public:
 
   void wait (W1 &r1 = g_nil, W2 &r2 = g_nil, W3 &r3 = g_nil, W4 &r4 = g_nil)
   { 
-    thread_lock_acquire ();
+    bool rls = thread_lock_acquire ();
     while (!_ti_next_trigger (r1, r2, r3, r4)) 
       threadwait (); 
-    thread_lock_release ();
-    
+    thread_lock_release (rls);
   }
 
   void waitall () 
   { 
-    thread_lock_acquire ();
-    while (need_wait ()) 
-      while (!_ti_next_trigger ())
+    bool rls = thread_lock_acquire ();
+    while (n_events_out () > 0) {
+      while (!_ti_next_trigger ()) {
 	threadwait ();
-    thread_lock_release ();
+      }
+    }
+    thread_lock_release (rls);
   }
 
   // End threaded interface
@@ -268,10 +275,18 @@ public:
     return ret;
   }
   
-  void _ti_join (const my_value_set_t &v)
+  void _ti_join (const my_value_set_t &v, _event_cancel_base *e, bool clear)
   {
-    thread_lock_acquire ();
+
+#ifdef HAVE_TAME_PTH
+    bool rls = thread_lock_acquire ();
+#endif 
+
     _pending_values.push_back (v);
+
+    if (clear) 
+      remove (e);
+
     if (_join_method == JOIN_EVENTS) {
       assert (_join_cls);
       ptr<closure_t> c = _join_cls;
@@ -287,14 +302,22 @@ public:
     } else {
       /* called join before a waiter; we can just queue */
     }
-    thread_lock_release ();
+
+#ifdef HAVE_TAME_PTH
+    thread_lock_release (rls);
+#endif
+
   }
 
   bool _ti_next_trigger (W1 &r1 = g_nil, W2 &r2 = g_nil, 
 			 W3 &r3 = g_nil, W4 &r4 = g_nil)
   {
     bool ret = true;
-    thread_lock_acquire ();
+
+#ifdef HAVE_TAME_PTH
+    bool rls = thread_lock_acquire ();
+#endif
+
     value_set_t<W1,W2,W3,W4> *v;
     if (pending (&v)) {
       r1 = v->v1;
@@ -304,7 +327,11 @@ public:
       consume ();
     } else
       ret = false;
-    thread_lock_release ();
+
+#ifdef HAVE_TAME_PTH
+    thread_lock_release (rls);
+#endif
+
     return ret;
   }
 
@@ -312,24 +339,29 @@ public:
 
 private:
 
-  inline void thread_lock_acquire ()
+  inline bool thread_lock_acquire ()
   {
+    bool rls = false;
 #ifdef HAVE_TAME_PTH
     if (!_has_lock) {
       pth_mutex_acquire (&_mutex, 0, NULL);
       _has_lock = true;
+      rls = true;
     }
 #else /* ! HAVE_TAME_PTH */
     /* noop */
 #endif /* HAVE_TAME_PTH */
+    return rls;
   }
 
-  inline void thread_lock_release ()
+  inline void thread_lock_release (bool rls)
   {
 #ifdef HAVE_TAME_PTH
-    assert (_has_lock);
-    _has_lock = false;
-    pth_mutex_release (&_mutex);
+    if (rls) {
+      assert (_has_lock);
+      _has_lock = false;
+      pth_mutex_release (&_mutex);
+    }
 #else /* ! HAVE_TAME_PTH */
     /* noop */
 #endif /* HAVE_TAME_PTH */
@@ -338,6 +370,7 @@ private:
   void threadwait ()
   {
 #ifdef HAVE_TAME_PTH
+    assert (_has_lock);
     _ti_set_join_method (JOIN_THREADS);
     pth_cond_await (&_cond, &_mutex, NULL);
     _ti_clear_join_method ();

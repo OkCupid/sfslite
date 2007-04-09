@@ -12,7 +12,7 @@ struct req_t {
 };
 
 struct worker_t {
-  worker_t () : _req (NULL) {}
+  worker_t () : _shutdown (false), _req (NULL) {}
   void serve ();
   int blocking_action (int i);
   int _index;
@@ -99,7 +99,9 @@ worker_t::serve ()
   warn << "w> " << _index << " starting up...\n";
   while (!_shutdown) {
     if (!_req) {
+      warn << "w> " << _index << " waiting for request...\n";
       twait { _ev = mkevent (); }
+      warn << "w> " << _index << " got request...\n";
       _ev = NULL;
     }
     if (_req) {
@@ -149,6 +151,7 @@ server_t::serve (int i, evi_t cb)
     int res (-1);
     req_t *r;
   }
+  warn << "s> incoming request: " << i << "\n";
   if (i == 0) {
     if (_shutdown_cb) {
       warn << "s> invoking shutdown_cb ...\n";
@@ -157,12 +160,15 @@ server_t::serve (int i, evi_t cb)
       c->trigger ();
     }
   } else {
+    warn << "s> " << i << " get thread...\n";
     twait { get_thread (mkevent (w)); }
+    warn << "s> " << i << " got thread...\n";
     if (w && !w->_shutdown) {
       twait { 
 	r = New req_t (i, mkevent (res));
 	w->_req = r;
 	if (w->_ev) {
+	  warn << "s> " << i << " trigger for thread...\n";
 	  w->_ev->trigger ();
 	}
       }
@@ -202,6 +208,7 @@ run_client (server_t *s, evv_t cb)
   }
 
   for (i = 1; i < N_CALLS; i++) {
+    warn << "c> issue client request " << i << "\n";
     s->serve (i, mkevent (rv, i, res[i]));
     twait { delaycb (1, 0, mkevent ()); }
   }
