@@ -67,8 +67,8 @@ public:
     double m = mean ();
     double sd = stddev ();
     fprintf (stderr, 
-	     "mean: %0.6g; sd: %0.6g, sd/mean: %0.6g%% min: %lld\n", 
-	     m, sd, sd / m * 100, min);
+	     "mean: %0.6g; sd: %0.6g, sd/mean: %0.3g%% min: %lld\n", 
+	     m, sd, sd * 100 / m, min);
 
     for (size_t s = 0; s < raw_results.size (); s++) {
       printf ("%" PRId64 "\n", raw_results[s] );
@@ -442,15 +442,18 @@ int main (int argc, char *argv[])
   int ch;
   setprogname (argv[0]);
   bool dealloc (false);
-  bool null_test (false);
   bool do_alloc = false;
 
+  mode = SFS_MODE;
   toggle_corebench (true);
 
   while ((ch = getopt (argc, argv, "Nfwdcnbi:t:saIETFX")) != -1) {
     switch (ch) {
     case 'F':
       mode = PTH_FORK;
+      break;
+    case 'X':
+      mode = TAME_NULL;
       break;
     case 'T':
       mode = TAME_NULL_THR;
@@ -459,7 +462,7 @@ int main (int argc, char *argv[])
       do_alloc = true;
       break;
     case 'N':
-      null_test = true;
+      mode = SFS_NULL;
       break;
     case 's':
       if (mode != SFS_MODE) usage ();
@@ -559,31 +562,30 @@ int main (int argc, char *argv[])
     exit (0);
     break;
   case SFS_MODE:
-    if (null_test) {
-      mode = SFS_NULL;
-      warn << "doing SFS NULL call test....\n";
-      bench1_null (do_alloc);
-      exit (0);
-    } else {
-      warn << "using SFS code for full test...\n";
-    }
+    warn << "using SFS code for full test...\n";
     break;
   case IMPLICIT_MODE:
     warn << "using implicit rendezvous mode for full test...\n";
+    break;
+
+  case SFS_NULL:
+    warn << "doing SFS NULL call test...\n";
+    bench1_null (do_alloc);
+    exit (0);
+    break;
+  case TAME_NULL:
+    warn << "doing a tame NULL in which closure is alloc'ed but no events..\n";
+    bench1_null (do_alloc);
+    exit (0);
     break;
   case TAME_NULL_THR:
     warn << "doing a NULL function with PTH threads....\n";
     bench1_null (do_alloc);
     exit (0);
     break;
+
   case EXPLICIT_MODE:
-    if (null_test) {
-      warn << "doing a TAME NULL call test...\n";
-      bench1_null (do_alloc);
-      exit (0);
-    } else {
-      warn << "using explicit rendezvous mode for full test...\n";
-    }
+    warn << "using explicit rendezvous mode for full test...\n";
     break;
   case THR_IMPL_MODE:
     warn << "using THREADED implicit rendezous mode for full test...\n";
