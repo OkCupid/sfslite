@@ -203,19 +203,19 @@ bench1_twait_implicit (int niter, cbv done)
   (*done) ();
 }
 
-#ifdef HAVE_PTH
+#ifdef HAVE_TAME_PTH
 static void noop () {}
 #endif
 
 static void
 bench1_twait_thr_implicit (int niter)
 {
-#ifdef HAVE_PTH
+#ifdef HAVE_TAME_PTH
   for (int i = 0; i < niter; i++) {
     twait { tfork (wrap (noop)); }
   }
 #else
-  panic ("Cannot run testcase without PTH support");
+  panic ("Cannot run testcase without PTH support\n");
 #endif
   return;
 }
@@ -223,14 +223,14 @@ bench1_twait_thr_implicit (int niter)
 static void
 bench1_twait_thr_explicit (int niter)
 {
-#ifdef HAVE_PTH
+#ifdef HAVE_TAME_PTH
   rendezvous_t<> r;
   for (int i = 0; i < niter; i++) {
     tfork (r, wrap (noop));
     r.wait ();
   }
 #else
-  panic ("Cannot run testcase without PTH support");
+  panic ("Cannot run testcase without PTH support\n");
 #endif
 
   return;
@@ -243,7 +243,7 @@ bench1_nulltame ()
   i++;
 }
 
-#ifdef HAVE_PTH
+#ifdef HAVE_TAME_PTH
 static void *
 nullthreadfn (void *in)
 {
@@ -278,7 +278,7 @@ static void benchmark_fork ()
 static void
 bench1_nullthr ()
 {
-#ifdef HAVE_PTH
+#ifdef HAVE_TAME_PTH
 
   pth_attr_t attr = pth_attr_new ();
   pth_attr_set (attr, PTH_ATTR_NAME, __FL__);
@@ -443,18 +443,17 @@ int main (int argc, char *argv[])
   setprogname (argv[0]);
   bool dealloc (false);
   bool null_test (false);
-  bool thr_test (false);
   bool do_alloc = false;
 
   toggle_corebench (true);
 
-  while ((ch = getopt (argc, argv, "Nfwdcnbi:t:saIETF")) != -1) {
+  while ((ch = getopt (argc, argv, "Nfwdcnbi:t:saIETFX")) != -1) {
     switch (ch) {
     case 'F':
       mode = PTH_FORK;
       break;
     case 'T':
-      thr_test = true;
+      mode = TAME_NULL_THR;
       break;
     case 'a':
       do_alloc = true;
@@ -524,13 +523,12 @@ int main (int argc, char *argv[])
     check_cpu_speed (); 
     exit (0);
   }
-  sfs_set_clock (SFS_CLOCK_TIMER);
 
   switch (mode) {
   case PTH_FORK:
     warn << "Benchmarking fork....\n";
 
-#ifdef HAVE_PTH
+#ifdef HAVE_TAME_PTH
     benchmark_fork ();
 #else
     warn << "Failed to benchmark ... no PTH support...\n";
@@ -573,9 +571,13 @@ int main (int argc, char *argv[])
   case IMPLICIT_MODE:
     warn << "using implicit rendezvous mode for full test...\n";
     break;
+  case TAME_NULL_THR:
+    warn << "doing a NULL function with PTH threads....\n";
+    bench1_null (do_alloc);
+    exit (0);
+    break;
   case EXPLICIT_MODE:
     if (null_test) {
-      mode = thr_test ? TAME_NULL_THR : TAME_NULL;
       warn << "doing a TAME NULL call test...\n";
       bench1_null (do_alloc);
       exit (0);

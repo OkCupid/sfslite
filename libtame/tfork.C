@@ -15,7 +15,7 @@ void _tfork (thread_implicit_rendezvous_t *rv, const char *loc, cbv a)
 	   a);
 }
 
-void _tfork (ptr<closure_t> c, const char *loc, rendezvous_t<> rv, cbv a)
+void _tfork (ptr<closure_t> c, const char *loc, rendezvous_t<> &rv, cbv a)
 {
   __tfork (loc, _mkevent (c, loc, rv), a);
 }

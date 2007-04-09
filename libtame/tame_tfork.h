@@ -149,7 +149,7 @@ void _tfork (thread_implicit_rendezvous_t *rv, const char *loc,
  * This _fork is for any situation with an explicit rendezvous, be it
  * in a threaded or TAMED function.
  */
-void _tfork (ptr<closure_t> c, const char *loc, rendezvous_t<> rv, cbv a);
+void _tfork (ptr<closure_t> c, const char *loc, rendezvous_t<> &rv, cbv a);
 
 template<class C, class R>
 void _tfork (const closure_wrapper<C> &c, const char *loc, R &r, 
