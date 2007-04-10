@@ -30,6 +30,7 @@ closure_t::closure_t (const char *file, const char *fun)
     _funcname (fun),
     _n_events (0)
 {
+  g_stats->did_mkclosure ();
   if (tame_check_leaks ())
     _events = New refcounted<event_cancel_list_t> ();
 }

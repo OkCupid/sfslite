@@ -26,7 +26,7 @@ public:
     _cancelled (false),
     _cleared (false),
     _reuse (false) 
-  {}
+  { g_stats->did_mkevent (); }
 
   ~_event_cancel_base () {}
 

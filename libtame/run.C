@@ -23,7 +23,10 @@ tame_error (const char *loc, const char *msg)
 tame_stats_t::tame_stats_t ()
   : _collect (false),
     _n_evv_rec_hit (0),
-    _n_evv_rec_miss (0)
+    _n_evv_rec_miss (0),
+    _n_mkevent (0),
+    _n_mkclosure (0),
+    _n_new_rv (0)
 {}
 
 void
@@ -44,6 +47,9 @@ tame_stats_t::dump()
     return;
 
   warn << "Tame statistics -------------------------------------------\n";
+  warn << "  total events allocated: " << _n_mkevent << "\n"
+       << "  total closures allocated: " << _n_mkclosure << "\n"
+       << "  total RVs allocated: " << _n_new_rv << "\n";
   warn << "  event<> recyle hits/misses: "
        << _n_evv_rec_hit << "/" << _n_evv_rec_miss << "\n";
   warn << "  event allocations:\n";

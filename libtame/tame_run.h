@@ -72,14 +72,23 @@ public:
   inline void mkevent_impl_rv_alloc(const char *loc)
   { if (_collect) _mkevent_impl_rv_alloc (loc); }
 
+  inline void did_mkevent () { if (_collect) _did_mkevent (); }
+  inline void did_mkclosure () { if (_collect) _did_mkclosure (); }
+  inline void did_new_rv () { if (_collect) _did_new_rv (); }
+
 private:
 
   void _evv_rec_hit () { _n_evv_rec_hit ++; }
   void _evv_rec_miss () { _n_evv_rec_miss ++; }
   void _mkevent_impl_rv_alloc (const char *loc);
+  void _did_mkevent () { _n_mkevent ++; }
+  void _did_mkclosure () { _n_mkclosure ++; }
+  void _did_new_rv () { _n_new_rv++; }
 
   bool _collect;
   int _n_evv_rec_hit, _n_evv_rec_miss;
+  int _n_mkevent, _n_mkclosure, _n_new_rv;
+
   qhash<const char *, int> _mkevent_impl_rv;
 };
 
