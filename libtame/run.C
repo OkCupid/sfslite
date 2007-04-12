@@ -47,9 +47,9 @@ tame_stats_t::dump()
     return;
 
   warn << "Tame statistics -------------------------------------------\n";
-  warn << "  total events allocated: " << _n_mkevent << "\n"
-       << "  total closures allocated: " << _n_mkclosure << "\n"
-       << "  total RVs allocated: " << _n_new_rv << "\n";
+  warn << "  total events allocated: " << _n_mkevent << "\n";
+  warn << "  total closures allocated: " << _n_mkclosure << "\n";
+  warn << "  total RVs allocated: " << _n_new_rv << "\n";
   warn << "  event<> recyle hits/misses: "
        << _n_evv_rec_hit << "/" << _n_evv_rec_miss << "\n";
   warn << "  event allocations:\n";
