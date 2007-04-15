@@ -6,50 +6,20 @@
 #include "arpc.h"
 #include "parseopt.h"
 #include "tame.h"
+#include "tame_rpcserver.h"
 
-class exsrv_t {
+class exsrv_t : public tame::server_t {
 public:
-  void dispatch (svccb *cb);
-  void runloop (CLOSURE);
-  exsrv_t (int fd) ;
-  ptr<axprt_stream> x;
-  ptr<asrv> s;
+  exsrv_t (int fd) : tame::server_t (fd) {}
+  const rpc_program &get_prog () const { return ex_prog_1; }
+  void dispatch (svccb *sbp);
 };
 
-exsrv_t::exsrv_t (int fd)
-{
-  tcp_nodelay (fd);
-  x = axprt_stream::alloc (fd);
-  runloop ();
-}
-
-tamed void
-exsrv_t::runloop ()
-{
-  tvars {
-    rendezvous_t<> rv (__FILE__, __LINE__);
-    event<svccb *>::ptr ev;
-    svccb *sbp;
-  }
-
-  ev = mkevent (rv, sbp);
-  ev->set_reuse (true);
-  
-  s = asrv_delayed_eof::alloc (x, ex_prog_1, ev);
-
-  do {
-    twait (rv);
-    if (sbp) {
-      dispatch (sbp);
-    }
-  } while (sbp);
-
-  warn << "EOF on socket recevied; deleting server...\n";
-  ev->finish ();
-
-  delete this;
-  return;
-}
+class exsrv_factory_t : public tame::server_factory_t {
+public:
+  exsrv_factory_t () : tame::server_factory_t () {}
+  tame::server_t *alloc_server (int fd) { return New exsrv_t (fd); }
+};
 
 void
 reply_rand (svccb *sbp)
@@ -120,71 +90,17 @@ exsrv_t::dispatch (svccb *sbp)
   }
 }
 
-static void
-new_connection (int lfd)
-{
-  sockaddr_in sin;
-  socklen_t sinlen = sizeof (sin);
-  bzero (&sin, sinlen);
-  int newfd = accept (lfd, reinterpret_cast<sockaddr *> (&sin), &sinlen);
-  if (newfd >= 0) {
-    warn ("accepting connection from %s\n", inet_ntoa (sin.sin_addr));
-    vNew exsrv_t (newfd);
-  } else if (errno != EAGAIN) {
-    warn ("accept failure: %m\n");
-  }
-}
-
-tamed static void
-run_server (u_int port, evb_t done)
-{
-  tvars {
-    int fd;
-    event<>::ptr ev;
-    bool ret (false);
-    bool go (true);
-    rendezvous_t<bool> rv (__FILE__, __LINE__);
-  }
-
-  fd = inetsocket (SOCK_STREAM, port);
-  if (fd <= 0) {
-    warn << "cannot allocate TCP port: " << port << "\n";
-  } else {
-    ret = true;
-
-    sigcb (SIGINT, mkevent (rv, false));
-    sigcb (SIGTERM, mkevent (rv, false));
-
-    close_on_exec (fd);
-    listen (fd, 200);
-
-    ev = mkevent (rv, true);
-    ev->set_reuse (true);
-
-    fdcb (fd, selread, ev);
-
-    while (go) {
-      twait (rv, go);
-      if (go) 
-	new_connection (fd);
-    }
-
-    ev->finish ();
-  }
-  done->trigger (ret);
-}
-
 tamed static void
 main2 (int argc, char **argv)
 {
   tvars {
     bool ret;
-    int port;
+    exsrv_factory_t fact;
   }
-  if (argc != 2 || !convertint (argv[1], &port))
+  if (argc != 2)
     fatal << "usage: exsrv <port>\n";
 
-  twait { run_server (port, mkevent (ret)); }
+  twait { fact.run (argv[1], mkevent (ret)); }
   exit (ret ? 0 : -1);
 }
 

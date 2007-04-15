@@ -40,6 +40,7 @@ tame_src(pipeline)
 tame_src(lock)
 tame_src(io)
 tame_src(aio)
+tame_src(rpcserver)
 tame_hdr(tame_connectors)
 tame_hdr(tame_nlock)
 
@@ -106,6 +107,7 @@ sfsinclude_HEADERS = \
 	tame_pc.h \
 	tame_io.h \
 	tame_aio.h \
+	tame_rpcserver.h \
 	tame_out_h
 
 .PHONY: tameclean
