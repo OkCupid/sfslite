@@ -174,7 +174,7 @@ const u_int sfs_maxpwdcost = 32;
 extern u_int sfs_hashcost;
 extern u_int sfs_maxhashcost;
 
-void sfsconst_init ();
+void sfsconst_init (bool lite_mode = false);
 str sfsconst_etcfile (const char *name);
 str sfsconst_etcfile (const char *name, const char *const *path);
 str sfsconst_etcfile_required (const char *name);

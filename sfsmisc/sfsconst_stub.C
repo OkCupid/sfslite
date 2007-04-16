@@ -312,7 +312,7 @@ mksfsdir (str path, mode_t mode, struct stat *sbp, uid_t uid)
 }
 
 void
-sfsconst_init ()
+sfsconst_init (bool lite_mode)
 {
   if (const_set)
     return;
@@ -367,8 +367,10 @@ sfsconst_init ()
     }
   }
 
-  if (!sfs_uid)
-    idlookup (NULL, NULL);
+  if (!lite_mode) {
+    if (!sfs_uid)
+      idlookup (NULL, NULL);
+  }
 
   if (char *p = getenv ("SFS_HASHCOST")) {
     sfs_hashcost = strtoi64 (p);
