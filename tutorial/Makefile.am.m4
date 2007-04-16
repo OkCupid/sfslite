@@ -85,6 +85,8 @@ tame_rpcclient(exsrv)
 tame_standalone(nlock)
 tame_standalone(ex14)
 
+tame_standalone(buggy1)
+
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
 
