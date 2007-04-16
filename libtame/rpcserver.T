@@ -6,7 +6,7 @@
 
 namespace tame {
 
-  server_t::server_t (int fd)
+  server_t::server_t (int fd, int v) : _verbosity (v)
   {
     tcp_nodelay (fd);
     _x = axprt_stream::alloc (fd);
@@ -34,7 +34,9 @@ namespace tame {
       }
     } while (sbp);
     
-    warn << "EOF on socket recevied; deleting server...\n";
+    if (_verbosity >= VERB_MED)
+      warn << "EOF on socket received; deleting server...\n";
+
     ev->finish ();
     
     delete this;
@@ -48,11 +50,13 @@ namespace tame {
     bzero (&sin, sinlen);
     int newfd = accept (lfd, reinterpret_cast<sockaddr *> (&sin), &sinlen);
     if (newfd >= 0) {
-      warn ("accepting connection from %s\n", inet_ntoa (sin.sin_addr));
-      server_t *srv = alloc_server (newfd);
+      if (_verbosity >= VERB_MED)
+	warn ("accepting connection from %s\n", inet_ntoa (sin.sin_addr));
+      server_t *srv = alloc_server (newfd, _verbosity);
       srv->runloop ();
     } else if (errno != EAGAIN) {
-      warn ("accept failure: %m\n");
+      if (_verbosity >= VERB_LOW)
+	warn ("accept failure: %m\n");
     }
   }
 

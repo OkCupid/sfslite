@@ -24,7 +24,6 @@
 
 
 class xhinfo : public virtual refcount {
-  bool eof;
   u_int nsvc;
 
 protected:
@@ -44,7 +43,7 @@ public:
   u_int svcadd () { return nsvc++; }
   u_int svcdel () { assert (nsvc); return nsvc--; }
 
-  bool ateof () { return eof; }
+  bool ateof () { return xh->ateof (); }
   static ptr<xhinfo> lookup (const ref<axprt> &);
   static void xon (const ref<axprt> &x, bool receive = true);
 

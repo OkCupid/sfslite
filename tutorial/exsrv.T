@@ -10,7 +10,7 @@
 
 class exsrv_t : public tame::server_t {
 public:
-  exsrv_t (int fd) : tame::server_t (fd) {}
+  exsrv_t (int fd, int v) : tame::server_t (fd, v) {}
   const rpc_program &get_prog () const { return ex_prog_1; }
   void dispatch (svccb *sbp);
 };
@@ -18,7 +18,7 @@ public:
 class exsrv_factory_t : public tame::server_factory_t {
 public:
   exsrv_factory_t () : tame::server_factory_t () {}
-  tame::server_t *alloc_server (int fd) { return New exsrv_t (fd); }
+  tame::server_t *alloc_server (int fd, int v) { return New exsrv_t (fd, v); }
 };
 
 void

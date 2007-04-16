@@ -36,28 +36,35 @@
 //
 namespace tame {
 
+  enum { VERB_NONE = 0,
+	 VERB_LOW = 10,
+	 VERB_MED = 20,
+	 VERB_HIGH = 30 };
+
   class server_t {
   public:
-    server_t (int fd);
+    server_t (int fd, int v);
     virtual ~server_t () {}
     virtual void dispatch (svccb *svp) = 0;
     virtual const rpc_program &get_prog () const = 0;
     void runloop (CLOSURE);
   private:
     ptr<axprt_stream> _x;
+    int _verbosity;
   };
 
   class server_factory_t {
   public:
-    server_factory_t () {}
+    server_factory_t () : _verbosity (VERB_LOW) {}
     virtual ~server_factory_t () {}
-    virtual server_t *alloc_server (int fd) = 0;
+    virtual server_t *alloc_server (int fd, int v) = 0;
     void new_connection (int fd);
     void run (const str &port, evb_t done);
     void run (u_int port, evb_t done) { run_T (port, done); }
+    void set_verbosity (int i) { _verbosity = i; }
   private:
     void run_T (u_int port, evb_t done, CLOSURE);
-    
+    int _verbosity;
   };
 
 };
