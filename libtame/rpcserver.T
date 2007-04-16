@@ -25,7 +25,7 @@ namespace tame {
     ev = mkevent (rv, sbp);
     ev->set_reuse (true);
     
-    s = asrv_delayed_eof::alloc (_x, get_prog (), ev);
+    s = asrv::alloc (_x, get_prog (), ev);
     
     do {
       twait (rv);

@@ -184,9 +184,9 @@ clock_set_timer ()
 {
   struct itimerval val;
   val.it_value.tv_sec = 0;
-  val.it_value.tv_usec = 100000; // 100 milliseconds
+  val.it_value.tv_usec = 10000; // 10 milliseconds
   val.it_interval.tv_sec = 0;
-  val.it_interval.tv_usec = 100000; // 100 milliseconds
+  val.it_interval.tv_usec = 10000; // 10 milliseconds
 
   setitimer (ITIMER_REAL, &val, 0);
 }
