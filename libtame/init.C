@@ -38,7 +38,7 @@ tame_init::start ()
 
   tame_thread_init ();
 
-  tame_options = TAME_RECYCLE_EVENTS;
+  tame_options = 0;
 
   char *e = safegetenv (TAME_OPTIONS);
   for (char *cp = e; cp && *cp; cp++) {
@@ -47,7 +47,7 @@ tame_init::start ()
       tame_options |= TAME_ALWAYS_VIRTUAL;
       break;
     case 'R':
-      tame_options &= ~int(TAME_RECYCLE_EVENTS);
+      tame_options |= TAME_RECYCLE_EVENTS;
       break;
     case 'S':
       tame_options |= TAME_STRICT;

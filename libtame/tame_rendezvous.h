@@ -187,7 +187,9 @@ public:
   
   ~rendezvous_t () { cleanup(); }
 
+  //=======================================================================
   // Public Interface to Rendezvous Class
+
   void cancel ()
   {
     // setting this flag prevents more events from being added on
@@ -196,8 +198,9 @@ public:
 
     cancel_all_events ();
 
-    // must set flag after cancelling all events, since events cannot
-    // access this object if it's cancelled.
+    // Must set flag after cancelling all events, since events cannot
+    // access this object if it's cancelled (due to particulars of
+    // weak refcount implementation -- nothing "deep").
     this->flag()->set_cancelled ();
   }
 
@@ -206,6 +209,7 @@ public:
   u_int n_triggers_left () const { return n_events_out () + n_pending (); }
   bool need_wait () const { return n_triggers_left () > 0; }
 
+  //-----------------------------------------------------------------------
   // Threaded interface
 
   void wait (W1 &r1 = g_nil, W2 &r2 = g_nil, W3 &r3 = g_nil, W4 &r4 = g_nil)
@@ -226,12 +230,15 @@ public:
     }
     thread_lock_release (rls);
   }
-
   // End threaded interface
+  //-----------------------------------------------------------------------
 
   // End Public Interface
+  //=======================================================================
 
+  //=======================================================================
   // Public Interface, but internal to tame (hence _ti_*)
+
   void _ti_set_join_method (join_method_t jm)
   {
     assert (_join_method == JOIN_NONE);
@@ -336,6 +343,7 @@ public:
   }
 
   // End tame-internal public interface
+  //=======================================================================
 
 private:
 
@@ -392,8 +400,9 @@ private:
   {
     if (need_wait () && !this->flag ()->is_cancelled ()) {
       strbuf b;
-      b.fmt ("rendezvous went out of scope when expecting %u trigger(s)",
-	     n_triggers_left ());
+      b.fmt ("rendezvous went out of scope when expecting %u trigger%s",
+	     n_triggers_left (),
+	     n_triggers_left () > 1 ? "s" : "");
       str s = b;
       tame_error (loc(), s.cstr ());
     } 

@@ -27,12 +27,9 @@ closure_t::closure_t (const char *file, const char *fun)
   : _jumpto (0), 
     _id (++closure_serial_number),
     _filename (file),
-    _funcname (fun),
-    _n_events (0)
+    _funcname (fun)
 {
   g_stats->did_mkclosure ();
-  if (tame_check_leaks ())
-    _events = New refcounted<event_cancel_list_t> ();
 }
 
 static void
@@ -42,8 +39,10 @@ report_rv_problems (const vec<weakref<rendezvous_base_t> > &rvs)
     u_int n;
     const rendezvous_base_t *p = rvs[i].pointer ();
     if (p && (n = p->n_triggers_left ())) {
-      strbuf b ("rendezvous still active with %u triggers after control "
-		"left function", n);
+      strbuf b ("rendezvous still active with %u trigger%s after control "
+		"left function", 
+		n, 
+		n > 1 ? "s" : "");
       str s = b;
       tame_error (p->loc (), s.cstr ());
     }
@@ -51,11 +50,9 @@ report_rv_problems (const vec<weakref<rendezvous_base_t> > &rvs)
 }
 
 static void
-end_of_scope_checks (ptr<event_cancel_list_t> events,
-		     vec<weakref<rendezvous_base_t> > rvs)
+end_of_scope_checks (vec<weakref<rendezvous_base_t> > rvs)
 {
   report_rv_problems (rvs);
-  report_leaks (events);
 }
 
 void 
@@ -68,7 +65,7 @@ closure_t::end_of_scope_checks (int line)
     // closure since that will keep it from going out of scope.
     // So instead, we hold onto the relevant pieces inside the class,
     // with an expensive copy in the case of the _rvs.
-    delaycb (0, 0, wrap (::end_of_scope_checks, _events, _rvs));
+    delaycb (0, 0, wrap (::end_of_scope_checks, _rvs));
   }
 }
 

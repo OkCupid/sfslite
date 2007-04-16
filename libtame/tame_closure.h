@@ -69,24 +69,6 @@ public:
   bool block_dec_count (const char *loc);
   inline void block_inc_count () { _block._count++; }
 
-  // Add/remove events to this closure
-  inline void remove (_event_cancel_base *e)
-  {
-    if (tame_check_leaks ()) {
-      assert (_n_events > 0);
-      _n_events --;
-      _events->remove (e);
-    }
-  }
-
-  inline void add (_event_cancel_base *e)
-  {
-    if (tame_check_leaks ()) {
-      _n_events ++;
-      _events->insert_head (e);
-    }
-  }
-
   //
   // Rendezvous can't statically type what kind of closure they
   // need to jump back into; therefore, we need a virtual reentry
@@ -101,7 +83,6 @@ public:
 
   void collect_rendezvous ();
 
-
 protected:
 
   u_int64_t _id;
@@ -109,20 +90,16 @@ protected:
   const char *_filename;              // filename for the function
   const char *_funcname;         
 
+public:
   // Variables involved with managing BLOCK blocks. Note that only one
   // can be active at any given time.
-public:
   struct block_t { 
     block_t () : _id (0), _count (0), _lineno (0) {}
     int _id, _count, _lineno;
   };
   block_t _block;
-
   
   vec<weakref<rendezvous_base_t> > _rvs;
-  ptr<event_cancel_list_t> _events;
-  u_int _n_events;
-
 };
 
 typedef ptr<closure_t> closure_ptr_t;
@@ -147,23 +124,16 @@ public:
     if (!_closure) {
       tame_error (loc, "event reused after deallocation");
     } else {
+      // Maybe reenter does clear() so no need to call it separately
       maybe_reenter (loc);
-      clear (event);
       ret = true;
     }
     return ret;
   }
 
-  //
-  // Invariant: as long as this object has a reference to the closure,
-  // the associated event appears in the closure's list of outstanding 
-  // events.  Of course the closure cannot go out of scope as long as this 
-  // reference exists, so this arrangement should prevent dangling pointers.
-  //
   void clear (_event_cancel_base *e) 
   {
     if (_closure) {
-      _closure->remove (e);
       _closure = NULL;
     }
   }
@@ -172,12 +142,16 @@ private:
 
   void maybe_reenter (const char *loc)
   {
-    if (_closure->block_dec_count (loc))
+    ptr<C> c = _closure;
+    _closure = NULL;
+    if (c->block_dec_count (loc)) {
       if (tame_always_virtual ()) {
-	_closure->v_reenter ();
+	c->v_reenter ();
       } else {
-	_closure->reenter ();
+	c->reenter ();
       }
+    }
+    c = NULL;
   }
   
   ptr<C> _closure;
@@ -204,12 +178,11 @@ _mkevent_implicit_rv (const ptr<C> &c,
 		      const char *loc,
 		      const _tame_slot_set<T1,T2,T3> &rs)
 {
-  ptr<_event_impl<closure_action<C>,T1,T2,T3> >  ret;
-  ret = New refcounted<_event_impl<closure_action<C>,T1,T2,T3> > 
+  ptr<_event_impl<closure_action<C>,T1,T2,T3> > ret =
+    New refcounted<_event_impl<closure_action<C>,T1,T2,T3> > 
     (closure_action<C> (c), rs, loc);
-  c->block_inc_count ();
-  c->add (ret);
 
+  c->block_inc_count ();
   g_stats->mkevent_impl_rv_alloc (loc);
   return ret;
 }

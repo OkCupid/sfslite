@@ -37,12 +37,7 @@ public:
 
   void clear_action ()
   {
-    closure_ptr_t p = _closure;
     _closure = NULL;
-    if (p) {
-      p->remove (this);
-    }
-    p = NULL;
   }
 
   bool perform_action (_event_cancel_base *e, const char *loc, bool reuse)
@@ -51,10 +46,11 @@ public:
     if (!_closure) {
       tame_error (loc, "event reused after deallocation");
     } else {
-      if (_closure->block_dec_count (loc)) {
-	_closure->v_reenter ();
+      closure_ptr_t c = _closure;
+      _closure = NULL;
+      if (c->block_dec_count (loc)) {
+	c->v_reenter ();
       }
-      clear_action ();
       ret = true;
     }
     return ret;
@@ -93,7 +89,6 @@ namespace green_event {
       g_stats->evv_rec_miss ();
     }
     c->block_inc_count ();
-    c->add (ret);
     return ret;
   }
 }

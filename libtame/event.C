@@ -22,7 +22,6 @@ _event_cancel_base::cancel ()
   }
 }
 
-
 void
 _event_cancel_base::clear ()
 {
@@ -30,5 +29,4 @@ _event_cancel_base::clear ()
     clear_action ();
     _cleared = true;
   }
-
 }

@@ -93,8 +93,7 @@ event_cancel_list_t;
 
 void report_leaks (event_cancel_list_t *lst);
 
-template<class A, class T1=void, class T2=void, 
-	 class T3=void, class T4=void> 
+template<class A, class T1=void, class T2=void, class T3=void, class T4=void> 
 class _event_impl;
 
 template<class T1=void, class T2=void, class T3=void>

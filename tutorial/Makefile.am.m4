@@ -86,6 +86,8 @@ tame_standalone(nlock)
 tame_standalone(ex14)
 
 tame_standalone(buggy1)
+tame_standalone(buggy2)
+tame_standalone(buggy3)
 
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
