@@ -167,7 +167,8 @@ fhtab::lookup (aiod_file *af, int *errp)
      * with outstanding requests (in which case the close could get
      * reordered).  However such usage is really a bug in the calling
      * program. */
-    warn ("stale handle on already open file\n");
+    warn ("stale handle on already open file (%lld,%lld) v (%lld,%lld)\n",
+	  af->dev, af->ino, h->dev, h->ino);
     tab.remove (af->handle);
     h = alloc (af, errp);
     if (!h)

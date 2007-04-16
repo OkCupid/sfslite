@@ -35,10 +35,12 @@ namespace tame {
   class aiofh_t {
   public:
     aiofh_t (aiod *a) : _aiod (a), _off (0) {}
+    ~aiofh_t ();
     void open (const str &fn, int flg, int mode, evi_t ev, CLOSURE);
     void read (size_t sz, aio_read_ev_t ev, CLOSURE);
     void lseek (off_t o) { _off = o; }
     void fstat (aio_stat_ev_t ev) { _fh->fstat (ev); }
+    void close (evi_t::ptr ev = NULL, CLOSURE);
 
   private:
     aiod *_aiod;

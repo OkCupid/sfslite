@@ -46,4 +46,26 @@ namespace tame {
     ev->trigger (rbuf, rsz);
   }
 
+  tamed void
+  aiofh_t::close (evi_t::ptr ev)
+  {
+    tvars {
+      int ret;
+    }
+    assert (_fh);
+    twait { 
+      _fh->close (mkevent (ret)); 
+      _fh = NULL;
+    }
+    if (ev)
+      ev->trigger (ret);
+  }
+
+  aiofh_t::~aiofh_t ()
+  {
+    if (_fh) {
+      close ();
+    }
+  }
+
 };

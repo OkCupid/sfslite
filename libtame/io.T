@@ -179,8 +179,14 @@ namespace tame {
   {
     tvars {
       int rc;
+      evv_t::ptr ev;
     }
-    twait { fdcb (fd, selwrite, mkevent ()); }
+    twait { 
+      ev = mkevent ();
+      warn ("enable: %p\n", static_cast<_event<> *> (ev));
+      fdcb (fd, selwrite, ev);
+    }
+    warn ("disable: %p\n", static_cast<_event<> *> (ev));
     fdcb (fd, selwrite, NULL);
     rc = ::write (fd, buf, sz);
     ev->trigger (rc);

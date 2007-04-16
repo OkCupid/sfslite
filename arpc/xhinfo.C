@@ -24,7 +24,7 @@
 #include "arpc.h"
 
 xhinfo::xhinfo (const ref<axprt> &x)
-  : eof (false), nsvc (0), xh (x), max_acked_offset (0)
+  : nsvc (0), xh (x), max_acked_offset (0)
 {
   xh->xhip = this;
   xh->setrcb (wrap (this, &xhinfo::dispatch));
@@ -39,13 +39,10 @@ xhinfo::~xhinfo ()
 ptr<xhinfo>
 xhinfo::lookup (const ref<axprt> &x)
 {
-  if (xhinfo *xip = x->xhip) {
-    if (xip->eof)
-      return NULL;
-    return mkref (xip);
-  }
   if (x->ateof ())
     return NULL;
+  if (xhinfo *xip = x->xhip)
+    return mkref (xip);
   return New refcounted<xhinfo> (x);
 }
 
@@ -53,7 +50,6 @@ void
 xhinfo::seteof (ref<xhinfo> xi, const sockaddr *src)
 {
   if (xh->connected) {
-    eof = true;
     xh->setrcb (NULL);
     if (clist.first)
       aclnt::dispatch (xi, NULL, 0, src);
