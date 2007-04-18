@@ -1,24 +1,25 @@
-
+// -*-c++-*-
+/* $Id$ */
 
 #include "ex_prot.h"
 #include "async.h"
 #include "arpc.h"
 #include "parseopt.h"
+#include "tame.h"
+#include "tame_rpcserver.h"
 
-class exsrv_t {
+class exsrv_t : public tame::server_t {
 public:
-  void dispatch (svccb *cb);
-  exsrv_t (int fd) ;
-  ptr<axprt_stream> x;
-  ptr<asrv> s;
+  exsrv_t (int fd, int v) : tame::server_t (fd, v) {}
+  const rpc_program &get_prog () const { return ex_prog_1; }
+  void dispatch (svccb *sbp);
 };
 
-exsrv_t::exsrv_t (int fd)
-{
-  tcp_nodelay (fd);
-  x = axprt_stream::alloc (fd);
-  s = asrv_delayed_eof::alloc (x, ex_prog_1, wrap (this, &exsrv_t::dispatch));
-}
+class exsrv_factory_t : public tame::server_factory_t {
+public:
+  exsrv_factory_t () : tame::server_factory_t () {}
+  tame::server_t *alloc_server (int fd, int v) { return New exsrv_t (fd, v); }
+};
 
 void
 reply_rand (svccb *sbp)
@@ -37,9 +38,6 @@ void
 exsrv_t::dispatch (svccb *sbp)
 {
   if (!sbp) {
-    warn << "EOF on socket recevied; shutting down\n";
-    delete this;
-    return;
   }
 
   u_int p = sbp->proc ();
@@ -92,42 +90,24 @@ exsrv_t::dispatch (svccb *sbp)
   }
 }
 
-static void
-new_connection (int lfd)
+tamed static void
+main2 (int argc, char **argv)
 {
-  sockaddr_in sin;
-  socklen_t sinlen = sizeof (sin);
-  bzero (&sin, sinlen);
-  int newfd = accept (lfd, reinterpret_cast<sockaddr *> (&sin), &sinlen);
-  if (newfd >= 0) {
-    warn ("accepting connection from %s\n", inet_ntoa (sin.sin_addr));
-    vNew exsrv_t (newfd);
-  } else if (errno != EAGAIN) {
-    warn ("accept failure: %m\n");
+  tvars {
+    bool ret;
+    exsrv_factory_t fact;
   }
-}
+  if (argc != 2)
+    fatal << "usage: exsrv <port>\n";
 
-static bool
-init_server (u_int port)
-{
-  int fd = inetsocket (SOCK_STREAM, port);
-  if (!fd) {
-    warn << "cannot allocate TCP port: " << port << "\n";
-    return false;
-  }
-  close_on_exec (fd);
-  listen (fd, 200);
-  fdcb (fd, selread, wrap (new_connection, fd));
-  return true;
+  twait { fact.run (argv[1], mkevent (ret)); }
+  exit (ret ? 0 : -1);
 }
 
 int
 main (int argc, char *argv[])
 {
-  int port;
-  if (argc != 2 || !convertint (argv[1], &port))
-    fatal << "usage: exsrv <port>\n";
-
-  init_server (port);
+  setprogname (argv[0]);
+  main2 (argc, argv);
   amain ();
 }

@@ -82,13 +82,13 @@ tame_standalone(null)
 tame_standalone(test)
 tame_standalone(buggy2)
 tame_standalone(buggy3)
+tame_rpcclient(exsrv)
 
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
 
 noinst_PROGRAMS = tame_exes exsrv conftabtst
 
-exsrv_SOURCES = exsrv.C ex_prot.C
 conftabtst_SOURCES = conftabtst.C
 
 RPC_AUTOGEN_FILES = ex_prot.C ex_prot.h
