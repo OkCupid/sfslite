@@ -3,7 +3,7 @@ $(PROGRAMS): $(LDEPS)
 
 sfslib_LTLIBRARIES = libtame.la
 
-sfsinclude_HEADERS = pipeline.h lock.h autocb.h
+sfsinclude_HEADERS = pipeline.h lock.h autocb.h tame_rpcserver.h
 
 SUFFIXES = .C .T .h
 .T.C:
@@ -28,6 +28,7 @@ dnl
 
 tame_src(pipeline)
 tame_src(lock)
+tame_src(rpcserver)
 
 dnl
 dnl

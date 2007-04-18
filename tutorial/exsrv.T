@@ -90,17 +90,17 @@ exsrv_t::dispatch (svccb *sbp)
   }
 }
 
-tamed static void
+TAMED static void
 main2 (int argc, char **argv)
 {
-  tvars {
+  VARS {
     bool ret;
     exsrv_factory_t fact;
   }
   if (argc != 2)
     fatal << "usage: exsrv <port>\n";
 
-  twait { fact.run (argv[1], mkevent (ret)); }
+  BLOCK { fact.run (argv[1], @(ret)); }
   exit (ret ? 0 : -1);
 }
 
