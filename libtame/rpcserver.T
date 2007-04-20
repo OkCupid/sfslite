@@ -67,7 +67,7 @@ namespace tame {
     if (!convertint (s, &port)) {
       warn << "Could not convert string to port: " << s << "\n";
       done->trigger (false);
-    } else if (port <= 0 || port > USHRT_MAX) {
+    } else if (port <= 0 || port > int (USHRT_MAX)) {
       warn << "Invalid port specified: " << port << "\n";
       done->trigger (false);
     } else {
