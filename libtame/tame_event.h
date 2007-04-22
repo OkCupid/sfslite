@@ -43,6 +43,8 @@ public:
   const char *loc () const { return _loc; }
   bool cancelled () const { return _cancelled; }
 
+  operator bool() const { return ! _cancelled; }
+
   void set_reuse (bool b) { _reuse = b; }
   bool get_reuse () const { return _reuse; }
 
