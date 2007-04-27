@@ -114,14 +114,18 @@ axprt_pipe::sendbreak (cbv::ptr cb)
 void
 axprt_pipe::fail ()
 {
+  // MK: don't close the same FD twice in the case of axprt_stream
+  int closed = -1;
   if (fdread >= 0) {
     fdcb (fdread, selread, NULL);
     close (fdread);
+    closed = fdread;
   }
   if (fdwrite >= 0) {
     fdcb (fdwrite, selwrite, NULL);
     wcbset = false;
-    close (fdwrite);
+    if (fdwrite != closed)
+      close (fdwrite);
   }
   fdread = fdwrite = -1;
   if (!destroyed) {
