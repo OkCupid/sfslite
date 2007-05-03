@@ -41,7 +41,7 @@ lock_t::acquire (lock_t::mode_t m, evv_t cb)
     
   if (wait) {
     ret = New lock_t::waiter_t (m, cb);
-    _waiters.insert_head (ret);
+    _waiters.insert_tail (ret);
   }
 
   if (!ret) cb->trigger ();
