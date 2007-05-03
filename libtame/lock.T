@@ -11,7 +11,7 @@ lock_t::acquire (lock_t::mode_t m, cbv cb)
     _mode = m;
   } else if (_mode != SHARED || m != SHARED) {
     ret = New lock_t::waiter_t (m, cb);
-    _waiters.insert_head (ret);
+    _waiters.insert_tail (ret);
   }
   if (!ret) SIGNAL (cb);
   return ret;
