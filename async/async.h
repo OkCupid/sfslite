@@ -90,7 +90,12 @@ void ifchgcb_remove (ifchgcb_t *chg);
 #define SFSLITE_VERSION_MAJOR 1
 #define SFSLITE_VERSION_MINOR 1
 #define SFSLITE_VERSION_PATCHLEVEL 2
-#define SFSLITE_VERSION_PRE 2
+#define SFSLITE_VERSION_PRE 100
+//
+// VERSION_PRE < 100 means pre1, pre2, etc. releases
+// VERSION_PRE = 100 means the real release
+// VERSION_PRE > 100 means sub-minor? patches
+//
 
 #define VERSION_FLATTEN(Maj,Min,Pat,Pre) \
    (((Maj * 256 + Min) * 256 + Pat) * 256 + Pre)
@@ -102,6 +107,6 @@ void ifchgcb_remove (ifchgcb_t *chg);
                    SFSLITE_VERSION_PATCHLEVEL, \
                    SFSLITE_VERSION_PRE))
 
-#define SFSLITE_PATCHLEVEL_STR "1.1.2pre2"
+#define SFSLITE_PATCHLEVEL_STR "1.1.2"
 
 #endif /* !_ASYNC_ASYNC_H_ */
