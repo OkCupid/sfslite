@@ -27,10 +27,18 @@
 #include "tame.h"
 #include "aiod.h"
 
+/*
+ * A library class that puts a wrapper around SFS's aiod interface.
+ *
+ * In general, create an aiod.  Make a new aiofh_t below, and then
+ * can call open/read/lseek/fstat and close on it.  Other features
+ * may be added in the future.
+ *
+ */
 namespace tame {
 
-  typedef event_t<ptr<aiobuf>, ssize_t>::ref aio_read_ev_t;
-  typedef event_t<struct stat *, int>::ref aio_stat_ev_t;
+  typedef event<ptr<aiobuf>, ssize_t>::ref aio_read_ev_t;
+  typedef event<struct stat *, int>::ref aio_stat_ev_t;
 
   class aiofh_t {
   public:
@@ -51,8 +59,7 @@ namespace tame {
     str _fn;
   };
 
-  typedef event_t<ptr<aiofh_t> >::ref open_ev_t;
-
+  typedef event<ptr<aiofh_t> >::ref open_ev_t;
 
 };
 

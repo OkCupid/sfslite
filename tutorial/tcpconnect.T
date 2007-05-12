@@ -56,7 +56,7 @@ connect_to_in_addr (in_addr a, int port, evi_t ev)
     if (connect (fd, (sockaddr *) &sin, sizeof (sin)) >= 0 || 
 	errno == EINPROGRESS) {
 
-      twait { waitwrite (fd, connector::cnc (mkevent (), ev, &outc)); }
+      twait { tame::waitwrite (fd, connector::cnc (mkevent (), ev, &outc)); }
       warn << "return from function\n";
 
       if (outc == OUTCOME_SUCC) {
@@ -69,7 +69,7 @@ connect_to_in_addr (in_addr a, int port, evi_t ev)
 	    fd = -ECONNREFUSED;
 	}
       } else {
-	clearwrite (fd);
+	tame::clearwrite (fd);
       }
     } else {
       fd = -errno;

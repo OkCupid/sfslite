@@ -26,7 +26,7 @@ static void
 run_thr ()
 {
   rendezvous_t<int> rv;
-  int i;
+  int i = 0;
   int r1, r2;
   warn << "+ run_thr\n";
 

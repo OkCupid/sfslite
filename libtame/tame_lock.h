@@ -9,35 +9,44 @@
 #include "list.h"
 #include "tame.h"
 
-class lock_t {
-public:
+// 
+// A simple lock, to get coarse-grained atomicity across blocking
+// operations.
+//
+namespace tame {
 
-  enum mode_t {
-    OPEN = 0,
-    SHARED = 1,
-    EXCLUSIVE = 2
-  };
-
-  lock_t (mode_t m = OPEN);
-
-  struct waiter_t {
-    waiter_t (mode_t m, evv_t c) : _mode (m), _cb (c) {}
+  class lock_t {
+  public:
+    
+    enum mode_t {
+      OPEN = 0,
+      SHARED = 1,
+      EXCLUSIVE = 2
+    };
+    
+    lock_t (mode_t m = OPEN);
+    
+    struct waiter_t {
+      waiter_t (mode_t m, evv_t c) : _mode (m), _cb (c) {}
+      mode_t _mode;
+      evv_t _cb;
+      tailq_entry<waiter_t> _lnk;
+    };
+    
+    waiter_t *acquire (mode_t m, evv_t cb);
+    void timed_acquire (mode_t m, u_int s, u_int ms, evb_t cb, CLOSURE);
+    void release ();
+    void cancel (waiter_t *w);
+    mode_t mode () const { return _mode; }
+    
+  protected:
+    void call (waiter_t *w);
+    
+    tailq<waiter_t, &waiter_t::_lnk> _waiters;
     mode_t _mode;
-    evv_t _cb;
-    list_entry<waiter_t> _lnk;
+    int _sharers;
   };
 
-  waiter_t *acquire (mode_t m, evv_t cb);
-  void timed_acquire (mode_t m, u_int s, u_int ms, evb_t cb, CLOSURE);
-  void release ();
-  void cancel (waiter_t *w);
-
-protected:
-  void call (waiter_t *w);
-
-  list<waiter_t, &waiter_t::_lnk> _waiters;
-  mode_t _mode;
-  int _sharers;
 };
 
 

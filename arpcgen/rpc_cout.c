@@ -691,7 +691,7 @@ emit_single_in_line (declaration * decl, int flag, relation rel)
 
 
   if (flag == PUT)
-    f_print (fout, "\t\t IXDR_PUT_");
+    f_print (fout, "\t\t (void )IXDR_PUT_");
   else if (rel == REL_ALIAS)
     f_print (fout, "\t\t objp->%s = IXDR_GET_", decl->name);
   else

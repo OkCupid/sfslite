@@ -1,10 +1,10 @@
 
 // -*-c++-*-
 #include "tame.h"
-#include "tame_core.h"
 #include "tame_io.h"
 #include "tame_connectors.h"
 
+namespace tame {
 
 void
 clearread (int fd)
@@ -114,7 +114,7 @@ proxy (int infd, int outfd, evv_t cb)
   }
 
   // If the parent process gives up on us, then we'll get a callback here
-  cb->set_notify_on_cancel (mkevent (G, ENDPROG));
+  cb->set_cancel_notifier (mkevent (G, ENDPROG));
 
   read.setev (mkevent (G, READ));
   write.setev (mkevent (G, WRITE));
@@ -160,6 +160,8 @@ proxy (int infd, int outfd, evv_t cb)
   G.cancel (); // for the timer (if necessary )
 }
 
+};
+
 namespace tame {
 
   tamed void
@@ -179,14 +181,8 @@ namespace tame {
   {
     tvars {
       int rc;
-      evv_t::ptr ev;
     }
-    twait { 
-      ev = mkevent ();
-      warn ("enable: %p\n", static_cast<_event<> *> (ev));
-      fdcb (fd, selwrite, ev);
-    }
-    warn ("disable: %p\n", static_cast<_event<> *> (ev));
+    twait { fdcb (fd, selwrite, mkevent ()); }
     fdcb (fd, selwrite, NULL);
     rc = ::write (fd, buf, sz);
     ev->trigger (rc);
@@ -198,13 +194,11 @@ namespace tame {
     tvars {
       int rc;
     }
+
     twait { fdcb (sockfd, selread, mkevent ()); }
     fdcb (sockfd, selread, NULL);
     rc = ::accept (sockfd, addr, addrlen);
     ev->trigger (rc);
   }
-
-
-
 
 };

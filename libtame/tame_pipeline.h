@@ -8,6 +8,11 @@
 #include "async.h"
 #include "tame.h"
 
+//
+// A class to automate pipelined operations.
+//
+namespace tame {
+
 class pipeliner_t {
 public:
   pipeliner_t (size_t w);
@@ -32,6 +37,8 @@ private:
 typedef callback<void, size_t, cbb, ptr<closure_t> >::ref pipeline_op_t;
 
 void do_pipeline (size_t w, size_t n, pipeline_op_t op, evv_t done, CLOSURE);
+
+};
 
 
 #endif /* _LIBTAME_PIPELINE_H_ */

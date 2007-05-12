@@ -1,91 +1,42 @@
 // -*-c++-*-
-/* $Id$ */
+/* $Id: buggy2.T 2349 2006-12-03 19:12:46Z max $ */
 
 #include "tame.h"
 #include "parseopt.h"
 #include "arpc.h"
 
-bool fix_bug;
+//
+// Bug #2: Leaking a reusable event.
+//
 
 static void usage ()
 {
   fatal << "usage: " << progname << " [-f]\n";
 }
 
-vec<cbv::ptr> holding_area;
-
-tamed static
-void leaky_callee (cbv cb)
-{
-  holding_area.push_back (cb);
-  twait { delaycb (1, 0, mkevent ()); }
-  if (fix_bug)
-    TRIGGER (cb);
-  else
-    (*cb) ();
-}
-
-
-tamed static
-void block_with_cb_hog (cbv cb)
-{
-  warn << "block_with_cb_hog...\n";
-  twait { leaky_callee (mkevent ()); }
-  TRIGGER (cb);
-}
-
-tamed static
-void nonblock_with_cb_hog (cbv cb)
+tamed static void
+run_test (bool fix_bug, evv_t ev)
 {
   tvars {
     rendezvous_t<> rv (__FILE__, __LINE__);
+    evv_t::ptr nev;
   }
-  warn << "nonblock_with_cb_hog...\n";
-  leaky_callee (mkevent (rv));
+  nev = mkevent (rv);
+  nev->set_reuse (true);
+  delaycb (1, 0, nev);
   twait (rv);
-  TRIGGER (cb);
+  if (fix_bug)
+    nev->finish ();
+  ev->trigger ();
 }
 
-tamed static
-void nonblock_with_unwaited_cvs (cbv cb)
+tamed static void
+main2 (int argc, char **argv)
 {
   tvars {
-    rendezvous_t<> rv (__FILE__, __LINE__);
+    int ch;
+    bool fix_bug (false);
   }
-  warn << "nonblock_with_unwaited_cvs...\n";
-  delaycb (1, 0, mkevent (rv) );
-  if (fix_bug) {
-    twait (rv); 
-  }
-  TRIGGER (cb);
-}
-
-typedef void (* run_me_t) (cbv, ptr<closure_t>);
-
-tamed static 
-void main_T ()
-{
-  tvars { 
-    run_me_t *p (NULL); 
-  }
-  static run_me_t fns[] = { block_with_cb_hog,
-			    nonblock_with_cb_hog,
-			    nonblock_with_unwaited_cvs,
-			    NULL };
-
-  for ( p = fns; *p; p++) {
-    twait { (*p) ( mkevent (), NULL ); }
-    twait { delaycb (2, 0, mkevent () ); }
-  }
-  warn << "delaying for 2 seconds, then exiting..\n";
-  delaycb (2, 0, wrap (exit, 0));
-}
- 
-int main (int argc, char *argv[])
-{
-  int ch;
-  fix_bug = false;
-  setprogname (argv[0]);
   while ((ch = getopt (argc, argv, "f")) != -1) {
     switch (ch) {
     case 'f':
@@ -95,6 +46,15 @@ int main (int argc, char *argv[])
       usage ();
     }
   }
-  main_T ();
+  twait { run_test (fix_bug, mkevent ()); }
+  twait { delaycb (2, 0, mkevent ()); }
+  exit (0);
+}
+ 
+int 
+main (int argc, char *argv[])
+{
+  setprogname (argv[0]);
+  main2 (argc, argv);
   amain ();
 }

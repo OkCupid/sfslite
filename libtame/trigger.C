@@ -2,8 +2,8 @@
 #include "tame_trigger.h"
 
 void
-dtrigger (event_t<>::ref cb)
+dtrigger (event<>::ref cb)
 {
-  delaycb (0, 0, wrap (cb, &event<>::trigger));
+  delaycb (0, 0, wrap (cb, &_event<>::trigger));
 }
 

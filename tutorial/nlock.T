@@ -8,15 +8,15 @@
 #include "parseopt.h"
 #include "tame_nlock.h"
 
-lock_table_t<str> tab;
+tame::lock_table_t<str> tab;
 
 tamed static void 
 main2 (int argc, char **argv)
 {
   tvars {
-    ptr<lock_handle_t<str> > lh;
+    ptr<tame::lock_handle_t<str> > lh;
   }
-  twait { tab.acquire (&lh, "foo", lock_t::EXCLUSIVE, mkevent ()); }
+  twait { tab.acquire (&lh, "foo", tame::lock_t::EXCLUSIVE, mkevent ()); }
   lh = NULL;
 }
 

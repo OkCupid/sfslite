@@ -12,7 +12,7 @@ struct req_t {
 };
 
 struct worker_t {
-  worker_t () : _req (NULL) {}
+  worker_t () : _shutdown (false), _req (NULL) {}
   void serve ();
   int blocking_action (int i);
   int _index;
@@ -31,7 +31,7 @@ public:
 private:
   void init ();
   void ready_thread (worker_t *w);
-  void get_thread (event_t<worker_t *>::ref, CLOSURE);
+  void get_thread (event<worker_t *>::ref, CLOSURE);
   size_t _n_threads;
   vec<worker_t> _workers;
   list<worker_t, &worker_t::_rlnk> _ready;
@@ -130,7 +130,7 @@ worker_t::blocking_action (int i)
 }
 
 tamed void
-server_t::get_thread (event_t<worker_t *>::ref cb)
+server_t::get_thread (event<worker_t *>::ref cb)
 {
   tvars {
     worker_t *w (NULL);
@@ -202,10 +202,11 @@ run_client (server_t *s, evv_t cb)
   }
 
   for (i = 1; i < N_CALLS; i++) {
+    warn << "c> issue request " << i << "\n";
     s->serve (i, mkevent (rv, i, res[i]));
     twait { delaycb (1, 0, mkevent ()); }
   }
-  while (rv.n_out ()) {
+  while (rv.n_triggers_left ()) {
     twait (rv, i);
     warn << "c> request " << i << " returned: " << res[i] << "\n";
   }

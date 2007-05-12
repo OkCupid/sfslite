@@ -8,11 +8,15 @@ use strict;
 
 my $N_tv = 3;
 my $N_wv = 3;
-my $name = "_mkevent";
-my $CN = "event";
-my $WCN = "event_t";
-my $mkrs = $name . "_rs";
-my $evbg = "event_generic_base_t";
+my $MKEV = "_mkevent";
+my $MKEVCOPY = "_mkeventcopy";
+my $CN = "_event";
+my $CNI = ${CN} . "_impl";
+my $WCN = "event";
+my $MKEVRS = ${MKEV} . "_rs";
+my $BASE = "_event_cancel_base";
+my $EVCB = "_event_cancel_base";
+my $RVMKEV = "_ti_mkevent";
 
 sub mklist ($$)
 {
@@ -58,15 +62,29 @@ sub template_arglist (@)
     }
 }
 
-sub do_trigger_func ($$$)
+sub do_trigger_funcs ($)
 {
-    my ($fn, $arg1, $t) = @_;
+    my ($t) = @_;
 
-    print ("  void $fn (",
+    print ("  void trigger (",
+	   arglist (["const T% &t%", $t]), ")\n",
+	   "  {\n",
+	   "    if (can_trigger ()) {\n",
+	   "      _event_hold_t hold = mkref (this);\n"
+	   );
+
+    if ($t) {
+	print ("      _slot_set.assign (", arglist(["t%", $t]), ");\n");
+    }
+
+    print ("      if (perform_action (this, this->_loc, _reuse))\n",
+	   "        _cleared = true;\n",
+	   "    }\n",
+	   "  }\n");
+
+    print ("  void operator() (",
 	   arglist (["T% t%", $t]), ")",
-	   " { dotrig (",
-	   arglist ($arg1, ["t%", $t], ["nil_t()", $N_tv - $t]),
-	   " ); }\n");
+	   " { trigger (", arglist(["t%", $t]), "); }\n");
 }
 
 #
@@ -80,36 +98,94 @@ sub do_event_class ($)
 
     print ("template<", arglist (["class T%", $t]), ">\n");
     $tlist = "<" . arglist (["T%", $t]) . ">";
-    $tlist2 = $tlist;
 
     my $vlist = "<" . arglist ("void", ["T%", $t]) . ">";
 
+    my $ctss = "const _tame_slot_set$tlist &";
+
     # print the classname
-    print ("class event", $tlist, " :\n",
-	   "     public ${evbg}", $tlist2, ",\n",
-	   "     public callback", $vlist , "\n",
+    print ("class ${CN}", $tlist, " :\n",
+	   "     public ${BASE},\n",
+	   "     public callback${vlist}\n",
+	   "{\n",
+	   "public:\n");
+
+    # print the constructors
+    print ("  ${CN} (const _tame_slot_set$tlist &rs, const char *loc)\n",
+	   "   : ${BASE} (loc),\n",
+	   "     callback${vlist} (CALLBACK_ARGS(loc))");
+    if ($t) {
+	print (",\n",
+	       "    _slot_set (rs)");
+    }
+    print ("\n",
+	   "    {}\n\n");
+
+    if ($t) {
+	print ("  ${ctss}slot_set() const\n",
+	       "  { return _slot_set; }\n");
+	print ("  void slot_set_reassign (${ctss}ss) { _slot_set = ss; }");
+    } else {
+	print ("  _tame_slot_set$tlist slot_set() const\n",
+	       "  { return _tame_slot_set$tlist (); }");
+	print ("  void slot_set_reassign (${ctss}ss) {}");
+    }
+    print ("\n\n");
+
+    do_trigger_funcs ($t);
+    
+    # close the class
+    if ($t) {
+	print ("private:\n",
+	       "  _tame_slot_set$tlist _slot_set;\n");
+    }
+    print ("\n};\n\n");
+}
+
+#
+# make a class of type event, the inherits from libasync's callback,
+# for each number of trigger values.
+#
+sub do_event_impl_class ($)
+{
+    my ($t) = @_;
+    my ($tlist, $tlist2);
+
+    print ("template<", arglist ("class A", ["class T%", $t]), ">\n");
+    $tlist = "<" . arglist (["T%", $t]) . ">";
+    $tlist2 = "<" . arglist ("A", ["T%", $t]) . ">";
+
+
+    # print the classname
+    print ("class ${CNI}", $tlist2, " :\n",
+	   "     public ${CN}", $tlist , "\n",
 	   "{\n",
 	   "public:\n");
 
     # print the constructor
-    print ("  event (",
-	   arglist ("event_action_ptr_t a",
-		    "const refset_t$tlist2 &rs",
+    print ("  ${CNI} (",
+	   arglist ("const A &action",
+		    "const _tame_slot_set$tlist &rs",
 		    "const char *loc"),
 	   ")\n",
-	   "    : ${evbg}" , $tlist2 , " (a, rs, loc),\n",
-	   "      callback", $vlist, 
-	   " (CALLBACK_ARGS(loc))\n",
-	   "     {}\n");
+	   "    : ${CN}${tlist} (rs, loc),\n",
+	   "      _action (action) {}\n\n");
 
-    # print the trigger functions
-    do_trigger_func ("operator()", "true", $t);
-    do_trigger_func ("trigger", "false", $t);
-    
+    # print the destructor
+    print ("  ~${CNI} () { if (!this->_cleared) clear_action (); }\n\n");
+
+    # print the action functions
+    print ("  bool perform_action (${EVCB} *e, const char *loc, bool reuse)\n",
+	   "  { return _action.perform (e, loc, reuse); }\n");
+    print ("  void clear_action () { _action.clear (this); }\n\n");
+
+    # print the data
+    print ("private:\n",
+	   "  A _action;\n");
+
     # close the class
     print "};\n\n";
 }
-
 #
 # Return:
 #
@@ -139,11 +215,11 @@ sub do_mkevent_rs ($$)
     my $prfx = mkevent_prefix ($t, $w);
     
     print ("$prfx\n",
-	   "${mkrs} (" ,
+	   "${MKEVRS} (" ,
 	   arglist ("ptr<closure_t> c",
 		    "const char *loc",
-		    "const refset_t<" .arglist (["T%", $t]). "> &rs",
-		    "rendezvous_t<" . arglist (["W%", $w]). "> rv",
+		    "const _tame_slot_set<" .arglist (["T%", $t]). "> &rs",
+		    "rendezvous_t<" . arglist (["W%", $w]). "> &rv",
 		    ["const W% &w%", $w]
 		    ),
 	   ")\n"
@@ -156,8 +232,8 @@ sub do_mkevent_rs ($$)
 		    "value_set_t<" . arglist (["W%", $w]) . "> (".
 		    arglist (["w%", $w]). ")",
 		    "rs");
-	print ("  return rv._mkevent (" ,
-	       join (",\n                      ", @args),
+	print ("  return rv.${RVMKEV} (" ,
+	       join (",\n                        ", @args),
 	       ");\n");
 	print ("}");
     } else {
@@ -173,10 +249,10 @@ sub do_mkevent ($$)
     my $prfx = mkevent_prefix ($t, $w);
     
     print ("$prfx\n",
-	   "${name} (" , 
+	   "${MKEV} (" , 
 	   arglist ("ptr<closure_t> c",
 		    "const char *loc",
-		    "rendezvous_t<" . arglist (["W%", $w]) . "> rv",
+		    "rendezvous_t<" . arglist (["W%", $w]) . "> &rv",
 		    ["const W% &w%", $w],
 		    ["T% &t%", $t]
 		    ),
@@ -187,12 +263,12 @@ sub do_mkevent ($$)
 	
 	my @args = ("c", 
 		    "loc",
-		    "refset_t<" . arglist (["T%", $t]) . "> (" .
-		    arglist (["t%", $t]) . ")",
+		    "_tame_slot_set<" . arglist (["T%", $t]) . "> (" .
+		    arglist (["&t%", $t]) . ")",
 		    "rv",
 		    ["w%", $w]
 		    );
-	print ("  return ${mkrs} (" , 
+	print ("  return ${MKEVRS} (" , 
 	       join (",\n                      ", 
 		     mklist_multi (@args)),
 	       ");\n");
@@ -214,37 +290,61 @@ sub do_generic ($$)
 sub do_mkevent_block ($)
 {
     my ($t) = @_;
-    if ($t > 0) {
-	print "template<" . arglist (["class T%", $t]) . ">\n";
-	print "typename ";
+
+    if ($t == 0) {
+	return;
     }
+
+    print "template<" . arglist ("class C", ["class T%", $t]) . ">\n";
+    print "typename ";
     print "${WCN}<" . arglist (["T%", $t]) . ">::ref\n";
-    print ("${name} (" ,
-	   arglist ("implicit_rendezvous_t *r",
+    print ("${MKEV} (" ,
+	   arglist ("const closure_wrapper<C> &c",
 		    "const char *loc",
 		    [ "T% &t%", $t ]),
 	   ")\n");
-    if ($t > 0) {
-	print "{\n";
-	print ("  return New refcounted<${CN}<" .
-	       arglist (["T%", $t]) . "> >\n" .
-	       "   (",
-	       arglist ( "r->make_reenter (loc)",
-			 "refset_t<" . arglist (["T%", $t]) 
-			 ."> (" . arglist (["t%", $t]) . ")",
-			 "loc"
-			 ),
-	       ");\n");
-	print "}\n\n";
-    } else {
-	print ";\n\n";
-    }
+    print "{\n";
+
+    print ("  return _mkevent_implicit_rv (",
+	   arglist ("c.closure ()", "loc", 
+		    "_tame_slot_set<" . arglist (["T%", $t]) 
+		    ."> (" . arglist (["&t%", $t]) . ")" ),
+	   ");\n");
+    print "}\n\n";
 }
 
-sub do_block ($)
+#
+# do a makeevent on a thread-implicit-rendezvous
+#
+# Right now not being used.
+#
+sub do_mkevent_tir ($)
 {
     my ($t) = @_;
-    do_mkevent_block ($t);
+    my $tlist = "<" . arglist (["class T%", $t]) . ">";
+    print "template${tlist}\n";
+    if ($t > 0) {
+	print "typename ";
+    }
+    print "${WCN}${tlist}::ref\n";
+    print ("${MKEV} (",
+	   arglist ("thread_implicit_rendezvous_t *r",
+		    "const char *loc",
+		    [ "T% &t%", $t] ),
+	   ")\n");
+    if ($t > 0) {
+	print ("{\n",
+	       "   return _mkevent (",
+	       arglist ("r->closure ()",
+			"loc",
+			"*r",
+			[ "t%", $t ]),
+	       ");\n",
+	       "}");
+    } else {
+	print ";";
+    }
+    print "\n\n";
 }
 
 print <<EOF;
@@ -257,19 +357,19 @@ print <<EOF;
 #define _LIBTAME_EVENT_AG_H_
 
 #include "tame_event.h"
-#include "tame_core.h"
-
+#include "tame_closure.h"
+#include "tame_rendezvous.h"
 
 EOF
 
 for (my $t = 0; $t <= $N_tv; $t++) {
     do_event_class ($t);
-    do_block ($t);
+    do_event_impl_class ($t);
+    do_mkevent_block ($t);
     for (my $w = 0; $w <= $N_wv; $w++) {
 	do_generic ($t, $w);
     }
 }
-
 
 print <<EOF;
 #endif // _LIBTAME_EVENT_AG_H_ 

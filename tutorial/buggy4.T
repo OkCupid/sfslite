@@ -1,3 +1,4 @@
+
 // -*-c++-*-
 /* $Id: buggy2.T 2349 2006-12-03 19:12:46Z max $ */
 
@@ -6,7 +7,7 @@
 #include "arpc.h"
 
 //
-// Bug #3: RV out of scope with uncollected events
+// Bug #4: 
 //
 
 static void usage ()

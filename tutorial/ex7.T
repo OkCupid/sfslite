@@ -5,7 +5,7 @@
 #include "parseopt.h"
 #include "tame_io.h"
 
-typedef event_t<int,int>::ref cbii ;
+typedef event<int,int>::ref cbii ;
 
 /**
  * Given a vector of N hosts, connect to all of them on the given port.
@@ -31,7 +31,7 @@ connect (vec<str> hosts, int port, cbii done)
     tcpconnect (hosts[i], port, mkevent (rv,i,fd,*fd));
   }
   
-  while (rv.need_join ()) {
+  while (rv.need_wait ()) {
     twait (rv, i, fd);
     warn << hosts[i]  << ":" << port << ": ";
     if (*fd >= 0) {
@@ -94,7 +94,7 @@ get_fastest_web_page (vec<str> hosts, int port, cbb cb)
     // Wait on fd to become writable, and get called back when so.
     // Unlike libasync's fdcb, waitwrite (and waitread) are not
     // "sticky" --- they're one-shots.
-    twait { waitwrite (fd, mkevent ()); }
+    twait { tame::waitwrite (fd, mkevent ()); }
 
     //
     // Use this syntax to output the results of the string buffer
@@ -118,7 +118,7 @@ get_fastest_web_page (vec<str> hosts, int port, cbb cb)
   // writing loop above.
   //
   while (true) {
-    twait { waitread (fd, mkevent ()); }
+    twait { tame::waitread (fd, mkevent ()); }
     if ((rc = resp.tosuio ()->input (fd)) < 0 && errno != EAGAIN) {
       ret = false;
       goto done;

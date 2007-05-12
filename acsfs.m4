@@ -2336,5 +2336,9 @@ AC_DEFUN([SFS_EPOLL],
 [AC_ARG_ENABLE(epoll,
 --enable-epoll 		[experimental] epoll support on linux)
 test "${enable_epoll+set}" = "set" && with_epoll="yes"
-AC_DEFINE(USE_EPOLL, 1, Define if using experiment Epoll support on linux)
+if test "$with_epoll" = "yes"
+then
+	AC_DEFINE(USE_EPOLL, 1, 
+	          Define if using experiment Epoll support on linux)
+fi
 ])

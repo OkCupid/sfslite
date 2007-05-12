@@ -238,7 +238,8 @@ public:
   ~sfs_pathcert ();
   bool valid () const {
     return !cert.msg.redirect
-      || cert.msg.redirect->expire < implicit_cast<sfs_time> (timenow);
+      || cert.msg.redirect->expire < 
+      implicit_cast<sfs_time> (sfs_get_timenow());
   }
   str dest () const {
     if (cert.msg.redirect && valid ())

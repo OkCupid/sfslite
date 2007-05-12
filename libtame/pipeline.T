@@ -4,10 +4,13 @@
 
 #include "tame_pipeline.h"
 
-pipeliner_t::pipeliner_t (size_t w) : 
-  _wsz (w), _rv (__FILE__, __LINE__), _cancelled (false)
-{ assert (_wsz > 0); }
 
+namespace tame {
+
+pipeliner_t::pipeliner_t (size_t w) : 
+ _wsz (w), _rv (__FILE__, __LINE__), _cancelled (false)
+{ assert (_wsz > 0); }
+  
 tamed void
 pipeliner_t::wait_n (size_t n, evv_t done)
 {
@@ -73,3 +76,5 @@ do_pipeline (size_t w, size_t n, pipeline_op_t op, evv_t done)
   twait { ppl.run (mkevent ()); }
   done->trigger ();
 }
+
+};

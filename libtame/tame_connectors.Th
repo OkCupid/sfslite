@@ -7,6 +7,10 @@
 
 #include "tame.h"
 
+//
+// Connectors that combine different events in useful ways.
+//
+
 typedef enum { OUTCOME_SUCC = 0,
 	       OUTCOME_TIMEDOUT = 1,
 	       OUTCOME_CANCELLED = 2,
@@ -18,61 +22,70 @@ inline bool valid_timeout (int s, int ns)
   return (s >= 0 && ns >= 0 && (s > 0 || ns > 0));
 }
 
-template<class T1=nil_t, class T2=nil_t, class T3=nil_t>
+template<class T1=void, class T2=void, class T3=void>
 class connector_t {
 public:
 
   connector_t () {}
 
-  static typename event_t<T1,T2,T3>::ptr
-  cnc (typename event_t<T1,T2,T3>::ref in, 
-       cancelable_t *cobj,
+  static typename event<T1,T2,T3>::ptr
+  cnc (typename event<T1,T2,T3>::ref in, 
+       _event_cancel_base *cobj,
        int to_s,
        int to_ns,
        outcome_t *ocp = NULL)
   {
-    typename event_t<T1,T2,T3>::ptr  ncb;
+    typename event<T1,T2,T3>::ptr  ncb;
     connector_t<T1,T2,T3> c;
     c.__cnc (&ncb, in, cobj, to_s, to_ns, ocp);
     return ncb;
   }
 
-  static typename event_t<T1,T2,T3>::ptr
-  sig (typename event_t<T1,T2,T3>::ref in, 
+  static typename event<T1,T2,T3>::ptr
+  sig (typename event<T1,T2,T3>::ref in, 
        vec<int> sigv,
        int *res,
-       cancelable_t *cobj)
+       _event_cancel_base *cobj)
   {
-    typename event_t<T1,T2,T3>::ptr  ncb;
+    typename event<T1,T2,T3>::ptr  ncb;
     connector_t<T1,T2,T3> c;
     c.__sig (&ncb, in, sigv, res, cobj);
     return ncb;
   }
 
+  static typename event<T1,T2,T3>::ptr
+  first (typename event<T1,T2,T3>::ref *es, size_t sz)
+  {
+    typename event<T1,T2,T3>::ptr ncb;
+    connector_t<T1,T2,T3> c;
+    c.__first (es, sz);
+    return ncb;
+  }
+
 private:
-  void __cnc (typename event_t<T1,T2,T3>::ptr *out, 
-	      typename event_t<T1,T2,T3>::ref in, 
-	      cancelable_t *c, 
+  void __cnc (typename event<T1,T2,T3>::ptr *out, 
+	      typename event<T1,T2,T3>::ref in, 
+	      _event_cancel_base *c, 
 	      int to_s, 
 	      int to_ns,
 	      outcome_t *ocp,
 	      CLOSURE);
 
-  void __sig (typename event_t<T1,T2,T3>::ptr *out, 
-	      typename event_t<T1,T2,T3>::ref in, 
+  void __sig (typename event<T1,T2,T3>::ptr *out, 
+	      typename event<T1,T2,T3>::ref in, 
 	      vec<int> sigs,
 	      int *sigp,
-	      cancelable_t *cobj, 
+	      _event_cancel_base *cobj, 
 	      CLOSURE);
 
 };
 
 tamed template<class T1, class T2, class T3> void 
-connector_t<T1,T2,T3>::__sig (typename event_t<T1,T2,T3>::ptr *out, 
-			      typename event_t<T1,T2,T3>::ref in, 
+connector_t<T1,T2,T3>::__sig (typename event<T1,T2,T3>::ptr *out, 
+			      typename event<T1,T2,T3>::ref in, 
 			      vec<int> sigs,
 			      int *sigp,
-			      cancelable_t *cobj)
+			      _event_cancel_base *cobj)
 {
   tvars {
     rendezvous_t<int> rv (__FILE__, __LINE__);
@@ -81,13 +94,13 @@ connector_t<T1,T2,T3>::__sig (typename event_t<T1,T2,T3>::ptr *out,
   }
 
   if (cobj) {
-    cobj->set_notify_on_cancel (mkevent (rv, -1));
+    cobj->set_cancel_notifier (mkevent (rv, -1));
   }
   for (i = 0; i < sigs.size (); i++) {
     sigcb (sigs[i], mkevent (rv, sigs[i]));
   }
-  *out = mkevent_rs (in->refset (), rv, 0);
-  (*out)->set_notify_on_cancel (mkevent (rv, -2));
+  *out = mkevent_rs (in->slot_set (), rv, 0);
+  (*out)->set_cancel_notifiers (mkevent (rv, -2));
 
   twait (rv, sig);
 
@@ -95,18 +108,17 @@ connector_t<T1,T2,T3>::__sig (typename event_t<T1,T2,T3>::ptr *out,
     sigcb (sigs[i], NULL);
   }
 
-
   rv.cancel ();
   if (sigp) *sigp = sig;
 
-  in->rawtrig ();
+  in->trigger_no_assign ();
 }
 
 
 tamed template<class T1, class T2, class T3> void 
-connector_t<T1,T2,T3>::__cnc (typename event_t<T1,T2,T3>::ptr *out, 
-			      typename event_t<T1,T2,T3>::ref in, 
-			      cancelable_t *cobj, 
+connector_t<T1,T2,T3>::__cnc (typename event<T1,T2,T3>::ptr *out, 
+			      typename event<T1,T2,T3>::ref in, 
+			      _event_cancel_base *cobj, 
 			      int to_s, 
 			      int to_ns,
 			      outcome_t *ocp)
@@ -118,15 +130,15 @@ connector_t<T1,T2,T3>::__cnc (typename event_t<T1,T2,T3>::ptr *out,
   }
 
   if (cobj) {
-    cobj->set_notify_on_cancel (mkevent (rv, OUTCOME_CANCELLED)); 
+    cobj->set_cancel_notifier (mkevent (rv, OUTCOME_CANCELLED)); 
   }
 
   if (valid_timeout (to_s, to_ns)) {
     tcb = delaycb (to_s, to_ns, mkevent (rv, OUTCOME_TIMEDOUT));
   }
 
-  *out = mkevent_rs (in->refset (), rv, OUTCOME_SUCC);
-  (*out)->set_notify_on_cancel (mkevent (rv, OUTCOME_DISCARDED));
+  *out = mkevent_rs (in->slot_set (), rv, OUTCOME_SUCC);
+  (*out)->set_cancel_notifier (mkevent (rv, OUTCOME_DISCARDED));
   twait (rv, outc);
 
   if (outc != OUTCOME_TIMEDOUT && tcb) {
@@ -139,41 +151,49 @@ connector_t<T1,T2,T3>::__cnc (typename event_t<T1,T2,T3>::ptr *out,
 
   if (ocp) *ocp = outc;
 
-  in->rawtrig ();
+  in->trigger_no_assign ();
 }
 
 namespace connector {
 
   template<typename T1, typename T2, typename T3>
-  ref<event<T1,T2,T3> >
-  cnc (ref<event<T1,T2,T3> > in, cancelable_t *cobj, 
+  ref<_event<T1,T2,T3> >
+  cnc (ref<_event<T1,T2,T3> > in, _event_cancel_base *cobj, 
 	outcome_t *ocp = NULL)
   {
     return connector_t<T1,T2,T3>::cnc (in, cobj, -1, -1, ocp);
   }
 
   template<typename T1, typename T2, typename T3>
-  ref<event<T1,T2,T3> >
-  cnc (ref<event<T1,T2,T3> > in, cancelable_t *cobj, int to_s, int to_ns,
+  ref<_event<T1,T2,T3> >
+  cnc (ref<_event<T1,T2,T3> > in, _event_cancel_base *cobj, 
+       int to_s, int to_ns,
 	outcome_t *ocp = NULL)
   {
     return connector_t<T1,T2,T3>::cnc (in, cobj, to_s, to_ns, ocp);
   }
 
   template<typename T1, typename T2, typename T3>
-  ref<event<T1,T2,T3> >
-  timeout (ref<event<T1,T2,T3> > in, int to_s, int to_ns = 0, 
+  ref<_event<T1,T2,T3> >
+  timeout (ref<_event<T1,T2,T3> > in, int to_s, int to_ns = 0, 
 	   outcome_t *ocp = NULL)
   {
     return connector_t<T1,T2,T3>::cnc (in, NULL, to_s, to_ns, ocp);
   }
 
   template<typename T1, typename T2, typename T3>
-  ref<event<T1,T2,T3> >
-  sig (ref<event<T1,T2,T3> > in, vec<int> sigs, int *sigp = NULL,
-       cancelable_t *cobj = NULL)
+  ref<_event<T1,T2,T3> >
+  sig (ref<_event<T1,T2,T3> > in, vec<int> sigs, int *sigp = NULL,
+       _event_cancel_base *cobj = NULL)
   {
     return connector_t<T1,T2,T3>::sig (in, sigs, sigp, cobj);
+  }
+
+  template<typename T1, typename T2, typename T3>
+  ref<_event<T1,T2,T3> >
+  first (ref<_event<T1,T2,T3> > *es, size_t sz)
+  {
+    return connector_t<T1,T2,T3>::first (es, sz);
   }
 
 };

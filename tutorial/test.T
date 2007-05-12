@@ -3,6 +3,7 @@
 
 #include "async.h"
 #include "qhash.h"
+#include "tame.h"
 
 int counter;
 class A {
@@ -36,6 +37,9 @@ main (int argc, char *argv[])
   bar ();
   warn << "x5\n";
 
+  warn << "sizeof (_event<>): " << sizeof(_event<>) << "\n";
+  warn << "sizeof (_event<int>): " << sizeof(_event<int>) << "\n";
+  warn << "sizeof (_event<int, str, double>): " << sizeof(_event<int, str, double>) << "\n";
 
   qhash<int,int> x,y;
   x.insert (1, 5);

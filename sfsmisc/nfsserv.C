@@ -39,7 +39,8 @@ const rpcgen_table nfscall::closert = {
 
 nfscall::nfscall (const authunix_parms *au, u_int32_t p, void *a)
   : aup (au), procno (p), argp (a), resp (NULL), xdr_res (NULL),
-    acstat (SUCCESS), austat (AUTH_OK), rqtime (timenow), nocache (false),
+    acstat (SUCCESS), austat (AUTH_OK), rqtime (sfs_get_timenow()), 
+    nocache (false),
     nofree (false), stopserv (NULL), curserv (NULL)
 {
 }

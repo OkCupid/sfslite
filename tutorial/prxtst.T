@@ -40,8 +40,8 @@ do_proxy (int infd, str hn, int port, cbv cb)
   twait { tcpconnect (hn, port, mkevent (outfd)); }
   if (outfd >= 0) {
     twait {
-      proxy (infd, outfd, mkevent ());
-      proxy (outfd, infd, mkevent ());
+      tame::proxy (infd, outfd, mkevent ());
+      tame::proxy (outfd, infd, mkevent ());
     }
   } else {
     warn ("tcpconnect failed: %m\n");
@@ -65,12 +65,12 @@ listen_loop (int lport, str hn, int port, evv_t cb)
 
   if ((lfd = listen_on (lport)) >= 0) {
 
-    cb->set_notify_on_cancel (mkevent (G, PROXY_END));
+    cb->set_cancel_notifier (mkevent (G, PROXY_END));
 
     while (go || proxies_out > 0 ) {
 
       if (go)
-	waitread (lfd, mkevent (G, READ));
+	tame::waitread (lfd, mkevent (G, READ));
 
       twait (G, which);
 
@@ -115,8 +115,8 @@ main2 (int lport, str hn, int port)
   }
 
   listen_loop (lport, hn, port, mkevent (rv, true));
-  sigcb1 (SIGINT, mkevent (rv, false));
-  sigcb1 (SIGTERM, mkevent (rv, false));
+  tame::sigcb1 (SIGINT, mkevent (rv, false));
+  tame::sigcb1 (SIGTERM, mkevent (rv, false));
 
   twait (rv, ok);
 

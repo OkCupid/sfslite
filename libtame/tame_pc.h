@@ -10,9 +10,12 @@
 #include "list.h"
 #include "tame.h"
 
+//
+// producer/consumer with 1 object
+//
+
 namespace tame {
 
-  // producer/consumer with 1 object
   template<class V>
   class pc1_t {
   public:

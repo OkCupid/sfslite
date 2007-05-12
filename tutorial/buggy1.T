@@ -6,8 +6,7 @@
 #include "arpc.h"
 
 //
-// Bug #3: RV out of scope with uncollected events
-//
+// Fix Bug #1: An event firing twice.
 
 static void usage ()
 {
@@ -15,17 +14,11 @@ static void usage ()
 }
 
 tamed static void
-run_test (bool fix_bug, evv_t ev)
+double_trigger (bool fix_bug, evv_t ev)
 {
-  tvars {
-    rendezvous_t<> rv (__FILE__, __LINE__);
-  }
-  delaycb (1, 0, mkevent (rv));
-  delaycb (2, 0, mkevent (rv));
-  twait (rv);
   ev->trigger ();
-  if (fix_bug)
-    twait (rv);
+  if (!fix_bug) 
+    ev->trigger ();
 }
 
 tamed static void
@@ -44,7 +37,7 @@ main2 (int argc, char **argv)
       usage ();
     }
   }
-  twait { run_test (fix_bug, mkevent ()); }
+  twait { double_trigger (fix_bug, mkevent ()); }
   twait { delaycb (2, 0, mkevent ()); }
   exit (0);
 }

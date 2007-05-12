@@ -27,6 +27,7 @@
 #define _ASYNC_LITETIME_H_ 1
 
 #include "amisc.h"
+#include "init.h"
 
 //
 // public
@@ -36,8 +37,8 @@ typedef enum { SFS_CLOCK_GETTIME = 0,
 	       SFS_CLOCK_MMAP = 1, 
 	       SFS_CLOCK_TIMER = 2 } sfs_clock_t;
 
-void sfs_set_clock (sfs_clock_t typ, const str &s = NULL);
-int my_clock_gettime (struct timespec *p);
+INIT(litetime_init);
+
 
 #define HAVE_MY_CLOCK_GETTIME 1
 
@@ -54,6 +55,18 @@ int my_clock_gettime (struct timespec *p);
 #define TIMESPEC_EQ(ts1, ts2) \
   ((ts1).tv_sec == (ts2).tv_sec && (ts1).tv_nsec == (ts2).tv_nsec)
 
+
+//
+// Public interface to clock.
+//
+void sfs_set_clock (sfs_clock_t typ, const str &s = NULL, bool lzy = false);
+struct timespec sfs_get_tsnow (bool force = false);
+void sfs_get_tsnow (struct timespec *ts, bool force = false);
+void sfs_set_global_timestamp ();
+void sfs_leave_sel_loop ();
+time_t sfs_get_timenow(bool force = false);
+//
+//
 
 #endif
 

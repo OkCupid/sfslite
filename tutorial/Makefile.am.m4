@@ -34,7 +34,7 @@ changequote([[, ]])dnl
 define(`tame_exes', tame_exes $1)dnl
 define(`tame_dist', tame_dist $1.T)dnl
 define(`tame_clean', tame_clean $1.C)dnl
-$1.C: $(srcdir)/$1.T
+$1.C: $(srcdir)/$1.T $(TAME)
 ]]changequote)dnl
 
 define(`tame_standalone',
@@ -73,14 +73,8 @@ tame_rpcclient(ex11)
 tame_standalone(ex12)
 tame_rpcclient(ex13)
 tame_standalone(tcpconnect)
-tame_standalone(buggy1a)
-tame_standalone(buggy1b)
-tame_standalone(buggy1c)
-tame_rpcclient(buggy10)
 tame_standalone(null)
 tame_standalone(test)
-tame_standalone(buggy2)
-tame_standalone(buggy3)
 tame_standalone(thr1)
 tame_standalone(thr2)
 tame_standalone(thr3)
@@ -89,6 +83,11 @@ tame_standalone(cnc)
 tame_standalone(connect1)
 tame_rpcclient(exsrv)
 tame_standalone(nlock)
+tame_standalone(ex14)
+
+tame_standalone(buggy1)
+tame_standalone(buggy2)
+tame_standalone(buggy3)
 
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
