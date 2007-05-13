@@ -66,10 +66,12 @@ sub do_trigger_funcs ($)
 {
     my ($t) = @_;
 
+
     print ("  void trigger (",
 	   arglist (["const T% &t%", $t]), ")\n",
 	   "  {\n",
 	   "    if (can_trigger ()) {\n",
+	   "      _performing = true;\n",
 	   "      _event_hold_t hold = mkref (this);\n"
 	   );
 
@@ -77,8 +79,10 @@ sub do_trigger_funcs ($)
 	print ("      _slot_set.assign (", arglist(["t%", $t]), ");\n");
     }
 
-    print ("      if (perform_action (this, this->_loc, _reuse))\n",
+    print ("      if (perform_action (this, this->_loc, _reuse)) {\n",
 	   "        _cleared = true;\n",
+	   "      }\n",
+	   "      _performing = false;\n",
 	   "    }\n",
 	   "  }\n");
 

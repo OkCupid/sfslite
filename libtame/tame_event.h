@@ -25,7 +25,8 @@ public:
     _loc (loc), 
     _cancelled (false),
     _cleared (false),
-    _reuse (false) 
+    _reuse (false),
+    _performing (false)
   { g_stats->did_mkevent (); }
 
   ~_event_cancel_base () {}
@@ -34,6 +35,7 @@ public:
   {
     _loc = loc;
     _cancelled = false;
+    _performing = false;
     _cleared = false;
     _reuse = false;
   }
@@ -43,7 +45,10 @@ public:
   const char *loc () const { return _loc; }
   bool cancelled () const { return _cancelled; }
 
-  operator bool() const { return ! _cancelled; }
+  operator bool() const { return is_alive (); }
+
+  bool is_alive () const 
+  { return (!_cancelled && (_reuse || !_performing) && !_cleared); }
 
   void set_reuse (bool b) { _reuse = b; }
   bool get_reuse () const { return _reuse; }
@@ -51,11 +56,13 @@ public:
   bool can_trigger ()
   {
     bool ret = false;
-    if (this->_cancelled) {
+    if (_cancelled) {
       if (tame_strict_mode ()) 
-	tame_error (this->_loc, "event triggered after it was cancelled");
-    } else if (this->_cleared) {
-      tame_error (this->_loc, "event triggered after it was cleared");
+	tame_error (_loc, "event triggered after it was cancelled");
+    } else if (_performing && !_reuse) {
+      tame_error (_loc, "event triggered recursively");
+    } else if (_cleared) {
+      tame_error (_loc, "event triggered after it was cleared");
     } else {
       ret = true;
     }
@@ -65,8 +72,12 @@ public:
   void trigger_no_assign ()
   {
     if (can_trigger ()) {
-      if (perform_action (this, this->_loc, _reuse))
-	this->_cleared = true;
+      ptr<_event_cancel_base> hold (mkref (this));
+      _performing = true;
+      if (perform_action (this, _loc, _reuse)) {
+	_cleared = true;
+      }
+      _performing = false;
     }
   }
 
@@ -84,6 +95,7 @@ protected:
   bool _cancelled;
   bool _cleared;
   bool _reuse;
+  bool _performing;
   ptr<_event<> > _cancel_notifier;
 
 };
