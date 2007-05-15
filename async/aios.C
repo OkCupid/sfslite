@@ -50,10 +50,17 @@ aios::fail (int e)
   }
 }
 
+static time_t safe_timenow ()
+{
+  if (timenow)
+    return timenow;
+  return time (NULL);
+}
+
 void
 aios::timeoutcatch ()
 {
-  time_t now = time (NULL);
+  time_t now = safe_timenow ();
   if (now < timeoutnext) {
     timeoutcb = timecb (timeoutnext, wrap (this, &aios::timeoutcatch));
     return;
@@ -70,7 +77,7 @@ void
 aios::timeoutbump ()
 {
   if (timeoutval && !eof) {
-    timeoutnext = time (NULL) + timeoutval;
+    timeoutnext = safe_timenow () + timeoutval;
     if (!timeoutcb && (rcb || outb.tosuio ()->resid ()))
       timeoutcb = timecb (timeoutnext, wrap (this, &aios::timeoutcatch));
   }
