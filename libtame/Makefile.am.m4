@@ -61,10 +61,10 @@ io.o: tame_connectors.h
 io.lo: tame_connectors.h
 
 tame_event_ag.h: $(srcdir)/mkevent.pl
-	perl $< > $@
+	$(PERL) $(srcdir)/mkevent.pl > $@ || (rm -f $@ && false)
 
 tame_tfork_ag.h: $(srcdir)/mktfork_ag.pl
-	perl $< > $@
+	$(PERL) $(srcdir)/mktfork_ag.pl > $@ || (rm -f $@ && false)
 
 
 libtame_la_SOURCES = \
