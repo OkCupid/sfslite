@@ -1679,7 +1679,7 @@ if test -f ${with_sfs}/Makefile -a -f ${with_sfs}/autoconf.h; then
     esac
 
     CPPFLAGS="$CPPFLAGS -I${with_sfs}"
-    for lib in async arpc crypt sfsmisc; do
+    for lib in libtame async arpc crypt sfsmisc; do
 	CPPFLAGS="$CPPFLAGS -I${sfssrcdir}/$lib"
     done
     CPPFLAGS="$CPPFLAGS -I${with_sfs}/svc"
@@ -1693,6 +1693,7 @@ if test -f ${with_sfs}/Makefile -a -f ${with_sfs}/autoconf.h; then
     MALLOCK=${with_sfs}/sfsmisc/mallock.o
     TAME=${with_sfs}/tame/tame
     ARPCGEN=${with_sfs}/arpcgen/arpcgen
+    RPCC=${with_sfs}/rpcc/rpcc
 
 elif test -f ${with_sfs}/include/${sfsprfx}/autoconf.h \
 	-a -f ${with_sfs}/lib/${sfsprfx}/libasync.la; then
