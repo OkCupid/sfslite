@@ -88,6 +88,7 @@
 #include "parseopt.h"
 #include "list.h"
 #include "qhash.h"
+#include "dirent.h"
 
 class aiosrv;
 
@@ -195,6 +196,84 @@ fhtab::close (aiod_file *af, int *errp)
   return 0;
 }
 
+class dhtab {
+  struct fh {
+    DIR *fd;
+    const dev_t dev;
+    const ino_t ino;
+    const char *const path;
+
+    fh (DIR *f, dev_t d, ino_t i, const char *p)
+      : fd (f), dev (d), ino (i), path (xstrdup (p)) {}
+    ~fh () { ::closedir (fd); xfree (const_cast<char *> (path)); }
+  };
+
+  qhash<int, ref<fh> > tab;
+
+  fh *alloc (aiod_file *af, int *errp);
+public:
+  DIR *lookup (aiod_file *af, int *errp);
+  int create (aiod_file *af, int *errp);
+  int close (aiod_file *af, int *errp);
+};
+
+dhtab::fh *
+dhtab::alloc (aiod_file *af, int *errp)
+{
+  DIR *fd = opendir (af->path);
+  if (fd == NULL) {
+    *errp = errno;
+    tab.remove (af->handle);
+    return NULL;
+  }
+  
+  ref<fh> h = New refcounted<fh> (fd, 0, 0, af->path);
+  tab.insert (af->handle, h);
+  return h;
+}
+
+DIR *
+dhtab::lookup (aiod_file *af, int *errp)
+{
+  fh *h = tab[af->handle];
+  if (!h) {
+    h = alloc (af, errp);
+    if (!h)
+      return NULL;
+  }
+  else if (strcmp(af->path, h->path) != 0) { 
+    /* This shouldn't happen, unless someone closes a file descriptor
+     * with outstanding requests (in which case the close could get
+     * reordered).  However such usage is really a bug in the calling
+     * program. */
+    warn ("stale handle on already open file\n");
+    tab.remove (af->handle);
+    h = alloc (af, errp);
+    if (!h)
+      return NULL;
+  }
+  return h->fd;
+}
+
+int
+dhtab::create (aiod_file *af, int *errp)
+{
+  fh *h = alloc (af, errp);
+  return h ? 1 : -1;
+}
+
+int
+dhtab::close (aiod_file *af, int *errp)
+{
+  errno = 0;
+  tab.remove (af->handle);
+  if (errno) {
+    *errp = errno;
+    return -1;
+  }
+  return 0;
+}
+
 class shmbuf {
   char *const buf;
   const size_t len;
@@ -261,6 +340,7 @@ shmbuf::alloc (int fd)
 
 class aiosrv {
   fhtab fht;
+  dhtab dht;
   const int fd;
   const ref<shmbuf> buf;
 
@@ -268,6 +348,7 @@ class aiosrv {
   void pathop (aiomsg_t);
   void fhop (aiomsg_t);
   void fstat (aiomsg_t);
+  void dhop (aiomsg_t);
 public:
   aiosrv (int f, ref<shmbuf> b) : fd (f), buf (b) { make_sync (fd); }
   void getmsg (aiomsg_t msg);
@@ -315,6 +396,46 @@ aiosrv::pathop (aiomsg_t msg)
     break;
   default:
     panic ("aiosrv::pathop: bad op %d\n", rq->op);
+    break;
+  }
+  if (errno)
+    rq->err = errno;
+}
+
+void
+aiosrv::dhop (aiomsg_t msg)
+{
+  dirent *dp;
+  aiod_fhop *rq = buf->Xtmpl getptr<aiod_fhop> (msg);
+  aiod_file *af = buf->Xtmpl getptr<aiod_file> (rq->fh);
+
+  if (rq->op == AIOD_OPENDIR) {
+    dht.create (af, &rq->err);
+    return;
+  }
+  if (rq->op == AIOD_CLOSEDIR) {
+    dht.close (af, &rq->err);
+    return;
+  }
+
+  DIR *fd = dht.lookup (af, &rq->err);
+  if (fd == NULL)
+    return;
+
+  errno = 0;
+  switch (rq->op) {
+  case AIOD_READDIR:
+    dp = readdir (fd);
+    if (dp != NULL) {
+      rq->iobuf.len = sizeof(dirent);
+      memcpy(buf->getbuf (&rq->iobuf), dp, sizeof(dirent));
+    }
+    else {
+      rq->iobuf.len = 0;
+    }
+    break;
+  default:
+    panic ("aiosrv::dhop: bad op %d\n", rq->op);
     break;
   }
   if (errno)
@@ -462,6 +583,8 @@ aiosrv::getmsg (aiomsg_t msg)
     fhop (msg);
   else if (op == AIOD_FSTAT)
     fstat (msg);
+  else if (op >= AIOD_OPENDIR && op <= AIOD_CLOSEDIR)
+    dhop (msg);
   else
     fatal ("bad opcode %d from client\n", op);
 

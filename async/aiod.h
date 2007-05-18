@@ -163,7 +163,7 @@ class aiod {
   static void cbstat_cb (cbstat cb, ptr<aiobuf> buf);
   static void pathret_cb (cbsi cb, ptr<aiobuf> buf);
   static void open_cb (ref<aiofh> fh, cbopen cb, ptr<aiobuf> buf);
-
+  
   void pathop (aiod_op op, str p1, str p2, cbb cb, size_t bufsize = 0);
   void statop (aiod_op op, const str &path, const cbstat &cb)
     { pathop (op, path, NULL, wrap (cbstat_cb, cb), sizeof (struct stat)); }
@@ -202,6 +202,7 @@ public:
   void lstat (str path, cbstat cb) { statop (AIOD_LSTAT, path, cb); }
 
   void open (str path, int flags, int mode, cbopen cb);
+  void opendir (str path, cbopen cb);
 };
 
 inline char *
@@ -242,6 +243,7 @@ class aiofh : public virtual refcount {
   aiod *const iod;
   const ref<aiobuf> fh;
   const int fhno;
+  bool isdir;
   bool closed;
 
   void rw (aiod_op op, off_t pos, ptr<aiobuf> iobuf,
@@ -255,11 +257,12 @@ class aiofh : public virtual refcount {
   void cbi_cb (cbi cb, ptr<aiobuf> buf);
 
 protected:
-  aiofh (aiod *iod, ref<aiobuf> fh);
+  aiofh (aiod *iod, ref<aiobuf> fh, bool dir = false);
   ~aiofh ();
 
 public:
   void close (cbi cb);
+  void closedir (cbi cb);
   void fsync (cbi cb)
     { simpleop (AIOD_FSYNC, wrap (mkref (this), &aiofh::cbi_cb, cb), 
 		off_t (0)); }
@@ -268,8 +271,12 @@ public:
   }
   void read (off_t pos, ptr<aiobuf> buf, cbrw cb)
     { rw (AIOD_READ, pos, buf, 0, buf->size (), cb); }
+  void readdir (ptr<aiobuf> buf, cbrw cb)
+    { rw (AIOD_READDIR, 0, buf, 0, buf->size (), cb); }
   void sread (off_t pos, ptr<aiobuf> buf, u_int iostart, u_int iosize, cbrw cb)
     { rw (AIOD_READ, pos, buf, iostart, iosize, cb); }
+  void sreaddir (off_t pos, ptr<aiobuf> buf, u_int iostart, u_int iosize, cbrw cb)
+    { rw (AIOD_READDIR, pos, buf, iostart, iosize, cb); }
   void write (off_t pos, ptr<aiobuf> buf, cbrw cb)
     { rw (AIOD_WRITE, pos, buf, 0, buf->size (), cb); }
   void swrite (off_t pos, ptr<aiobuf> buf, u_int iostart, u_int iosize,

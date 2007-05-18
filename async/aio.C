@@ -508,8 +508,38 @@ aiod::open (str path, int flags, int mode,
   sendmsg (rqbuf, wrap (open_cb, fh, cb));
 }
 
-aiofh::aiofh (aiod *d, ref<aiobuf> f)
-  : iod (d), fh (f), fhno (iod->fhno_alloc ()), closed (false)
+void
+aiod::opendir (str path,
+	       callback<void, ptr<aiofh>, int>::ref cb)
+{
+  if (closed) {
+    (*cb) (NULL, NULL);
+    return;
+  }
+
+  ptr<aiobuf> rqbuf, fhbuf;
+  if ((rqbuf = bufalloc (sizeof (aiod_fhop))))
+    fhbuf = bufalloc (sizeof (aiod_file) + path.len ());
+  if (!rqbuf || !fhbuf) {
+    bufwait (wrap (this, &aiod::opendir, path, cb));
+    return;
+  }
+
+  aiod_file *af = buf2file (fhbuf);
+  bzero (af, sizeof (*af));
+  strcpy (af->path, path);
+  ref<aiofh> fh = New refcounted<aiofh> (this, fhbuf, true);
+
+  aiod_fhop *rq = buf2fhop (rqbuf);
+  rq->op = AIOD_OPENDIR;
+  rq->err = 0;
+  rq->fh = fhbuf->pos;
+  
+  sendmsg (rqbuf, wrap (open_cb, fh, cb));
+}
+
+aiofh::aiofh (aiod *d, ref<aiobuf> f, bool dir)
+  : iod (d), fh (f), fhno (iod->fhno_alloc ()), isdir (dir), closed (false) 
 {
   aiod_file *af = aiod::buf2file (fh);
   af->handle = fhno;
@@ -540,7 +570,7 @@ aiofh::sendclose (cbi::ptr cb)
   }
   aiod_fhop *rq = aiod::buf2fhop (buf);
 
-  rq->op = AIOD_CLOSE;
+  rq->op = isdir ? AIOD_CLOSEDIR : AIOD_CLOSE;
   rq->err = 0;
   rq->fh = fh->pos;
 
@@ -559,6 +589,12 @@ aiofh::close (cbi cb)
     (*cb) (EBADF);
   else
     sendclose (cb);
+}
+
+void
+aiofh::closedir (cbi cb)
+{
+  close (cb);
 }
 
 void
@@ -606,6 +642,10 @@ aiofh::rw (aiod_op op, off_t pos, ptr<aiobuf> iobuf,
     return;
 #else
     switch (op) {
+    case AIOD_READDIR:
+      iod->bufwait (wrap (mkref (this), &aiofh::sreaddir, pos,
+			  iobuf, iostart, iosize, cb));
+      return;
     case AIOD_READ:
       iod->bufwait (wrap (mkref (this), &aiofh::sread, pos,
 			  iobuf, iostart, iosize, cb));

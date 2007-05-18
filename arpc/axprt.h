@@ -127,6 +127,7 @@ protected:
   virtual ~axprt_pipe ();
 
 public:
+  int outlen() { return (out->resid()); }
   void ungetpkt (const void *pkt, size_t len);
   void reclaim (int *rfd, int *wfd);
   int getreadfd () { return fdread; }

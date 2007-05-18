@@ -69,6 +69,11 @@ enum aiod_op {
 
   /* fstat is special */
   AIOD_FSTAT = 15,
+
+  /*Requests take an aiod_fhop */
+  AIOD_OPENDIR = 16,
+  AIOD_READDIR = 17,
+  AIOD_CLOSEDIR = 18,
 };
 
 /* Common header for all requests */
