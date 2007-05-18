@@ -8,10 +8,10 @@ SFSLITE HOWTO
 
 - Build requires GMP version 4 or higher
 
-If from CVS, then you need the GNU autotool suite, with 
+If from SVN, then you need the GNU autotool suite, with 
 libtool/libtoolize:
 	
-	$ autoreconf -f -i -s
+	$ sh -x setup.gnu -f -i -s
 	$ ./configure
 	$ gmake
 	$ gmake install
@@ -35,6 +35,10 @@ etc, where the modes are:
 	debug:  static build, with dmalloc support, no compiler optimization
 	deflt:	static build, -O2, no dmalloc
 
-This library is also available as a port for FreeBSD. See:
+This library was also available as a port for FreeBSD, but 
+I fell behind and had trouble navigating the Ports bureaucracy.
+If you depend on the FreeBSD port and would like to help me out, 
+please drop me a line.
 
-	http://www.okws.org for more details
+Max Krohn
+(first name AT okws DOT org)
