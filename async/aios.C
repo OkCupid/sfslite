@@ -53,7 +53,7 @@ aios::fail (int e)
 void
 aios::timeoutcatch ()
 {
-  time_t now = time (NULL);
+  time_t now = sfs_get_timenow ();
   if (now < timeoutnext) {
     timeoutcb = timecb (timeoutnext, wrap (this, &aios::timeoutcatch));
     return;
@@ -70,7 +70,7 @@ void
 aios::timeoutbump ()
 {
   if (timeoutval && !eof) {
-    timeoutnext = time (NULL) + timeoutval;
+    timeoutnext = sfs_get_timenow () + timeoutval;
     if (!timeoutcb && (rcb || outb.tosuio ()->resid ()))
       timeoutcb = timecb (timeoutnext, wrap (this, &aios::timeoutcatch));
   }

@@ -29,7 +29,7 @@ changequote([[, ]])dnl
 [[dnl
 $1.h: $1.Th $(TAME)
 define(`tame_out_h', tame_out_h $1.h)dnl
-define(`tame_in_h', tame_in_h, $1.Th)dnl
+define(`tame_in_h', tame_in_h $1.Th)dnl
 ]]changequote)dnl
 
 
