@@ -12,6 +12,7 @@ SUFFIXES = .C .T .h .Th
 define(`tame_in')dnl
 define(`tame_out')dnl
 define(`tame_out_h')dnl
+define(`tame_in_h')dnl
 
 define(`tame_src',
 changequote([[, ]])dnl
@@ -28,6 +29,7 @@ changequote([[, ]])dnl
 [[dnl
 $1.h: $1.Th $(TAME)
 define(`tame_out_h', tame_out_h $1.h)dnl
+define(`tame_in_h', tame_in_h, $1.Th)dnl
 ]]changequote)dnl
 
 
@@ -100,7 +102,6 @@ sfsinclude_HEADERS = \
 	tame_slotset.h \
 	tame_event_green.h \
 	tame.h \
-	tame_connectors.h \
 	tame_pipeline.h \
 	tame_lock.h \
 	tame_autocb.h \
@@ -122,8 +123,10 @@ clean:
 dist-hook:
 	cd $(distdir) && rm -f tame_out
 
-EXTRA_DIST = .svnignore tame_in Makefile.am.m4 mkevent.pl mktfork_ag.pl
-CLEANFILES = core *.core *~ *.rpo tame_event_ag.h tame_tfork_ag.h tame_out
+EXTRA_DIST = .svnignore tame_in Makefile.am.m4 mkevent.pl mktfork_ag.pl  \
+	tame_in_h
+CLEANFILES = core *.core *~ *.rpo tame_event_ag.h tame_tfork_ag.h tame_out \
+	tame_out_h
 MAINTAINERCLEANFILES = Makefile.in Makefile.am
 
 $(srcdir)/Makefile.am: $(srcdir)/Makefile.am.m4
