@@ -186,6 +186,8 @@ private:
   }
   void delslot (slot *s) { core::remove (s); delete s; }
 
+  void copyslot (const slot &s) { insert (s.key); }
+
   static void mkcb (ref<callback<void, K> > cb, qhash_slot<K, void> *s)
     { (*cb) (s->key); }
   static void mkcbr (ref<callback<void, const K &> > cb,
@@ -196,6 +198,18 @@ public:
   bhash () {}
   void clear () { this->deleteall (); }
   ~bhash () { clear (); }
+
+  bhash (const bhash<K,H,E> &in)
+  {
+    in.core::traverse (wrap (this, &bhash::copyslot));
+  }
+
+  bhash<K,H,E> &operator= (const bhash<K,H,E> &in)
+  {
+    clear ();
+    in.core::traverse (wrap (this, &bhash::copyslot));
+    return *this;
+  }
 
   bool insert (const K &k) {
     if (!getslot (k)) {

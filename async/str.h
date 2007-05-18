@@ -166,8 +166,14 @@ public:
   bool operator> (const str &s) const { return cmp (s) > 0; }
   bool operator>= (const str &s) const { return cmp (s) >= 0; }
 
-  bool operator== (const char *p) const { return !cmp (p); }
-  bool operator!= (const char *p) const { return cmp (p); }
+  bool operator== (const char *p) const 
+  {
+    if (!p && !b) return true;
+    else if (!p || !b) return false;
+    else return !cmp (p);
+  }
+
+  bool operator!= (const char *p) const { return !( *this == p); }
 
   operator hash_t () const { return hash_bytes (cstr (), len ()); }
 
