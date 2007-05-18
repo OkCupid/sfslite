@@ -77,6 +77,8 @@ private:
   }
   void delslot (slot *s) { core::remove (s); delete s; }
 
+  void copyslot (const slot &s) { insert (s.key, s.value); }
+
   static void mkcb (ref<callback<void, K, typename R::type> > cb, slot *s)
     { (*cb) (s->key, R::ret (&s->value)); }
   static void mkcbr (ref<callback<void, const K &, typename R::type> > cb,
@@ -85,11 +87,22 @@ private:
 
 public:
   qhash () : eq (E ()), hash (H ()) {}
+  qhash (const qhash<K,V,H,E,R> &in)
+  {
+    in.core::traverse (wrap (this, &qhash::copyslot));
+  }
   void clear () {
     core::traverse (wrap (this, &qhash::delslot));
     core::clear ();
   }
   ~qhash () { clear (); }
+
+  qhash<K,V,H,E,R> &operator= (const qhash<K,V,H,E,R> &in)
+  {
+    clear ();
+    in.core::traverse (wrap (this, &qhash::copyslot));
+    return *this;
+  }
 
 #if 0
   void traverse (callback<void, K, typename R::type>::ref cb)
@@ -126,6 +139,17 @@ public:
     else
       return R::ret (NULL);
   }
+
+  bool remove (const K &k, V *v) {
+    if (slot *s = getslot (k)) {
+      *v = s->value;
+      delslot (s);
+      return true;
+    } else {
+      return false;
+    }
+  }
+
   typename R::const_type operator[] (const K &k) const {
     if (slot *s = getslot (k))
       return R::const_ret (&s->value);
@@ -189,6 +213,43 @@ public:
 #endif
   void traverse (ref<callback <void, const K &> > cb)
     { core::traverse (wrap (mkcbr, cb)); }
+};
+
+template<class K, class V, class H = hashfn<K> , class E = equals<K> >
+class qhash_const_iterator_t {
+public:
+  qhash_const_iterator_t (const qhash<K,V,H,E> &q) 
+    : _i (q.first ()), _qh (q) {}
+  const K *next (V *val = NULL) {
+    const K *r = NULL;
+    if (_i) {
+      if (val) *val = _i->value;
+      r = &_i->key;
+      _i = _qh.next (_i);
+    }
+    return r;
+  }
+private:
+  const qhash_slot<K,V> *_i;
+  const qhash<K,V,H,E> &_qh;
+};
+
+template<class K, class V, class H = hashfn<K>, class E = equals<K> >
+class qhash_iterator_t {
+public:
+  qhash_iterator_t (qhash<K,V,H,E> &q) : _i (q.first ()), _qh (q) {}
+  const K *next (V *val = NULL) {
+    const K *r = NULL;
+    if (_i) {
+      if (val) *val = _i->value;
+      r = &_i->key;
+      _i = _qh.next (_i);
+    }
+    return r;
+  }
+private:
+  qhash_slot<K,V> *_i;
+  qhash<K,V,H,E> &_qh;
 };
 
 
