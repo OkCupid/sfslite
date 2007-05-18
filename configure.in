@@ -4,7 +4,7 @@ dnl Process this file with autoconf to produce a configure script.
 dnl
 
 AC_INIT(acinclude.m4)
-AM_INIT_AUTOMAKE(sfslite,0.8.17pre3)
+AM_INIT_AUTOMAKE(sfslite,0.8.17pre4)
 dnl AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER(config.h)
 
