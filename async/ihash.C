@@ -24,7 +24,6 @@
 #include "amisc.h"
 #include "ihash.h"
 #include "msb.h"
-#include "qhash.h"
 
 /* Some prime numbers <= powers of 2 */
 const u_int exp2primes[33] = {
@@ -72,17 +71,4 @@ _ihash_grow (_ihash_table *htp, const size_t eos)
   delete[] htp->tab;
   htp->tab = ntab;
   htp->buckets = nbuckets;
-}
-
-int foo ()
-{
-  bhash<int> b;
-  
-  b.insert (0);
-  b.insert (1);
-
-  bhash<int> b2 (b);
-
-  bhash<int> b3 = b;
-  return 0;
 }
