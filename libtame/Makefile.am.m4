@@ -100,6 +100,7 @@ sfsinclude_HEADERS = \
 	tame_slotset.h \
 	tame_event_green.h \
 	tame.h \
+	tame_connectors.h \
 	tame_pipeline.h \
 	tame_lock.h \
 	tame_autocb.h \
