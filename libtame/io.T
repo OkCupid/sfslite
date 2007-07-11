@@ -96,8 +96,6 @@ iofd_sticky_t::finish ()
   _ev = NULL;
 }
 
-
-
 tamed void
 proxy (int infd, int outfd, evv_t cb)
 {
@@ -155,50 +153,41 @@ proxy (int infd, int outfd, evv_t cb)
   read.finish ();
   write.finish ();
 
-
   cb->trigger ();
   G.cancel (); // for the timer (if necessary )
 }
 
-};
+tamed void
+read (int fd, char *buf, size_t sz, evi_t ev)
+{
+  tvars { int rc; }
 
-namespace tame {
+  twait { fdcb (fd, selread, mkevent ()); }
+  fdcb (fd, selread, NULL);
+  rc = ::read (fd, buf, sz);
+  ev->trigger (rc);
+}
 
-  tamed void
-  read (int fd, char *buf, size_t sz, evi_t ev)
-  {
-    tvars {
-      int rc;
-    }
-    twait { fdcb (fd, selread, mkevent ()); }
-    fdcb (fd, selread, NULL);
-    rc = ::read (fd, buf, sz);
-    ev->trigger (rc);
-  }
+tamed void
+write (int fd, const char *buf, size_t sz, evi_t ev)
+{
+  tvars { int rc; }
 
-  tamed void
-  write (int fd, const char *buf, size_t sz, evi_t ev)
-  {
-    tvars {
-      int rc;
-    }
-    twait { fdcb (fd, selwrite, mkevent ()); }
-    fdcb (fd, selwrite, NULL);
-    rc = ::write (fd, buf, sz);
-    ev->trigger (rc);
-  }
+  twait { fdcb (fd, selwrite, mkevent ()); }
+  fdcb (fd, selwrite, NULL);
+  rc = ::write (fd, buf, sz);
+  ev->trigger (rc);
+}
 
-  tamed void 
-  accept (int sockfd, struct sockaddr *addr, socklen_t *addrlen, evi_t ev)
-  {
-    tvars {
-      int rc;
-    }
-
-    twait { fdcb (sockfd, selread, mkevent ()); }
-    fdcb (sockfd, selread, NULL);
-    rc = ::accept (sockfd, addr, addrlen);
-    ev->trigger (rc);
-  }
+tamed void 
+accept (int sockfd, struct sockaddr *addr, socklen_t *addrlen, evi_t ev)
+{
+  tvars { int rc; }
+  
+  twait { fdcb (sockfd, selread, mkevent ()); }
+  fdcb (sockfd, selread, NULL);
+  rc = ::accept (sockfd, addr, addrlen);
+  ev->trigger (rc);
+}
 
 };
