@@ -43,6 +43,7 @@ timecb_t *delaycb (time_t sec, u_int32_t nsec, cbv cb);
 void timecb_remove (timecb_t *);
 lazycb_t *lazycb (time_t min_interval, cbv cb);
 void lazycb_remove (lazycb_t *lazy);
+void set_greedy (bool b);
 
 inline timecb_t *
 timecb (time_t tm, cbv cb)

@@ -408,12 +408,19 @@ fdcb (int fd, selop op, cbv::ptr cb)
     FD_CLR (fd, fdsp[op]);
 }
 
+static bool greedy_loop;
+void set_greedy (bool b) { greedy_loop = b; }
+
 static void
 fdcb_check (void)
 {
   for (int i = 0; i < fdsn; i++)
     memcpy (fdspt[i], fdsp[i], fd_set_bytes);
 
+  if (greedy_loop) {
+    memset (&selwait, 0, sizeof (selwait));
+  }
+  
   int n = SFS_SELECT (nselfd, fdspt[0], fdspt[1], NULL, &selwait);
   //int n = SFS_SELECT (nselfd, fdspt[0], fdspt[1], NULL, NULL);
 
