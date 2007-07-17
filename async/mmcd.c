@@ -172,9 +172,11 @@ main (int argc, char *argv[])
   set_signal_handlers ();
   
   targ = (struct timespec *) mmap_rgn;
-  wt.tv_sec = 0;
-  wt.tv_usec = CLCKD_INTERVAL;
   while (1) {
+    
+    wt.tv_sec = 0;
+    wt.tv_usec = CLCKD_INTERVAL;
+
     mmcd_gettime (ts); 
     targ[0] = ts[0];
     targ[1] = ts[0];
