@@ -261,7 +261,9 @@ make_async (int s)
   sn = sizeof (type);
   if (getsockopt (s, SOL_SOCKET, SO_TYPE, (char *)&type, &sn) < 0)
     return;
-#if defined (SO_RCVBUF) && defined (SO_SNDBUF)
+
+  // Linux does its own autotuning
+#if !defined(__linux__) && defined (SO_RCVBUF) && defined (SO_SNDBUF)
   if (type == SOCK_STREAM)
     n = rcvbufsize;
   else
@@ -275,7 +277,8 @@ make_async (int s)
     n = maxsobufsize;
   if (setsockopt (s, SOL_SOCKET, SO_SNDBUF, (char *) &n, sizeof (n)) < 0)
     warn ("SO_SNDBUF: %s\n", strerror (errno));
-#endif /* SO_RCVBUF && SO_SNDBUF */
+#endif /* !__linux__ && SO_RCVBUF && SO_SNDBUF */
+
   /* Enable keepalives to avoid buffering write data for infinite time */
   n = 1;
   if (type == SOCK_STREAM
