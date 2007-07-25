@@ -37,6 +37,11 @@ int fd_set_bytes;		// Size in bytes of a [wide] fd_set
 int maxfd;
 bool amain_panic;
 static int nselfd;
+static int sel_iter_n;
+
+// Every condense_nselfd_iterations, condense nselfd to make it more
+// accurate.
+int condense_nselfd_iter = 4096;
 
 // initialize this in case we access tsnow before calling amain()
 timespec tsnow;
@@ -251,8 +256,20 @@ fdcb (int fd, selop op, cbv::ptr cb)
 static void
 fdcb_check (void)
 {
+  if (condense_nselfd_iter && (++sel_iter_n % condense_nselfd_iter) == 0) {
+    int max_tmp = 0;
+    for (int i = 0; i < nselfd; i++) {
+      for (int j = 0; j < fdsn; j++) {
+	if (FD_ISSET(i, fdsp[j]))
+	  max_tmp = i;
+      }
+    }
+    nselfd = max_tmp + 1;
+  }
+
   for (int i = 0; i < fdsn; i++)
     memcpy (fdspt[i], fdsp[i], fd_set_bytes);
+
   int n = select (nselfd, fdspt[0], fdspt[1], NULL, &selwait);
   if (n < 0 && errno != EINTR)
     panic ("select: %m\n");
