@@ -118,9 +118,9 @@ namespace sfs_core {
     if (n < 0 && errno != EINTR) {
       select_failure ();
     }
+
     sfs_set_global_timestamp ();
-    
-    try_sigcb_check ();
+    sigcb_check ();
 
     for (int fd = 0; fd < maxfd && n > 0; fd++)
       for (int i = 0; i < fdsn; i++)

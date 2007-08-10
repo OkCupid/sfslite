@@ -439,12 +439,6 @@ lazycb_check ()
   }
 }
 
-int
-get_sigpipes0 ()
-{
-  return sigpipes[0];
-}
-
 static void
 ainit ()
 {

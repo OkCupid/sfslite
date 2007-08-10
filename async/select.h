@@ -63,12 +63,6 @@ int sfs_pth_core_select (int nfds, fd_set *rfds, fd_set *wfds,
 //  like epoll or kqueue.
 //
 
-#ifdef HAVE_KQUEUE
-# include <sys/types.h>
-# include <sys/event.h>
-# include <sys/time.h>
-#endif
-
 namespace sfs_core {
 
   //-----------------------------------------------------------------------
@@ -158,6 +152,29 @@ namespace sfs_core {
   };
 #endif /* HAVE_EPOLL */
 
+#ifdef HAVE_KQUEUE
+# include <sys/types.h>
+# include <sys/event.h>
+# include <sys/time.h>
+
+  class kqueue_selector_t : public selector_t {
+  public:
+    kqueue_selector_t (selector_t *t);
+    ~kqueue_selector_T ();
+    void fdcb (int selop, cbv::ptr);
+    void fdcb_check (struct timeval *timeout);
+    select_policy_t typ () const { return SELECT_KQUEUE; }
+
+    enum { CHANGE_Q_SZ };
+
+  private:
+    int _kq;
+    struct kevent *_kq_events_out;
+    struct kevent _kq_changes[CHANGE_Q_SZ];
+    int _change_ptr;
+    int _maxevents;
+  };
+#endif
 };
 
 //

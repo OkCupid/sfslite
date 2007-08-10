@@ -11,7 +11,6 @@ namespace sfs_core {
     : selector_t (old),
       _maxevents (maxfd *2)
   {
-    _maxevents = maxfd * 2;
     if ((_epfd = epoll_create (maxfd)) < 0) {
       panic ("epoll_create(%d): %m\n", maxfd);
     }
