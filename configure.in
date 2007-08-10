@@ -88,8 +88,9 @@ AC_SUBST(MALLOCK)
 MALLOCK='$(top_builddir)/sfsmisc/mallock.o'
 SFS_NOPAGING
 
-dnl Potentially turn on epoll support on linux
+dnl Potentially turn on epoll support on linux and kqueue on FreeBSD
 SFS_EPOLL
+SFS_KQUEUE
 
 dnl Path for daemonize
 SFS_PATH_PROG(logger)

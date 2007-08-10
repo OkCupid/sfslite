@@ -2334,12 +2334,33 @@ dnl
 dnl  If supplied, use EPOLL
 dnl
 AC_DEFUN([SFS_EPOLL],
-[AC_ARG_ENABLE(epoll,
---enable-epoll 		[experimental] epoll support on linux)
-test "${enable_epoll+set}" = "set" && with_epoll="yes"
-if test "$with_epoll" = "yes"
-then
-	AC_DEFINE(USE_EPOLL, 1, 
-	          Define if using experiment Epoll support on linux)
-fi
-])
+[AC_CACHE_CHECK(for epoll, sfs_cv_epoll,
+AC_TRY_COMPILE([
+#include <sys/epoll.h>
+], [
+   struct epoll_event *events;
+   epoll_wait (0, events, 0, 0);  
+], sfs_cv_epoll=yes, sfs_cv_epoll=no))
+if test "$sfs_cv_have_epoll" = yes; then
+	AC_DEFINE(HAVE_EPOLL, 1,
+	     Define if this machine has Linux epoll support)
+fi])
+dnl
+dnl SFS_KQUEUE
+dnl
+dnl
+AC_DEFUN([SFS_KQUEUE],
+[AC_CACHE_CHECK(for epoll, sfs_cv_epoll,
+AC_TRY_COMPILE([
+[
+#include <sys/types.h>
+#include <sys/event.h>
+#include <sys/time.h>
+], [
+   (void)kqueue ();
+], sfs_cv_kqueue=yes, sfs_cv_kqueue=no))
+if test "$sfs_cv_have_kqueue" = yes; then
+	AC_DEFINE(HAVE_KQUEUE, 1,
+	     Define if this machine has FreeBSD kqueue support)
+fi])
+

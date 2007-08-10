@@ -45,6 +45,14 @@ lazycb_t *lazycb (time_t min_interval, cbv cb);
 void lazycb_remove (lazycb_t *lazy);
 void set_greedy (bool b);
 
+/*
+ * introduced in new factoring of core.C and select.C
+ */
+void sigcb_check ();
+#ifdef WRAP_DEBUG
+void callback_trace_fdcb (int i, int fd, cbv::ptr cb);
+#endif /* WRAP_DEBUG */
+
 inline timecb_t *
 timecb (time_t tm, cbv cb)
 {

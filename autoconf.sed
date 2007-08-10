@@ -64,6 +64,8 @@ $a\
 / SFS_HAVE_CALLBACK2/b pdefine
 / HAVE_SFSMISC/b pdefine
 / _FILE_OFFSET_BITS/b pdefine
+/ HAVE_EPOLL/b pdefine
+/ HAVE_KQUEUE/b pdefine
 
 :skip
 d

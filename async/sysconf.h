@@ -79,11 +79,6 @@ extern "C" {
 #include <sys/param.h>
 #include <sys/mman.h>
 
-// MW hacking in for Linux
-#ifdef USE_EPOLL
-# include <sys/epoll.h>
-#endif /* USE_EPOLL */
-
 #include <sys/ioctl.h>
 #ifdef HAVE_SYS_SOCKIO_H
 # include <sys/sockio.h>
