@@ -1,0 +1,106 @@
+
+#include "select.h"
+
+
+#ifdef HAVE_KQUEUE
+
+namespace sfs_core {
+
+  kqueue_selector_t::kqueue_selector_t (selector_t *old)
+    : selector (old),
+      _maxevents (maxfds *2),
+      _change_ptr (0)
+  {
+    if ((_kq = kqueue ()) < 0)
+      panic ("kqueue: %m\n");
+    size_t sz = _maxevents * sizeof (struct kevent);
+    _kq_events_out = (struct kevent *)malloc (sz);
+    memset (_kq_events_out, 0, sz);
+    memset (_kq_changes, 0, CHANGE_Q_SZ * sizeof (struct kevent));
+  }
+
+  kqueue_selector_t::~kqueue_selector_t ()
+  {
+    xfree (_kq_events_out);
+  }
+
+  void
+  kqueue_selector_t::fdcb (int fd, selop op, cbv::ptr cb)
+  {
+    bool doit = true;
+
+    assert (fd >= 0);
+    assert (fd < maxfd);
+
+    short filter = (op == selread) ? EVFILT_READ : EVFILT_WRITE;
+    u_short flags = cb ? EV_ADD : EV_DELETE;
+
+    EV_SET(&_kq_changes[_change_ptr++], fd, filter, flags, 0, 0, 0);
+
+    _fdcb[op][fd] = cb;
+    
+    if (_change_ptr >= CHANGE_Q_SZ) {
+      int rc;
+      do {
+	rc = kevent (_kq, _kq_changes, _change_ptr, NULL, 0, NULL);
+	if (rc < 0 && errno != EINTR) {
+	  panic ("kqueue failure: %m\n");
+	}
+      } while (rc < 0);
+      _change_ptr = 0;
+    }
+  }
+
+  static void
+  val2spec (const struct timeval *in, struct timespec *out)
+  {
+    out->tv_sec = in->tv_sec;
+    out->tv_nsec = 1000 * in->tv_usec;
+  }
+
+  void
+  kqueue_selector_t::fdcb_check (struct timeval *selwait)
+  {
+    struct timespec ts;
+    val2spec (selwait, &ts);
+    int rc = kevent (_kq, _kq_changes, _change_ptr, _kq_events_out, 
+		     _maxevents, &ts);
+    if (rc < 0) {
+      if (errno != EINTR) {
+	panic ("kqueue failure: %m\n");
+      }
+    } else {
+      _change_ptr = 0;
+    }
+
+    sfs_set_global_timestamp ();
+    sigcb_check ();
+
+    for (int i = 0; i < rc; i++) {
+      const struct kevent &kev = _kq_events_out[i];
+      if (kev.flags != EV_ERROR) {
+	int op = -1;
+	switch (kev.filter) {
+	case EVFILT_READ:
+	  op = int (selread);
+	  break;
+	case EVFILT_WRITE:
+	  op = int (selwrite);
+	  break;
+	default:
+	  break;
+	}
+      }
+      if (op >= 0 && _fdcbs[op][kev.ident]) {
+	sfs_leave_sel_loop ();
+	(*_fdcbs[op][kev.ident])();
+      }
+    }
+  }
+  
+
+};
+
+
+
+#endif /* HAVE_KQUEUE */
