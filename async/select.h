@@ -111,8 +111,8 @@ namespace sfs_core {
     ~std_selector_t ();
     void fdcb (int, selop, cbv::ptr);
     void fdcb_check (struct timeval *timeout);
-    int set_compact_interval (u_int i);
-    int set_busywait (bool b);
+    int set_compact_interval (u_int i) { _compact_interval = i; return 0; }
+    int set_busywait (bool b) { _busywait = b; return 0; }
     select_policy_t typ () const { return SELECT_STD; }
 
   private:
