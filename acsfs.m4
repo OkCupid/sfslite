@@ -2358,7 +2358,7 @@ AC_TRY_COMPILE([
 ], [
    (void)kqueue ();
 ], sfs_cv_kqueue=yes, sfs_cv_kqueue=no))
-if test "$sfs_cv_have_kqueue" = yes; then
+if test "$sfs_cv_kqueue" = yes; then
 	AC_DEFINE(HAVE_KQUEUE, 1,
 	     Define if this machine has FreeBSD kqueue support)
 fi])
