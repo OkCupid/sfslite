@@ -26,8 +26,10 @@ namespace sfs_core {
 
   std_selector_t::~std_selector_t ()
   {
-    xfree (_fdsp);
-    xfree (_fdspt);
+    for (int i = 0; i < fdsn; i++) {
+      xfree (_fdsp[i]);
+      xfree (_fdspt[i]);
+    }
   }
 
   //-----------------------------------------------------------------------
