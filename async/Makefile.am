@@ -21,7 +21,7 @@ core.C daemonize.C dns.C dnsparse.C err.C fdwait.C ident.C ifchg.C	\
 ihash.C itree.C lockfile.C malloc.C msb.C myaddrs.C myname.C		\
 parseopt.C pipe2str.C refcnt.C rxx.C sigio.C socket.C spawn.C str.C	\
 str2file.C straux.C suio++.C suio_vuprintf.C tcpconnect.C litetime.C 	\
-select.C select_std.C select_epoll.C 
+select.C select_std.C select_epoll.C select_kqueue.C
 
 aiod_SOURCES = aiod.C
 aiod_LDADD = $(LIBASYNC) $(LIBPY) $(LDADD_THR)

@@ -29,7 +29,6 @@
 #include "err.h"
 #include "callback.h"
 #include "serial.h"
-#include "select.h"
 
 /* getopt declarations */
 extern char *optarg;

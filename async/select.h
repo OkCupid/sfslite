@@ -85,7 +85,7 @@ namespace sfs_core {
   class selector_t {
   public:
     selector_t ();
-    selector_t (const selector_t *s);
+    selector_t (selector_t *s);
     virtual ~selector_t ();
     virtual void fdcb (int, selop, cbv::ptr) = 0;
     virtual void fdcb_check (struct timeval *timeout) = 0;
@@ -97,9 +97,9 @@ namespace sfs_core {
     static int maxfd;
     static void init (void);
 
-    cbv::ptr *fdcbs () { return _fdcbs; }
+    cbv::ptr **fdcbs () { return _fdcbs; }
 
-    enum { fdsn = 2 ; }
+    enum { fdsn = 2  };
   protected:
     cbv::ptr *_fdcbs[fdsn];
   };
@@ -107,8 +107,9 @@ namespace sfs_core {
   class std_selector_t : public selector_t {
   public:
     std_selector_t ();
-    std_selector_t (const select_t *s);
-    void fdcb (int selop, cbv::ptr);
+    std_selector_t (selector_t *s);
+    ~std_selector_t ();
+    void fdcb (int, selop, cbv::ptr);
     void fdcb_check (struct timeval *timeout);
     int set_compact_interval (u_int i);
     int set_busywait (bool b);
@@ -117,13 +118,14 @@ namespace sfs_core {
   private:
     
     void compact_nselfd ();
+    void init_fdsets ();
+    void select_failure ();
 
     u_int _compact_interval;
     u_int _n_fdcb_iter;
     int _nselfd;
     bool _busywait;
 
-    int _nselfd;
     fd_set *_fdsp[fdsn];
     fd_set *_fdspt[fdsn];
   };
@@ -135,7 +137,7 @@ namespace sfs_core {
   public:
     epoll_selector_t (selector_t *cur);
     ~epoll_selector_t ();
-    void fdcb (int selop, cbv::ptr);
+    void fdcb (int, selop, cbv::ptr);
     void fdcb_check (struct timeval *timeout);
     select_policy_t typ () const { return SELECT_EPOLL; }
 
@@ -149,6 +151,9 @@ namespace sfs_core {
       bool in_epoll;
     };
     epoll_state *_epoll_states;
+
+    int user_events_to_epoll_events(epoll_state* es);
+    int update_epoll_state(epoll_state* es) ;
   };
 #endif /* HAVE_EPOLL */
 

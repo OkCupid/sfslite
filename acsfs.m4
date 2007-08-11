@@ -2341,7 +2341,7 @@ AC_TRY_COMPILE([
    struct epoll_event *events;
    epoll_wait (0, events, 0, 0);  
 ], sfs_cv_epoll=yes, sfs_cv_epoll=no))
-if test "$sfs_cv_have_epoll" = yes; then
+if test "$sfs_cv_epoll" = yes; then
 	AC_DEFINE(HAVE_EPOLL, 1,
 	     Define if this machine has Linux epoll support)
 fi])
@@ -2350,9 +2350,8 @@ dnl SFS_KQUEUE
 dnl
 dnl
 AC_DEFUN([SFS_KQUEUE],
-[AC_CACHE_CHECK(for epoll, sfs_cv_epoll,
+[AC_CACHE_CHECK(for kqueue, sfs_cv_kqueue,
 AC_TRY_COMPILE([
-[
 #include <sys/types.h>
 #include <sys/event.h>
 #include <sys/time.h>

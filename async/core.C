@@ -352,7 +352,7 @@ sigcb (int sig, cbv::ptr cb, int flags)
   return ocb;
 }
 
-static void
+void
 sigcb_check ()
 {
   if (sigdocheck) {
@@ -545,7 +545,7 @@ async_init::start ()
   }
 
   sfs_core::selector_t::init ();
-  selector = New sfs_core::selector_t ();
+  selector = New sfs_core::std_selector_t ();
 
   lazylist = New list<lazycb_t, &lazycb_t::link>;
 
@@ -575,11 +575,11 @@ async_init::start ()
 	sfs_core::set_busywait (true);
 	break;
       case 'e':
-	if (sfs_core::set_select_policy (SELECT_EPOLL) < 0)
+	if (sfs_core::set_select_policy (sfs_core::SELECT_EPOLL) < 0)
 	  warn ("failed to switch select policy to EPOLL\n");
 	break;
       case 'k':
-	if (sfs_core::set_select_policy (SELECT_KQUEUE) < 0)
+	if (sfs_core::set_select_policy (sfs_core::SELECT_KQUEUE) < 0)
 	  warn ("failed to switch select policy to KQUEUE\n");
 	break;
       default:

@@ -1,5 +1,8 @@
 
 #include "select.h"
+#include "async.h"
+#include "litetime.h"
+#include "corebench.h"
 
 namespace sfs_core {
 
@@ -21,7 +24,7 @@ namespace sfs_core {
 
   //-----------------------------------------------------------------------
 
-  ~std_selector_t::std_selector_t ()
+  std_selector_t::~std_selector_t ()
   {
     xfree (_fdsp);
     xfree (_fdspt);
@@ -33,10 +36,10 @@ namespace sfs_core {
   std_selector_t::init_fdsets ()
   {
     for (int i = 0; i < fdsn; i++) {
-      fdsp[i] = (fd_set *) xmalloc (fd_set_bytes);
-      bzero (fdsp[i], fd_set_bytes);
-      fdspt[i] = (fd_set *) xmalloc (fd_set_bytes);
-      bzero (fdspt[i], fd_set_bytes);
+      _fdsp[i] = (fd_set *) xmalloc (fd_set_bytes);
+      bzero (_fdsp[i], fd_set_bytes);
+      _fdspt[i] = (fd_set *) xmalloc (fd_set_bytes);
+      bzero (_fdspt[i], fd_set_bytes);
     }
   }
 
@@ -50,7 +53,7 @@ namespace sfs_core {
     _fdcbs[op][fd] = cb;
     if (cb) {
       sfs_add_new_cb ();
-      if (fd >= nselfd)
+      if (fd >= _nselfd)
 	_nselfd = fd + 1;
       FD_SET (fd, _fdsp[op]);
     }
@@ -64,7 +67,7 @@ namespace sfs_core {
   std_selector_t::compact_nselfd ()
   {
     int max_tmp = 0;
-    for (int i = 0; i < nselfd; i++) {
+    for (int i = 0; i < _nselfd; i++) {
       for (int j = 0; j < fdsn; j++) {
 	if (FD_ISSET(i, _fdsp[j]))
 	  max_tmp = i;
@@ -83,7 +86,7 @@ namespace sfs_core {
     for (int k = 0; k < 2; k++) {
       warnx << "Select Set Dump: " << typ[k] << " { " ;
       for (int j = 0; j < maxfd; j++) {
-	if (FD_ISSET (j, fdspt[k])) {
+	if (FD_ISSET (j, _fdspt[k])) {
 	  warnx << j << " ";
 	}
       }

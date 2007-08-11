@@ -1,5 +1,7 @@
 
 #include "select.h"
+#include "litetime.h"
+#include "async.h"
 
 #ifdef HAVE_EPOLL
 
@@ -38,8 +40,8 @@ namespace sfs_core {
 #define EV_WRITE_EVENTS (EPOLLOUT | EPOLLHUP | EPOLLERR)
   
   // maps our change-in-event-state to instructions to epoll
-  static int
-  update_epoll_state(epoll_state* es)
+  int
+  epoll_selector_t::update_epoll_state(epoll_state* es)
   {
     int epoll_op = (es->user_events 
 		    ? (es->in_epoll 
@@ -53,8 +55,8 @@ namespace sfs_core {
 
   //-----------------------------------------------------------------------
 
-  static int
-  user_events_to_epoll_events(epoll_state* es)
+  int
+  epoll_selector_t::user_events_to_epoll_events(epoll_state* es)
   {
     int ret = 0;
     
@@ -113,14 +115,14 @@ namespace sfs_core {
   epoll_selector_t::fdcb_check (struct timeval *selwait)
   {
     int timeout_ms = selwait->tv_usec / 1000 + selwait->tv_sec * 1000;
-    int n = epoll_wait(_epfd, ret_events, maxevents, timeout_ms);
+    int n = epoll_wait(_epfd, _ret_events, _maxevents, timeout_ms);
     
     if (n < 0 && errno != EINTR)
       panic ("epoll_wait: %m\n");
     
     sfs_set_global_timestamp ();
 
-    try_sigcb_check();
+    sigcb_check();
     
     if (n < 0) return;
     
