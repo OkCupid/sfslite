@@ -32,7 +32,7 @@
 
 #define FDLIM_MAX 0x18000
 
-int
+inline int
 fdlim_get (int hard)
 {
 #ifdef RLIMIT_NOFILE
@@ -62,7 +62,7 @@ fdlim_get (int hard)
 #endif /* !RLIMIT_NOFILE */
 }
 
-int
+inline int
 fdlim_set (rlim_t lim, int hard)
 {
 #ifdef RLIMIT_NOFILE
