@@ -1,15 +1,19 @@
 
 #include "select.h"
+#include <time.h>
+#include "litetime.h"
+#include "async.h"
 
 
 #ifdef HAVE_KQUEUE
 
+
 namespace sfs_core {
 
   kqueue_selector_t::kqueue_selector_t (selector_t *old)
-    : selector (old),
-      _maxevents (maxfds *2),
-      _change_ptr (0)
+    : selector_t (old),
+      _maxevents (maxfd *2),
+      _change_indx (0)
   {
     if ((_kq = kqueue ()) < 0)
       panic ("kqueue: %m\n");
@@ -35,19 +39,19 @@ namespace sfs_core {
     short filter = (op == selread) ? EVFILT_READ : EVFILT_WRITE;
     u_short flags = cb ? EV_ADD : EV_DELETE;
 
-    EV_SET(&_kq_changes[_change_ptr++], fd, filter, flags, 0, 0, 0);
+    EV_SET(&_kq_changes[_change_indx++], fd, filter, flags, 0, 0, 0);
 
-    _fdcb[op][fd] = cb;
+    _fdcbs[op][fd] = cb;
     
-    if (_change_ptr >= CHANGE_Q_SZ) {
+    if (_change_indx >= CHANGE_Q_SZ) {
       int rc;
       do {
-	rc = kevent (_kq, _kq_changes, _change_ptr, NULL, 0, NULL);
+	rc = kevent (_kq, _kq_changes, _change_indx, NULL, 0, NULL);
 	if (rc < 0 && errno != EINTR) {
 	  panic ("kqueue failure: %m\n");
 	}
       } while (rc < 0);
-      _change_ptr = 0;
+      _change_indx = 0;
     }
   }
 
@@ -61,16 +65,16 @@ namespace sfs_core {
   void
   kqueue_selector_t::fdcb_check (struct timeval *selwait)
   {
-    struct timespec ts;
+    struct timespec  ts;
     val2spec (selwait, &ts);
-    int rc = kevent (_kq, _kq_changes, _change_ptr, _kq_events_out, 
+    int rc = kevent (_kq, _kq_changes, _change_indx, _kq_events_out, 
 		     _maxevents, &ts);
     if (rc < 0) {
       if (errno != EINTR) {
 	panic ("kqueue failure: %m\n");
       }
     } else {
-      _change_ptr = 0;
+      _change_indx = 0;
     }
 
     sfs_set_global_timestamp ();
@@ -78,8 +82,8 @@ namespace sfs_core {
 
     for (int i = 0; i < rc; i++) {
       const struct kevent &kev = _kq_events_out[i];
+      int op = -1;
       if (kev.flags != EV_ERROR) {
-	int op = -1;
 	switch (kev.filter) {
 	case EVFILT_READ:
 	  op = int (selread);
