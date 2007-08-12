@@ -173,7 +173,7 @@ namespace sfs_core {
     void fdcb_check (struct timeval *timeout);
     select_policy_t typ () const { return SELECT_KQUEUE; }
 
-    enum { CHANGE_Q_SZ };
+    enum { CHANGE_Q_SZ = 0x1000 };
 
   private:
     int _kq;

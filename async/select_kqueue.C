@@ -39,6 +39,8 @@ namespace sfs_core {
     short filter = (op == selread) ? EVFILT_READ : EVFILT_WRITE;
     u_short flags = cb ? EV_ADD : EV_DELETE;
 
+    assert (_change_indx < CHANGE_Q_SZ);
+
     EV_SET(&_kq_changes[_change_indx++], fd, filter, flags, 0, 0, 0);
 
     _fdcbs[op][fd] = cb;
