@@ -105,6 +105,16 @@ static int exponent (char *, int, int);
 #define NOCOPY          0x200   /* String contents doesn't have to be copied */
 #define SIZET           0x400   /* Variable of type size_t */
 
+static size_t
+my_strnlen (const char *s, size_t len)
+{
+  const char *cp;
+  size_t r;
+
+  for (cp = s, r = 0; r < len && *cp; cp++, r++) ;
+  return r;
+}
+
 void
 #ifndef DSPRINTF_DEBUG
 suio_vuprintf (struct suio *uio, const char *_fmt, va_list ap)
@@ -416,16 +426,25 @@ __suio_vuprintf (const char *line, struct suio *uio,
 	 * can't use strlen; can only look for the
 	 * NUL in the first `prec' characters, and
 	 * strlen() will go further.
+	 *
+	 * MK 8/16/07: Unfortunately, can't use memchr either,
+	 * since dmalloc complains that memchr would scan off the
+	 * end of the allocated string.
 	 */
-	char *p = (char *) memchr (cp, 0, prec);
+	size = my_strnlen (cp, prec);
 
-	if (p != NULL) {
+	/*
+	 * MK 8/16/07: used to be:
+	 *
+	  char *p = (char *) memchr (cp, 0, prec);
+	  if (p != NULL) {
 	  size = p - cp;
 	  if (size > prec)
-	    size = prec;
-	}
-	else
 	  size = prec;
+	  }
+	  else
+	  size = prec;
+	*/
       }
       else
 	size = strlen (cp);
