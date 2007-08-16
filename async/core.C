@@ -114,16 +114,9 @@ timestring ()
   return buf;
 }
 
-void callback_trace_fdcb (int i, int fd, cbv::ptr cb)
-{
-  if (fd != errfd && fd != sigpipes[0] && (callback_trace & CBTR_FD))
-    warn ("CALLBACK_TRACE: %sfdcb %d%c %s <- %s\n",
-	  timestring (), fd, "rwe"[i],
-	  cb->dest, cb->line);
-}
-
-
 #endif /* WRAP_DEBUG */
+
+
 
 struct child {
   pid_t pid;
@@ -595,3 +588,15 @@ async_init::stop ()
 {
   err_flush ();
 }
+
+#ifdef WRAP_DEBUG
+
+void callback_trace_fdcb (int i, int fd, cbv::ptr cb)
+{
+  if (fd != errfd && fd != sigpipes[0] && (callback_trace & CBTR_FD))
+    warn ("CALLBACK_TRACE: %sfdcb %d%c %s <- %s\n",
+	  timestring (), fd, "rwe"[i],
+	  cb->dest, cb->line);
+}
+
+#endif /* WRAP_DEBUG */
