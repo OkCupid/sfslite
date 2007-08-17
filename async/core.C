@@ -31,7 +31,7 @@
 #include <typeinfo>
 
 #include "litetime.h"
-#include "select.h"
+#include "sfs_select.h"
 #include <stdio.h>
 
 bool amain_panic;
