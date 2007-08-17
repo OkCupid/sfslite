@@ -25,7 +25,6 @@
 #ifndef _ASYNC_SELECT_H_
 #define _ASYNC_SELECT_H_ 1
 
-#include "config.h"
 #include "amisc.h"
 
 //-----------------------------------------------------------------------
