@@ -9,7 +9,11 @@ namespace sfs_core {
   //-----------------------------------------------------------------------
 
   std_selector_t::std_selector_t ()
-    : selector_t ()
+    : selector_t (),
+      _compact_interval (0),
+      _n_fdcb_iter (0),
+      _nselfd (0),
+      _busywait (false)
   {
     init_fdsets ();
   }
@@ -17,7 +21,11 @@ namespace sfs_core {
   //-----------------------------------------------------------------------
 
   std_selector_t::std_selector_t (selector_t *old)
-    : selector_t (old)
+    : selector_t (old),
+      _compact_interval (0),
+      _n_fdcb_iter (0),
+      _nselfd (0),
+      _busywait (false)
   {
     init_fdsets ();
   }
