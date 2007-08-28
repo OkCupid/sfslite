@@ -229,8 +229,12 @@ enum {
 class conftab {
 public:
   conftab () {}
+
+  typedef enum { OK = 0,
+		 ERROR = 1,
+		 UNKNOWN = 2 } status_t;
   
-  bool run (const str &file, u_int opts = 0);
+  bool run (const str &file, u_int opts = 0, status_t *sp = NULL);
 
   template<class P, class D> 
   conftab &add (const str &nm, P *dp, D lb, D ub)
