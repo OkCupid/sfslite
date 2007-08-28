@@ -493,14 +493,21 @@ const char *__backtrace (const char *file, int lim);
 #include <memory.h>
 #endif /* HAVE_MEMORY_H */
 #include <dmalloc.h>
+
 #undef memcpy
 #undef xfree
+
+#if DMALLOC_VERSION_MAJOR < 5  || \
+     (DMALLOC_VERSION_MAJOR == 5 && DMALLOC_VERSION_MINOR < 5)
+
 #define memcpy(to, from, len) \
   _dmalloc_memcpy((char *) (to), (const char *) (from), len)
 #define memmove(to, from, len) \
   _dmalloc_bcopy((const char *) (from), (char *) (to), len)
-/* Work around Dmalloc's misunderstanding of free's definition */
 
+#endif /* version < 5.5 */
+
+/* Work around Dmalloc's misunderstanding of free's definition */
 #if DMALLOC_VERSION_MAJOR >= 5
 #define _xmalloc_leap(f, l, s) \
   dmalloc_malloc (f, l, s, DMALLOC_FUNC_MALLOC, 0, 1)

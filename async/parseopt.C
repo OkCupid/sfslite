@@ -366,9 +366,10 @@ conftab::report ()
 }
 
 bool
-conftab::run (const str &file, u_int opts, int fd)
+conftab::run (const str &file, u_int opts, int fd, status_t *sp)
 {
   bool errors = false;
+  bool unknown = false;
 
   if (opts & (CONFTAB_APPLY_DEFAULTS|CONFTAB_VERBOSE)) {
     reset ();
@@ -386,7 +387,7 @@ conftab::run (const str &file, u_int opts, int fd)
     while (pa.getline (&av, &line)) {
       if (!match (av, file, line, &errors)) {
 	warn << file << ":" << line << ": unknown config parameter\n";
-	errors = true;
+	unknown = true;
       }
     }
   }
@@ -397,5 +398,11 @@ conftab::run (const str &file, u_int opts, int fd)
   if (opts & CONFTAB_VERBOSE)
     report ();
 
-  return !errors;
+  if (sp) {
+    if (errors) *sp = ERROR;
+    else if (unknown) *sp = UNKNOWN;
+    else *sp = OK;
+  }
+
+  return !(errors || unknown);
 }
