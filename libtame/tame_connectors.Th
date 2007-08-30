@@ -100,7 +100,7 @@ connector_t<T1,T2,T3>::__sig (typename event<T1,T2,T3>::ptr *out,
     sigcb (sigs[i], mkevent (rv, sigs[i]));
   }
   *out = mkevent_rs (in->slot_set (), rv, 0);
-  (*out)->set_cancel_notifiers (mkevent (rv, -2));
+  (*out)->set_cancel_notifier (mkevent (rv, -2));
 
   twait (rv, sig);
 
