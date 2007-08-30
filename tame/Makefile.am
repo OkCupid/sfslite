@@ -3,7 +3,7 @@
 
 LDADD = $(LIBASYNC) 
 
-sfsexec_PROGRAMS = tame
+sfsbin_PROGRAMS = tame
 
 noinst_HEADERS = tame.h parse.h
 
