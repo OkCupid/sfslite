@@ -31,8 +31,6 @@ namespace sfs_core {
   void
   kqueue_selector_t::fdcb (int fd, selop op, cbv::ptr cb)
   {
-    bool doit = true;
-
     assert (fd >= 0);
     assert (fd < maxfd);
 
