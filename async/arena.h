@@ -63,6 +63,8 @@ protected:
     { return strcpy ((char *) alloc (1 + strlen (str), 1), str); }
   char *dmalloc_strdup (const char *, int, const char *str, int)
     { return strcpy ((char *) alloc (1 + strlen (str), 1), str); }
+  char *dmalloc_strndup (const char *, int, const char *str, int, int)
+    { return strcpy ((char *) alloc (1 + strlen (str), 1), str); }
 #endif /* DMALLOC */
 
   ~arena ();
