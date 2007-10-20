@@ -66,6 +66,7 @@ $a\
 / _FILE_OFFSET_BITS/b pdefine
 / HAVE_EPOLL/b pdefine
 / HAVE_KQUEUE/b pdefine
+/ PATH_LOGGER/b pdefine
 
 :skip
 d

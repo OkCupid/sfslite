@@ -151,7 +151,6 @@ public:
 extern str syslog_priority;
 void daemonize (const str &name = NULL);
 void start_logger ();
-int start_custom_logger (const str &pri, str tag = NULL);
 int start_logger (const str &pri, const str &tag, const str &line, 
 		  const str &logfile, int flags, mode_t mode);
 
