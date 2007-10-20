@@ -89,6 +89,33 @@ start_logger (const str &priority, const str &tag, const str &line,
   return start_log_to_file (line, logfile, flags, mode);
 }
 
+int 
+start_custom_logger (const str &priority, str tag)
+{
+  int ret = -1;
+#ifdef PATH_LOGGER
+  if (!tag) tag = "";
+  char *av[] = { PATH_LOGGER, "-p", 
+		 const_cast<char *> (priority.cstr ()), 
+		 "-t", 
+		 const_cast<char *> (tag.cstr ()), NULL };
+  int fds[2];
+  if (socketpair (AF_UNIX, SOCK_STREAM, 0, fds) < 0) 
+    fatal ("socketpair: %m\n");
+  close_on_exec (fds[0]);
+  if (fds[1] != 0) 
+    close_on_exec (fds[1]);
+
+  if (spawn (PATH_LOGGER, av, fds[1], 0, 0) >= 0) {
+    close (fds[1]);
+    ret = fds[0];
+  } else {
+    ret = -1;
+  }
+#endif /* PATH_LOGGER */
+  return ret;
+}
+
 void
 start_logger ()
 {
