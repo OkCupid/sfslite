@@ -6,6 +6,13 @@
 
 #include "list.h"
 
+/*
+ * qtailq
+ *
+ *   A "quick" form of tailq, in which the object is stored non-intrusively
+ *   in the tailq, via a simple wrapper slot object.
+ *
+ */
 
 template<class T> 
 class qtailq_slot_t {
