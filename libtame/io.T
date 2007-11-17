@@ -97,13 +97,48 @@ iofd_sticky_t::finish ()
 }
 
 tamed void
-proxy (int infd, int outfd, evv_t cb)
+proxy (int infd, int outfd, evv_t ev)
 {
   tvars {
-    rendezvous_t<ev_t> G (__FILE__, __LINE__);
+    std_proxy_t px;
+  }
+  twait { px.go (infd, outfd, mkevent ()); }
+  ev->trigger ();
+}
+
+bool
+std_proxy_t::have_room_to_read () const
+{
+  return (_sz > _buf.resid ());
+}
+
+bool
+std_proxy_t::have_data_to_write () const 
+{
+  return (_buf.resid () > 0);
+}
+
+int
+std_proxy_t::v_read (int fd)
+{
+  return _buf.input (fd, _sz - _buf.resid ());
+}
+
+int 
+std_proxy_t::v_write (int fd)
+{
+  return _buf.output (fd);
+}
+
+std_proxy_t::std_proxy_t (size_t s) : _sz (s) {}
+std_proxy_t::~std_proxy_t () {}
+
+tamed void
+proxy_t::go (int infd, int outfd, evv_t ev)
+{
+  tvars {
+    rendezvous_t<ev_t> rv (__FILE__, __LINE__);
     bool eof (false);
-    suio buf;
-    size_t sz (0x4000);
     ev_t which;
     int rc;
     bool err (false);
@@ -112,24 +147,24 @@ proxy (int infd, int outfd, evv_t cb)
   }
 
   // If the parent process gives up on us, then we'll get a callback here
-  cb->set_cancel_notifier (mkevent (G, ENDPROG));
+  ev->set_cancel_notifier (mkevent (rv, ENDPROG));
 
-  read.setev (mkevent (G, READ));
-  write.setev (mkevent (G, WRITE));
+  read.setev (mkevent (rv, READ));
+  write.setev (mkevent (rv, WRITE));
 
-  while (!err && (!(eof || cancelled) || buf.resid () )) {
+  while (!err && (!(eof || cancelled) || have_data_to_write ())) {
     
-    if (buf.resid () < sz && !eof) read.on ();
+    if (have_room_to_read () && !eof) read.on ();
     else read.off ();
     
-    if (buf.resid () > 0) write.on ();
+    if (have_data_to_write ()) write.on ();
     else write.off ();
 
-    twait (G, which);
+    twait (rv, which);
 
     switch (which) {
     case READ: 
-      if ((rc = buf.input (read.fd (), sz - buf.resid ())) == 0) {
+      if ((rc = v_read (read.fd())) == 0) {
 	eof = true;
       } else if (rc < 0 && errno != EAGAIN) {
 	warn ("read error: %m\n");
@@ -137,7 +172,7 @@ proxy (int infd, int outfd, evv_t cb)
       }
       break;
     case WRITE:
-      if ((rc = buf.output (write.fd ())) < 0 && errno != EAGAIN) {
+      if ((rc = v_write (write.fd())) < 0 && errno != EAGAIN) {
 	warn ("write error: %m\n");
 	err = true;
       }
@@ -153,8 +188,8 @@ proxy (int infd, int outfd, evv_t cb)
   read.finish ();
   write.finish ();
 
-  cb->trigger ();
-  G.cancel (); // for the timer (if necessary )
+  ev->trigger ();
+  rv.cancel (); // for the timer (if necessary )
 }
 
 tamed void

@@ -77,6 +77,36 @@ namespace tame {
   void write (int fd, const char *buf, size_t sz, evi_t ev, CLOSURE);
   void accept (int sockfd, struct sockaddr *addr, socklen_t *addrlen, 
 	       evi_t ev, CLOSURE);
+
+
+  class proxy_t {
+  public:
+    proxy_t () {}
+    virtual ~proxy_t () {}
+
+    void go (int infd, int outfd, evv_t ev, CLOSURE);
+
+  protected:
+    virtual bool have_room_to_read () const = 0;
+    virtual bool have_data_to_write () const = 0;
+    virtual int v_read (int fd) = 0;
+    virtual int v_write (int fd) = 0;
+  };
+
+  class std_proxy_t : public proxy_t {
+  public:
+    std_proxy_t (size_t sz = 0x4000) ;
+    ~std_proxy_t ();
+   
+  protected:
+    bool have_room_to_read () const;
+    bool have_data_to_write () const;
+    int v_read (int fd);
+    int v_write (int fd);
+
+    size_t _sz;
+    suio _buf;
+  };
 };
 
 #endif /* _LIBTAME_TAME_IO_H_ */
