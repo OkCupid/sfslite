@@ -37,14 +37,14 @@ Tame Core:
 Tame Library: the rest of the files in this directory are all part of 
 the Tame Library -- nonessentials that are useful in writing
 applications.  All libraries are in the tame:: namespace (except
-for connectors) and must are written with tame translations.
+for connectors) and most are written with tame translations.
 
  - tame_aio.h, aio.T: wrappers around sfs's AIOD-style I/O
  - tame_io.h, io.T: wrappers around standard C library I/O in a way
    that's tame-friendly.
  - tame_lock.h, lock.T: simple tame locks
  - tame_nlock.Th: named locking for tame (store multiple locks in
-   a hash table, hashed by a templated key type.
+   a hash table, hashed by a templated key type).
  - tame_autocb.h: convenience; fire an event as it goes out of scope.
  - tame_connectors.Th: connectors for easy handling of timeouts
    and other cancellation events.

@@ -14,12 +14,14 @@
 //
 class remote_host_t {
 public:
-  remote_host_t (const str &n) : _name (n) {}
+  remote_host_t (const str &n) : _name (n), _some_class_member (5) {}
   void dostuff (int port, cbb cb) 
   { dostuff_private (port, cb); }
 private:
   void dostuff_private (int port, cbb cv, CLOSURE);
   str _name;
+public:
+  size_t _some_class_member;
 };
 
 // TAME_OFF
@@ -62,7 +64,12 @@ remote_host_t::dostuff_private (int port, cbb cv)
     bool err_occurred (false);
     rendezvous_t<int> window;
     int return_id;
+    size_t test (_self->_some_class_member + 2);
   }
+
+  // Test isn't useful, just to test that tvars{..} can reference
+  // members of the underlying class.
+  test ++;
 
   // Call tcpconnect, and block until it returns; when it does return,
   // assign the local variable 'fd' to the result.

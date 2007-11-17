@@ -306,6 +306,7 @@ public:
   // ASC = Args, Stack or Class
   void set_asc (vartyp_t a) { _asc = a; }
   vartyp_t get_asc () const { return _asc; }
+  void reset_name (const str &s) { _name = s; }
 
   void set_type (const type_t &t) { _type = t; }
   ptr<initializer_t> initializer () const { return _initializer; }
@@ -344,6 +345,7 @@ public:
   void initialize (strbuf &b, bool self) const;
   bool exists (const str &n) const { return _tab[n]; }
   const var_t *lookup (const str &n) const;
+  void copy_in (const vartab_t &vt);
 
   vec<var_t> _vars;
   qhash<str, u_int> _tab;

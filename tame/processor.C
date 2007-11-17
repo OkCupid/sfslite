@@ -241,6 +241,13 @@ strip_off_method (const str &in)
   }
 }
 
+void
+vartab_t::copy_in (const vartab_t &vt)
+{
+  for (size_t i = 0; i < vt._vars.size (); i++) {
+    add (vt._vars[i]);
+  }
+}
 
 bool
 vartab_t::add (var_t v)
@@ -536,6 +543,15 @@ tame_fn_t::output_closure (outputter_t *o)
     b.mycat (template_str ()) << "\n";
   }
 
+  ptr<vartab_t> slfargs;
+  if (need_self ()) {
+    slfargs = New refcounted<vartab_t> ();
+    slfargs->add (_self);
+    if (_args) slfargs->copy_in (*_args);
+  } else {
+    slfargs = _args;
+  }
+
   b << "class " << _closure.type ().base_type () 
     << " : public closure_t "
     << "{\n"
@@ -543,15 +559,7 @@ tame_fn_t::output_closure (outputter_t *o)
     << "  " << _closure.type ().base_type () 
     << " (";
 
-  if (need_self ()) {
-    b.cat (_self.decl (), true);
-    if (_args)
-      b << ", ";
-  }
-
-  if (_args) {
-    _args->paramlist (b, DECLARATIONS);
-  }
+  if (slfargs) slfargs->paramlist (b, DECLARATIONS);
 
   b << ") : closure_t (\"" << state->infile_name () << "\", \"" 
     << _name << "\"), "
@@ -565,7 +573,9 @@ tame_fn_t::output_closure (outputter_t *o)
 
   b << " _stack ("
     ;
-  if (_args) _args->paramlist (b, NAMES);
+
+  if (slfargs) slfargs->paramlist (b, NAMES);
+
   b << "), _args ("
     ;
 
@@ -584,7 +594,8 @@ tame_fn_t::output_closure (outputter_t *o)
   // output the stack structure
   b << "  struct stack_t {\n"
     << "    stack_t (";
-  if (_args) _args->paramlist (b, DECLARATIONS);
+  if (slfargs) slfargs->paramlist (b, DECLARATIONS);
+
   b << ")" ;
 
   // output stack declaration
