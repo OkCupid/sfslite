@@ -39,7 +39,6 @@ namespace tame {
   void clearwrite (int fd);
   void waitread (int fd, evv_t cb);
   void waitwrite (int fd, evv_t cb);
-  void proxy (int in, int out, evv_t cb, CLOSURE);
   
   void fdcb1(int fd, selop which, evv_t cb, CLOSURE);
   void sigcb1 (int sig, evv_t cb, CLOSURE);
@@ -78,6 +77,7 @@ namespace tame {
   void accept (int sockfd, struct sockaddr *addr, socklen_t *addrlen, 
 	       evi_t ev, CLOSURE);
 
+  //-----------------------------------------------------------------------
 
   class proxy_t {
   public:
@@ -86,27 +86,38 @@ namespace tame {
 
     void go (int infd, int outfd, evv_t ev, CLOSURE);
 
+    bool poke ();
+
   protected:
-    virtual bool have_room_to_read () const = 0;
-    virtual bool have_data_to_write () const = 0;
+    virtual bool is_readable () const = 0;
+    virtual bool is_writable () const = 0;
     virtual int v_read (int fd) = 0;
     virtual int v_write (int fd) = 0;
+
+    evv_t::ptr _poke_ev;
   };
 
   class std_proxy_t : public proxy_t {
   public:
-    std_proxy_t (size_t sz = 0x4000) ;
-    ~std_proxy_t ();
+    std_proxy_t (ssize_t sz = -1);
+    virtual ~std_proxy_t ();
    
   protected:
-    bool have_room_to_read () const;
-    bool have_data_to_write () const;
-    int v_read (int fd);
-    int v_write (int fd);
+    virtual bool is_readable () const;
+    virtual bool is_writable () const;
+    virtual int v_read (int fd);
+    virtual int v_write (int fd);
+
+    size_t room_left () const { return _sz - _buf.resid (); }
 
     size_t _sz;
     suio _buf;
   };
+
+  void proxy (int in, int out, evv_t cb, CLOSURE);
+
+  //-----------------------------------------------------------------------
+
 };
 
 #endif /* _LIBTAME_TAME_IO_H_ */

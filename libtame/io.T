@@ -68,7 +68,7 @@ iofd_t::off (bool check)
   }
 }
 
-typedef enum { READ, WRITE, ENDPROG } ev_t;
+typedef enum { READ, WRITE, ENDPROG, POKE } ev_t;
 
 void
 iofd_sticky_t::on ()
@@ -107,13 +107,13 @@ proxy (int infd, int outfd, evv_t ev)
 }
 
 bool
-std_proxy_t::have_room_to_read () const
+std_proxy_t::is_readable () const
 {
   return (_sz > _buf.resid ());
 }
 
 bool
-std_proxy_t::have_data_to_write () const 
+std_proxy_t::is_writable () const 
 {
   return (_buf.resid () > 0);
 }
@@ -130,7 +130,7 @@ std_proxy_t::v_write (int fd)
   return _buf.output (fd);
 }
 
-std_proxy_t::std_proxy_t (size_t s) : _sz (s) {}
+std_proxy_t::std_proxy_t (ssize_t s) : _sz (s > 0 ? s : 0x4000) {}
 std_proxy_t::~std_proxy_t () {}
 
 tamed void
@@ -152,17 +152,22 @@ proxy_t::go (int infd, int outfd, evv_t ev)
   read.setev (mkevent (rv, READ));
   write.setev (mkevent (rv, WRITE));
 
-  while (!err && (!(eof || cancelled) || have_data_to_write ())) {
+  _poke_ev = mkevent (rv, POKE);
+  _poke_ev->set_reuse (true);
+
+  while (!err && (!(eof || cancelled) || is_writable ())) {
     
-    if (have_room_to_read () && !eof) read.on ();
+    if (is_readable () && !eof) read.on ();
     else read.off ();
     
-    if (have_data_to_write ()) write.on ();
+    if (is_writable ()) write.on ();
     else write.off ();
 
     twait (rv, which);
 
     switch (which) {
+    case POKE:
+      break;
     case READ: 
       if ((rc = v_read (read.fd())) == 0) {
 	eof = true;
@@ -187,9 +192,21 @@ proxy_t::go (int infd, int outfd, evv_t ev)
 
   read.finish ();
   write.finish ();
+  _poke_ev = NULL;
 
   ev->trigger ();
   rv.cancel (); // for the timer (if necessary )
+}
+
+bool
+proxy_t::poke ()
+{
+  if (_poke_ev) {
+    _poke_ev->trigger ();
+    return true;
+  } else {
+    return false;
+  }
 }
 
 tamed void
@@ -224,5 +241,6 @@ accept (int sockfd, struct sockaddr *addr, socklen_t *addrlen, evi_t ev)
   rc = ::accept (sockfd, addr, addrlen);
   ev->trigger (rc);
 }
+
 
 };
