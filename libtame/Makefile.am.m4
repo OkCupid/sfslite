@@ -118,7 +118,8 @@ tameclean:
 	rm -f tame_out tame_out_h
 
 clean:
-	rm -rf tame_out tame_out_h *.o *.lo .libs _libs core *.core *~ *.rpo
+	rm -rf tame_out tame_out_h *.o *.lo .libs _libs core *.core *~ *.rpo \
+		tame_event_ag.h tame_tfork_ag.h *.la
 
 dist-hook:
 	cd $(distdir) && rm -f tame_out
