@@ -187,15 +187,15 @@ class sfs_connect_t {
   bool setsock (int fd);
 
   bool start_common ();
-  void getfd (int fd);
+  void getfd (ref<bool> d, int fd);
   void sendconnect ();
-  void getconres (enum clnt_stat err);
+  void getconres (ref<bool> d, enum clnt_stat err);
   bool dogetconres ();
   void docrypt ();
-  void cryptcb (const sfs_hash *sessidp);
+  void cryptcb (ref<bool> d, const sfs_hash *sessidp);
   void doauth ();
   void dologin (ref<bool> destroyed);
-  void donelogin (clnt_stat);
+  void donelogin (ref<bool> dest, clnt_stat);
   void checkedserver (ref<bool> d);
 
 public:

@@ -75,7 +75,7 @@ sfs_connect_t::srvfail (int e, str msg)
     carg_reset ();
     last_srv_err = e;
     tcpc = tcpconnect_srv_retry (srvl,
-				 wrap (this, &sfs_connect_t::getfd),
+				 wrap (this, &sfs_connect_t::getfd, destroyed),
 				 &dnsname);
   }
   else
@@ -189,7 +189,7 @@ sfs_connect_t::start ()
     int fd = suidgetfd ("authd");
     local_authd = true;
     errno = ECONNREFUSED;
-    getfd (fd);
+    getfd (destroyed, fd);
     return true;
   }
 
@@ -199,7 +199,8 @@ sfs_connect_t::start ()
     case AF_INET:
       dnsname = inet_ntoa (hp->sa.sa_in.sin_addr);
       tcpc = tcpconnect (hp->sa.sa_in.sin_addr, ntohs (hp->sa.sa_in.sin_port),
-			 wrap (this, &sfs_connect_t::getfd));
+			 wrap (this, &sfs_connect_t::getfd,
+			       destroyed));
       return true;
     default:
       fail (EPROTONOSUPPORT, location << ": unknown protocol family "
@@ -209,10 +210,11 @@ sfs_connect_t::start ()
   }
 
   if (port)
-    tcpc = tcpconnect (location, port, wrap (this, &sfs_connect_t::getfd));
+    tcpc = tcpconnect (location, port, wrap (this, &sfs_connect_t::getfd,
+					     destroyed));
   else
     tcpc = tcpconnect_srv (location, "sfs", SFS_PORT,
-			   wrap (this, &sfs_connect_t::getfd),
+			   wrap (this, &sfs_connect_t::getfd, destroyed),
 			   true, &srvl, &dnsname);
   return true;
 }
@@ -237,7 +239,7 @@ sfs_connect_t::start (ptr<srvlist> sl)
 
   srvl = sl;
   tcpc = tcpconnect_srv_retry (srvl,
-			       wrap (this, &sfs_connect_t::getfd),
+			       wrap (this, &sfs_connect_t::getfd, destroyed),
 			       &dnsname);
   return true;
 }
@@ -253,7 +255,7 @@ sfs_connect_t::start (in_addr a, u_int16_t p)
   else if (!port)
     port = SFS_PORT;
 
-  tcpc = tcpconnect (a, port, wrap (this, &sfs_connect_t::getfd));
+  tcpc = tcpconnect (a, port, wrap (this, &sfs_connect_t::getfd, destroyed));
   return true;
 }
 
@@ -327,8 +329,11 @@ sfs_connect_t::init ()
 }
 
 void
-sfs_connect_t::getfd (int fd)
+sfs_connect_t::getfd (ref<bool> dest, int fd)
 {
+  if (*dest)
+    return;
+
   tcpc = NULL;
   if (fd < 0) {
     fail (last_srv_err ? last_srv_err : errno,
@@ -344,12 +349,15 @@ void
 sfs_connect_t::sendconnect ()
 {
   cbase = c->call (SFSPROC_CONNECT, &sc->ci, &cres,
-		   wrap (this, &sfs_connect_t::getconres));
+		   wrap (this, &sfs_connect_t::getconres, destroyed));
 }
 
 void
-sfs_connect_t::getconres (enum clnt_stat err)
+sfs_connect_t::getconres (ref<bool> dest, enum clnt_stat err)
 {
+  if (*dest)
+    return;
+
   cbase = NULL;
   if (err == RPC_CANTDECODEARGS && sfs_nextci (&sc->ci))
     sendconnect ();
@@ -446,12 +454,15 @@ sfs_connect_t::docrypt ()
     delaycb (3600, wrap (&ckey_clear));
   }
   cbase = sfs_client_crypt (c, ckey, sc->ci, *cres.reply, sc->servinfo,
-			    wrap (this, &sfs_connect_t::cryptcb));
+			    wrap (this, &sfs_connect_t::cryptcb, destroyed));
 }
 
 void
-sfs_connect_t::cryptcb (const sfs_hash *sidp)
+sfs_connect_t::cryptcb (ref<bool> dest, const sfs_hash *sidp)
 {
+  if (*dest)
+    return;
+
   cbase = NULL;
   if (!sidp) {
     srvfail (EIO, location << ": Session key negotiation failed");
@@ -508,16 +519,19 @@ sfs_connect_t::dologin (ref<bool> dest)
   swap (larg.certificate, *ares->certificate);
   if (authorizer->mutual)
     cbase = c->call (SFSPROC_LOGIN, &larg, lres,
-		     wrap (this, &sfs_connect_t::donelogin));
+		     wrap (this, &sfs_connect_t::donelogin, destroyed));
   else
     cbase = c->call (SFSPROC_LOGIN, &larg, olres,
-		     wrap (this, &sfs_connect_t::donelogin),
+		     wrap (this, &sfs_connect_t::donelogin, destroyed),
 		     NULL, NULL, xdr_sfs_loginres_old);
 }
 
 void
-sfs_connect_t::donelogin (clnt_stat err)
+sfs_connect_t::donelogin (ref<bool> dest, clnt_stat err)
 {
+  if (*dest)
+    return;
+
   cbase = NULL;
   if (err) {
     fail (EIO, location << ": LOGIN RPC: " << err);
