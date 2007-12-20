@@ -150,7 +150,7 @@ __suio_vuprintf (const char *line, struct suio *uio,
   int dprec;			/* a copy of prec if [diouxX], 0 otherwise */
   int realsz;			/* field size expanded by dprec */
   int size;			/* size of converted field or string */
-  char *xdigs = "";		/* digits for [xX] conversion */
+  const char *xdigs = "";		/* digits for [xX] conversion */
 
   char buf[BUF];                /* space for %c, %[diouxX], %[eEfgG] */
   char ox[2];                   /* space for 0x hex-prefix */
@@ -523,7 +523,8 @@ __suio_vuprintf (const char *line, struct suio *uio,
 	  break;
 
 	default:
-	  cp = "bug in vfprintf: bad base";
+	  // XXX leak memory to satisfy compiler.  but it's in an error case
+	  cp = strdup ("bug in vfprintf: bad base");
 	  size = strlen (cp);
 	  goto skipsize;
 	}

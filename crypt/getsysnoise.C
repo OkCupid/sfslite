@@ -26,7 +26,7 @@
 #include "sha1.h"
 #include <sys/resource.h>
 
-char *const noiseprogs[][5] = {
+const char *const noiseprogs[][5] = {
   { PATH_PS, "laxwww" },
   { PATH_PS, "-al" },
   { PATH_LS, "-nfail", "/tmp/." },
@@ -105,12 +105,12 @@ class noise_from_prog {
   cbv cb;
 
   PRIVDEST ~noise_from_prog () { if (to) timecb_remove (to); }
-  int execprog (char *const *);
+  int execprog (const char *const *);
   void done ();
   void timeout ();
 public:
   noise_from_prog (datasink *dst, int fd, pid_t pid, cbv cb);
-  noise_from_prog (datasink *dst, char *const *av, cbv cb);
+  noise_from_prog (datasink *dst, const char *const *av, cbv cb);
 };
 
 void
@@ -120,7 +120,7 @@ getfdnoise (datasink *dst, int fd, cbv cb, size_t maxbytes)
 }
 
 void
-getprognoise (datasink *dst, char *const *av, cbv cb)
+getprognoise (datasink *dst, const char *const *av, cbv cb)
 {
   vNew noise_from_prog (dst, av, cb);
 }
@@ -229,7 +229,7 @@ noise_from_prog::noise_from_prog (datasink *dst, int fd, pid_t p, cbv cb)
   getfdnoise (dst, fd, wrap (this, &noise_from_prog::done));
 }
 
-noise_from_prog::noise_from_prog (datasink *dst, char *const *av, cbv cb)
+noise_from_prog::noise_from_prog (datasink *dst, const char *const *av, cbv cb)
   : cb (cb)
 {
   int fd = execprog (av);
@@ -238,7 +238,7 @@ noise_from_prog::noise_from_prog (datasink *dst, char *const *av, cbv cb)
 }
 
 int
-noise_from_prog::execprog (char *const *av)
+noise_from_prog::execprog (const char *const *av)
 {
   int fds[2];
   if (pipe (fds) < 0)
@@ -258,7 +258,7 @@ noise_from_prog::execprog (char *const *av)
     open ("/dev/null", O_RDONLY);
 
     char *env[] = { NULL };
-    execve (av[0], av, env);
+    execve (av[0], const_cast<char *const *> (av), env);
     //warn ("%s: %m\n", av[0]);
     _exit (1);
   }

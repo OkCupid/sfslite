@@ -24,8 +24,6 @@
 #include "amisc.h"
 #include "parseopt.h"
 
-char *parseargs::errorbuf = "";
-
 static inline int
 isspc (char c)
 {
@@ -151,7 +149,7 @@ parseargs::error (str msg)
 }
 
 parseargs::parseargs (str file, int fd)
-  : buf (errorbuf), lim (buf), p (buf), filename (file), lineno (0)
+  : buf (NULL), lim (buf), p (buf), filename (file), lineno (0)
 {
   if (fd == -1 && (fd = open (file, O_RDONLY, 0)) < 0)
     error (strbuf ("%m"));
@@ -160,6 +158,7 @@ parseargs::parseargs (str file, int fd)
   // when fd is for a regular file.
   size_t pos = 0;
   size_t size = 128;
+  p = buf;
   buf = static_cast<char *> (xmalloc (size));
 
   for (;;) {
@@ -185,7 +184,7 @@ parseargs::parseargs (str file, int fd)
 
 parseargs::~parseargs ()
 {
-  if (buf != errorbuf)
+  if (buf)
     xfree (buf);
 }
 

@@ -49,7 +49,7 @@ start_logger (const str &priority, const str &tag, const str &line,
 	      const str &logfile, int flags, mode_t mode)
 {
 #ifdef PATH_LOGGER
-  char *av[] = { PATH_LOGGER, "-p", NULL, "-t", NULL, NULL, NULL };
+  const char *av[] = { PATH_LOGGER, "-p", NULL, "-t", NULL, NULL, NULL };
   av[2] = const_cast<char *> (priority.cstr ());
   
   if (line)
@@ -93,9 +93,9 @@ void
 start_logger ()
 {
 #ifdef PATH_LOGGER
-  char *av[] = { PATH_LOGGER, "-p",
-		 const_cast<char *> (syslog_priority.cstr ()),
-		 "-t", "", NULL};
+  const char *av[] = { PATH_LOGGER, "-p",
+		       syslog_priority.cstr (),
+		       "-t", "", NULL};
   int fds[2];
 
   close (0);
@@ -181,7 +181,7 @@ daemonize (const str &nm)
       piddir = builddir;
     str path = strbuf () << piddir << "/" << pidfilebase << ".pid";
     struct stat sb;
-    if (str2file (path, strbuf ("%d\n", int (getpid ())), 0444, &sb))
+    if (str2file (path, strbuf ("%d\n", int (getpid ())), 0444, false, &sb))
       pidfiles.push_back (pidfile (path, sb));
   }
 }

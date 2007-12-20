@@ -31,11 +31,10 @@
 #include "amisc.h"
 
 class parseargs {
-  static char *errorbuf;
 
   char *buf;
   const char *lim;
-  const char *p;
+  const char *p; 
 
   void skipblanks ();
   void skiplwsp ();
