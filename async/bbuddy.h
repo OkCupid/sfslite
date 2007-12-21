@@ -25,7 +25,7 @@
 #ifndef _BBUDDY_H_
 #define _BBUDDY_H_ 1
 
-#include "config.h"
+#include "sysconf.h"
 #include "opnew.h"
 
 extern "C" const char bytepop[];
