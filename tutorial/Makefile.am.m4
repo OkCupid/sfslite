@@ -84,6 +84,7 @@ tame_standalone(connect1)
 tame_rpcclient(exsrv)
 tame_standalone(nlock)
 tame_standalone(ex14)
+tame_standalone(ex15)
 
 tame_standalone(buggy1)
 tame_standalone(buggy2)
