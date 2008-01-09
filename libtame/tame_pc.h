@@ -70,6 +70,39 @@ namespace tame {
     typename callback<void, bool, V>::ptr _cb;
   };  
 
+
+  template<class V>
+  class pc_t {
+  private:
+    typedef typename event<V>::ref _ev_t;
+  public:
+    pc_t () {}
+
+    void produce (const V &v)
+    {
+      _q.push_back (v);
+      if (_waiters.size ()) {
+	_ev_t ev (_waiters.pop_front ());
+	V v (_q.pop_front ());
+	ev->trigger (v);
+      }
+    }
+
+    void consume (_ev_t e)
+    {
+      if (_q.size ()) {
+	V v (_q.pop_front ());
+	e->trigger (v);
+      } else {
+	_waiters.push_back (e);
+      }
+    }
+
+  private:
+    vec<V> _q;
+    vec<_ev_t> _waiters;
+  };
+
 };
 
 
