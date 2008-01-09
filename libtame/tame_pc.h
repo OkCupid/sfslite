@@ -76,16 +76,20 @@ namespace tame {
   private:
     typedef typename event<V>::ref _ev_t;
   public:
-    pc_t () {}
+    pc_t (size_t mx = 0) : _maxsz (mx) {}
 
-    void produce (const V &v)
+    bool produce (const V &v)
     {
+      if (_maxsz > 0 && _q.size () >= _maxsz)
+	return false;
+
       _q.push_back (v);
       if (_waiters.size ()) {
 	_ev_t ev (_waiters.pop_front ());
 	V v (_q.pop_front ());
 	ev->trigger (v);
       }
+      return true;
     }
 
     void consume (_ev_t e)
@@ -101,6 +105,7 @@ namespace tame {
   private:
     vec<V> _q;
     vec<_ev_t> _waiters;
+    size_t _maxsz;
   };
 
 };
