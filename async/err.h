@@ -113,6 +113,18 @@ operator<< (const traceobj &sb, const str &s)
     suio_print (sb.tosuio (), s);
   return sb;
 }
+inline const warnobj &
+operator<< (const warnobj &sb, const str &s)
+{
+  if (sb.doprint) {
+    if (s)
+      suio_print (sb.tosuio (), s);
+    else {
+      sb.cat ("(null)", true);
+    }
+  }
+  return sb;
+}
 
 
 #undef assert
