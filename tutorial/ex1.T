@@ -23,6 +23,9 @@ int main (int argc, char *argv[])
   int port;
   if (argc != 3 || !convertint (argv[2], &port))
     fatal << "usage: ex2 <hostname> <port>\n";
+
+  str s;
+  warn << "What happens when you warn a NULL string? " << s << "\n";
   
   try_connect (argv[1], port);
   amain ();
