@@ -20,6 +20,8 @@ public:
   virtual ~dynenum_t () {}
 
   int operator[] (const str &s) const { return lookup (s, _quiet); }
+
+  bool lookup (const str &s, int *v) const;
   int lookup (const str &s, bool dowarn = true) const ;
 
 protected:
