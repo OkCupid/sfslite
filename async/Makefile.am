@@ -21,8 +21,7 @@ core.C daemonize.C dns.C dnsparse.C err.C fdwait.C ident.C ifchg.C	\
 ihash.C itree.C lockfile.C malloc.C msb.C myaddrs.C myname.C		\
 parseopt.C pipe2str.C refcnt.C rxx.C sigio.C socket.C spawn.C str.C	\
 str2file.C straux.C suio++.C suio_vuprintf.C tcpconnect.C litetime.C 	\
-select.C select_std.C select_epoll.C select_kqueue.C \
-dynenum.C
+select.C select_std.C select_epoll.C select_kqueue.C dynenum.C
 
 aiod_SOURCES = aiod.C
 aiod_LDADD = $(LIBASYNC) $(LIBPY) $(LDADD_THR)
@@ -34,9 +33,7 @@ bbuddy.h bitvec.h callback.h cbuf.h dns.h dnsimpl.h dnsparse.h err.h	\
 fdlim.h ihash.h init.h itree.h keyfunc.h list.h msb.h opnew.h		\
 parseopt.h pcre.h qhash.h refcnt.h rxx.h serial.h stllike.h str.h	\
 suio++.h sysconf.h union.h vatmpl.h vec.h rwfd.h litetime.h       	\
-corebench.h callback.h qtailq.h						\
-sfs_select.h rclist.h \
-dynenum.h
+corebench.h callback.h qtailq.h	sfs_select.h rclist.h dynenum.h
 
 #
 # begin sfslite changes
