@@ -2,7 +2,7 @@
 #include "dynenum.h"
 
 bool
-dynenum_t::lookup (const str &s, int *vp) const
+dynamic_enum_t::lookup (const str &s, int *vp) const
 {
   bool ret = false;
   int v = _def_val;
@@ -16,7 +16,7 @@ dynenum_t::lookup (const str &s, int *vp) const
 }
 
 int
-dynenum_t::lookup (const str &s, bool dowarn) const
+dynamic_enum_t::lookup (const str &s, bool dowarn) const
 {
   int ret = 0; // silence not-initialized warnings
   bool ok = lookup (s, &ret);
@@ -26,7 +26,7 @@ dynenum_t::lookup (const str &s, bool dowarn) const
 }
 
 void
-dynenum_t::warn_not_found (str s) const
+dynamic_enum_t::warn_not_found (str s) const
 {
   if (!s)
     s = "(null)";
@@ -40,7 +40,7 @@ dynenum_t::warn_not_found (str s) const
 
 
 void
-dynenum_t::init (const pair_t pairs[], bool chk)
+dynamic_enum_t::init (const pair_t pairs[], bool chk)
 {
   for (const pair_t *p = pairs; p->n; p++) {
     _tab.insert (p->n, p->v);
