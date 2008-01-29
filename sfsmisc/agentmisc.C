@@ -96,7 +96,7 @@ agent_userdir (u_int32_t uid, bool create)
     return NULL;
   }
 
-  char *tmpdir = safegetenv ("TMPDIR");
+  const char *tmpdir = safegetenv ("TMPDIR");
   if (!tmpdir || tmpdir[0] != '/')
     tmpdir = "/tmp";
   
@@ -267,9 +267,9 @@ agent_spawn (bool opt_verbose)
     if (opt_verbose)
       warn << "No existing agent found; spawning a new one...\n";
     str sa = find_program ("sfsagent");
-    vec<char *> av;
+    vec<const char *> av;
 
-    av.push_back (const_cast<char *> (sa.cstr ()));
+    av.push_back (sa.cstr ());
     av.push_back ("-c");
     av.push_back (NULL);
     pid_t pid = spawn (av[0], av.base ());

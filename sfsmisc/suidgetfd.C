@@ -43,8 +43,7 @@ suidgetfd (str prog)
   close_on_exec (fds[0]);
 
   str path = fix_exec_path ("suidconnect");
-  char *av[] = { "suidconnect", "-q",
-		 const_cast<char *> (prog.cstr ()), NULL };
+  const char *av[] = { "suidconnect", "-q", prog.cstr (), NULL };
   if (spawn (path, av, fds[1]) == -1) {
     close (fds[0]);
     close (fds[1]);
@@ -66,7 +65,7 @@ suidgetfd_required (str prog)
   close_on_exec (fds[0]);
 
   str path = fix_exec_path ("suidconnect");
-  char *av[] = { "suidconnect", const_cast<char *> (prog.cstr ()), NULL };
+  const char *av[] = { "suidconnect", prog.cstr (), NULL };
   if (spawn (path, av, fds[1]) == -1)
     fatal << path << ": " << strerror (errno) << "\n";
   close (fds[1]);
