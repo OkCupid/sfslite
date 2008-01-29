@@ -104,7 +104,7 @@ static void report (u_int64_t diff, const char *where= NULL)
   double r = (double)diff / ( (double) ntimes * niter);
   if (where == NULL) where = "total   ";
   fprintf (stderr, 
-	   "%s: %lld %s; time/call=%0.6g %s\n", 
+	   "%s: %" PRId64 " %s; time/call=%0.6g %s\n", 
 	   where, diff, tick_name, r, tick_name);
 }
 
