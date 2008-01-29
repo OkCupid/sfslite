@@ -67,7 +67,7 @@ public:
     double m = mean ();
     double sd = stddev ();
     fprintf (stderr, 
-	     "mean: %0.6g; sd: %0.6g, sd/mean: %0.3g%% min: %lld\n", 
+	     "mean: %0.6g; sd: %0.6g, sd/mean: %0.3g%% min: %" PRId64 "\n", 
 	     m, sd, sd * 100 / m, min);
 
     for (size_t s = 0; s < raw_results.size (); s++) {
