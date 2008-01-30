@@ -95,10 +95,12 @@ protected:
     // MK 1/29/08; for some reason the line below broke on Linux 64
     // when compiling with gcc 4.2.3.  lastp was being initialized to
     // basep - 8, even though firstp was 0.
-    if (lastp)
+    if (firstp)
       lastp += basep - firstp;
-    else
+    else {
+      assert (lastp == NULL);
       lastp = basep;
+    }
 
     firstp = basep;
   }
