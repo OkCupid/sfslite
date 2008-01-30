@@ -91,7 +91,15 @@ protected:
       new ((void *) (dst++)) elm_t (*src);
       src->~elm_t ();
     }
-    lastp += basep - firstp;
+
+    // MK 1/29/08; for some reason the line below broke on Linux 64
+    // when compiling with gcc 4.2.3.  lastp was being initialized to
+    // basep - 8, even though firstp was 0.
+    if (lastp)
+      lastp += basep - firstp;
+    else
+      lastp = basep;
+
     firstp = basep;
   }
 
