@@ -29,7 +29,8 @@
 int asrvtrace (getenv ("ASRV_TRACE") ? atoi (getenv ("ASRV_TRACE")) : 0);
 bool asrvtime (getenv ("ASRV_TIME"));
 void set_asrvtrace (int l) { asrvtrace = l; }
-void set_asrvtime (bool b) { asrvtime = b; }
+int get_asrvtrace (void) { return asrvtrace; }
+bool get_asrvtime (void) { return asrvtime; }
 #else /* !MAINTAINER */
 enum { asrvtrace = 0, asrvtime = 0 };
 #endif /* !MAINTAINER */
