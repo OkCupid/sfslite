@@ -235,3 +235,8 @@ public:
 
 ptr<asrv> asrv_alloc (ref<axprt>, const rpc_program &,
     		      callback<void, svccb *>::ptr, bool);
+
+#ifdef MAINTAINER
+void set_asrvtrace (int l);
+void set_asrvtime (bool b);
+#endif /* MAINTAINER */
