@@ -131,20 +131,36 @@ std_proxy_t::v_write (int fd)
   return _buf.output (fd);
 }
 
-std_proxy_t::std_proxy_t (ssize_t s) : _sz (s > 0 ? s : 0x4000) {}
+std_proxy_t::std_proxy_t (const str &d, ssize_t s) : 
+  proxy_t (d), 
+  _sz (s > 0 ? s : 0x4000) {}
+
 std_proxy_t::~std_proxy_t () {}
+
+void
+proxy_t::do_debug (const str &msg) const
+{
+  if (msg && _debug_level > 0) {
+    str s = _debug_name;
+    if (!s) 
+      s = "<anonymous>";
+    warn << s << ": " << msg;
+    if (msg[msg.len () - 1] != '\n')
+      warnx << "\n";
+  }
+}
 
 tamed void
 proxy_t::go (int infd, int outfd, evv_t ev)
 {
   tvars {
     rendezvous_t<ev_t> rv (__FILE__, __LINE__);
-    bool eof (false);
     ev_t which;
     int rc;
     bool err (false);
     iofd_sticky_t read (infd, selread), write (outfd, selwrite);
     bool cancelled (false);
+    str s;
   }
 
   // If the parent process gives up on us, then we'll get a callback here
@@ -156,9 +172,9 @@ proxy_t::go (int infd, int outfd, evv_t ev)
   _poke_ev = mkevent (rv, POKE);
   _poke_ev->set_reuse (true);
 
-  while (!err && (!(eof || cancelled) || is_writable ())) {
+  while (!err && (!(is_eof() || cancelled) || is_writable ())) {
     
-    if (is_readable () && !eof) read.on ();
+    if (is_readable () && !is_eof ()) read.on ();
     else read.off ();
     
     if (is_writable ()) write.on ();
@@ -171,25 +187,41 @@ proxy_t::go (int infd, int outfd, evv_t ev)
       break;
     case READ: 
       if ((rc = v_read (read.fd())) == 0) {
-	eof = true;
-      } else if (rc < 0 && errno != EAGAIN) {
-	warn ("read error: %m\n");
-	err = true;
+	do_debug ("EOF on socket");
+	set_eof ();
+      } else if (rc < 0) {
+	if (read_error (&s)) {
+	  warn ("read error: %s\n", s.cstr ());
+	  err = true;
+	} else if (errno != EAGAIN) {
+	  warn ("read error: %m\n");
+	  err = true;
+	}
       }
+      do_debug (strbuf ("read() => (%d,%d)", rc, errno));
       break;
     case WRITE:
-      if ((rc = v_write (write.fd())) < 0 && errno != EAGAIN) {
-	warn ("write error: %m\n");
-	err = true;
+      if ((rc = v_write (write.fd())) < 0) {
+	if (write_error (&s)) {
+	  warn ("write error: %s\n", s.cstr ());
+	  err = true;
+	} else if (errno != EAGAIN) {
+	  warn ("write error: %m\n");
+	  err = true;
+	}
       }
+      do_debug (strbuf ("write() => (%d,%d)", rc, errno));
       break;
     case ENDPROG:
+      do_debug ("end program");
       cancelled = true;
       break;
     default:
       panic ("unexpected case.\n");
     }
   }
+
+  do_debug ("leaving proxy loop");
 
   read.finish ();
   write.finish ();

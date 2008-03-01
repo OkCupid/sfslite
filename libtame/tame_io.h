@@ -81,12 +81,16 @@ namespace tame {
 
   class proxy_t {
   public:
-    proxy_t () {}
+    proxy_t (const str &d = NULL) : 
+      _debug_name (d), 
+      _debug_level (0), 
+      _eof (false) {}
+
     virtual ~proxy_t () {}
 
     void go (int infd, int outfd, evv_t ev, CLOSURE);
-
     bool poke ();
+    void set_debug_level (int d) { _debug_level = d; }
 
   protected:
     virtual bool is_readable () const = 0;
@@ -94,12 +98,25 @@ namespace tame {
     virtual int v_read (int fd) = 0;
     virtual int v_write (int fd) = 0;
 
+    virtual bool is_eof () const { return _eof; }
+    virtual void set_eof () { _eof = true; }
+
+    // Can signal errors other than via errno
+    virtual bool read_error (str *s) { return false; }
+    virtual bool write_error (str *s) { return false; }
+
+    void do_debug (const str &msg) const;
+
     evv_t::ptr _poke_ev;
+    const str _debug_name;
+    int _debug_level;
+    bool _eof;
+
   };
 
   class std_proxy_t : public proxy_t {
   public:
-    std_proxy_t (ssize_t sz = -1);
+    std_proxy_t (const str &d = NULL, ssize_t sz = -1);
     virtual ~std_proxy_t ();
    
   protected:
