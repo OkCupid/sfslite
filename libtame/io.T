@@ -3,6 +3,25 @@
 #include "tame.h"
 #include "tame_io.h"
 #include "tame_connectors.h"
+#include "tame_nlock.h"
+
+struct selop_which_t {
+  selop_which_t (int f, selop w) : _fd (f), _which (w) {}
+  int _fd;
+  selop _which;
+};
+
+template<> struct equals<selop_which_t> {
+  equals () {}
+  bool operator() (const selop_which_t &a, const selop_which_t &b) const
+  { return (a._fd == b._fd && a._which == b._which); }
+};
+
+template<> struct hashfn<selop_which_t> {
+  hashfn () {}
+  bool operator() (const selop_which_t &x) const
+  { return hash_t ((x._fd << 3) | int (x._which)); }
+};
 
 namespace tame {
 
@@ -16,14 +35,6 @@ void
 clearwrite (int fd)
 {
   fdcb (fd, selwrite, NULL);
-}
-
-tamed void
-fdcb1(int fd, selop which, evv_t cb)
-{
-  twait { fdcb (fd, which, mkevent ()); }
-  fdcb (fd, which, NULL);
-  cb->trigger ();
 }
 
 tamed void
@@ -274,6 +285,26 @@ accept (int sockfd, struct sockaddr *addr, socklen_t *addrlen, evi_t ev)
   rc = ::accept (sockfd, addr, addrlen);
   ev->trigger (rc);
 }
+ 
+  //-----------------------------------------------------------------------
 
+  lock_table_t<selop_which_t> locktab;
+  
+  tamed void 
+  fdcb1 (int fd, selop which, evv_t cb)
+  {
+    tvars {
+      ptr<lock_handle_t<selop_which_t> > lh;
+      selop_which_t sw (fd, which);
+    }
+
+    twait { locktab.acquire (&lh, sw, lock_t::EXCLUSIVE, mkevent ()); }
+    twait { fdcb (fd, which, mkevent ()); }
+    fdcb (fd, which, NULL);
+    lh->release ();
+    cb->trigger ();
+  }
+
+  //-----------------------------------------------------------------------
 
 };
