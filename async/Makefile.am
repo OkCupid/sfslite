@@ -33,7 +33,8 @@ bbuddy.h bitvec.h callback.h cbuf.h dns.h dnsimpl.h dnsparse.h err.h	\
 fdlim.h ihash.h init.h itree.h keyfunc.h list.h msb.h opnew.h		\
 parseopt.h pcre.h qhash.h refcnt.h rxx.h serial.h stllike.h str.h	\
 suio++.h sysconf.h union.h vatmpl.h vec.h rwfd.h litetime.h       	\
-corebench.h callback.h qtailq.h	sfs_select.h rclist.h dynenum.h
+corebench.h callback.h qtailq.h	sfs_select.h rclist.h dynenum.h \
+rctailq.h
 
 #
 # begin sfslite changes
