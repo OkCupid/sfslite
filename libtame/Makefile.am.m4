@@ -59,8 +59,8 @@ mkevent.lo: tame_event_ag.h mkevent.C
 tfork.o:    tame_event_ag.h tame_tfork_ag.h tfork.C
 tfork.lo:   tame_event_ag.h tame_tfork_ag.h tfork.C
 
-io.o: tame_connectors.h
-io.lo: tame_connectors.h
+io.o: tame_connectors.h tame_nlock.h
+io.lo: tame_connectors.h tame_nlock.h
 
 tame_event_ag.h: $(srcdir)/mkevent.pl
 	$(PERL) $(srcdir)/mkevent.pl > $@ || (rm -f $@ && false)
