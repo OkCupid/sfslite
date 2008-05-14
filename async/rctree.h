@@ -30,7 +30,7 @@ public:
   }
   void *v_node () { return _node; }
   
-  void remove_from_list ()
+  void remove_from_tree ()
   {
     assert (_node);
     _node = NULL;
@@ -113,7 +113,7 @@ public:
   void remove (ptr<V> p) {
     mynode_t *n = get_node (p);
     _tree.remove (n);
-    (n->*field).remove_from_list ();
+    (n->*field).remove_from_tree ();
     delete n;
   }
   
