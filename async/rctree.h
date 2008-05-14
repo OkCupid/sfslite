@@ -63,7 +63,7 @@ private:
 public:
 
   rctree_t () {}
-  ~rctree_t () { _tree.deleteall (); }
+  ~rctree_t () { clear (); }
   
   typedef rctree_node_t<K, V, field> mynode_t;
   typedef itree<const K, mynode_t, &mynode_t::_key, &mynode_t::_lnk> mytree_t;
@@ -113,8 +113,48 @@ public:
   void remove (ptr<V> p) {
     mynode_t *n = get_node (p);
     _tree.remove (n);
-    (n->*field).remove_from_tree ();
+    (p->*field).remove_from_tree ();
     delete n;
+  }
+
+  static ptr<V> min_postorder (ptr<V> in) 
+  {
+    ptr<V> ret;
+    mynode_t *n = NULL;
+    if (in) n = get_node (in);
+    mynode_t *out = mytree_t::min_postorder (n);
+    if (out) { ret = out->elem (); }
+    return ret;
+  }
+
+  static ptr<const V> next_postorder (ptr<const V> in)
+  {
+    ptr<const V> ret;
+    const mynode_t *n = NULL;
+    if (in) n = get_node (in);
+    mynode_t *out = mytree_t::next_postorder (n);
+    if (out) { ret = out->elem (); }
+    return ret;
+  }
+
+  static ptr<V> next_postorder (ptr<V> in)
+  {
+    ptr<V> ret;
+    mynode_t *n = NULL;
+    if (in) n = get_node (in);
+    mynode_t *out = mytree_t::next_postorder (n);
+    if (out) { ret = out->elem (); }
+    return ret;
+  }
+
+  void clear ()
+  {
+    mynode_t *n, *nn;
+    for (n = _tree.min_postorder (_tree.root ()); n; n = nn) {
+      nn = _tree.next_postorder (n);
+      remove (n->elem ());
+    }
+    _tree.clear ();
   }
   
   ptr<V> search (typename callback<int, ptr<V> >::ref fn) const 
@@ -127,9 +167,6 @@ public:
     return ret;
   }
   
-  void deleteall () { _tree.deleteall (); }
-
-
 private:
   mytree_t _tree;
 };
