@@ -49,6 +49,7 @@ public:
   const K _key;
   itree_entry<rctree_node_t<K,V,field> > _lnk;
   ptr<V> elem () { return _elm; }
+  ptr<const V> elem () const { return _elm; }
 private:
   ptr<V> _elm;
 };
@@ -117,35 +118,21 @@ public:
     delete n;
   }
 
-  static ptr<V> min_postorder (ptr<V> in) 
-  {
-    ptr<V> ret;
-    mynode_t *n = NULL;
-    if (in) n = get_node (in);
-    mynode_t *out = mytree_t::min_postorder (n);
-    if (out) { ret = out->elem (); }
-    return ret;
+#define POWALKFN(typ,dir)                                                \
+  static ptr<typ V> dir (ptr<typ V> in)                                  \
+  {                                                                      \
+    ptr<typ V> ret;                                                      \
+    typ mynode_t *n = NULL;                                              \
+    if (in && (n = get_node (in)) && (n = mytree_t::dir (n)))            \
+      ret = n->elem ();                                                  \
+    return ret;                                                          \
   }
 
-  static ptr<const V> next_postorder (ptr<const V> in)
-  {
-    ptr<const V> ret;
-    const mynode_t *n = NULL;
-    if (in) n = get_node (in);
-    mynode_t *out = mytree_t::next_postorder (n);
-    if (out) { ret = out->elem (); }
-    return ret;
-  }
+  POWALKFN(, min_postorder);
+  POWALKFN(, next_postorder);
+  POWALKFN(const, next_postorder);
 
-  static ptr<V> next_postorder (ptr<V> in)
-  {
-    ptr<V> ret;
-    mynode_t *n = NULL;
-    if (in) n = get_node (in);
-    mynode_t *out = mytree_t::next_postorder (n);
-    if (out) { ret = out->elem (); }
-    return ret;
-  }
+#undef POWALKFN
 
   void clear ()
   {
@@ -155,6 +142,20 @@ public:
       remove (n->elem ());
     }
     _tree.clear ();
+  }
+
+  ptr<V> operator[] (const K &k) {
+    ptr<V> ret;
+    mynode_t *n = _tree[k];
+    if (n) ret = n->elem ();
+    return ret;
+  }
+
+  ptr<const V> operator[] (const K &k) const {
+    ptr<const V> ret;
+    const mynode_t *n = _tree[k];
+    if (n) ret = n->elem ();
+    return ret;
   }
   
   ptr<V> search (typename callback<int, ptr<V> >::ref fn) const 
