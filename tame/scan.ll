@@ -273,11 +273,13 @@ __LOC__         { return loc_return (); }
 
 <TWAIT_BODY_BASE,TWAIT_BODY>{
 \n			{ ++lineno; return std_ret (T_PASSTHROUGH); }
-[^ gr\t{}\n/]+|[ \tgr/]	{ return std_ret (T_PASSTHROUGH); }
+[^ "gr\t{}\n/]+|[ \tgr/]  { return std_ret (T_PASSTHROUGH); }
 [{]			{ yy_push_state (TWAIT_BODY); 
 			  return std_ret (T_PASSTHROUGH); }
 goto/[ \t\n]		{ return yyerror ("cannot goto within twait{..}"); }
 return/[ \t\n(;]	{ return yyerror ("cannot return withint twait{..}"); }
+\"		        { yy_push_state (QUOTE); 
+                          return std_ret (T_PASSTHROUGH); }
 }
 
 <TWAIT_BODY_BASE>{
