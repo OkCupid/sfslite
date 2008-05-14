@@ -40,11 +40,11 @@ private:
   void *_node;
 };
 
-template<class K, class V, rctree_entry_t<T> T::*field>
+template<class K, class V, rctree_entry_t<V> V::*field>
 class rctree_node_t {
 public:
   rctree_node_t (const K &k, ptr<V> v) : 
-    _key (k), _elm (v) { (e->*field).put_in_list (this); }
+    _key (k), _elm (v) { (v->*field).put_in_list (this); }
 
   const K _key;
   itree_entry<rctree_node_t<K,V,field> > _lnk;
@@ -53,7 +53,7 @@ private:
   ptr<V> _elm;
 };
 
-template<class K, class V, rctree_entry_t<V> T::*field, class C = compare<K> >
+template<class K, class V, rctree_entry_t<V> V::*field, class C = compare<K> >
 class rctree_t {
 private:
   rctree_t (const rctree_t<K, V, field, C> &r);
@@ -66,33 +66,34 @@ public:
   ~rctree_t () { _tree.deleteall (); }
   
   typedef rctree_node_t<K, V, field> mynode_t;
-  typedef itree<K, mynode_t, &mynode_t::_key, &mynode_t::_lnk> mytree_t;
+  typedef itree<const K, mynode_t, &mynode_t::_key, &mynode_t::_lnk> mytree_t;
 
 private:
   
-  static mynode_t *get_node (ptr<T> e) 
+  static mynode_t *get_node (ptr<V> e) 
   { return static_cast<mynode_t *> ( (e->*field).v_node () ); }
-  static const mynode_t *get_node (ptr<const T> e) 
+  static const mynode_t *get_node (ptr<const V> e) 
   { return static_cast<const mynode_t *> ( (e->*field).v_node () ); }
   
-  int search_adapter_cb (callback<int, ptr<T> >::ref fn, const T *el)
+  int search_adapter_cb (typename callback<int, ptr<V> >::ref fn, const V *el)
   {
     return (*fn) (el->elem ());
   }
 
 public:
 
-  ptr<T> root ()
+  ptr<V> root ()
   {
-    ptr<T> ret; 
-    if (_lst.root) ret = _lst.root->elem (); 
+    ptr<V> ret; 
+    mynode_t *r = _tree.root ();
+    if (r) ret = r->elem (); 
     return ret;
   }
   
 #define WALKFN(typ,dir)                                               \
-  static ptr<typ T> up (ptr<typ T> e)                                 \
+  static ptr<typ V> dir (ptr<typ V> e)                                \
   {                                                                   \
-    ptr<typ T> ret;                                                   \
+    ptr<typ V> ret;                                                   \
     typ mynode_t *p, *n;                                              \
     if (e && (p = get_node (e)) && (n = mytree_t::dir(p)))            \
       ret = n->elem ();                                               \
@@ -107,45 +108,18 @@ public:
   WALKFN(const,left)
 #undef WALKFN
 
-  static ptr<T> up (ptr<T> e) 
-  {
-    ptr<T> ret;
-    mynode_t *p, *n;
-    if (e && (p = get_node (e)) && (n = mytree_t::up (p)))
-      ret = n->elem ();
-    return ret;
-  }
-
-  static ptr<const T> right (ptr<const T> e) 
-  {
-    ptr<const T> ret;
-    const mynode_t *p, *n;
-    if (e && (p = get_node (e)) && (n = mytree_t::right (p)))
-      ret = n->elem ();
-    return ret;
-  }
+  void insert (const K &k, ptr<V> n) { _tree.insert (New mynode_t (k, n)); }
   
-  static ptr<T> right (ptr<T> e) 
-  {
-    ptr<T> ret;
-    mynode_t *p, *n;
-    if (e && (p = get_node (e)) && (n = mytree_t::right (p)))
-      ret = n->elem ();
-    return ret;
-  }
-
-  void insert (const K &k, ptr<T> n) { _tree.insert (New mynode_t (k, n)); }
-  
-  void remove (ptr<T> p) {
+  void remove (ptr<V> p) {
     mynode_t *n = get_node (p);
     _tree.remove (n);
     (n->*field).remove_from_list ();
     delete n;
   }
   
-  ptr<T> search (typename callback<int, ptr<T> >::ref fn) const 
+  ptr<V> search (typename callback<int, ptr<V> >::ref fn) const 
   {
-    ptr<T> ret;
+    ptr<V> ret;
     mynode_t *n = _tree.search (wrap (search_adapter_cb, fn));
     if (n) {
       ret = n->elem ();
@@ -157,7 +131,7 @@ public:
 
 
 private:
-  mylist_t _lst;
+  mytree_t _tree;
 };
 
 

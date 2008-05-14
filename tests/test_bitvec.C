@@ -26,7 +26,7 @@
 #include "async.h"
 #include "arc4.h"
 
-#ifdef DMALLOC
+#if 0 /* DMALLOC */
 void
 dmprt (void *p)
 {

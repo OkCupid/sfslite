@@ -1,6 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 # $Id$
 
+LDADD = $(LIBTAME) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC) $(LIBGMP) 
 
 TESTS = test_aes \
 	test_aiod \
@@ -24,7 +25,8 @@ TESTS = test_aes \
 	test_tiger \
 	test_timecb \
 	test_hashcash \
-	test_schnorr
+	test_schnorr \
+	test_rctree
 
 check_PROGRAMS = $(TESTS)
 
@@ -51,6 +53,7 @@ test_srp_SOURCES = test_srp.C
 test_tiger_SOURCES = test_tiger.C
 test_timecb_SOURCES = test_timecb.C
 test_schnorr_SOURCES = test_schnorr.C
+test_rctree_SOURCES = test_rctree.C
 
 $(check_PROGRAMS): $(LDEPS)
 

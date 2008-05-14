@@ -22,11 +22,11 @@ main (int argc, char **argv)
   if (pid == -1)
     fatal ("fork: %m\n");
   else if (pid == 0) {
-    setprogname ("child");
+    setprogname ( strdup ("child"));
     xfd = fds[0];
     close (fds[1]);
   } else {
-    setprogname ("parent");
+    setprogname ( strdup ("parent"));
     xfd = fds[1];
     close (fds[0]);
   }

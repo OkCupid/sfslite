@@ -11,7 +11,7 @@
 
 #define NTEST 6U
 struct tv_t {
-  char *in;			/* input */
+  const char *in;	        	/* input */
   u_int8_t res[sha1ctx::hashsize]; /* expected result */
 } tv[NTEST] = {
   {
