@@ -395,9 +395,6 @@ dump_tmpl_proc (const rpc_proc *rc)
   if (rc->arg != "void") arg = rc->arg;
   if (rc->res != "void") res = rc->res;
   str spc = "    ";
-  str sig1 = "template<class C, class E> void";
-  str prm1 = "C c";
-
 
   dump_tmpl_proc_1 (arg, res, fn, spc, true, rc->id);
   if (arg) 
