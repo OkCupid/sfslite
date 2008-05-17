@@ -60,9 +60,9 @@ remote_host_t::dostuff_private (int port, cbb cv)
     ptr<aclnt> cli;
     vec<int> res;
     vec<clnt_stat> errs;
-    int n_tot (40), window_sz (5), i;
-    bool err_occurred (false);
-    rendezvous_t<int> window;
+    int n_tot (40), window_sz (5), sent (0), recv (0);
+    bool ok (true);
+    rendezvous_t<int> rv;
     int return_id;
     size_t test (_self->_some_class_member + 2);
   }
@@ -77,46 +77,36 @@ remote_host_t::dostuff_private (int port, cbb cv)
 
   if (fd < 0) {
     warn ("%s:%d: connection failed: %m\n", _name.cstr(), port);
-    err_occurred = true;
+    ok = false;
   } else {
     res.setsize (n_tot);
     errs.setsize (n_tot);
     x = axprt_stream::alloc (fd);
     cli = aclnt::alloc (x, ex_prog_1);
 
-    for (i = 0; i < window_sz && i < n_tot; i++) {
-
-      // launch an asychronous function call, but don't
-      // block on its return. Associate the call with the 
-      // join group 'window' and the index value 'i'
-      cli->call (EX_RANDOM, NULL, &res[i], mkevent(window,i,errs[i]) );
-    }
-
-    // a join is needed for every call that returns
-    while (window.n_triggers_left()) {
-
-      // Block until a call has returned; when it has, get
-      // the index variable associated with the call, and assign
-      // it to 'return_id' for the scope of the JOIN block.
-      twait (window, return_id);
-      if (errs[return_id]) {
-	err_occurred = true;
-	warn << "RPC error: " << errs[return_id] << "\n";
+    while ((ok && recv < n_tot) || (!ok && recv < sent)) {
+      
+      if (sent < n_tot && sent - recv < window_sz && ok) {
+	RPC::ex_prog_1::ex_random (cli, &res[sent], 
+				   mkevent(rv,sent,errs[sent]));
+	sent++;
       } else {
-	warn << "Success " << return_id << ": " << res[return_id] << "\n";
-	
-	// in the common case, for every call that returns,
-	// another should be launched. but don't bother launching
-	// more if an error occurred.
-	if (i < n_tot && !err_occurred) {
-	  cli->call (EX_RANDOM, NULL, &res[i], mkevent (window,i, errs[i]));
-	  i++;
+	// Block until a call has returned; when it has, get
+	// the index variable associated with the call, and assign
+	// it to 'return_id' for the scope of the JOIN block.
+	twait (rv, return_id);
+	if (errs[return_id]) {
+	  ok = false;
+	  warn << "RPC error: " << errs[return_id] << "\n";
+	} else {
+	  warn << "Success " << return_id << ": " << res[return_id] << "\n";
 	}
+	recv++;
       }
     }
   }
   warn << "All done...\n";
-  TRIGGER (cv, !err_occurred);
+  TRIGGER (cv, ok);
 }
 
 static void finish (bool rc)
