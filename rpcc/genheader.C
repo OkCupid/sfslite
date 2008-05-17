@@ -359,6 +359,55 @@ tolower (const str &in)
 }
 
 static void
+dump_tmpl_proc_1 (const str &arg, const str &res, const str &fn,
+		  const str &spc, const str &dec1, const str &dec2,
+		  const str &rpc)
+{
+    
+  aout << spc << "template<class C, class E> void\n"
+       << spc << fn << "(C c, ";
+  if (arg) 
+    aout << "const " << arg << " " << dec1 << "arg, ";
+  if (res)
+    aout << res << " *res, ";
+  aout << "E cb)\n";
+
+  aout << spc << "{ c->call (" << rpc << ", ";
+
+  if (arg)
+    aout << dec2 << "arg";
+  else
+    aout << "NULL";
+  aout << ", ";
+
+  if (res)
+    aout << "res";
+  else
+    aout << "NULL";
+
+  aout << ", cb); }\n";
+}
+
+static void
+dump_tmpl_proc (const rpc_proc *rc)
+{
+  str arg, res;
+  str fn = tolower (rc->id);
+  if (rc->arg != "void") arg = rc->arg;
+  if (rc->res != "void") res = rc->res;
+  str spc = "    ";
+  str sig1 = "template<class C, class E> void";
+  str prm1 = "C c";
+
+
+  dump_tmpl_proc_1 (arg, res, fn, spc, "*", "", rc->id);
+  if (arg) 
+    dump_tmpl_proc_1 (arg, res, fn, spc, "&", "&", rc->id);
+  aout << "\n";
+
+}
+
+static void
 dumpnamespace (const rpc_sym *s)
 {
   const rpc_namespace *ns = s->snamespace.addr ();
@@ -374,28 +423,9 @@ dumpnamespace (const rpc_sym *s)
       aout << "  namespace " << n << " {\n";
       for (const rpc_proc *rc = rv->procs.base ();
 	   rc < rv->procs.lim (); rc++) {
-	str arg, res;
-	aout << "    template<class C, class E> void\n"
-	     << "    " << tolower (rc->id) << " (C cli, ";
-	if (rc->arg != "void") {
-	  arg = "arg";
-	  aout << "const " << rc->arg << " *arg, ";
-	} else {
-	  arg = "NULL";
-	}
 
-	if (rc->res != "void") {
-	  res = "res";
-	  aout  << rc->res << " *res, ";
-	} else {
-	  res = "NULL";
-	}
+	dump_tmpl_proc (rc);
 
-	aout << "E cb)\n";
-
-	aout << "    { cli->call (::" << rc->id << ", "
-	     << arg << ", "
-	     << res << ", cb); }\n\n";
       }
       aout << "  };\n"; // rpcprog (p, v);
     }
