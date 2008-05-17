@@ -319,9 +319,8 @@ dumptypedef (const rpc_sym *s)
 }
 
 static void
-dumpprog (const rpc_sym *s)
+dumpprog (const rpc_program *rs)
 {
-  const rpc_program *rs = s->sprogram.addr ();
   // aout << "\nenum { " << rs->id << " = " << rs->val << " };\n";
   aout << "#ifndef " << rs->id << "\n"
        << "#define " << rs->id << " " << rs->val << "\n"
@@ -350,6 +349,52 @@ dumpprog (const rpc_sym *s)
 }
 
 static void
+dumpnamespace (const rpc_sym *s)
+{
+  const rpc_namespace *ns = s->snamespace.addr ();
+  for (size_t i = 0; i < ns->progs.size (); i++) {
+    dumpprog (&ns->progs[i]);
+  }
+  aout << "namespace " << ns->id << " {\n";
+  for (const rpc_program *rp = ns->progs.base (); 
+       rp < ns->progs.lim (); rp++) {
+    aout << "  namespace p_" << rp->id << " {\n";
+    for (const rpc_vers *rv = rp->vers.base ();
+	 rv < rp->vers.lim (); rp++ ) {
+      aout << "    namespace v" << rv->val << " {\n";
+      for (const rpc_proc *rc = rv->procs.base ();
+	   rc < rv->procs.lim (); rc++) {
+	str arg, res;
+	aout << "      template<class C, class E> void\n"
+	     << "      " << rc->id << " (C cli, ";
+	if (rc->arg != "void") {
+	  arg = "arg";
+	  aout << "const " << rc->arg << " *arg, ";
+	} else {
+	  arg = "NULL";
+	}
+
+	if (rc->res != "void") {
+	  res = "res";
+	  aout  << rc->res << " *res, ";
+	} else {
+	  res = "NULL";
+	}
+
+	aout << "E cb)\n";
+
+	aout << "      { cli->call (::" << rc->id << ", "
+	     << arg << ", "
+	     << res << ", cb); }\n\n";
+      }
+      aout << "    };\n"; //rv->val
+    }
+    aout << "  };\n"; // rp->id
+  }
+  aout << "};\n"; // ns->id
+}
+
+static void
 dumpsym (const rpc_sym *s)
 {
   switch (s->type) {
@@ -370,7 +415,10 @@ dumpsym (const rpc_sym *s)
     dumptypedef (s);
     break;
   case rpc_sym::PROGRAM:
-    dumpprog (s);
+    dumpprog (s->sprogram);
+    break;
+  case rpc_sym::NAMESPACE:
+    dumpnamespace (s);
     break;
   case rpc_sym::LITERAL:
     aout << *s->sliteral << "\n";

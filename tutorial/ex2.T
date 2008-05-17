@@ -11,7 +11,7 @@ try_rpc (str h, int port, evb_t cb)
 {
   tvars {
     bool ret (false);
-    int fd, r1;
+    int32_t fd, r1;
     ptr<axprt_stream> x;
     ptr<aclnt> cli;
  
@@ -30,9 +30,9 @@ try_rpc (str h, int port, evb_t cb)
     a2 = "go hang a salami i'm a lasagna hog";
     
     twait {
-      cli->call (EX_RANDOM, NULL, &r1, mkevent(e1));
-      cli->call (EX_REVERSE, &a2, &r2, mkevent(e2));
-      cli->call (EX_STRUCT, NULL, &r3, mkevent(e3));
+      me::p_EX_PROG::v1::EX_RANDOM (cli, &r1, mkevent (e1));
+      me::p_EX_PROG::v1::EX_REVERSE (cli, &a2, &r2, mkevent(e2));
+      me::p_EX_PROG::v1::EX_STRUCT (cli, &r3, mkevent(e3));
     }
     if (e1 || e2 || e3) {
       warn << "at least 1 RPC failed!\n";

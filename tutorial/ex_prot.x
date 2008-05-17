@@ -6,6 +6,7 @@ struct ex_struct_t {
 	unsigned 	u;
 };
 
+namespace me {
 program EX_PROG {
 	version EX_VERS {
 		void
@@ -24,3 +25,4 @@ program EX_PROG {
 		EX_RANDOM2 (unsigned) = 4;
 	} = 1;
 } = 31313;
+};

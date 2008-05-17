@@ -79,6 +79,14 @@ mktbl (const rpc_program *rs)
 }
 
 static void
+mkns (const rpc_namespace *ns)
+{
+  for (const rpc_program *rp = ns->progs.base (); rp < ns->progs.lim (); rp++) {
+    mktbl (rp);
+  }
+}
+
+static void
 dumpsym (const rpc_sym *s)
 {
   switch (s->type) {
@@ -96,6 +104,9 @@ dumpsym (const rpc_sym *s)
     break;
   case rpc_sym::PROGRAM:
     mktbl (s->sprogram.addr ());
+    break;
+  case rpc_sym::NAMESPACE:
+    mkns (s->snamespace);
     break;
   default:
     break;
