@@ -377,16 +377,12 @@ dump_tmpl_proc_1 (const str &arg, const str &res, const str &fn,
 
   aout << spc << "{ c->call (" << rpc << ", ";
 
-  if (arg)
-    aout << dec2 << "arg";
-  else
-    aout << "NULL";
+  if (arg) aout << dec2 << "arg";
+  else     aout << "NULL";
   aout << ", ";
 
-  if (res)
-    aout << "res";
-  else
-    aout << "NULL";
+  if (res) aout << "res";
+  else     aout << "NULL";
 
   aout << ", cb); }\n";
 }
