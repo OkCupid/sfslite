@@ -34,7 +34,7 @@ void try_rpc (str h, int port, cbb cv)
  
     twait {
       for (i = 0; i < n; i++) {
-        cli->call (EX_RANDOM, NULL, &rv[i], mkevent(ev[i]) );
+	RPC::ex_prog_1::ex_random (cli, &rv[i], mkevent(ev[i]));
       }
     }
     ret = true;

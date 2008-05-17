@@ -348,6 +348,16 @@ dumpprog (const rpc_program *rs)
   aout << "\n";
 }
 
+static str
+tolower (const str &in)
+{
+  strbuf r;
+  for (const char *c = in.cstr (); *c; c++) {
+    r << char (tolower (*c));
+  }
+  return r;
+}
+
 static void
 dumpnamespace (const rpc_sym *s)
 {
@@ -358,15 +368,15 @@ dumpnamespace (const rpc_sym *s)
   aout << "namespace " << ns->id << " {\n";
   for (const rpc_program *rp = ns->progs.base (); 
        rp < ns->progs.lim (); rp++) {
-    aout << "  namespace p_" << rp->id << " {\n";
     for (const rpc_vers *rv = rp->vers.base ();
 	 rv < rp->vers.lim (); rp++ ) {
-      aout << "    namespace v" << rv->val << " {\n";
+      str n = rpcprog (rp, rv);
+      aout << "  namespace " << n << " {\n";
       for (const rpc_proc *rc = rv->procs.base ();
 	   rc < rv->procs.lim (); rc++) {
 	str arg, res;
-	aout << "      template<class C, class E> void\n"
-	     << "      " << rc->id << " (C cli, ";
+	aout << "    template<class C, class E> void\n"
+	     << "    " << tolower (rc->id) << " (C cli, ";
 	if (rc->arg != "void") {
 	  arg = "arg";
 	  aout << "const " << rc->arg << " *arg, ";
@@ -383,13 +393,12 @@ dumpnamespace (const rpc_sym *s)
 
 	aout << "E cb)\n";
 
-	aout << "      { cli->call (::" << rc->id << ", "
+	aout << "    { cli->call (::" << rc->id << ", "
 	     << arg << ", "
 	     << res << ", cb); }\n\n";
       }
-      aout << "    };\n"; //rv->val
+      aout << "  };\n"; // rpcprog (p, v);
     }
-    aout << "  };\n"; // rp->id
   }
   aout << "};\n"; // ns->id
 }

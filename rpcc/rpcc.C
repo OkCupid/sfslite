@@ -289,7 +289,6 @@ get_prog (bool creat)
   rpc_sym *s;
   if (symlist.size () && (s = &symlist.back ()) &&
       s->gettype () == rpc_sym::NAMESPACE) {
-    warn << "namespace!\n";
     if (creat)
       s->snamespace->progs.push_back ();
     r = &s->snamespace->progs.back ();

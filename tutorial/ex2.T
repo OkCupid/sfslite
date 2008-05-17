@@ -30,9 +30,9 @@ try_rpc (str h, int port, evb_t cb)
     a2 = "go hang a salami i'm a lasagna hog";
     
     twait {
-      me::p_EX_PROG::v1::EX_RANDOM (cli, &r1, mkevent (e1));
-      me::p_EX_PROG::v1::EX_REVERSE (cli, &a2, &r2, mkevent(e2));
-      me::p_EX_PROG::v1::EX_STRUCT (cli, &r3, mkevent(e3));
+      RPC::ex_prog_1::ex_random (cli, &r1, mkevent (e1));
+      RPC::ex_prog_1::ex_reverse (cli, &a2, &r2, mkevent(e2));
+      RPC::ex_prog_1::ex_struct (cli, &r3, mkevent(e3));
     }
     if (e1 || e2 || e3) {
       warn << "at least 1 RPC failed!\n";

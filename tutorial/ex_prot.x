@@ -6,7 +6,7 @@ struct ex_struct_t {
 	unsigned 	u;
 };
 
-namespace me {
+namespace RPC {
 program EX_PROG {
 	version EX_VERS {
 		void
