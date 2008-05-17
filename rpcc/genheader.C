@@ -360,9 +360,12 @@ tolower (const str &in)
 
 static void
 dump_tmpl_proc_1 (const str &arg, const str &res, const str &fn,
-		  const str &spc, const str &dec1, const str &dec2,
-		  const str &rpc)
+		  const str &spc, bool argpointer, const str &rpc)
 {
+
+  const char *dec1 = argpointer ? "*" : "&";
+  const char *dec2 = argpointer ? ""  : "&";
+  
     
   aout << spc << "template<class C, class E> void\n"
        << spc << fn << "(C c, ";
@@ -400,9 +403,9 @@ dump_tmpl_proc (const rpc_proc *rc)
   str prm1 = "C c";
 
 
-  dump_tmpl_proc_1 (arg, res, fn, spc, "*", "", rc->id);
+  dump_tmpl_proc_1 (arg, res, fn, spc, true, rc->id);
   if (arg) 
-    dump_tmpl_proc_1 (arg, res, fn, spc, "&", "&", rc->id);
+    dump_tmpl_proc_1 (arg, res, fn, spc, false, rc->id);
   aout << "\n";
 
 }
