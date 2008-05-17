@@ -91,9 +91,9 @@ remote_host_t::dostuff_private (int port, cbb cv)
 				   mkevent(rv,sent,errs[sent]));
 	sent++;
       } else {
-	// Block until a call has returned; when it has, get
+	// wait until a call has returned; when it has, get
 	// the index variable associated with the call, and assign
-	// it to 'return_id' for the scope of the JOIN block.
+	// it to 'return_id' to which finished.
 	twait (rv, return_id);
 	if (errs[return_id]) {
 	  ok = false;
