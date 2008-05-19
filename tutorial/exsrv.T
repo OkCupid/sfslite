@@ -52,8 +52,11 @@ exsrv_t::dispatch (svccb *sbp)
     }
   case EX_RANDOM2:
     {
-      if (*(sbp->Xtmpl getarg<unsigned>()) % 11 == 0) {
-	sbp->reject (PROC_UNAVAIL);
+      RPC::ex_prog_1::ex_random2_srv_t<svccb> x (sbp);
+      unsigned int *i = x.getarg ();
+      
+      if (*i % 11 == 0) {
+	x.reject (PROC_UNAVAIL);
       } else {
 	delaycb (rand () % 5, 0, wrap (reply_rand2, sbp));
       }
@@ -61,8 +64,8 @@ exsrv_t::dispatch (svccb *sbp)
     }
   case EX_REVERSE:
     {
-      ex_str_t *arg = sbp->Xtmpl getarg<ex_str_t> ();
-      str s = *arg;
+      RPC::ex_prog_1::ex_reverse_srv_t<svccb> x (sbp);
+      str s = *x.getarg ();
       ex_str_t ret;
       mstr m (s.len ());
       const char *cp = s.cstr ();
@@ -72,16 +75,17 @@ exsrv_t::dispatch (svccb *sbp)
 	mp--;
       }
       ret = m;
-      sbp->replyref (ret);
+      x.reply (ret);
       break;
     }
 
   case EX_STRUCT:
     {
       ex_struct_t s;
+      RPC::ex_prog_1::ex_struct_srv_t<svccb> x (sbp);
       s.s = "hello, world!";
       s.u = 34444;
-      sbp->replyref (s);
+      x.reply (s);
       break;
     }
   default:

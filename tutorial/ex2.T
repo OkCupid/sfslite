@@ -5,6 +5,13 @@
 #include "parseopt.h"
 #include "arpc.h"
 #include "ex_prot.h"
+#include "tame_rpc.h"
+
+static callbase *
+foo (ptr<aclnt> c, u_int32_t rpc, const void *a, void *r, aclnt_cb cb)
+{
+  return c->call (rpc, a, r, cb);
+}
 
 tamed static void 
 try_rpc (str h, int port, evb_t cb)
@@ -18,6 +25,7 @@ try_rpc (str h, int port, evb_t cb)
     ex_str_t r2, a2;
     ex_struct_t r3;
     clnt_stat e1, e2, e3;
+    callbase *cbase;
   }
 
   twait { tcpconnect (h, port, mkevent(fd)); }
@@ -32,7 +40,12 @@ try_rpc (str h, int port, evb_t cb)
     twait {
       RPC::ex_prog_1::ex_random (cli, &r1, mkevent (e1));
       RPC::ex_prog_1::ex_reverse (cli, a2, &r2, mkevent(e2));
-      RPC::ex_prog_1::ex_struct (cli, &r3, mkevent(e3));
+
+      // Calling can be more general than just (void)call() methods.
+      // Need to specify callbase* unfortunately; can't be inferred
+      // from the type of tame_rpc...
+      cbase = RPC::ex_prog_1::w_ex_struct<callbase *> 
+	(wrap (tame_rpc::rcall, cli), &r3, mkevent(e3));
     }
     if (e1 || e2 || e3) {
       warn << "at least 1 RPC failed!\n";

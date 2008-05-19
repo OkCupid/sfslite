@@ -110,6 +110,7 @@ sfsinclude_HEADERS = \
 	tame_io.h \
 	tame_aio.h \
 	tame_rpcserver.h \
+	tame_rpc.h \
 	tame_out_h
 
 .PHONY: tameclean
