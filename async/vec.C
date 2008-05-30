@@ -18,11 +18,8 @@ vec_resize_fn (u_int nalloc, u_int nwanted, int objid)
   if (vec_resizer) {
     ret = vec_resizer->resize (nalloc, nwanted, objid);
   } else {
+    // The original resize operation from SFS
     ret = (1 << fls (max (nalloc, nwanted)));
   }
-  /*
-  fprintf (stderr, "vec_resize_fn(%u,%u,%d) -> %u\n",
-	   nalloc, nwanted, objid, ret);
-  */
   return ret;
 }

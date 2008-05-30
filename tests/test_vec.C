@@ -21,8 +21,11 @@ my_resizer_t::resize (u_int nalloc, u_int nwanted, int objid)
 
   exponent = ((exponent - 1) / step + 1) * step;
   size_t ret = 1 << exponent;
+
+  // If you want to know the pattern...
   warn << "resize: " << nalloc << "," << nwanted << "," << objid 
        << " -> " << ret << "\n";
+
   return ret;
 }
 
