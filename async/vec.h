@@ -30,6 +30,21 @@
 #include "array.h"
 #include "msb.h"
 
+size_t vec_resize_fn (u_int nwanted, u_int nalloc, int objid);
+class vec_resizer_t {
+public:
+   virtual ~vec_resizer_t () {}
+   virtual size_t resize (u_int nalloc, u_int nwanted, int objid) = 0;
+};
+void set_vec_resizer (vec_resizer_t *v);
+
+template<class T>
+struct vec_obj_id_t 
+{
+  vec_obj_id_t () {}
+  int operator() (void) const { return 0; }
+};
+
 template<class T, size_t N> struct vec_base {
   typedef typename toarray(T) elm_t;
 protected:
@@ -81,6 +96,8 @@ protected:
   using base_t::limp;
   using base_t::def_basep;
   using base_t::def_limp;
+
+  vec_obj_id_t<T> _vec_obj_id;
 
   void move (elm_t *dst) {
     if (dst == firstp)
@@ -143,7 +160,7 @@ public:
     size_t nalloc = limp - basep;
     size_t nwanted = lastp - firstp + n;
     if (nwanted > nalloc / 2) {
-      nalloc = 1 << fls (max (nalloc, nwanted));
+      nalloc = vec_resize_fn (nalloc, nwanted, _vec_obj_id());
       elm_t *obasep = basep;
       move (static_cast<elm_t *> (txmalloc (nalloc * sizeof (elm_t))));
       limp = basep + nalloc;
