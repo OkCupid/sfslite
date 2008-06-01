@@ -1,9 +1,13 @@
 
+// -*- c++ -*-
+
+#include "list.h"
+#include "vec.h"
+
 namespace cgc {
 
   class v_ptrslot_t;
 
-  typedef tailq<memslot_t, &memslot_t::_next> memslot_list_t;
 
   class memslot_t {
   public:
@@ -32,23 +36,28 @@ namespace cgc {
       _sz = ms->sz;
     }
 
-    template<class T> void
-    finalize ()
-    {
-      data<T> ()->~T();
-      memslot_list_t::remove (this);
-    }
+    template<class T> void finalize ();
 
+  };
+
+  typedef tailq<memslot_t, &memslot_t::_next> memslot_list_t;
+
+  struct active_ptrslot_t {
+    active_ptrslot_t (memslot_t *ms) : _ms (ms), _count (0) {}
+    memslot_t *_ms;
+    u_int _count;
   };
 
   class v_ptrslot_t {
   public:
-    v_ptrslot_t (memslot_t *m) : _ms (m), _count (1) {}
-    void set_mem_slot (memslot_t *ms) { _ms = ms; }
-    memslot_t *memslot () const { return _ms; }
+    v_ptrslot_t (memslot_t *m) : _slot (m) {}
+    void set_mem_slot (memslot_t *ms) { _slot._ms = ms; }
+    memslot_t *memslot () const { return _slot._ms; }
   protected:
-    memslot_t *_ms;
-    u_int _count;
+    union {
+      active_ptrslot_t _slot;
+      tailq_entry<v_ptrslot_t> _free_lnk;
+    };
   };
 
   template<class T>
@@ -58,35 +67,34 @@ namespace cgc {
 
     T *obj () const 
     { 
-      assert (_count > 0); 
-      return _ms->data<T> (); 
+      assert (_slot._count > 0); 
+      return _slot._ms->data<T> (); 
     }
 
     T *lim () const
     {
-      assert (_count > 0);
-      return _ms->lim<T> ();
+      assert (_slot._count > 0);
+      return _slot._ms->lim<T> ();
     }
 
-    void rc_inc () { _count++; }
+    void rc_inc () { _slot._count++; }
 
     bool rc_dec () {
       bool ret;
 
-      assert (_count > 0);
-      --_count;
-      if (_count == 0) {
-	_ms->finalize<T> ();
+      assert (_slot._count > 0);
+      --_slot._count;
+      if (_slot._count == 0) {
+	_slot._ms->finalize<T> ();
 	ret = false;
       } else {
 	ret = true;
       }
       return ret;
     }
-
-  private:
-    void *_obj;
   };
+
+  typedef tailq<v_ptrslot_t, &v_ptrslot_t::_free_link> ptrslot_freelist_t;
 
   template<class T>
   class ptr {
@@ -233,7 +241,15 @@ namespace cgc {
     size_t _sz;
 
     memslot_list_t _memslots;
-    vec<v_ptrslot_t *> _free_ptr_slots;
+    ptrslot_freelist_t _free_ptrslots;
   };
+
+
+  template<class T>
+  memslot_t::finalize ()
+  {
+    data<T> ()->~T();
+    memslot_list_t::remove (this);
+  }
 
 };
