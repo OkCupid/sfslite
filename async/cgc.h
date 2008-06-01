@@ -1,6 +1,8 @@
 
 // -*- c++ -*-
 
+#include "refcnt.h"
+#include "callback.h"
 #include "list.h"
 #include "vec.h"
 
@@ -16,24 +18,29 @@ namespace cgc {
     size_t _sz;
     u_int8_t _data[0];
 
-    static size (size_t s) { return sizeof (memslot_t) + s; }
+    static size_t size (size_t s) { return sizeof (memslot_t) + s; }
     size_t size () const { return size (_sz); }
 
-    u_int8_t *v_data () const { return _data; }
+    u_int8_t *v_data () { return _data; }
+    const u_int8_t *v_data () const { return _data; }
     void reseat ();
 
     template<class T> T *
+    data () { return reinterpret_cast<T *> (_data); }
+    template<class T> const T *
     data () const { return reinterpret_cast<T *> (_data); }
 
     template<class T> T *
-    lim () const { return reinterpret_cast<T *> (_data + s); }
+    lim () { return reinterpret_cast<T *> (_data + _sz); }
+    template<class T> const T *
+    lim () const { return reinterpret_cast<T *> (_data + _sz); }
 
     void
     copy (const memslot_t *ms)
     {
       _ptrslot = ms->_ptrslot;
       memcpy (_data, ms->_data, ms->_sz);
-      _sz = ms->sz;
+      _sz = ms->_sz;
     }
 
     template<class T> void finalize ();
@@ -42,59 +49,53 @@ namespace cgc {
 
   typedef tailq<memslot_t, &memslot_t::_next> memslot_list_t;
 
-  struct active_ptrslot_t {
-    active_ptrslot_t (memslot_t *ms) : _ms (ms), _count (0) {}
-    memslot_t *_ms;
-    u_int _count;
-  };
-
   class v_ptrslot_t {
   public:
-    v_ptrslot_t (memslot_t *m) : _slot (m) {}
-    void set_mem_slot (memslot_t *ms) { _slot._ms = ms; }
-    memslot_t *memslot () const { return _slot._ms; }
+    v_ptrslot_t (memslot_t *m) : _ms (m), _count (1) {}
+    void set_mem_slot (memslot_t *ms) { _ms = ms; }
+    memslot_t *memslot () const { return _ms; }
+    void init (memslot_t *m, int c)  { _ms = m; _count = c; }
+    int count() const { return _count; }
+    void mark_free () { _count = -1; }
   protected:
-    union {
-      active_ptrslot_t _slot;
-      tailq_entry<v_ptrslot_t> _free_lnk;
-    };
+    memslot_t *_ms;
+    int _count;
   };
 
   template<class T>
   class ptrslot_t : v_ptrslot_t {
   public:
-    ptrslot (memslot_t *m) : v_ptrslot_t (m) {}
+    ptrslot_t (memslot_t *m) : v_ptrslot_t (m) {}
 
     T *obj () const 
     { 
-      assert (_slot._count > 0); 
-      return _slot._ms->data<T> (); 
+      assert (_count > 0); 
+      return _ms->data<T> (); 
     }
 
     T *lim () const
     {
-      assert (_slot._count > 0);
-      return _slot._ms->lim<T> ();
+      assert (_count > 0);
+      return _ms->lim<T> ();
     }
 
-    void rc_inc () { _slot._count++; }
+    void rc_inc () { _count++; }
 
     bool rc_dec () {
       bool ret;
 
-      assert (_slot._count > 0);
-      --_slot._count;
-      if (_slot._count == 0) {
-	_slot._ms->finalize<T> ();
+      assert (_count > 0);
+      --_count;
+      if (_count == 0) {
+	_ms->finalize<T> ();
 	ret = false;
       } else {
 	ret = true;
       }
       return ret;
     }
-  };
 
-  typedef tailq<v_ptrslot_t, &v_ptrslot_t::_free_link> ptrslot_freelist_t;
+  };
 
   template<class T>
   class ptr {
@@ -104,7 +105,7 @@ namespace cgc {
 
     T *volatile_ptr () const
     {
-      if (!_ptr_slot) return NULL;
+      if (!_ptrslot) return NULL;
       else return obj ();
     }
 
@@ -127,14 +128,14 @@ namespace cgc {
     ptr (ptrslot_t<T> *p) : _ptrslot (p) { if (p) p->rc_inc (); }
     
   private:
-    virtual T *obj () { return _ptrslot->obj<T> (); }
+    virtual T *obj () { return _ptrslot->obj (); }
     virtual void v_clear () {}
     ptrslot_t<T> *_ptrslot;
   };
 
 
   template<class T>
-  class aptr : class ptr<T> {
+  class aptr : public ptr<T> {
   public:
     aptr () : ptr<T> (), _offset (0) {}
     aptr (size_t s) : ptr<T> (), _offset (s) {}
@@ -168,8 +169,8 @@ namespace cgc {
       return ret;
     }
 
-    aptr<T> operator++ (size s) { return (*this) += 1; }
-    aptr<T> operator-- (size s) { return (*this) -= 1; }
+    aptr<T> operator++ (size_t s) { return (*this) += 1; }
+    aptr<T> operator-- (size_t s) { return (*this) -= 1; }
 
     aptr<T> &operator+= (size_t s) 
     {
@@ -185,21 +186,33 @@ namespace cgc {
       return (*this);
     }
 
-#define RELOP(op) \
-    bool operator##op (const aptr<T> &p) const \
-    { \
-      assert (_ptrslot == p._ptrslot); \
-      return (_offset op p._offset);  \
+    bool operator< (const aptr<T> &p) const 
+    { 
+      assert (_ptrslot == p._ptrslot);
+      return (_offset < p._offset); 
     } 
-    RELOP(<)
-    RELOP(<=)
-    RELOP(>)
-    RELOP(>=)
-#undef RELOP
+
+    bool operator<= (const aptr<T> &p) const 
+    { 
+      assert (_ptrslot == p._ptrslot);
+      return (_offset <= p._offset); 
+    }
+ 
+    bool operator>= (const aptr<T> &p) const 
+    { 
+      assert (_ptrslot == p._ptrslot);
+      return (_offset >= p._offset); 
+    } 
+
+    bool operator> (const aptr<T> &p) const 
+    { 
+      assert (_ptrslot == p._ptrslot);
+      return (_offset > p._offset); 
+    } 
 
     bool inbounds ()
     {
-      return (_ptrslot->obj<T>() + _offset <= _ptrslot->lim<T> ());
+      return (_ptrslot->obj() + _offset <= _ptrslot->lim());
     }
 
   protected:
@@ -210,7 +223,7 @@ namespace cgc {
     T *obj ()
     {
       assert (inbounds ());
-      return (_ptrslot->obj<T> + _offset);
+      return (_ptrslot->obj() + _offset);
     }
 
     void v_clear () { _offset = 0; }
@@ -219,33 +232,94 @@ namespace cgc {
     size_t _offset;
   };
 
+  template<class T>
+  class simple_stack_t {
+  public:
+
+    enum { defsize = 0x10 } ;
+
+    simple_stack_t () 
+      : _base (New T [defsize]),
+	_nxt (0),
+	_size (defsize) {}
+
+    ~simple_stack_t () { delete [] _base; }
+
+    void push_back (const T &t)
+    {
+      reserve ();
+      assert (_nxt < _size);
+      _base[_nxt++] = t;
+    }
+
+    size_t size () const { return _size; }
+    
+    T pop_back () 
+    {
+      assert (_nxt > 0);
+      T ret = _base[--_nxt];
+      return ret;
+    }
+
+    T back () const
+    {
+      assert (_nxt > 0);
+      return _base[_nxt-1];
+    }
+
+    void reserve ()
+    {
+      if (_nxt == _size) {
+	size_t newsz = _size * 2;
+	T *nb = New T[newsz];
+	for (size_t i = 0; i < _nxt ; i++) {
+	  nb[i] = _base[i];
+	}
+	delete [] _base;
+	_base = nb;
+	_size = newsz;
+      }
+    }
+
+    
+  private:
+    T *_base;
+    size_t _nxt, _size;
+  };
+
   class arena_t {
   public:
     arena_t (u_int8_t *base, size_t sz) 
       : _base (base),
 	_top (_base + sz),
 	_nxt_ptrslot (_base),
-	_next_memslot (_top - sizeof (memslot_t)),
+	_nxt_memslot (_top - sizeof (memslot_t)),
 	_sz (sz)
     {}
 
     v_ptrslot_t *alloc (size_t sz);
+    template<class T> ptrslot_t<T> *alloc ();
 
     void gc (void);
+
+  protected:
+    v_ptrslot_t *get_free_ptrslot (void);
+    void collect_ptrslots (void);
+    void compact_memslots (void);
 
   private:
     u_int8_t *_base;
     u_int8_t *_top;
     u_int8_t *_nxt_ptrslot;
-    u_int8_t *_next_memslot;
+    u_int8_t *_nxt_memslot;
     size_t _sz;
 
     memslot_list_t _memslots;
-    ptrslot_freelist_t _free_ptrslots;
+    simple_stack_t<v_ptrslot_t *> _free_ptrslots;
   };
 
 
-  template<class T>
+  template<class T> void
   memslot_t::finalize ()
   {
     data<T> ()->~T();

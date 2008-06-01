@@ -6,16 +6,30 @@ namespace cgc {
   void memslot_t::reseat () { _ptrslot->set_mem_slot (this); }
 
   v_ptrslot_t *
+  arena_t::get_free_ptrslot ()
+  {
+    v_ptrslot_t *ret = NULL;
+    if (_free_ptrslots.size ()) {
+      ret = _free_ptrslots.pop_back ();
+    } else {
+     ret = reinterpret_cast<v_ptrslot_t *> (_nxt_ptrslot);
+     _nxt_ptrslot += sizeof (*ret);
+    }
+    return ret;
+  }
+
+  v_ptrslot_t *
   arena_t::alloc (size_t sz)
   {
     v_ptrslot_t *res = NULL;
     if (memslot_t::size (sz) + _nxt_memslot <= _nxt_ptrslot) {
       memslot_t *ms = reinterpret_cast<memslot_t *> (_nxt_memslot);
       v_ptrslot_t *ps = reinterpret_cast<v_ptrslot_t *> (_nxt_ptrslot);
+      
       ms->_sz = sz;
       ms->_ptrslot = ps;
-      _ps->_ms = ms;
-      _ps->_count = 1;
+
+      ps->init (ms, 1);
 
       _nxt_memslot += ms->size ();
       _nxt_ptrslot += sizeof (*ps);
@@ -24,13 +38,13 @@ namespace cgc {
     return res;
   }
 
+  template<class T>
   ptrslot_t<T> *
-  arena_t::alloc (size_t n)
+  arena_t::alloc ()
   {
-
-
+    v_ptrslot_t *v = alloc (sizeof (T));
+    return reinterpret_cast<ptrslot_t<T> *> (v);
   }
-
   
   void
   arena_t::collect_ptrslots (void)
@@ -40,17 +54,18 @@ namespace cgc {
     v_ptrslot_t *last_used = NULL;
 
     for ( ; p >= last; p--) {
-      if (p->_count == 0) {
+      if (p->count () == 0) {
+	p->mark_free ();
 	_free_ptrslots.push_back (p);
       } else {
-	_last_used = p;
+	last_used = p;
       }
     }
 
-    if (_last_used > _last) {
-      _last = _last_used;
-      _nxt_ptrslot = reinterpret_cast<u_int8_t *> (_last - 1);
-      while (_free_ptrslots.size () && _free_ptrslots.back () > _last)
+    if (last_used > last) {
+      last = last_used;
+      _nxt_ptrslot = reinterpret_cast<u_int8_t *> (last - 1);
+      while (_free_ptrslots.size () && _free_ptrslots.back () > last)
 	_free_ptrslots.pop_back ();
     }
 
@@ -68,8 +83,8 @@ namespace cgc {
     while (m) {
       n = _memslots.next (m);
       _memslots.remove (m);
+      memslot_t *ns = reinterpret_cast<memslot_t *> (p);
       if (m->v_data () > p) {
-	memslot_t *ns = reinterpret_cast<memslot_t *> (p);
 	ns->copy (m);
 	ns->reseat ();
 	p += ns->size ();
