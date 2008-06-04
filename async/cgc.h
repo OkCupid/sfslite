@@ -44,13 +44,7 @@ namespace cgc {
     template<class T> const T *
     lim () const { return reinterpret_cast<T *> (_data + _sz); }
 
-    void
-    copy (const memslot_t *ms)
-    {
-      _ptrslot = ms->_ptrslot;
-      memcpy (_data, ms->_data, ms->_sz);
-      _sz = ms->_sz;
-    }
+    void copy (const memslot_t *ms);
 
     template<class T> void finalize ();
   };
