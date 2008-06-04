@@ -100,7 +100,8 @@ namespace cgc {
 
       // Hack; Specy a random type here, because the size of the 
       // underlying object does not depend on sizeof(T) [ T = int below ].
-      bigptr_t<int> *bp = reinterpret_cast<bigptr_t<int> *> (_nxt_ptrslot);
+      // Use placement new to place this object into the mem given.
+      bigptr_t<int> *bp = new (_nxt_ptrslot) bigptr_t<int> (ms);
 
       // What we care about is this pointer anyway, but make sure C++
       // has satisfied its object layout constraints.
@@ -111,10 +112,8 @@ namespace cgc {
       ms->_sz = sz;
       ms->_ptrslot = res;
 
-      res->init (ms, 1);
-
       _nxt_memslot += ms->size ();
-      _nxt_ptrslot += sizeof (*bp);
+      _nxt_ptrslot -= sizeof (*bp);
       _memslots.insert_tail (ms);
     }
     return res;
