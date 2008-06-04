@@ -75,6 +75,10 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
+#define ALIGNSZ (sizeof(void *))
+#define ALIGN(x) \
+  (((x) + ALIGNSZ) & ~ALIGNSZ)
+
   v_ptrslot_t *
   arena_t::alloc (size_t sz)
   {
@@ -82,6 +86,8 @@ namespace cgc {
     if (memslot_t::size (sz) + _nxt_memslot <= _nxt_ptrslot) {
       memslot_t *ms = reinterpret_cast<memslot_t *> (_nxt_memslot);
       v_ptrslot_t *ps = reinterpret_cast<v_ptrslot_t *> (_nxt_ptrslot);
+
+      sz = ALIGN(sz);
       
       ms->_sz = sz;
       ms->_ptrslot = ps;

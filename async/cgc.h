@@ -17,9 +17,14 @@ namespace cgc {
 
   class memslot_t {
   public:
+
+    // Make sure these 3 elements are all aligned, which they are
+    // since all are pointers and/or size_t's.  Might want to revisit
+    // this assumption.
     tailq_entry<memslot_t> _next;
     v_ptrslot_t *_ptrslot;
     size_t _sz;
+
     memptr_t _data[0];
 
     static size_t size (size_t s) { return sizeof (memslot_t) + s; }
