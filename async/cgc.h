@@ -13,6 +13,7 @@ namespace cgc {
 
   class v_ptrslot_t;
 
+  //=======================================================================
 
   class memslot_t {
   public:
@@ -47,10 +48,13 @@ namespace cgc {
     }
 
     template<class T> void finalize ();
-
   };
 
+  //=======================================================================
+
   typedef tailq<memslot_t, &memslot_t::_next> memslot_list_t;
+
+  //=======================================================================
 
   class v_ptrslot_t {
   public:
@@ -65,14 +69,22 @@ namespace cgc {
     int _count;
   };
 
+  //=======================================================================
+
   template<class T>
-  class ptrslot_t : v_ptrslot_t {
+  class ptrslot_t : public v_ptrslot_t {
   public:
     ptrslot_t (memslot_t *m) : v_ptrslot_t (m) {}
 
-    T *obj () const 
+    T *obj () 
     { 
       assert (_count > 0); 
+      return _ms->data<T> (); 
+    }
+    
+    const T *obj () const
+    {
+      assert (_count > 0);
       return _ms->data<T> (); 
     }
 
@@ -100,6 +112,10 @@ namespace cgc {
 
   };
 
+  //=======================================================================
+
+  template<class T> class allocator_t;
+
   template<class T>
   class ptr {
   public:
@@ -112,7 +128,8 @@ namespace cgc {
       else return obj ();
     }
 
-    T *operator-> () const { assert (_ptrslot); return obj(); }
+    const T *operator-> () const { assert (_ptrslot); return obj(); }
+    T *operator-> () { assert (_ptrslot); return obj(); }
     T &operator* () const { assert (_ptrslot); return obj(); }
 
     ptr<T> &operator= (ptr<T> &p)
@@ -124,18 +141,28 @@ namespace cgc {
       return (*this);
     }
 
-    bool operator== (const ptr<T> &p) const { return _ptrslot == p._ptrslot; }
-    bool operator== (const ptr<T> &p) const { return ! ( (*this) == p); }
+    ptr<T> &operator= (int i)
+    {
+      assert (i == 0);
+      if (_ptrslot) _ptrslot->rc_dec ();
+      v_clear ();
+      return (*this);
+    }
 
-  protected:
-    ptr (ptrslot_t<T> *p) : _ptrslot (p) { if (p) p->rc_inc (); }
+
+    bool operator== (const ptr<T> &p) const { return _ptrslot == p._ptrslot; }
+    bool operator!= (const ptr<T> &p) const { return ! ( (*this) == p); }
     
+    friend class allocator_t<T>;
+  protected:
+    explicit ptr (ptrslot_t<T> *p) : _ptrslot (p) { if (p) p->rc_inc (); }
   private:
     virtual T *obj () { return _ptrslot->obj (); }
     virtual void v_clear () {}
     ptrslot_t<T> *_ptrslot;
   };
 
+  //=======================================================================
 
   template<class T>
   class aptr : public ptr<T> {
@@ -235,6 +262,8 @@ namespace cgc {
     size_t _offset;
   };
 
+  //=======================================================================
+
   template<class T>
   class simple_stack_t {
   public:
@@ -283,12 +312,13 @@ namespace cgc {
 	_size = newsz;
       }
     }
-
     
   private:
     T *_base;
     size_t _nxt, _size;
   };
+
+  //=======================================================================
 
   class arena_t {
   public:
@@ -302,7 +332,12 @@ namespace cgc {
     virtual ~arena_t ();
 
     v_ptrslot_t *alloc (size_t sz);
-    template<class T> ptrslot_t<T> *alloc ();
+
+    template<class T> ptrslot_t<T> *alloc ()
+    {
+      v_ptrslot_t *vp = alloc (sizeof (T));
+      return reinterpret_cast<ptrslot_t<T> *> (vp);
+    }
 
     void register_arena (void);
     void unregister_arena (void);
@@ -316,17 +351,16 @@ namespace cgc {
     itree_entry<arena_t> _tlnk;
     memptr_t *_base;
 
-    static arena_t *pick_arena (void);
+    tailq_entry<arena_t> _qlnk;
 
-    template<class T> static arena_t 
-    *lookup (ptr<T> p) { return v_lookup (p->memslot ()->v_data ()); }
+    static arena_t *pick_arena (size_t sz);
 
+    void remove (memslot_t *m) { _memslots.remove (m); }
 
   protected:
     v_ptrslot_t *get_free_ptrslot (void);
     void collect_ptrslots (void);
     void compact_memslots (void);
-    static arena_t *v_lookup (const memptr_t *p);
 
     memptr_t *_top;
     memptr_t *_nxt_ptrslot;
@@ -337,15 +371,19 @@ namespace cgc {
     simple_stack_t<v_ptrslot_t *> _free_ptrslots;
   };
 
+  //=======================================================================
+
   template<class T>
   class allocator_t {
   public:
-    allocator_t (arena_t *a) : _arena (a ? a : arena_t::pick_arena ()) {}
+    allocator_t (arena_t *a = NULL) : _arena (a) {}
 
-    VA_TEMPLATE(ptr<T> alloc, \
-		{ ptrslot_t<T> ret = _arena->alloc<T>(); \
-		  (void) new (ret->memslot ()->v_data ()) T ,\
-		    ; return ret; } )
+    VA_TEMPLATE(ptr<T> alloc,						\
+		{ arena_t *a = _arena ? _arena :			\
+		    arena_t::pick_arena (sizeof (T));			\
+		  ptrslot_t<T> *ret = a->alloc<T>();			\
+		  (void) new (ret->memslot ()->v_data ()) T ,		\
+		    ; return ptr<T> (ret); } )
 
   private:
     arena_t *_arena;
@@ -359,12 +397,44 @@ namespace cgc {
     static size_t pagesz;
   };
 
+  //=======================================================================
+
+  class arena_set_t {
+  public:
+    arena_set_t () : _p (NULL) {}
+    void insert (arena_t *a);
+    void remove (arena_t *a);
+    arena_t *pick (size_t sz);
+
+    template<class T> arena_t *
+    lookup (ptr<T> p) { return v_lookup (p->memslot ()->v_data ()); }
+
+    arena_t *
+    lookup (const memslot_t *m) 
+    { return v_lookup (reinterpret_cast<const memptr_t *> (m)); }
+
+  private:
+    arena_t *v_lookup (const memptr_t *p);
+
+    arena_t *_p;
+    tailq<arena_t, &arena_t::_qlnk> _order;
+    itree<memptr_t *, arena_t, &arena_t::_base, &arena_t::_tlnk> _tree;
+  };
+
+  extern arena_set_t g_arena_set;
+
+  //=======================================================================
 
   template<class T> void
   memslot_t::finalize ()
   {
     data<T> ()->~T();
-    memslot_list_t::remove (this);
+    arena_t *a = g_arena_set.lookup (this);
+    if (a) {
+      a->remove (this);
+    }
   }
+
+  //=======================================================================
 
 };

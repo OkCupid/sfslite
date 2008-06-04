@@ -8,8 +8,55 @@ namespace cgc {
 
 
   //=======================================================================
+  
+  arena_set_t g_arena_set;
 
-  static itree<memptr_t *, arena_t, &arena_t::_base, &arena_t::_tlnk> _g_arenae;
+  //-----------------------------------------------------------------------
+
+  static int cmp_fn (const memptr_t *mp, const arena_t *a)
+  {
+    return a->cmp (mp);
+  }
+
+  //-----------------------------------------------------------------------
+
+  arena_t *
+  arena_set_t::v_lookup (const memptr_t *p)
+  {
+    return _tree.search (wrap (cmp_fn, p));
+  }
+
+  //-----------------------------------------------------------------------
+
+  void
+  arena_set_t::insert (arena_t *a)
+  {
+    _order.insert_tail (a);
+    _tree.insert (a);
+  }
+
+  //-----------------------------------------------------------------------
+  
+  void
+  arena_set_t::remove (arena_t *a)
+  {
+    _order.remove (a);
+    _tree.remove (a);
+  }
+
+  //-----------------------------------------------------------------------
+
+  arena_t *
+  arena_set_t::pick (size_t sz)
+  {
+    if (!_p) _p = _order.first;
+    if (!_p) return NULL;
+    arena_t *ret = _p;
+    _p = _order.next (_p);
+    return ret;
+  }
+
+  //=======================================================================
 
   //-----------------------------------------------------------------------
 
@@ -40,6 +87,7 @@ namespace cgc {
       ms->_ptrslot = ps;
 
       ps->init (ms, 1);
+      res = ps;
 
       _nxt_memslot += ms->size ();
       _nxt_ptrslot += sizeof (*ps);
@@ -48,16 +96,6 @@ namespace cgc {
     return res;
   }
 
-  //-----------------------------------------------------------------------
-
-  template<class T>
-  ptrslot_t<T> *
-  arena_t::alloc ()
-  {
-    v_ptrslot_t *v = alloc (sizeof (T));
-    return reinterpret_cast<ptrslot_t<T> *> (v);
-  }
-  
   //-----------------------------------------------------------------------
 
   void
@@ -139,29 +177,14 @@ namespace cgc {
       _key = reinterpret_cast<size_t> (_base);
     */
 
-    _g_arenae.insert (this);
+    g_arena_set.insert (this);
   }
 
   //-----------------------------------------------------------------------
 
   arena_t::~arena_t ()
   {
-    _g_arenae.remove (this);
-  }
-
-  //-----------------------------------------------------------------------
-
-  static int cmp_fn (const memptr_t *mp, const arena_t *a)
-  {
-    return a->cmp (mp);
-  }
-
-  //-----------------------------------------------------------------------
-
-  arena_t *
-  arena_t::v_lookup (const memptr_t *p)
-  {
-    return _g_arenae.search (wrap (cmp_fn, p));
+    g_arena_set.remove (this);
   }
 
   //-----------------------------------------------------------------------
@@ -205,7 +228,11 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
-
+  arena_t *
+  arena_t::pick_arena (size_t sz)
+  {
+    return g_arena_set.pick (sz);
+  }
 
   //-----------------------------------------------------------------------
 

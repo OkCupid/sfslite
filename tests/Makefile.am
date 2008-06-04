@@ -27,7 +27,8 @@ TESTS = test_aes \
 	test_hashcash \
 	test_schnorr \
 	test_rctree \
-	test_vec
+	test_vec \
+	test_cgc
 
 check_PROGRAMS = $(TESTS)
 
@@ -56,6 +57,7 @@ test_timecb_SOURCES = test_timecb.C
 test_schnorr_SOURCES = test_schnorr.C
 test_rctree_SOURCES = test_rctree.C
 test_vec_SOURCES = test_vec.C
+test_cgc_SOURCES = test_cgc.C
 
 $(check_PROGRAMS): $(LDEPS)
 
