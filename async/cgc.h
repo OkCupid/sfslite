@@ -5,8 +5,11 @@
 #include "callback.h"
 #include "list.h"
 #include "vec.h"
+#include "itree.h"
 
 namespace cgc {
+
+  typedef u_int8_t memptr_t;
 
   class v_ptrslot_t;
 
@@ -16,13 +19,13 @@ namespace cgc {
     tailq_entry<memslot_t> _next;
     v_ptrslot_t *_ptrslot;
     size_t _sz;
-    u_int8_t _data[0];
+    memptr_t _data[0];
 
     static size_t size (size_t s) { return sizeof (memslot_t) + s; }
     size_t size () const { return size (_sz); }
 
-    u_int8_t *v_data () { return _data; }
-    const u_int8_t *v_data () const { return _data; }
+    memptr_t *v_data () { return _data; }
+    const memptr_t *v_data () const { return _data; }
     void reseat ();
 
     template<class T> T *
@@ -289,33 +292,71 @@ namespace cgc {
 
   class arena_t {
   public:
-    arena_t (u_int8_t *base, size_t sz) 
-      : _base (base),
-	_top (_base + sz),
-	_nxt_ptrslot (_base),
-	_nxt_memslot (_top - sizeof (memslot_t)),
-	_sz (sz)
-    {}
+    arena_t (memptr_t *base, size_t sz)  { init (base, sz); }
+    arena_t ()
+      : _base (NULL), _top (NULL), _nxt_ptrslot (NULL), _nxt_memslot (NULL),
+	_sz (0) {}
+
+    void init (memptr_t *base, size_t sz);
+
+    virtual ~arena_t ();
 
     v_ptrslot_t *alloc (size_t sz);
     template<class T> ptrslot_t<T> *alloc ();
 
+    void register_arena (void);
+    void unregister_arena (void);
+
+    int cmp (const memptr_t *m) const;
+
     void gc (void);
+
+    // make a tree of all active arenas, so that we can take an
+    // object and figure out which arena it lives in.
+    itree_entry<arena_t> _tlnk;
+    memptr_t *_base;
+
+    static arena_t *pick_arena (void);
+
+    template<class T> static arena_t 
+    *lookup (ptr<T> p) { return v_lookup (p->memslot ()->v_data ()); }
+
 
   protected:
     v_ptrslot_t *get_free_ptrslot (void);
     void collect_ptrslots (void);
     void compact_memslots (void);
+    static arena_t *v_lookup (const memptr_t *p);
 
-  private:
-    u_int8_t *_base;
-    u_int8_t *_top;
-    u_int8_t *_nxt_ptrslot;
-    u_int8_t *_nxt_memslot;
+    memptr_t *_top;
+    memptr_t *_nxt_ptrslot;
+    memptr_t *_nxt_memslot;
     size_t _sz;
 
     memslot_list_t _memslots;
     simple_stack_t<v_ptrslot_t *> _free_ptrslots;
+  };
+
+  template<class T>
+  class allocator_t {
+  public:
+    allocator_t (arena_t *a) : _arena (a ? a : arena_t::pick_arena ()) {}
+
+    VA_TEMPLATE(ptr<T> alloc, \
+		{ ptrslot_t<T> ret = _arena->alloc<T>(); \
+		  (void) new (ret->memslot ()->v_data ()) T ,\
+		    ; return ret; } )
+
+  private:
+    arena_t *_arena;
+  };
+
+  class mmap_arena_t : public arena_t {
+  public:
+    mmap_arena_t (size_t npages);
+    ~mmap_arena_t ();
+    
+    static size_t pagesz;
   };
 
 

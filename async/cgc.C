@@ -1,9 +1,17 @@
 
 #include "cgc.h"
+#include <sys/mman.h>
 
 namespace cgc {
 
   void memslot_t::reseat () { _ptrslot->set_mem_slot (this); }
+
+
+  //=======================================================================
+
+  static itree<memptr_t *, arena_t, &arena_t::_base, &arena_t::_tlnk> _g_arenae;
+
+  //-----------------------------------------------------------------------
 
   v_ptrslot_t *
   arena_t::get_free_ptrslot ()
@@ -17,6 +25,8 @@ namespace cgc {
     }
     return ret;
   }
+
+  //-----------------------------------------------------------------------
 
   v_ptrslot_t *
   arena_t::alloc (size_t sz)
@@ -38,6 +48,8 @@ namespace cgc {
     return res;
   }
 
+  //-----------------------------------------------------------------------
+
   template<class T>
   ptrslot_t<T> *
   arena_t::alloc ()
@@ -46,6 +58,8 @@ namespace cgc {
     return reinterpret_cast<ptrslot_t<T> *> (v);
   }
   
+  //-----------------------------------------------------------------------
+
   void
   arena_t::collect_ptrslots (void)
   {
@@ -64,17 +78,18 @@ namespace cgc {
 
     if (last_used > last) {
       last = last_used;
-      _nxt_ptrslot = reinterpret_cast<u_int8_t *> (last - 1);
+      _nxt_ptrslot = reinterpret_cast<memptr_t *> (last - 1);
       while (_free_ptrslots.size () && _free_ptrslots.back () > last)
 	_free_ptrslots.pop_back ();
     }
-
   }
+
+  //-----------------------------------------------------------------------
 
   void
   arena_t::compact_memslots (void)
   {
-    u_int8_t *p = _base;
+    memptr_t *p = _base;
     memslot_t *m = _memslots.first;
     memslot_t *n = NULL;
 
@@ -99,6 +114,8 @@ namespace cgc {
     _nxt_memslot = p;
   }
 
+  //-----------------------------------------------------------------------
+
   void
   arena_t::gc (void)
   {
@@ -106,5 +123,92 @@ namespace cgc {
     compact_memslots ();
   }
 
+  //-----------------------------------------------------------------------
+
+  void
+  arena_t::init (memptr_t *base, u_int sz)
+  {
+    _base = base;
+    _top = _base + sz;
+    _nxt_ptrslot = _base;
+    _nxt_memslot = _top - sizeof (memslot_t);
+    _sz = sz;
+    
+    /*
+      assert (sizeof(size_t) == sizeof (memptr_t *));
+      _key = reinterpret_cast<size_t> (_base);
+    */
+
+    _g_arenae.insert (this);
+  }
+
+  //-----------------------------------------------------------------------
+
+  arena_t::~arena_t ()
+  {
+    _g_arenae.remove (this);
+  }
+
+  //-----------------------------------------------------------------------
+
+  static int cmp_fn (const memptr_t *mp, const arena_t *a)
+  {
+    return a->cmp (mp);
+  }
+
+  //-----------------------------------------------------------------------
+
+  arena_t *
+  arena_t::v_lookup (const memptr_t *p)
+  {
+    return _g_arenae.search (wrap (cmp_fn, p));
+  }
+
+  //-----------------------------------------------------------------------
+
+  int
+  arena_t::cmp (const memptr_t *mp) const
+  {
+    if (mp < _base) return -1;
+    else if (mp >= _base + _sz) return 1;
+    else return 0;
+  }
+
+  //=======================================================================
+
+  size_t mmap_arena_t::pagesz;
+
+  //-----------------------------------------------------------------------
+
+  mmap_arena_t::mmap_arena_t (size_t npages)
+  {
+    if (!pagesz) {
+      pagesz = sysconf (_SC_PAGE_SIZE);
+    }
+    size_t sz = npages * pagesz;
+
+    void *v = mmap (NULL, sz, PROT_READ | PROT_WRITE, 
+		    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+
+    if (!v) 
+      panic ("mmap failed: %m\n");
+
+    init (static_cast<memptr_t *> (v), sz);
+  }
+
+  //-----------------------------------------------------------------------
+
+  mmap_arena_t::~mmap_arena_t ()
+  {
+    munmap (_base, _sz);
+  }
+
+  //-----------------------------------------------------------------------
+
+
+
+  //-----------------------------------------------------------------------
+
+  //=======================================================================
 
 };
