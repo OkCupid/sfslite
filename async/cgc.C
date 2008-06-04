@@ -192,8 +192,11 @@ namespace cgc {
   {
     _base = base;
     _top = _base + sz;
-    _nxt_ptrslot = _base;
-    _nxt_memslot = _top - sizeof (memslot_t);
+    _nxt_memslot = _base;
+
+    // Ugly hack in which random type is used.  See above.
+    _nxt_ptrslot = _top - sizeof (bigptr_t<int>);
+
     _sz = sz;
     
     /*
