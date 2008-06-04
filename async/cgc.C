@@ -72,14 +72,14 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
-  v_ptrslot_t *
+  untyped_bigptr_t *
   arena_t::get_free_ptrslot ()
   {
-    v_ptrslot_t *ret = NULL;
+    untyped_bigptr_t *ret = NULL;
     if (_free_ptrslots.size ()) {
       ret = _free_ptrslots.pop_back ();
     } else {
-     ret = reinterpret_cast<v_ptrslot_t *> (_nxt_ptrslot);
+     ret = reinterpret_cast<untyped_bigptr_t *> (_nxt_ptrslot);
      _nxt_ptrslot += sizeof (*ret);
     }
     return ret;
@@ -91,24 +91,24 @@ namespace cgc {
 #define ALIGN(x) \
   (((x) + ALIGNSZ) & ~ALIGNSZ)
 
-  v_ptrslot_t *
+  untyped_bigptr_t *
   arena_t::alloc (size_t sz)
   {
-    v_ptrslot_t *res = NULL;
+    untyped_bigptr_t *res = NULL;
     if (memslot_t::size (sz) + _nxt_memslot <= _nxt_ptrslot) {
       memslot_t *ms = reinterpret_cast<memslot_t *> (_nxt_memslot);
-      v_ptrslot_t *ps = reinterpret_cast<v_ptrslot_t *> (_nxt_ptrslot);
+      bigptr_t<int> *bp = reinterpret_cast<bigptr_t<int> *> (_nxt_ptrslot);
+      untyped_bigptr_t *res = bp;
 
       sz = ALIGN(sz);
       
       ms->_sz = sz;
-      ms->_ptrslot = ps;
+      ms->_ptrslot = res;
 
-      ps->init (ms, 1);
-      res = ps;
+      res->init (ms, 1);
 
       _nxt_memslot += ms->size ();
-      _nxt_ptrslot += sizeof (*ps);
+      _nxt_ptrslot += sizeof (*bp);
       _memslots.insert_tail (ms);
     }
     return res;
@@ -119,9 +119,10 @@ namespace cgc {
   void
   arena_t::collect_ptrslots (void)
   {
-    v_ptrslot_t *p = reinterpret_cast<v_ptrslot_t *> (_top) - 1;
-    v_ptrslot_t *last = reinterpret_cast<v_ptrslot_t *> (_nxt_ptrslot) + 1;
-    v_ptrslot_t *last_used = NULL;
+    untyped_bigptr_t *p = reinterpret_cast<untyped_bigptr_t *> (_top) - 1;
+    untyped_bigptr_t *last = 
+      reinterpret_cast<untyped_bigptr_t *> (_nxt_ptrslot) + 1;
+    untyped_bigptr_t *last_used = NULL;
 
     for ( ; p >= last; p--) {
       if (p->count () == 0) {

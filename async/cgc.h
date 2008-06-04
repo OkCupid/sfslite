@@ -11,7 +11,7 @@ namespace cgc {
 
   typedef u_int8_t memptr_t;
 
-  class v_ptrslot_t;
+  class untyped_bigptr_t;
 
   //=======================================================================
 
@@ -29,7 +29,7 @@ namespace cgc {
     // to be compacted.
     //
     tailq_entry<memslot_t> _next;
-    v_ptrslot_t *_ptrslot;
+    untyped_bigptr_t *_ptrslot;
     size_t _sz;
 
     memptr_t _data[0];
@@ -41,19 +41,9 @@ namespace cgc {
     const memptr_t *v_data () const { return _data; }
     void reseat ();
 
-    template<class T> T *
-    data () { return reinterpret_cast<T *> (_data); }
-    template<class T> const T *
-    data () const { return reinterpret_cast<T *> (_data); }
-
-    template<class T> T *
-    lim () { return reinterpret_cast<T *> (_data + _sz); }
-    template<class T> const T *
-    lim () const { return reinterpret_cast<T *> (_data + _sz); }
-
     void copy (const memslot_t *ms);
+    void slotfree ();
 
-    template<class T> void finalize ();
   };
 
   //=======================================================================
@@ -62,14 +52,14 @@ namespace cgc {
 
   //=======================================================================
 
-  class v_ptrslot_t {
+  class untyped_bigptr_t {
   public:
-    v_ptrslot_t (memslot_t *m) : _ms (m), _count (1) {}
+    untyped_bigptr_t (memslot_t *m) : _ms (m), _count (1) {}
     void set_mem_slot (memslot_t *ms) { _ms = ms; }
     memslot_t *memslot () const { return _ms; }
     void init (memslot_t *m, int c)  { _ms = m; _count = c; }
-    int count() const { return _count; }
     void mark_free () { _count = -1; }
+    int count () const { return _count; }
   protected:
     memslot_t *_ms;
     int _count;
@@ -78,60 +68,71 @@ namespace cgc {
   //=======================================================================
 
   template<class T>
-  class ptrslot_t : public v_ptrslot_t {
+  class redirect_ptr_t {
   public:
-    ptrslot_t (memslot_t *m) : v_ptrslot_t (m) {}
+    
+    redirect_ptr_t () {}
+    virtual ~redirect_ptr_t () {}
+    
+    virtual int count() const = 0;
+    virtual void set_count (int i) = 0;
+    virtual size_t size () const = 0;
+    virtual memptr_t *v_data () = 0;
+    virtual const memptr_t *v_data () const = 0;
+    virtual void slotfree () = 0;
 
     T *obj () 
     { 
-      assert (_count > 0); 
-      return _ms->data<T> (); 
-    }
-    
-    const T *obj () const
-    {
-      assert (_count > 0);
-      return _ms->data<T> (); 
+      assert (count() > 0);
+      return reinterpret_cast<T *> (v_data ()); 
     }
 
-    T *lim () const
-    {
-      assert (_count > 0);
-      return _ms->lim<T> ();
+    const T *obj () const 
+    { 
+      assert (count() > 0);
+      return reinterpret_cast<const T *> (v_data ()); 
     }
 
-    void rc_inc () { _count++; }
+    const T *lim () const
+    {
+      assert (count() > 0);
+      return reinterpret_cast<const T *> (v_data() + size());
+    }
+
+    void rc_inc () { set_count (count () + 1); }
 
     bool rc_dec () {
       bool ret;
 
-      assert (_count > 0);
-      --_count;
-      if (_count == 0) {
-	_ms->finalize<T> ();
+      int c = count ();
+      assert (c > 0);
+      if (--c == 0) {
+	obj ()->~T();
+	slotfree ();
 	ret = false;
       } else {
 	ret = true;
       }
+      set_count (c);
       return ret;
     }
-
   };
 
   //=======================================================================
 
-  // Pointers to small objects
-  // Stubbed out for now.
   template<class T>
-  class smallptr_t {
+  class bigptr_t : public virtual redirect_ptr_t<T>, 
+		   public untyped_bigptr_t {
   public:
-    smallptr_t () {}
-    T * obj () { return NULL; }
-    const T *obj () const { return NULL; }
-    void rc_inc () {}
-    bool rc_dec () { return false; }
-  };
+    bigptr_t (memslot_t *m) : untyped_bigptr_t (m) {}
+    int count () const { return untyped_bigptr_t::count (); }
+    void set_count (int i) { _count = i; }
+    size_t size () const { return _ms->size (); }
+    memptr_t *v_data () { return _ms->v_data (); }
+    const memptr_t *v_data () const { return _ms->v_data (); }
+    void slotfree () { _ms->slotfree (); }
 
+  };
 
   //=======================================================================
 
@@ -142,33 +143,29 @@ namespace cgc {
   template<class T>
   class ptr {
   public:
-    ptr () : _small (NULL), _big (NULL) {}
+    ptr () : _redir_ptr (NULL) {}
     virtual ~ptr () { rc_dec(); }
 
     const T *volatile_ptr () const 
     {
-      if (_small) { return _small->obj (); }
-      else if (_big) { return _big->obj (); }
+      if (_redir_ptr) { return _redir_ptr->obj (); }
       else return NULL;
     }
 
     T *volatile_ptr ()
     {
-      if (_small) { return _small->obj (); }
-      else if (_big) { return _big->obj (); }
+      if (_redir_ptr) { return _redir_ptr->obj (); }
       else return NULL;
     }
 
     void rc_inc ()
     {
-      if (_small) { _small->rc_inc (); }
-      else if (_big) { _big->rc_inc (); }
+      if (_redir_ptr) { _redir_ptr->rc_inc (); }
     }
 
     bool rc_dec ()
     {
-      if (_small) { return _small->rc_dec (); }
-      else if (_big) { return _big->rc_dec (); }
+      if (_redir_ptr) { return _redir_ptr->rc_dec (); }
       else return false;
     }
 
@@ -191,16 +188,13 @@ namespace cgc {
     T &operator* () const { return nonnull_volatile_ptr (); }
     operator bool() const { return volatile_ptr () != NULL; }
 
-    bool operator== (const ptr<T> &p) const 
-    { return volatile_ptr () == p.volatile_ptr (); }
-    bool operator!= (const ptr<T> &p) const 
-    { return volatile_ptr () != p.volatile_ptr (); }
+    bool operator== (const ptr<T> &p) const { return base_eq (p); }
+    bool operator!= (const ptr<T> &p) const { return !base_eq (p); }
 
     ptr<T> &operator= (ptr<T> &p)
     {
       rc_dec ();
-      _small = p._small;
-      _big = p._big;
+      _redir_ptr = p._redir_ptr;
       v_clear ();
       rc_inc ();
       return (*this);
@@ -210,21 +204,20 @@ namespace cgc {
     {
       assert (i == 0);
       rc_dec ();
-      _small = NULL;
-      _big = NULL;
+      _redir_ptr = NULL;
       v_clear ();
       return (*this);
     }
 
+
     friend class allocator_t<T>;
   protected:
-    explicit ptr (ptrslot_t<T> *p) : _small (NULL), _big (p) { rc_inc (); }
-    explicit ptr (smallptr_t<T> *s) : _small (s), _big (NULL) { rc_inc (); }
+    explicit ptr (redirect_ptr_t<T> *p) : _redir_ptr (p) { rc_inc (); }
+    bool base_eq (const ptr<T> &p) { return _redir_ptr == p._redir_ptr; }
   private:
     virtual void v_clear () {}
 
-    smallptr_t<T> *_small;
-    ptrslot_t<T> *_big;
+    redirect_ptr_t<T> *_redir_ptr;
   };
 
   //=======================================================================
@@ -236,23 +229,23 @@ namespace cgc {
     aptr (size_t s) : ptr<T> (), _offset (s) {}
     
     bool operator== (const aptr<T> &p) const
-    { return _ptrslot == p._ptrslot && _offset = p._offset;  }
+    { return base_eq (p) && _offset = p._offset;  }
 
     bool operator== (const aptr<T> &p) const
     { return ! ( (*this) == p); }
     
     aptr<T> &operator= (aptr<T> &p)
     {
-      if (_ptrslot) _ptrslot->rc_dec ();
-      _ptrslot = p._ptrslot;
+      ptr<T>::rc_dec ();
+      ptr<T>::_redir_ptr = p._redir_ptr;
       _offset = p._offset;
-      if (_ptrslot) _ptrslot->rc_inc ();
+      ptr<T>::rc_inc ();
       return (*this);
     }
 
     aptr<T> operator+ (size_t s) const
     {
-      aptr<T> ret (_ptrslot, _offset + s);
+      aptr<T> ret (ptr<T>::_redir_ptr, _offset + s);
       assert (ret.inbounds ());
       return ret;
     }
@@ -260,7 +253,7 @@ namespace cgc {
     aptr<T> operator- (size_t s) const
     {
       assert (s <= _offset);
-      aptr<T> ret (_ptrslot, _offset - s);
+      aptr<T> ret (ptr<T>::_redir_ptr, _offset - s);
       return ret;
     }
 
@@ -283,47 +276,47 @@ namespace cgc {
 
     bool operator< (const aptr<T> &p) const 
     { 
-      assert (_ptrslot == p._ptrslot);
+      assert (base_eq (p));
       return (_offset < p._offset); 
     } 
 
     bool operator<= (const aptr<T> &p) const 
     { 
-      assert (_ptrslot == p._ptrslot);
+      assert (base_eq (p));
       return (_offset <= p._offset); 
     }
  
     bool operator>= (const aptr<T> &p) const 
     { 
-      assert (_ptrslot == p._ptrslot);
+      assert (base_eq (p));
       return (_offset >= p._offset); 
     } 
 
     bool operator> (const aptr<T> &p) const 
     { 
-      assert (_ptrslot == p._ptrslot);
+      assert (base_eq (p));
       return (_offset > p._offset); 
     } 
 
     bool inbounds ()
     {
-      return (_ptrslot->obj() + _offset <= _ptrslot->lim());
+      return (ptr<T>::_redir_ptr->obj() + _offset <= 
+	      ptr<T>::_redir_ptr->lim());
     }
 
   protected:
-    aptr (ptrslot_t<T> *p, size_t s) : ptr<T> (p), _offset (s) {}
+    aptr (redirect_ptr_t<T> *p, size_t s) : ptr<T> (p), _offset (s) {}
 
   private:
 
     T *obj ()
     {
       assert (inbounds ());
-      return (_ptrslot->obj() + _offset);
+      return (ptr<T>::_redir_ptr->obj() + _offset);
     }
 
     void v_clear () { _offset = 0; }
 
-    ptrslot_t<T> *_ptrslot;
     size_t _offset;
   };
 
@@ -396,12 +389,12 @@ namespace cgc {
 
     virtual ~arena_t ();
 
-    v_ptrslot_t *alloc (size_t sz);
+    untyped_bigptr_t *alloc (size_t sz);
 
-    template<class T> ptrslot_t<T> *alloc ()
+    template<class T> bigptr_t<T> *alloc ()
     {
-      v_ptrslot_t *vp = alloc (sizeof (T));
-      return reinterpret_cast<ptrslot_t<T> *> (vp);
+      untyped_bigptr_t *vp = alloc (sizeof (T));
+      return reinterpret_cast<bigptr_t<T> *> (vp);
     }
 
     void register_arena (void);
@@ -423,7 +416,7 @@ namespace cgc {
     void remove (memslot_t *m) { _memslots.remove (m); }
 
   protected:
-    v_ptrslot_t *get_free_ptrslot (void);
+    untyped_bigptr_t *get_free_ptrslot (void);
     void collect_ptrslots (void);
     void compact_memslots (void);
 
@@ -433,7 +426,7 @@ namespace cgc {
     size_t _sz;
 
     memslot_list_t _memslots;
-    simple_stack_t<v_ptrslot_t *> _free_ptrslots;
+    simple_stack_t<untyped_bigptr_t *> _free_ptrslots;
   };
 
   //=======================================================================
@@ -446,8 +439,8 @@ namespace cgc {
     VA_TEMPLATE(ptr<T> alloc,						\
 		{ arena_t *a = _arena ? _arena :			\
 		    arena_t::pick_arena (sizeof (T));			\
-		  ptrslot_t<T> *ret = a->alloc<T>();			\
-		  (void) new (ret->memslot ()->v_data ()) T ,		\
+		  bigptr_t<T> *ret = a->alloc<T>();			\
+		  (void) new (ret->v_data ()) T ,			\
 		    ; return ptr<T> (ret); } )
 
   private:
@@ -490,10 +483,9 @@ namespace cgc {
 
   //=======================================================================
 
-  template<class T> void
-  memslot_t::finalize ()
+  void
+  memslot_t::slotfree ()
   {
-    data<T> ()->~T();
     arena_t *a = g_arena_set.lookup (this);
     if (a) {
       a->remove (this);
