@@ -164,6 +164,32 @@ public:
     return *this;
   }
 
+  // return the index of the first unset bit, or -1 if none found
+  int first_unset_bit () const {
+    int ret = -1;
+    map_t all = 0;
+    map_t tmp;
+    all = ~all;
+    size_t slots = nbits / mapbits + 1;
+    ptrdiff_t bitindex = 0;
+    for (size_t i = 0; ret < 0 && i < slots; i++) {
+      if ((tmp = (map[i] ^ all))) {
+	for (size_t j = 0; ret < 0 && j < mapbits; j++) {
+	  if (tmp & 1) {
+	    ret = bitindex;
+	  } else {
+	    tmp = (tmp >> 1);
+	    bitindex++;
+	  }
+	}
+	assert (ret >= 0);
+      }
+      bitindex += mapbits;
+    }
+    if (ret >= 0) bcheck (ret);
+    return ret;
+  }
+
 #undef bcheck
 #undef rcheck
 };

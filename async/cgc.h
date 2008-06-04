@@ -120,52 +120,111 @@ namespace cgc {
 
   //=======================================================================
 
+  // Pointers to small objects
+  // Stubbed out for now.
+  template<class T>
+  class smallptr_t {
+  public:
+    smallptr_t () {}
+    T * obj () { return NULL; }
+    const T *obj () const { return NULL; }
+    void rc_inc () {}
+    bool rc_dec () { return false; }
+  };
+
+
+  //=======================================================================
+
   template<class T> class allocator_t;
+
+  //=======================================================================
 
   template<class T>
   class ptr {
   public:
-    ptr () : _ptrslot (NULL) {}
-    ~ptr () { if (_ptrslot) _ptrslot->rc_dec (); }
+    ptr () : _small (NULL), _big (NULL) {}
+    virtual ~ptr () { rc_dec(); }
 
-    T *volatile_ptr () const
+    const T *volatile_ptr () const 
     {
-      if (!_ptrslot) return NULL;
-      else return obj ();
+      if (_small) { return _small->obj (); }
+      else if (_big) { return _big->obj (); }
+      else return NULL;
     }
 
-    const T *operator-> () const { assert (_ptrslot); return obj(); }
-    T *operator-> () { assert (_ptrslot); return obj(); }
-    T &operator* () const { assert (_ptrslot); return obj(); }
+    T *volatile_ptr ()
+    {
+      if (_small) { return _small->obj (); }
+      else if (_big) { return _big->obj (); }
+      else return NULL;
+    }
+
+    void rc_inc ()
+    {
+      if (_small) { _small->rc_inc (); }
+      else if (_big) { _big->rc_inc (); }
+    }
+
+    bool rc_dec ()
+    {
+      if (_small) { return _small->rc_dec (); }
+      else if (_big) { return _big->rc_dec (); }
+      else return false;
+    }
+
+    const T *nonnull_volatile_ptr () const 
+    {
+      const T *ret = volatile_ptr ();
+      assert (ret);
+      return ret;
+    }
+
+    T *nonnull_volatile_ptr () 
+    {
+      T *ret = volatile_ptr ();
+      assert (ret);
+      return ret;
+    }
+
+    const T *operator-> () const { return nonnull_volatile_ptr (); }
+    T *operator-> () { return nonnull_volatile_ptr (); }
+    T &operator* () const { return nonnull_volatile_ptr (); }
+    operator bool() const { return volatile_ptr () != NULL; }
+
+    bool operator== (const ptr<T> &p) const 
+    { return volatile_ptr () == p.volatile_ptr (); }
+    bool operator!= (const ptr<T> &p) const 
+    { return volatile_ptr () != p.volatile_ptr (); }
 
     ptr<T> &operator= (ptr<T> &p)
     {
-      if (_ptrslot) _ptrslot->rc_dec ();
-      _ptrslot = p._ptrslot;
+      rc_dec ();
+      _small = p._small;
+      _big = p._big;
       v_clear ();
-      if (_ptrslot) _ptrslot->rc_inc ();
+      rc_inc ();
       return (*this);
     }
 
     ptr<T> &operator= (int i)
     {
       assert (i == 0);
-      if (_ptrslot) _ptrslot->rc_dec ();
+      rc_dec ();
+      _small = NULL;
+      _big = NULL;
       v_clear ();
       return (*this);
     }
 
-
-    bool operator== (const ptr<T> &p) const { return _ptrslot == p._ptrslot; }
-    bool operator!= (const ptr<T> &p) const { return ! ( (*this) == p); }
-    
     friend class allocator_t<T>;
   protected:
-    explicit ptr (ptrslot_t<T> *p) : _ptrslot (p) { if (p) p->rc_inc (); }
+    explicit ptr (ptrslot_t<T> *p) : _small (NULL), _big (p) { rc_inc (); }
+    explicit ptr (smallptr_t<T> *s) : _small (s), _big (NULL) { rc_inc (); }
   private:
-    virtual T *obj () { return _ptrslot->obj (); }
     virtual void v_clear () {}
-    ptrslot_t<T> *_ptrslot;
+
+    smallptr_t<T> *_small;
+    ptrslot_t<T> *_big;
   };
 
   //=======================================================================
