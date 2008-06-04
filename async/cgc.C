@@ -98,7 +98,7 @@ namespace cgc {
     if (memslot_t::size (sz) + _nxt_memslot <= _nxt_ptrslot) {
       memslot_t *ms = reinterpret_cast<memslot_t *> (_nxt_memslot);
 
-      // Hack; Specy a random type here, because the size of the 
+      // Hack; Specify a random type here, because the size of the 
       // underlying object does not depend on sizeof(T) [ T = int below ].
       // Use placement new to place this object into the mem given.
       bigptr_t<int> *bp = new (_nxt_ptrslot) bigptr_t<int> (ms);
