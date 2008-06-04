@@ -97,7 +97,13 @@ namespace cgc {
     untyped_bigptr_t *res = NULL;
     if (memslot_t::size (sz) + _nxt_memslot <= _nxt_ptrslot) {
       memslot_t *ms = reinterpret_cast<memslot_t *> (_nxt_memslot);
+
+      // Hack; Specy a random type here, because the size of the 
+      // underlying object does not depend on sizeof(T) [ T = int below ].
       bigptr_t<int> *bp = reinterpret_cast<bigptr_t<int> *> (_nxt_ptrslot);
+
+      // What we care about is this pointer anyway, but make sure C++
+      // has satisfied its object layout constraints.
       untyped_bigptr_t *res = bp;
 
       sz = ALIGN(sz);
