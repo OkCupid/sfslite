@@ -18,9 +18,16 @@ namespace cgc {
   class memslot_t {
   public:
 
+    //
     // Make sure these 3 elements are all aligned, which they are
     // since all are pointers and/or size_t's.  Might want to revisit
     // this assumption.
+    //
+    // Also note that the next three fields (4 long's worth) are all used
+    // during compaction.  For this reason, we might consider alternate
+    // storage for object that are much smaller and therefore don't need
+    // to be compacted.
+    //
     tailq_entry<memslot_t> _next;
     v_ptrslot_t *_ptrslot;
     size_t _sz;
