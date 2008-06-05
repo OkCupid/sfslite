@@ -209,11 +209,20 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
+  size_t
+  bigobj_arena_t::free_space () const
+  {
+    return (_nxt_ptrslot - _nxt_memslot);
+
+  }
+
+  //-----------------------------------------------------------------------
+
   bool
   bigobj_arena_t::gc_make_room (size_t sz)
   {
     bool ret = false;
-    if (_sz <= _unclaimed_space) {
+    if (sz <= _unclaimed_space  + free_space ()) {
       gc ();
       ret = true;
     }
@@ -226,7 +235,7 @@ namespace cgc {
   bigobj_arena_t::can_fit (size_t sz) const
   {
     sz = boa_obj_align (sz);
-    return (bigslot_t::size (sz) + _nxt_memslot <= _nxt_ptrslot);
+    return (bigslot_t::size (sz) <= free_space ());
   }
   
   //-----------------------------------------------------------------------

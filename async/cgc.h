@@ -429,6 +429,7 @@ namespace cgc {
 
     void remove (bigslot_t *m);
     bool can_fit (size_t sz) const;
+    size_t free_space () const;
 
   protected:
     bigptr_t *get_free_ptrslot (void);
