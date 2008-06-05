@@ -1,6 +1,7 @@
 
 #include "cgc.h"
 #include <sys/mman.h>
+#include <async.h>
 
 namespace cgc {
 
@@ -308,8 +309,10 @@ namespace cgc {
     bigslot_t *n = NULL;
 
     memslot_list_t nl;
+    warn << "CM!\n";
     
     while (m) {
+      m->check ();
       n = _memslots.next (m);
       _memslots.remove (m);
       bigslot_t *ns = reinterpret_cast<bigslot_t *> (p);
