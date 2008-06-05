@@ -14,6 +14,7 @@ namespace cgc {
   void
   bigslot_t::copy_reinit (const bigslot_t *ms)
   {
+    warn ("copy data from %p to %p (%u bytes)\n", ms->_data, _data, ms->_sz);
     _ptrslot = ms->_ptrslot;
     memcpy (_data, ms->_data, ms->_sz);
     _sz = ms->_sz;
@@ -29,6 +30,8 @@ namespace cgc {
     arena_t *a = mgr_t::get()->lookup (v_data ());
     if (a) {
       a->remove (this);
+    } else {
+      warn << "Arena lookup failed!\n";
     }
 
     mark_deallocated (this, size());
@@ -162,10 +165,23 @@ namespace cgc {
     if (p) {
       _next_big = p;
     } else {
+      if (debug_mem)
+	sanity_check ();
       p = gc_make_room_big (sz);
+      if (debug_mem)
+	sanity_check ();
     }
-
     return p;
+  }
+
+  //-----------------------------------------------------------------------
+
+  void
+  std_mgr_t::sanity_check (void) const
+  {
+    for (bigobj_arena_t *a = _bigs.first; a; a = _bigs.next (a)) {
+      a->sanity_check ();
+    }
   }
 
   //-----------------------------------------------------------------------
@@ -214,6 +230,16 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
+  void
+  bigobj_arena_t::sanity_check (void) const
+  {
+    for (bigslot_t *s = _memslots.first; s; s = _memslots.next (s)) {
+      s->check ();
+    }
+  }
+
+  //-----------------------------------------------------------------------
+
   size_t
   bigobj_arena_t::free_space () const
   {
@@ -256,6 +282,8 @@ namespace cgc {
       sz = boa_obj_align (sz);
       bigslot_t *ms = new (_nxt_memslot) bigslot_t (sz, res);
       assert (ms == ms_tmp);
+
+      warn ("allocated %p -> %p\n", ms, ms->_data + sz);
 
       _nxt_memslot += ms->size ();
       _nxt_ptrslot -= sizeof (*res);
@@ -328,6 +356,9 @@ namespace cgc {
     _memslots.first = nl.first;
     _memslots.plast = nl.plast;
 
+    if (_memslots.first) 
+      _memslots.first->check ();
+
     _nxt_memslot = p;
   }
 
@@ -338,6 +369,7 @@ namespace cgc {
   {
     collect_ptrslots ();
     compact_memslots ();
+    mark_deallocated (_nxt_memslot, _nxt_ptrslot - _nxt_memslot);
     _unclaimed_space = 0;
   }
 
@@ -356,9 +388,11 @@ namespace cgc {
   int
   arena_t::cmp (const memptr_t *mp) const
   {
-    if (mp < _base) return -1;
-    else if (mp >= _base + _sz) return 1;
-    else return 0;
+    int ret;
+    if (mp < _base) ret = 1;
+    else if (mp >= _base + _sz) ret = -1;
+    else ret = 0;
+    return ret;
   }
 
   //-----------------------------------------------------------------------
@@ -366,8 +400,10 @@ namespace cgc {
   void
   bigobj_arena_t::remove (bigslot_t *s)
   { 
+    warn ("RM %p %p\n", s, s->_data);
     _memslots.remove (s); 
     _unclaimed_space += s->size ();
+    mgr_t::get ()->sanity_check ();
   }
   
   //=======================================================================
@@ -414,8 +450,10 @@ namespace cgc {
 
   void mark_deallocated (void *p, size_t sz)
   {
-    if (debug_mem)
+    if (debug_mem) {
+      warn ("mark deallocated: %p to %p\n", p, (char *)p + sz);
       memset (p, 0xdf, sz);
+    }
   }
 
   void mark_unitialized (void *p, size_t sz)
@@ -433,4 +471,5 @@ namespace cgc {
   }
 
   //=======================================================================
+
 };

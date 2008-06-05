@@ -469,6 +469,8 @@ namespace cgc {
     void remove (bigslot_t *m);
     bool can_fit (size_t sz) const;
     size_t free_space () const;
+    
+    void sanity_check () const;
 
   protected:
     bigptr_t *get_free_ptrslot (void);
@@ -520,6 +522,7 @@ namespace cgc {
     redirect_ptr_t *aalloc (size_t sz) ;
 
     arena_t *lookup (const memptr_t *p);
+    virtual void sanity_check (void) const {}
 
     void insert (arena_t *a);
     void remove (arena_t *a);
@@ -588,6 +591,7 @@ namespace cgc {
     typedef tailq<bigobj_arena_t, &bigobj_arena_t::_qlnk> boa_list_t;
 
     virtual bigobj_arena_t *gc_make_room_big (size_t sz);
+    void sanity_check (void) const;
 
   private:
     std_cfg_t _cfg;

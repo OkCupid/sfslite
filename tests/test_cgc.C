@@ -79,6 +79,8 @@ main (int argc, char *argv[])
   cgc::mgr_t::set (New cgc::std_mgr_t (cfg));
 
   test1();
+  cgc::mgr_t::get ()->sanity_check();
+
   test2();
 }
 
