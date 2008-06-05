@@ -4,8 +4,10 @@
 
 class foo_t {
 public:
+  foo_t (int a) : _x (a) {}
   foo_t (int a, int b) : _x (a+b) {}
   void bar () { warn << "foo_t() => " << _x << "\n"; }
+  int baz () const { return _x; }
 private:
   int _x;
 };
@@ -19,10 +21,32 @@ main (int argc, char *argv[])
 
   cgc::mgr_t::set (New cgc::std_mgr_t (cfg));
   
-  cgc::ptr<foo_t> x = cgc::alloc<foo_t> (30, 40);
+  cgc::ptr<foo_t> x = cgc::alloc<foo_t> (10,23);
   cgc::ptr<foo_t> y = x;
   y->bar ();
   x->bar ();
   x = y = NULL;
+
+  vec<cgc::ptr<foo_t> > v;
+  for (size_t i = 0; i < 100; i++) {
+    v.push_back (cgc::alloc<foo_t> (i, 0));
+  }
+
+  for (size_t i = 0; i < 20; i++) {
+    v[i*5] = NULL;
+  }
+
+  for (size_t i = 0; i < 20; i++) {
+    v[i*5] = cgc::alloc<foo_t> (i,300);
+  }
+
+  for (size_t i = 0; i < 100; i++) {
+    size_t x = v[i]->baz ();
+    if (i % 5 == 0) {
+      assert (x == 300 + i/5);
+    } else {
+      assert (x == i);
+    }
+  }
 
 }

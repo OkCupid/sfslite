@@ -32,6 +32,16 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
+  redirect_ptr_t *
+  mgr_t::aalloc (size_t sz)
+  {
+    arena_t *a = pick (sz);
+    if (a) return a->aalloc (sz);
+    else return NULL;
+  }
+
+  //-----------------------------------------------------------------------
+
   arena_t *
   mgr_t::lookup (const memptr_t *p)
   {
@@ -79,10 +89,28 @@ namespace cgc {
   arena_t *
   std_mgr_t::pick (size_t sz)
   {
-    if (!_next_big) _next_big = _bigs.first;
-    if (!_next_big) return NULL;
-    arena_t *ret = _next_big;
-    _next_big = _bigs.next (_next_big);
+    bigobj_arena_t *s, *p;
+
+    s = _next_big;
+    if (!s) s = _bigs.first;
+    p = s;
+
+    bool go = true;
+    bigobj_arena_t *ret = NULL;
+    
+    while (p && go && !ret) {
+      if (p->can_fit (sz)) {
+	ret = p;
+      } else {
+	p = _bigs.next (p);
+	if (!p) p = _bigs.first;
+	if (s == p) {
+	  go = false;
+	}
+      }
+    }
+
+    _next_big = p;
     return ret;
   }
 
@@ -118,17 +146,29 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
-#define ALIGN(x,z) (((x) + (z)) & ~(z))
+#define ALIGN(x,z) (((x) + (z) -1) & ~(z-1))
+#define BOA_OBJ_ALIGN(x) (ALIGN(x, sizeof (void *)))
+
+  //-----------------------------------------------------------------------
+
+  bool
+  bigobj_arena_t::can_fit (size_t sz) const
+  {
+    sz = BOA_OBJ_ALIGN(sz);
+    return (bigslot_t::size (sz) + _nxt_memslot <= _nxt_ptrslot);
+  }
+  
+  //-----------------------------------------------------------------------
 
   redirect_ptr_t *
   bigobj_arena_t::aalloc (size_t sz)
   {
     bigptr_t *res = NULL;
-    if (bigslot_t::size (sz) + _nxt_memslot <= _nxt_ptrslot) {
+    if (can_fit (sz)) {
       bigslot_t *ms = reinterpret_cast<bigslot_t *> (_nxt_memslot);
-      bigptr_t *res = new (_nxt_ptrslot) bigptr_t (ms);
+      res = new (_nxt_ptrslot) bigptr_t (ms);
 
-      sz = ALIGN(sz, sizeof(void *));
+      sz = BOA_OBJ_ALIGN(sz);
       
       ms->_sz = sz;
       ms->_ptrslot = res;

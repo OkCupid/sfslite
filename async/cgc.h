@@ -104,7 +104,7 @@ namespace cgc {
 
   class bigptr_t : public redirect_ptr_t {
   public:
-    bigptr_t (bigslot_t *m) : _ms (m), _count (1) {}
+    bigptr_t (bigslot_t *m) : _ms (m), _count (0) {}
     void set_mem_slot (bigslot_t *ms) { _ms = ms; }
     bigslot_t *memslot () const { return _ms; }
     void init (bigslot_t *m, int c)  { _ms = m; _count = c; }
@@ -123,12 +123,14 @@ namespace cgc {
   //=======================================================================
 
   template<class T> class alloc;
+  template<class T> class alloc2;
 
   //=======================================================================
 
   template<class T>
   class ptr {
   public:
+    ptr (const ptr<T> &p) : _redir_ptr (p._redir_ptr) { rc_inc (); }
     ptr () : _redir_ptr (NULL) {}
     virtual ~ptr () { rc_dec(); }
 
@@ -170,7 +172,7 @@ namespace cgc {
     bool operator== (const ptr<T> &p) const { return base_eq (p); }
     bool operator!= (const ptr<T> &p) const { return !base_eq (p); }
 
-    ptr<T> &operator= (ptr<T> &p)
+    ptr<T> &operator= (const ptr<T> &p)
     {
       rc_dec ();
       _redir_ptr = p._redir_ptr;
@@ -189,8 +191,10 @@ namespace cgc {
     }
 
     friend class alloc<T>;
+    friend class alloc2<T>;
   protected:
     explicit ptr (redirect_ptr_t *p) : _redir_ptr (p) { rc_inc (); }
+
     bool base_eq (const ptr<T> &p) { return _redir_ptr == p._redir_ptr; }
 
     virtual void v_clear () {}
@@ -215,6 +219,9 @@ namespace cgc {
     }
 
     redirect_ptr_t *_redir_ptr;
+
+  private:
+    explicit ptr (int i); // do not call list
   };
 
   //=======================================================================
@@ -382,7 +389,6 @@ namespace cgc {
     virtual ~arena_t () {}
 
     virtual void remove (bigslot_t *s) = 0;
-    virtual bigobj_arena_t *to_bigobj_arena () { return NULL; }
 
     virtual redirect_ptr_t *aalloc (size_t sz) = 0;
 
@@ -418,7 +424,7 @@ namespace cgc {
     tailq_entry<bigobj_arena_t> _qlnk;
 
     void remove (bigslot_t *m) { _memslots.remove (m); }
-    bigobj_arena_t *to_bigobj_arena () { return this; }
+    bool can_fit (size_t sz) const;
 
   protected:
     bigptr_t *get_free_ptrslot (void);
@@ -466,7 +472,7 @@ namespace cgc {
     template<class T> arena_t *
     lookup (ptr<T> p) { return lookup (p->volatile_ptr ()); }
 
-    redirect_ptr_t *aalloc (size_t sz) { return pick (sz)->aalloc (sz); }
+    redirect_ptr_t *aalloc (size_t sz) ;
 
     arena_t *lookup (const memptr_t *p);
 
@@ -483,13 +489,34 @@ namespace cgc {
   //=======================================================================
 
   template<class T>
+  class alloc2 {
+  public:
+    template<class A> explicit alloc2 (const A &a)
+    {
+      redirect_ptr_t *r = mgr_t::get()->aalloc(sizeof(T));
+      if (r) {
+	(void) new (r->v_data ()) T (a);
+	_p = ptr<T> (r);
+      }
+    }
+    operator ptr<T>& () { return _p; }
+    operator const ptr<T>& () const { return _p; }
+  private:
+    ptr<T> _p;
+  };
+
+  //=======================================================================
+
+  template<class T>
   class alloc {
   public:
     VA_TEMPLATE(explicit alloc ,					\
 		{ redirect_ptr_t *r = mgr_t::get()->aalloc(sizeof(T));	\
+		  if (r) {						\
 		  (void) new (r->v_data ()) T ,				\
-		    ; _p = ptr<T> (r); } )
-    operator ptr<T>() { return _p; }
+		    ; _p = ptr<T> (r); } } )
+    operator ptr<T>&() { return _p; }
+    operator const ptr<T> &() const { return _p; }
   private:
     ptr<T> _p;
   };
