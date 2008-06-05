@@ -10,6 +10,7 @@ public:
   int baz () const { return _x; }
 private:
   int _x;
+  char _pad[51];
 };
 
 int

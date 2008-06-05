@@ -34,7 +34,7 @@ namespace cgc {
 
     memptr_t _data[0];
 
-    static size_t size (size_t s) { return sizeof (bigslot_t) + s; }
+    static size_t size (size_t s);
     size_t size () const { return size (_sz); }
 
     memptr_t *v_data () { return _data; }
@@ -391,6 +391,7 @@ namespace cgc {
     virtual void remove (bigslot_t *s) = 0;
 
     virtual redirect_ptr_t *aalloc (size_t sz) = 0;
+    virtual bool gc_make_room (size_t sz) { return false; }
 
     int cmp (const memptr_t *m) const;
 
@@ -407,12 +408,14 @@ namespace cgc {
 
   class bigobj_arena_t : public arena_t {
   public:
-    bigobj_arena_t (memptr_t *base, size_t sz) : arena_t (base, sz) { init(); }
+    bigobj_arena_t (memptr_t *base, size_t sz) 
+      : arena_t (base, sz), _unclaimed_space (0) { init(); }
     bigobj_arena_t () 
       : arena_t (NULL, 0), 
 	_top (NULL), 
 	_nxt_ptrslot (NULL), 
-	_nxt_memslot (NULL) {}
+	_nxt_memslot (NULL),
+	_unclaimed_space (0) {}
 
     void init ();
 
@@ -420,10 +423,11 @@ namespace cgc {
 
     redirect_ptr_t *aalloc (size_t sz);
     void gc (void);
+    virtual bool gc_make_room (size_t sz);
 
     tailq_entry<bigobj_arena_t> _qlnk;
 
-    void remove (bigslot_t *m) { _memslots.remove (m); }
+    void remove (bigslot_t *m);
     bool can_fit (size_t sz) const;
 
   protected:
@@ -437,6 +441,7 @@ namespace cgc {
 
     memslot_list_t _memslots;
     simple_stack_t<bigptr_t *> _free_ptrslots;
+    size_t _unclaimed_space;
   };
 
   //=======================================================================
@@ -534,28 +539,22 @@ namespace cgc {
 
   //=======================================================================
 
+
   class std_mgr_t : public mgr_t {
   public:
     std_mgr_t (const std_cfg_t &cfg);
     arena_t *pick (size_t sz);
 
+    typedef tailq<bigobj_arena_t, &bigobj_arena_t::_qlnk> boa_list_t;
+
+    virtual bigobj_arena_t *gc_make_room_big (size_t sz);
+
   private:
     std_cfg_t _cfg;
-    tailq<bigobj_arena_t, &bigobj_arena_t::_qlnk> _bigs;
+    boa_list_t _bigs;
     bigobj_arena_t *_next_big;
   };
 
-
-  //=======================================================================
-
-  void
-  bigslot_t::slotfree ()
-  {
-    arena_t *a = mgr_t::get()->lookup (v_data ());
-    if (a) {
-      a->remove (this);
-    }
-  }
 
   //=======================================================================
 

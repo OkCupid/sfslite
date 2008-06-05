@@ -18,6 +18,41 @@ namespace cgc {
     _sz = ms->_sz;
   }
 
+  //-----------------------------------------------------------------------
+
+  void
+  bigslot_t::slotfree ()
+  {
+    arena_t *a = mgr_t::get()->lookup (v_data ());
+    if (a) {
+      a->remove (this);
+    }
+  }
+
+  //-----------------------------------------------------------------------
+
+  static inline size_t
+  align (size_t in, size_t a)
+  {
+    a--;
+    return (in + a) & ~a;
+  }
+
+  //-----------------------------------------------------------------------
+
+  static inline size_t
+  boa_obj_align (size_t sz)
+  {
+    return align (sz, sizeof (void *));
+  }
+
+  //-----------------------------------------------------------------------
+
+  size_t
+  bigslot_t::size (size_t s)
+  {
+    return boa_obj_align (s) + sizeof (bigslot_t);
+  }
 
   //=======================================================================
 
@@ -86,32 +121,60 @@ namespace cgc {
 
   //=======================================================================
 
+  template<class L, class O>
+  class cyclic_list_iterator_t {
+  public:
+    cyclic_list_iterator_t (L *l, O *s) 
+      : _list (l), _start (s ? s : l->first), _p (_start) {}
+    
+    O *next ()
+    {
+      O *ret = _p;
+      if (_p) {
+	_p = _list->next (_p);
+	if (!_p) _p = _list->first;
+	if (_p == _start) _p  = NULL;
+      }
+      return ret;
+    }
+
+  private:
+    L *_list;
+    O *_start, *_p;
+  };
+
+
+  //=======================================================================
+
   arena_t *
   std_mgr_t::pick (size_t sz)
   {
-    bigobj_arena_t *s, *p;
+    cyclic_list_iterator_t<boa_list_t, bigobj_arena_t> it (&_bigs, _next_big);
+    bigobj_arena_t *p;
 
-    s = _next_big;
-    if (!s) s = _bigs.first;
-    p = s;
+    while ((p = it.next ()) && !(p->can_fit (sz))) {}
 
-    bool go = true;
-    bigobj_arena_t *ret = NULL;
-    
-    while (p && go && !ret) {
-      if (p->can_fit (sz)) {
-	ret = p;
-      } else {
-	p = _bigs.next (p);
-	if (!p) p = _bigs.first;
-	if (s == p) {
-	  go = false;
-	}
-      }
+    if (p) {
+      _next_big = p;
+    } else {
+      p = gc_make_room_big (sz);
     }
 
-    _next_big = p;
-    return ret;
+    return p;
+  }
+
+  //-----------------------------------------------------------------------
+
+  bigobj_arena_t *
+  std_mgr_t::gc_make_room_big (size_t sz)
+  {
+    cyclic_list_iterator_t<boa_list_t, bigobj_arena_t> it (&_bigs, _next_big);
+    bigobj_arena_t *p;
+    sz = bigslot_t::size (sz);
+
+    while ((p = it.next ()) && !(p->gc_make_room (sz))) {}
+    if (p) _next_big = p;
+    return p;
   }
 
   //-----------------------------------------------------------------------
@@ -146,15 +209,23 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
-#define ALIGN(x,z) (((x) + (z) -1) & ~(z-1))
-#define BOA_OBJ_ALIGN(x) (ALIGN(x, sizeof (void *)))
+  bool
+  bigobj_arena_t::gc_make_room (size_t sz)
+  {
+    bool ret = false;
+    if (_sz <= _unclaimed_space) {
+      gc ();
+      ret = true;
+    }
+    return ret;
+  }
 
   //-----------------------------------------------------------------------
 
   bool
   bigobj_arena_t::can_fit (size_t sz) const
   {
-    sz = BOA_OBJ_ALIGN(sz);
+    sz = boa_obj_align (sz);
     return (bigslot_t::size (sz) + _nxt_memslot <= _nxt_ptrslot);
   }
   
@@ -168,7 +239,7 @@ namespace cgc {
       bigslot_t *ms = reinterpret_cast<bigslot_t *> (_nxt_memslot);
       res = new (_nxt_ptrslot) bigptr_t (ms);
 
-      sz = BOA_OBJ_ALIGN(sz);
+      sz = boa_obj_align (sz);
       
       ms->_sz = sz;
       ms->_ptrslot = res;
@@ -243,6 +314,7 @@ namespace cgc {
   {
     collect_ptrslots ();
     compact_memslots ();
+    _unclaimed_space = 0;
   }
 
   //-----------------------------------------------------------------------
@@ -265,6 +337,15 @@ namespace cgc {
     else return 0;
   }
 
+  //-----------------------------------------------------------------------
+
+  void
+  bigobj_arena_t::remove (bigslot_t *s)
+  { 
+    _memslots.remove (s); 
+    _unclaimed_space += s->size ();
+  }
+  
   //=======================================================================
 
   size_t mmap_bigobj_arena_t::pagesz;
@@ -277,7 +358,7 @@ namespace cgc {
       pagesz = sysconf (_SC_PAGE_SIZE);
     }
 
-    sz = ALIGN(sz, pagesz);
+    sz = align(sz, pagesz);
 
     void *v = mmap (NULL, sz, PROT_READ | PROT_WRITE, 
 		    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
