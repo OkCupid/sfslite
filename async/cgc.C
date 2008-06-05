@@ -6,16 +6,17 @@ namespace cgc {
 
   //=======================================================================
 
-  void bigslot_t::reseat () { _ptrslot->set_mem_slot (this); }
+  void bigslot_t::reseat () { check(); _ptrslot->set_mem_slot (this); }
 
   //-----------------------------------------------------------------------
   
   void
-  bigslot_t::copy (const bigslot_t *ms)
+  bigslot_t::copy_reinit (const bigslot_t *ms)
   {
     _ptrslot = ms->_ptrslot;
     memcpy (_data, ms->_data, ms->_sz);
     _sz = ms->_sz;
+    debug_init ();
   }
 
   //-----------------------------------------------------------------------
@@ -23,10 +24,13 @@ namespace cgc {
   void
   bigslot_t::slotfree ()
   {
+    check();
     arena_t *a = mgr_t::get()->lookup (v_data ());
     if (a) {
       a->remove (this);
     }
+
+    mark_deallocated (this, size());
   }
 
   //-----------------------------------------------------------------------
@@ -245,19 +249,27 @@ namespace cgc {
   {
     bigptr_t *res = NULL;
     if (can_fit (sz)) {
-      bigslot_t *ms = reinterpret_cast<bigslot_t *> (_nxt_memslot);
-      res = new (_nxt_ptrslot) bigptr_t (ms);
-
-      sz = boa_obj_align (sz);
       
-      ms->_sz = sz;
-      ms->_ptrslot = res;
+      bigslot_t *ms_tmp = reinterpret_cast<bigslot_t *> (_nxt_memslot);
+      res = new (_nxt_ptrslot) bigptr_t (ms_tmp);
+      sz = boa_obj_align (sz);
+      bigslot_t *ms = new (_nxt_memslot) bigslot_t (sz, res);
+      assert (ms == ms_tmp);
 
       _nxt_memslot += ms->size ();
       _nxt_ptrslot -= sizeof (*res);
       _memslots.insert_tail (ms);
     }
     return res;
+  }
+
+  //-----------------------------------------------------------------------
+
+  bigslot_t::bigslot_t (size_t sz, bigptr_t *p)
+    : _sz (sz), _ptrslot (p) 
+  { 
+    debug_init(); 
+    mark_unitialized (_data, _sz);
   }
 
   //-----------------------------------------------------------------------
@@ -302,7 +314,7 @@ namespace cgc {
       _memslots.remove (m);
       bigslot_t *ns = reinterpret_cast<bigslot_t *> (p);
       if (m->v_data () > p) {
-	ns->copy (m);
+	ns->copy_reinit (m);
 	ns->reseat ();
 	p += ns->size ();
       }
@@ -372,6 +384,8 @@ namespace cgc {
     void *v = mmap (NULL, sz, PROT_READ | PROT_WRITE, 
 		    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
+    mark_unitialized (v, sz);
+
     if (!v) 
       panic ("mmap failed: %m\n");
 
@@ -389,4 +403,31 @@ namespace cgc {
 
   //=======================================================================
 
+#ifdef CGC_DEBUG
+  bool debug_mem = true;
+#else /* CGC_DEBUG */
+  bool debug_mem;
+#endif /* CGC_DEBUG */
+
+  void mark_deallocated (void *p, size_t sz)
+  {
+    if (debug_mem)
+      memset (p, 0xdf, sz);
+  }
+
+  void mark_unitialized (void *p, size_t sz)
+  {
+    if (debug_mem)
+      memset (p, 0xca, sz);
+  }
+
+ //=======================================================================
+
+  void
+  bigptr_t::slotfree()
+  {
+    _ms->slotfree ();
+  }
+
+  //=======================================================================
 };

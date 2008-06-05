@@ -7,41 +7,61 @@
 #include "vec.h"
 #include "itree.h"
 
+#define CGC_DEBUG 1
+
+
 namespace cgc {
 
   typedef u_int8_t memptr_t;
 
   class bigptr_t;
 
+  extern bool debug_mem;
+  void mark_deallocated (void *, size_t);
+  void mark_unitialized (void *, size_t);
+
   //=======================================================================
 
   class bigslot_t {
   public:
+    bigslot_t (size_t sz, bigptr_t *p);
 
-    //
-    // Make sure these 3 elements are all aligned, which they are
-    // since all are pointers and/or size_t's.  Might want to revisit
-    // this assumption.
-    //
-    // Also note that the next three fields (4 long's worth) are all used
-    // during compaction.  For this reason, we might consider alternate
-    // storage for object that are much smaller and therefore don't need
-    // to be compacted.
-    //
+
+#ifdef CGC_DEBUG
+    u_int32_t _magic;
+    enum { magic = 0xfbeefbee };
+
+    void debug_init () 
+    {
+      _magic = magic;
+    }
+
+    void check () const
+    {
+      assert (_magic == magic);
+    }
+
+#else /* CGC_DEBUG */
+
+    void debug_init () {}
+    void check () const {}
+
+#endif /*CGC_DEBUG */
+
     tailq_entry<bigslot_t> _next;
-    bigptr_t *_ptrslot;
     size_t _sz;
+    bigptr_t *_ptrslot;
 
     memptr_t _data[0];
 
     static size_t size (size_t s);
-    size_t size () const { return size (_sz); }
+    size_t size () const { check(); return size (_sz); }
 
-    memptr_t *v_data () { return _data; }
-    const memptr_t *v_data () const { return _data; }
+    memptr_t *v_data () { check(); return _data; }
+    const memptr_t *v_data () const { check(); return _data; }
     void reseat ();
 
-    void copy (const bigslot_t*ms);
+    void copy_reinit (const bigslot_t*ms);
     void slotfree ();
 
   };
@@ -104,7 +124,7 @@ namespace cgc {
 
   class bigptr_t : public redirect_ptr_t {
   public:
-    bigptr_t (bigslot_t *m) : _ms (m), _count (0) {}
+    bigptr_t (bigslot_t *m) : _ms (m), _count (0) { debug_init (); }
     void set_mem_slot (bigslot_t *ms) { _ms = ms; }
     bigslot_t *memslot () const { return _ms; }
     void init (bigslot_t *m, int c)  { _ms = m; _count = c; }
@@ -114,10 +134,29 @@ namespace cgc {
     size_t size () const { return _ms->size (); }
     memptr_t *v_data () { return _ms->v_data (); }
     const memptr_t *v_data () const { return _ms->v_data (); }
-    void slotfree () { _ms->slotfree (); }
+    void slotfree ();
   protected:
     bigslot_t *_ms;
     int _count;
+
+  protected:
+
+#ifdef CGC_DEBUG
+    u_int32_t _magic;
+    enum { magic = 0xefbeefbe };
+    void debug_init () 
+    {
+      _magic = magic;
+    }
+    void check () const
+    {
+      assert (_magic == magic);
+    }
+#else /* CGC_DEBUG */
+    void debug_init () {}
+    void check () const {}
+#endif /*CGC_DEBUG */
+
   };
 
   //=======================================================================
