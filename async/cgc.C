@@ -6,12 +6,12 @@ namespace cgc {
 
   //=======================================================================
 
-  void memslot_t::reseat () { _ptrslot->set_mem_slot (this); }
+  void bigslot_t::reseat () { _ptrslot->set_mem_slot (this); }
 
   //-----------------------------------------------------------------------
   
   void
-  memslot_t::copy (const memslot_t *ms)
+  bigslot_t::copy (const bigslot_t *ms)
   {
     _ptrslot = ms->_ptrslot;
     memcpy (_data, ms->_data, ms->_sz);
@@ -20,8 +20,8 @@ namespace cgc {
 
 
   //=======================================================================
-  
-  arena_set_t g_arena_set;
+
+  static mgr_t *_g_mgr;
 
   //-----------------------------------------------------------------------
 
@@ -33,7 +33,7 @@ namespace cgc {
   //-----------------------------------------------------------------------
 
   arena_t *
-  arena_set_t::v_lookup (const memptr_t *p)
+  mgr_t::lookup (const memptr_t *p)
   {
     return _tree.search (wrap (cmp_fn, p));
   }
@@ -41,45 +41,76 @@ namespace cgc {
   //-----------------------------------------------------------------------
 
   void
-  arena_set_t::insert (arena_t *a)
+  mgr_t::insert (arena_t *a)
   {
-    _order.insert_tail (a);
     _tree.insert (a);
   }
 
   //-----------------------------------------------------------------------
   
   void
-  arena_set_t::remove (arena_t *a)
+  mgr_t::remove (arena_t *a)
   {
-    _order.remove (a);
     _tree.remove (a);
   }
 
   //-----------------------------------------------------------------------
 
-  arena_t *
-  arena_set_t::pick (size_t sz)
+  mgr_t *
+  mgr_t::get () 
   {
-    if (!_p) _p = _order.first;
-    if (!_p) return NULL;
-    arena_t *ret = _p;
-    _p = _order.next (_p);
+    if (!_g_mgr) {
+      _g_mgr = New std_mgr_t (std_cfg_t ());
+    }
+    return _g_mgr;
+  }
+
+  //-----------------------------------------------------------------------
+
+  void
+  mgr_t::set (mgr_t *m)
+  {
+    assert (!_g_mgr);
+    _g_mgr = m;
+  }
+
+  //=======================================================================
+
+  arena_t *
+  std_mgr_t::pick (size_t sz)
+  {
+    if (!_next_big) _next_big = _bigs.first;
+    if (!_next_big) return NULL;
+    arena_t *ret = _next_big;
+    _next_big = _bigs.next (_next_big);
     return ret;
+  }
+
+  //-----------------------------------------------------------------------
+  
+  std_mgr_t::std_mgr_t (const std_cfg_t &cfg)
+    : _cfg (cfg),
+      _next_big (NULL)
+  {
+    for (size_t i = 0; i < _cfg._n_b_arenae; i++) {
+      mmap_bigobj_arena_t *a = New mmap_bigobj_arena_t (_cfg._size_b_arenae);
+      mgr_t::insert (a);
+      _bigs.insert_tail (a);
+    }
   }
 
   //=======================================================================
 
   //-----------------------------------------------------------------------
 
-  untyped_bigptr_t *
-  arena_t::get_free_ptrslot ()
+  bigptr_t *
+  bigobj_arena_t::get_free_ptrslot ()
   {
-    untyped_bigptr_t *ret = NULL;
+    bigptr_t *ret = NULL;
     if (_free_ptrslots.size ()) {
       ret = _free_ptrslots.pop_back ();
     } else {
-     ret = reinterpret_cast<untyped_bigptr_t *> (_nxt_ptrslot);
+     ret = reinterpret_cast<bigptr_t *> (_nxt_ptrslot);
      _nxt_ptrslot += sizeof (*ret);
     }
     return ret;
@@ -87,33 +118,23 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
-#define ALIGNSZ (sizeof(void *))
-#define ALIGN(x) \
-  (((x) + ALIGNSZ) & ~ALIGNSZ)
+#define ALIGN(x,z) (((x) + (z)) & ~(z))
 
-  untyped_bigptr_t *
-  arena_t::alloc (size_t sz)
+  redirect_ptr_t *
+  bigobj_arena_t::aalloc (size_t sz)
   {
-    untyped_bigptr_t *res = NULL;
-    if (memslot_t::size (sz) + _nxt_memslot <= _nxt_ptrslot) {
-      memslot_t *ms = reinterpret_cast<memslot_t *> (_nxt_memslot);
+    bigptr_t *res = NULL;
+    if (bigslot_t::size (sz) + _nxt_memslot <= _nxt_ptrslot) {
+      bigslot_t *ms = reinterpret_cast<bigslot_t *> (_nxt_memslot);
+      bigptr_t *res = new (_nxt_ptrslot) bigptr_t (ms);
 
-      // Hack; Specify a random type here, because the size of the 
-      // underlying object does not depend on sizeof(T) [ T = int below ].
-      // Use placement new to place this object into the mem given.
-      bigptr_t<int> *bp = new (_nxt_ptrslot) bigptr_t<int> (ms);
-
-      // What we care about is this pointer anyway, but make sure C++
-      // has satisfied its object layout constraints.
-      untyped_bigptr_t *res = bp;
-
-      sz = ALIGN(sz);
+      sz = ALIGN(sz, sizeof(void *));
       
       ms->_sz = sz;
       ms->_ptrslot = res;
 
       _nxt_memslot += ms->size ();
-      _nxt_ptrslot -= sizeof (*bp);
+      _nxt_ptrslot -= sizeof (*res);
       _memslots.insert_tail (ms);
     }
     return res;
@@ -122,12 +143,11 @@ namespace cgc {
   //-----------------------------------------------------------------------
 
   void
-  arena_t::collect_ptrslots (void)
+  bigobj_arena_t::collect_ptrslots (void)
   {
-    untyped_bigptr_t *p = reinterpret_cast<untyped_bigptr_t *> (_top) - 1;
-    untyped_bigptr_t *last = 
-      reinterpret_cast<untyped_bigptr_t *> (_nxt_ptrslot) + 1;
-    untyped_bigptr_t *last_used = NULL;
+    bigptr_t *p = reinterpret_cast<bigptr_t *> (_top) - 1;
+    bigptr_t *last = reinterpret_cast<bigptr_t *> (_nxt_ptrslot) + 1;
+    bigptr_t *last_used = NULL;
 
     for ( ; p >= last; p--) {
       if (p->count () == 0) {
@@ -149,18 +169,18 @@ namespace cgc {
   //-----------------------------------------------------------------------
 
   void
-  arena_t::compact_memslots (void)
+  bigobj_arena_t::compact_memslots (void)
   {
     memptr_t *p = _base;
-    memslot_t *m = _memslots.first;
-    memslot_t *n = NULL;
+    bigslot_t *m = _memslots.first;
+    bigslot_t *n = NULL;
 
     memslot_list_t nl;
     
     while (m) {
       n = _memslots.next (m);
       _memslots.remove (m);
-      memslot_t *ns = reinterpret_cast<memslot_t *> (p);
+      bigslot_t *ns = reinterpret_cast<bigslot_t *> (p);
       if (m->v_data () > p) {
 	ns->copy (m);
 	ns->reseat ();
@@ -179,7 +199,7 @@ namespace cgc {
   //-----------------------------------------------------------------------
 
   void
-  arena_t::gc (void)
+  bigobj_arena_t::gc (void)
   {
     collect_ptrslots ();
     compact_memslots ();
@@ -188,30 +208,11 @@ namespace cgc {
   //-----------------------------------------------------------------------
 
   void
-  arena_t::init (memptr_t *base, u_int sz)
+  bigobj_arena_t::init ()
   {
-    _base = base;
-    _top = _base + sz;
+    _top = _base + _sz;
     _nxt_memslot = _base;
-
-    // Ugly hack in which random type is used.  See above.
-    _nxt_ptrslot = _top - sizeof (bigptr_t<int>);
-
-    _sz = sz;
-    
-    /*
-      assert (sizeof(size_t) == sizeof (memptr_t *));
-      _key = reinterpret_cast<size_t> (_base);
-    */
-
-    g_arena_set.insert (this);
-  }
-
-  //-----------------------------------------------------------------------
-
-  arena_t::~arena_t ()
-  {
-    g_arena_set.remove (this);
+    _nxt_ptrslot = _top - sizeof (bigptr_t);
   }
 
   //-----------------------------------------------------------------------
@@ -226,16 +227,17 @@ namespace cgc {
 
   //=======================================================================
 
-  size_t mmap_arena_t::pagesz;
+  size_t mmap_bigobj_arena_t::pagesz;
 
   //-----------------------------------------------------------------------
 
-  mmap_arena_t::mmap_arena_t (size_t npages)
+  mmap_bigobj_arena_t::mmap_bigobj_arena_t (size_t sz)
   {
     if (!pagesz) {
       pagesz = sysconf (_SC_PAGE_SIZE);
     }
-    size_t sz = npages * pagesz;
+
+    sz = ALIGN(sz, pagesz);
 
     void *v = mmap (NULL, sz, PROT_READ | PROT_WRITE, 
 		    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
@@ -243,25 +245,17 @@ namespace cgc {
     if (!v) 
       panic ("mmap failed: %m\n");
 
-    init (static_cast<memptr_t *> (v), sz);
+    _base = static_cast<memptr_t *> (v);
+    _sz = sz;
+    init ();
   }
 
   //-----------------------------------------------------------------------
 
-  mmap_arena_t::~mmap_arena_t ()
+  mmap_bigobj_arena_t::~mmap_bigobj_arena_t ()
   {
     munmap (_base, _sz);
   }
-
-  //-----------------------------------------------------------------------
-
-  arena_t *
-  arena_t::pick_arena (size_t sz)
-  {
-    return g_arena_set.pick (sz);
-  }
-
-  //-----------------------------------------------------------------------
 
   //=======================================================================
 
