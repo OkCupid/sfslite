@@ -233,7 +233,7 @@ namespace cgc {
   void
   bigobj_arena_t::sanity_check (void) const
   {
-    for (bigslot_t *s = _memslots.first; s; s = _memslots.next (s)) {
+    for (bigslot_t *s = _memslots->first; s; s = _memslots->next (s)) {
       s->check ();
     }
   }
@@ -287,7 +287,7 @@ namespace cgc {
 
       _nxt_memslot += ms->size ();
       _nxt_ptrslot -= sizeof (*res);
-      _memslots.insert_tail (ms);
+      _memslots->insert_tail (ms);
     }
     return res;
   }
@@ -333,31 +333,31 @@ namespace cgc {
   bigobj_arena_t::compact_memslots (void)
   {
     memptr_t *p = _base;
-    bigslot_t *m = _memslots.first;
+    bigslot_t *m = _memslots->first;
     bigslot_t *n = NULL;
 
-    memslot_list_t nl;
+    memslot_list_t *nl = New memslot_list_t ();
     warn << "CM!\n";
     
     while (m) {
       m->check ();
-      n = _memslots.next (m);
-      _memslots.remove (m);
+      n = _memslots->next (m);
+      _memslots->remove (m);
       bigslot_t *ns = reinterpret_cast<bigslot_t *> (p);
       if (m->v_data () > p) {
 	ns->copy_reinit (m);
 	ns->reseat ();
 	p += ns->size ();
       }
-      nl.insert_tail (ns);
+      nl->insert_tail (ns);
       m = n;
     }
 
-    _memslots.first = nl.first;
-    _memslots.plast = nl.plast;
+    delete (_memslots);
+    _memslots = nl;
 
-    if (_memslots.first) 
-      _memslots.first->check ();
+    if (_memslots->first) 
+      _memslots->first->check ();
 
     _nxt_memslot = p;
   }
@@ -397,11 +397,27 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
+  static void
+  dump_list (memslot_list_t *ml)
+  {
+    bigslot_t *p;
+    warn ("List dump %p: ", ml);
+    for (p = ml->first; p; p = ml->next (p)) {
+      warn ("%p -> ", p);
+    }
+    warn ("NULL\n");
+  }
+
+  //-----------------------------------------------------------------------
+
   void
   bigobj_arena_t::remove (bigslot_t *s)
   { 
+    dump_list (_memslots);
     warn ("RM %p %p\n", s, s->_data);
-    _memslots.remove (s); 
+    mgr_t::get ()->sanity_check ();
+    _memslots->remove (s); 
+    dump_list (_memslots);
     _unclaimed_space += s->size ();
     mgr_t::get ()->sanity_check ();
   }

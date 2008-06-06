@@ -448,12 +448,15 @@ namespace cgc {
   class bigobj_arena_t : public arena_t {
   public:
     bigobj_arena_t (memptr_t *base, size_t sz) 
-      : arena_t (base, sz), _unclaimed_space (0) { init(); }
+      : arena_t (base, sz), 
+	_memslots (New memslot_list_t ()),
+	_unclaimed_space (0) { init(); }
     bigobj_arena_t () 
       : arena_t (NULL, 0), 
 	_top (NULL), 
 	_nxt_ptrslot (NULL), 
 	_nxt_memslot (NULL),
+	_memslots (New memslot_list_t ()),
 	_unclaimed_space (0) {}
 
     void init ();
@@ -481,7 +484,7 @@ namespace cgc {
     memptr_t *_nxt_ptrslot;
     memptr_t *_nxt_memslot;
 
-    memslot_list_t _memslots;
+    memslot_list_t *_memslots;
     simple_stack_t<bigptr_t *> _free_ptrslots;
     size_t _unclaimed_space;
   };
