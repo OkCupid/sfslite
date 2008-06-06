@@ -234,16 +234,12 @@ namespace cgc {
   bigobj_arena_t::get_free_ptrslot ()
   {
     bigptr_t *ret = NULL;
-    const char *c;
     if (_free_ptrslots.n_elem ()) {
       ret = _free_ptrslots.pop_back ();
-      c = "G";
     } else {
      ret = reinterpret_cast<bigptr_t *> (_nxt_ptrslot);
      _nxt_ptrslot -= sizeof (*ret);
-     c = "B";
     }
-    warn ("%s %p\n", c, ret);
     return ret;
   }
 
