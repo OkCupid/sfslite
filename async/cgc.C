@@ -243,7 +243,6 @@ namespace cgc {
       ret = nxt--;
       _nxt_ptrslot = reinterpret_cast<memptr_t *> (nxt);
     }
-    warn ("A %p\n", ret);
     return ret;
   }
 
@@ -559,7 +558,6 @@ namespace cgc {
   void
   bigptr_t::deallocate ()
   {
-    warn ("D %p\n", this);
     check ();
     assert (_count == 0);
     _ms->check ();

@@ -17,7 +17,6 @@ test1(void)
   for (size_t i = 0; i < 4; i++) {
     v.push_back (cgc::alloc<bar_t> (i));
   }
-  v[0] = NULL;
   v[0] = cgc::alloc<bar_t> (100);
 }
 
@@ -29,19 +28,16 @@ public:
   int baz () const { return _x; }
 private:
   int _x;
-  char _pad[1];
+  char _pad[37];
 };
 
 static void
 test2(void) {
 
-  warn << "+ Test2--------\n";
-  cgc::mgr_t::get ()->report ();
-  
   cgc::ptr<foo_t> x = cgc::alloc<foo_t> (10,23);
   cgc::ptr<foo_t> y = x;
-  y->bar ();
-  x->bar ();
+  assert (y->baz () == 33);
+  assert (x->baz () == 33);
   x = y = NULL;
   x = cgc::alloc<foo_t> (40,50);
 
@@ -52,19 +48,12 @@ test2(void) {
       assert (x);
       v.push_back (x);
     }
-    
-    warn << "--- pre clear ----\n";
-    cgc::mgr_t::get ()->report ();
     v.clear ();
-    cgc::mgr_t::get ()->gc ();
-    warn << "--- post clear ----\n";
-    cgc::mgr_t::get ()->report ();
   }
 
   for (size_t i = 0; i < 100; i++) {
     v.push_back (cgc::alloc<foo_t> (2*i, 0));
   }
-  cgc::mgr_t::get ()->report ();
 
   for (size_t i = 0; i < 20; i++) {
     v[i*5] = NULL;
@@ -84,9 +73,6 @@ test2(void) {
       assert (x == 2*i);
     }
   }
-
-  cgc::mgr_t::get ()->report ();
-  warn << "- Test2--------\n";
 }
 
 int
