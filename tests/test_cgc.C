@@ -29,7 +29,7 @@ public:
   int baz () const { return _x; }
 private:
   int _x;
-  char _pad[51];
+  char _pad[33];
 };
 
 static void
@@ -44,7 +44,9 @@ test2(void) {
 
   vec<cgc::ptr<foo_t> > v;
   for (size_t i = 0; i < 100; i++) {
-    v.push_back (cgc::alloc<foo_t> (i, 0));
+    x = cgc::alloc<foo_t> (i, 0);
+    assert (x);
+    v.push_back (x);
   }
 
   /*
@@ -59,7 +61,9 @@ test2(void) {
   */
 
   for (size_t i = 0; i < 20; i++) {
-    v[i*5] = cgc::alloc<foo_t> (i,300);
+    x = cgc::alloc<foo_t> (i,300);
+    assert (x);
+    v[i*5] = x;
   }
 
   for (size_t i = 0; i < 100; i++) {

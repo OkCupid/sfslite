@@ -400,6 +400,12 @@ namespace cgc {
       return _base[_nxt-1];
     }
 
+    const T &operator[] (size_t s) const
+    {
+      assert (s < _nxt);
+      return _base[s];
+    }
+
     void reserve ()
     {
       if (_nxt == _size) {
@@ -413,6 +419,8 @@ namespace cgc {
 	_size = newsz;
       }
     }
+
+    size_t n_elem () const { return _nxt; }
     
   private:
     T *_base;

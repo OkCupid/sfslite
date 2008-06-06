@@ -244,8 +244,10 @@ namespace cgc {
   size_t
   bigobj_arena_t::free_space () const
   {
-    return (_nxt_ptrslot - _nxt_memslot);
-
+    if (_nxt_ptrslot > _nxt_memslot) 
+      return (_nxt_ptrslot - _nxt_memslot);
+    else
+      return 0;
   }
 
   //-----------------------------------------------------------------------
@@ -288,7 +290,11 @@ namespace cgc {
 	warn ("allocated %p -> %p\n", ms, ms->_data + sz);
 
       _nxt_memslot += ms->size ();
+      assert (_nxt_ptrslot >= _nxt_memslot);
+
       _nxt_ptrslot -= sizeof (*res);
+
+
       _memslots->insert_tail (ms);
     }
     return res;
@@ -326,6 +332,13 @@ namespace cgc {
       _nxt_ptrslot = reinterpret_cast<memptr_t *> (last - 1);
       while (_free_ptrslots.size () && _free_ptrslots.back () > last)
 	_free_ptrslots.pop_back ();
+    }
+
+    if (debug_mem) {
+      for (size_t i = 0; i < _free_ptrslots.n_elem(); i++) {
+	assert (_free_ptrslots[i] > 
+		reinterpret_cast<bigptr_t *> (_nxt_ptrslot));
+      }
     }
   }
 
