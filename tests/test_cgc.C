@@ -46,15 +46,17 @@ test2(void) {
   for (size_t i = 0; i < 100; i++) {
     v.push_back (cgc::alloc<foo_t> (i, 0));
   }
-  v[0]->bar ();
+
+  /*
+  v.clear ();
   for (size_t i = 0; i < 100; i++) {
     v.push_back (cgc::alloc<foo_t> (2*i, 0));
   }
-  v[0]->bar ();
 
   for (size_t i = 0; i < 20; i++) {
     v[i*5] = NULL;
   }
+  */
 
   for (size_t i = 0; i < 20; i++) {
     v[i*5] = cgc::alloc<foo_t> (i,300);
@@ -65,7 +67,7 @@ test2(void) {
     if (i % 5 == 0) {
       assert (x == 300 + i/5);
     } else {
-      assert (x == 2*i);
+      assert (x == i);
     }
   }
 }
@@ -77,6 +79,7 @@ main (int argc, char *argv[])
   cfg._n_b_arenae = 2;
   cfg._size_b_arenae = 1;
   cgc::mgr_t::set (New cgc::std_mgr_t (cfg));
+  cgc::debug_warnings = 1;
 
   test1();
   cgc::mgr_t::get ()->sanity_check();

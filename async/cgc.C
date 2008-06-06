@@ -14,7 +14,8 @@ namespace cgc {
   void
   bigslot_t::copy_reinit (const bigslot_t *ms)
   {
-    warn ("copy data from %p to %p (%u bytes)\n", ms->_data, _data, ms->_sz);
+    if (debug_warnings)
+      warn ("copy data from %p to %p (%u bytes)\n", ms->_data, _data, ms->_sz);
     _ptrslot = ms->_ptrslot;
     memcpy (_data, ms->_data, ms->_sz);
     _sz = ms->_sz;
@@ -283,7 +284,8 @@ namespace cgc {
       bigslot_t *ms = new (_nxt_memslot) bigslot_t (sz, res);
       assert (ms == ms_tmp);
 
-      warn ("allocated %p -> %p\n", ms, ms->_data + sz);
+      if (debug_warnings)
+	warn ("allocated %p -> %p\n", ms, ms->_data + sz);
 
       _nxt_memslot += ms->size ();
       _nxt_ptrslot -= sizeof (*res);
@@ -337,7 +339,11 @@ namespace cgc {
     bigslot_t *n = NULL;
 
     memslot_list_t *nl = New memslot_list_t ();
-    warn << "CM!\n";
+
+    sanity_check();
+
+    if (debug_warnings)
+      warn << "compact memslots!\n";
     
     while (m) {
       m->check ();
@@ -356,8 +362,7 @@ namespace cgc {
     delete (_memslots);
     _memslots = nl;
 
-    if (_memslots->first) 
-      _memslots->first->check ();
+    sanity_check();
 
     _nxt_memslot = p;
   }
@@ -413,11 +418,20 @@ namespace cgc {
   void
   bigobj_arena_t::remove (bigslot_t *s)
   { 
-    dump_list (_memslots);
-    warn ("RM %p %p\n", s, s->_data);
+    if (debug_warnings >= 2) {
+      dump_list (_memslots);
+    }
+
+    if (debug_warnings) {
+      warn ("RM %p %p\n", s, s->_data);
+    }
+
     mgr_t::get ()->sanity_check ();
     _memslots->remove (s); 
-    dump_list (_memslots);
+
+    if (debug_warnings >= 2)
+      dump_list (_memslots);
+
     _unclaimed_space += s->size ();
     mgr_t::get ()->sanity_check ();
   }
@@ -464,10 +478,13 @@ namespace cgc {
   bool debug_mem;
 #endif /* CGC_DEBUG */
 
+  int debug_warnings;
+
   void mark_deallocated (void *p, size_t sz)
   {
     if (debug_mem) {
-      warn ("mark deallocated: %p to %p\n", p, (char *)p + sz);
+      if (debug_warnings)
+	warn ("mark deallocated: %p to %p\n", p, (char *)p + sz);
       memset (p, 0xdf, sz);
     }
   }

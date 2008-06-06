@@ -17,6 +17,7 @@ namespace cgc {
   class bigptr_t;
 
   extern bool debug_mem;
+  extern int debug_warnings;
   void mark_deallocated (void *, size_t);
   void mark_unitialized (void *, size_t);
 
