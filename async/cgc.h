@@ -21,6 +21,8 @@ namespace cgc {
   void mark_deallocated (void *, size_t);
   void mark_unitialized (void *, size_t);
 
+  class bigobj_arena_t;
+
   //=======================================================================
 
   class bigslot_t {
@@ -63,7 +65,7 @@ namespace cgc {
     void reseat ();
 
     void copy_reinit (const bigslot_t*ms);
-    void slotfree ();
+    void deallocate (bigobj_arena_t *a);
 
   };
 
@@ -84,7 +86,7 @@ namespace cgc {
     virtual size_t size () const = 0;
     virtual memptr_t *v_data () = 0;
     virtual const memptr_t *v_data () const = 0;
-    virtual void slotfree () = 0;
+    virtual void deallocate () = 0;
 
     memptr_t *obj () 
     { 
@@ -135,8 +137,12 @@ namespace cgc {
     size_t size () const { return _ms->size (); }
     memptr_t *v_data () { return _ms->v_data (); }
     const memptr_t *v_data () const { return _ms->v_data (); }
-    void slotfree ();
+    void deallocate ();
+
+    friend class bigobj_arena_t;
   protected:
+    void deallocate (bigobj_arena_t *a);
+    
     bigslot_t *_ms;
     int _count;
 
@@ -186,7 +192,8 @@ namespace cgc {
     {
       if (_redir_ptr && !_redir_ptr->rc_dec ()) {
 	obj()->~T();
-	_redir_ptr->slotfree ();
+	_redir_ptr->deallocate ();
+	_redir_ptr = NULL;
       }
     }
 
@@ -378,6 +385,8 @@ namespace cgc {
 
     ~simple_stack_t () { delete [] _base; }
 
+    void clear () { _nxt = 0; }
+
     void push_back (const T &t)
     {
       reserve ();
@@ -385,8 +394,6 @@ namespace cgc {
       _base[_nxt++] = t;
     }
 
-    size_t size () const { return _size; }
-    
     T pop_back () 
     {
       assert (_nxt > 0);
@@ -436,8 +443,6 @@ namespace cgc {
     arena_t (memptr_t *base, size_t sz) : _base (base), _sz (sz) {}
     virtual ~arena_t () {}
 
-    virtual void remove (bigslot_t *s) = 0;
-
     virtual redirect_ptr_t *aalloc (size_t sz) = 0;
     virtual bool gc_make_room (size_t sz) { return false; }
     virtual void report (void) const {}
@@ -461,14 +466,14 @@ namespace cgc {
     bigobj_arena_t (memptr_t *base, size_t sz) 
       : arena_t (base, sz), 
 	_memslots (New memslot_list_t ()),
-	_unclaimed_space (0) { init(); }
+	_unclaimed_space (0) { debug_init(); init(); }
     bigobj_arena_t () 
       : arena_t (NULL, 0), 
 	_top (NULL), 
 	_nxt_ptrslot (NULL), 
 	_nxt_memslot (NULL),
 	_memslots (New memslot_list_t ()),
-	_unclaimed_space (0) {}
+	_unclaimed_space (0) { debug_init(); }
 
     void init ();
 
@@ -480,17 +485,25 @@ namespace cgc {
 
     tailq_entry<bigobj_arena_t> _qlnk;
 
-    void remove (bigslot_t *m);
     bool can_fit (size_t sz) const;
     size_t free_space () const;
     
     void sanity_check () const;
     virtual void report (void) const;
 
+    void debug_init () { _magic = magic; }
+    void check() { assert (magic == _magic); }
+    void mark_free (bigptr_t *p);
+    void remove (bigslot_t *p);
+    
+
   protected:
     bigptr_t *get_free_ptrslot (void);
     void collect_ptrslots (void);
     void compact_memslots (void);
+
+    enum { magic = 0x4ee3beef };
+    u_int32_t _magic;
 
     memptr_t *_top;
     memptr_t *_nxt_ptrslot;

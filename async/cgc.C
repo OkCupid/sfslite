@@ -25,17 +25,11 @@ namespace cgc {
   //-----------------------------------------------------------------------
 
   void
-  bigslot_t::slotfree ()
+  bigslot_t::deallocate (bigobj_arena_t *a)
   {
-    check();
-    arena_t *a = mgr_t::get()->lookup (v_data ());
-    if (a) {
-      a->remove (this);
-    } else {
-      warn << "Arena lookup failed!\n";
-    }
-
-    mark_deallocated (this, size());
+    check ();
+    a->remove (this);
+    mark_deallocated (this, size ());
   }
 
   //-----------------------------------------------------------------------
@@ -240,14 +234,22 @@ namespace cgc {
   bigobj_arena_t::get_free_ptrslot ()
   {
     bigptr_t *ret = NULL;
-    if (_free_ptrslots.size ()) {
+    const char *c;
+    if (_free_ptrslots.n_elem ()) {
       ret = _free_ptrslots.pop_back ();
+      c = "G";
     } else {
      ret = reinterpret_cast<bigptr_t *> (_nxt_ptrslot);
      _nxt_ptrslot -= sizeof (*ret);
+     c = "B";
     }
+    warn ("%s %p\n", c, ret);
     return ret;
   }
+
+  //-----------------------------------------------------------------------
+
+  void bigobj_arena_t::mark_free (bigptr_t *p) {}
 
   //-----------------------------------------------------------------------
 
@@ -319,22 +321,22 @@ namespace cgc {
   {
     bigptr_t *res = NULL;
     if (can_fit (sz)) {
+
+      assert (_nxt_memslot < _nxt_ptrslot);
       
       bigslot_t *ms_tmp = reinterpret_cast<bigslot_t *> (_nxt_memslot);
-      res = new (_nxt_ptrslot) bigptr_t (ms_tmp);
+      bigptr_t *p_tmp = get_free_ptrslot ();
+      assert (p_tmp);
+      res = new (p_tmp) bigptr_t (ms_tmp);
       sz = boa_obj_align (sz);
       bigslot_t *ms = new (_nxt_memslot) bigslot_t (sz, res);
       assert (ms == ms_tmp);
+      assert (res->count () == 0);
 
       if (debug_warnings)
 	warn ("allocated %p -> %p\n", ms, ms->_data + sz);
 
       _nxt_memslot += ms->size ();
-      assert (_nxt_ptrslot >= _nxt_memslot);
-
-      _nxt_ptrslot -= sizeof (*res);
-
-
       _memslots->insert_tail (ms);
     }
     return res;
@@ -355,34 +357,21 @@ namespace cgc {
   bigobj_arena_t::collect_ptrslots (void)
   {
     bigptr_t *p = reinterpret_cast<bigptr_t *> (_top) - 1;
-    bigptr_t *last = reinterpret_cast<bigptr_t *> (_nxt_ptrslot) + 1;
-    bigptr_t *last_used = NULL;
+    bigptr_t *bottom = reinterpret_cast<bigptr_t *> (_nxt_ptrslot);
+    bigptr_t *last = NULL;
 
-    for ( ; p >= last; p--) {
+    _free_ptrslots.clear ();
+
+    for ( ; p > bottom; p--) {
+      p->check ();
       if (p->count () == 0) {
-	p->mark_free ();
 	_free_ptrslots.push_back (p);
       } else {
-	last_used = p;
+	last = p;
       }
     }
-
-    for (size_t i = 0; i < _free_ptrslots.n_elem (); i++) {
-      if (_free_ptrslots[i] < last_used)
-	last_used = _free_ptrslots[i];
-    }
-    
-    if (last_used > last) {
-      last = last_used;
+    if (last)
       _nxt_ptrslot = reinterpret_cast<memptr_t *> (last - 1);
-    }
-
-    if (debug_mem) {
-      for (size_t i = 0; i < _free_ptrslots.n_elem(); i++) {
-	assert (_free_ptrslots[i] > 
-		reinterpret_cast<bigptr_t *> (_nxt_ptrslot));
-      }
-    }
   }
 
   //-----------------------------------------------------------------------
@@ -557,10 +546,31 @@ namespace cgc {
  //=======================================================================
 
   void
-  bigptr_t::slotfree()
+  bigptr_t::deallocate ()
   {
-    _ms->slotfree ();
+    check ();
+    assert (_count == 0);
+    _ms->check ();
+    arena_t *a = mgr_t::get()->lookup (v_data ());
+    if (a) {
+      bigobj_arena_t *boa = reinterpret_cast<bigobj_arena_t *> (a);
+      boa->check ();
+      _ms->deallocate (boa);
+      deallocate (boa);
+    } else {
+      warn << "Arena lookup failed!\n";
+    }
   }
+
+  //-----------------------------------------------------------------------
+
+  void
+  bigptr_t::deallocate (bigobj_arena_t *a)
+  {
+    check ();
+    a->mark_free (this);
+  }
+
 
   //=======================================================================
 
