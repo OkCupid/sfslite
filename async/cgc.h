@@ -440,6 +440,8 @@ namespace cgc {
 
     virtual redirect_ptr_t *aalloc (size_t sz) = 0;
     virtual bool gc_make_room (size_t sz) { return false; }
+    virtual void report (void) const {}
+    virtual void gc (void) = 0;
 
     int cmp (const memptr_t *m) const;
 
@@ -483,6 +485,7 @@ namespace cgc {
     size_t free_space () const;
     
     void sanity_check () const;
+    virtual void report (void) const;
 
   protected:
     bigptr_t *get_free_ptrslot (void);
@@ -535,11 +538,13 @@ namespace cgc {
 
     arena_t *lookup (const memptr_t *p);
     virtual void sanity_check (void) const {}
+    virtual void report (void) const {}
 
     void insert (arena_t *a);
     void remove (arena_t *a);
     static mgr_t *get ();
     static void set (mgr_t *m);
+    virtual void gc (void) = 0;
 
   private:
     itree<memptr_t *, arena_t, &arena_t::_base, &arena_t::_tlnk> _tree;
@@ -603,7 +608,9 @@ namespace cgc {
     typedef tailq<bigobj_arena_t, &bigobj_arena_t::_qlnk> boa_list_t;
 
     virtual bigobj_arena_t *gc_make_room_big (size_t sz);
-    void sanity_check (void) const;
+    virtual void sanity_check (void) const;
+    virtual void report (void) const;
+    virtual void gc (void);
 
   private:
     std_cfg_t _cfg;

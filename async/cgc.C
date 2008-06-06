@@ -187,6 +187,26 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
+  void
+  std_mgr_t::gc (void)
+  {
+    for (bigobj_arena_t *a = _bigs.first; a; a = _bigs.next (a)) {
+      a->gc ();
+    }
+  }
+
+  //-----------------------------------------------------------------------
+
+  void
+  std_mgr_t::report (void) const
+  {
+    for (bigobj_arena_t *a = _bigs.first; a; a = _bigs.next (a)) {
+      a->report ();
+    }
+  }
+
+  //-----------------------------------------------------------------------
+
   bigobj_arena_t *
   std_mgr_t::gc_make_room_big (size_t sz)
   {
@@ -224,7 +244,7 @@ namespace cgc {
       ret = _free_ptrslots.pop_back ();
     } else {
      ret = reinterpret_cast<bigptr_t *> (_nxt_ptrslot);
-     _nxt_ptrslot += sizeof (*ret);
+     _nxt_ptrslot -= sizeof (*ret);
     }
     return ret;
   }
@@ -237,6 +257,26 @@ namespace cgc {
     for (bigslot_t *s = _memslots->first; s; s = _memslots->next (s)) {
       s->check ();
     }
+  }
+
+  //-----------------------------------------------------------------------
+
+  void
+  bigobj_arena_t::report (void) const
+  {
+    size_t sz = 0;
+    for (bigslot_t *s = _memslots->first; s; s = _memslots->next (s)) {
+      sz += s->size ();
+    }
+
+    warn ("bigobj_arena(%p -> %p): %zd in objs; %zd free; %zd unclaimed; "
+	  "%zd ptrslots; slotp=%p; ptrp=%p\n",
+	  _base, _top, 
+	  sz,
+	  free_space (), _unclaimed_space, 
+	  _free_ptrslots.n_elem(),
+	  _nxt_memslot,
+	  _nxt_ptrslot);
   }
 
   //-----------------------------------------------------------------------
@@ -327,11 +367,14 @@ namespace cgc {
       }
     }
 
+    for (size_t i = 0; i < _free_ptrslots.n_elem (); i++) {
+      if (_free_ptrslots[i] < last_used)
+	last_used = _free_ptrslots[i];
+    }
+    
     if (last_used > last) {
       last = last_used;
       _nxt_ptrslot = reinterpret_cast<memptr_t *> (last - 1);
-      while (_free_ptrslots.size () && _free_ptrslots.back () > last)
-	_free_ptrslots.pop_back ();
     }
 
     if (debug_mem) {
@@ -356,7 +399,7 @@ namespace cgc {
     sanity_check();
 
     if (debug_warnings)
-      warn << "compact memslots!\n";
+      warn << "+ compact memslots!\n";
     
     while (m) {
       m->check ();
@@ -378,6 +421,9 @@ namespace cgc {
     sanity_check();
 
     _nxt_memslot = p;
+
+    if (debug_warnings)
+      warn << "- compact memslots!\n";
   }
 
   //-----------------------------------------------------------------------

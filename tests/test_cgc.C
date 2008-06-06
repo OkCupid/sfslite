@@ -29,11 +29,14 @@ public:
   int baz () const { return _x; }
 private:
   int _x;
-  char _pad[33];
+  char _pad[1];
 };
 
 static void
 test2(void) {
+
+  warn << "+ Test2--------\n";
+  cgc::mgr_t::get ()->report ();
   
   cgc::ptr<foo_t> x = cgc::alloc<foo_t> (10,23);
   cgc::ptr<foo_t> y = x;
@@ -43,22 +46,29 @@ test2(void) {
   x = cgc::alloc<foo_t> (40,50);
 
   vec<cgc::ptr<foo_t> > v;
-  for (size_t i = 0; i < 100; i++) {
-    x = cgc::alloc<foo_t> (i, 0);
-    assert (x);
-    v.push_back (x);
+  for (int j = 0; j < 10; j++) {
+    for (size_t i = 0; i < 100; i++) {
+      x = cgc::alloc<foo_t> (i, 0);
+      assert (x);
+      v.push_back (x);
+    }
+    
+    warn << "--- pre clear ----\n";
+    cgc::mgr_t::get ()->report ();
+    v.clear ();
+    cgc::mgr_t::get ()->gc ();
+    warn << "--- post clear ----\n";
+    cgc::mgr_t::get ()->report ();
   }
 
-  /*
-  v.clear ();
   for (size_t i = 0; i < 100; i++) {
     v.push_back (cgc::alloc<foo_t> (2*i, 0));
   }
+  cgc::mgr_t::get ()->report ();
 
   for (size_t i = 0; i < 20; i++) {
     v[i*5] = NULL;
   }
-  */
 
   for (size_t i = 0; i < 20; i++) {
     x = cgc::alloc<foo_t> (i,300);
@@ -74,6 +84,9 @@ test2(void) {
       assert (x == i);
     }
   }
+
+  cgc::mgr_t::get ()->report ();
+  warn << "- Test2--------\n";
 }
 
 int
@@ -83,7 +96,6 @@ main (int argc, char *argv[])
   cfg._n_b_arenae = 2;
   cfg._size_b_arenae = 1;
   cgc::mgr_t::set (New cgc::std_mgr_t (cfg));
-  cgc::debug_warnings = 1;
 
   test1();
   cgc::mgr_t::get ()->sanity_check();
