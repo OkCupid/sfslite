@@ -81,7 +81,7 @@ test2(void) {
     if (i % 5 == 0) {
       assert (x == 300 + i/5);
     } else {
-      assert (x == i);
+      assert (x == 2*i);
     }
   }
 

@@ -234,12 +234,16 @@ namespace cgc {
   bigobj_arena_t::get_free_ptrslot ()
   {
     bigptr_t *ret = NULL;
+    bigptr_t *nxt = reinterpret_cast<bigptr_t *> (_nxt_ptrslot);
     if (_free_ptrslots.n_elem ()) {
       ret = _free_ptrslots.pop_back ();
+      assert (ret->count () == -1);
+      assert (ret > nxt);
     } else {
-     ret = reinterpret_cast<bigptr_t *> (_nxt_ptrslot);
-     _nxt_ptrslot -= sizeof (*ret);
+      ret = nxt--;
+      _nxt_ptrslot = reinterpret_cast<memptr_t *> (nxt);
     }
+    warn ("A %p\n", ret);
     return ret;
   }
 
@@ -255,6 +259,18 @@ namespace cgc {
     for (bigslot_t *s = _memslots->first; s; s = _memslots->next (s)) {
       s->check ();
     }
+
+    bigptr_t *bottom = reinterpret_cast<bigptr_t *> (_nxt_ptrslot) + 1;
+    bigptr_t *top = reinterpret_cast<bigptr_t *> (_top);
+
+    if (_free_ptrslots.n_elem ()) {
+      assert (_free_ptrslots.back () >= bottom);
+    }
+
+    for (bigptr_t *p = bottom; p < top; p++) {
+      p->check ();
+    }
+    
   }
 
   //-----------------------------------------------------------------------
@@ -360,11 +376,10 @@ namespace cgc {
 
     for ( ; p > bottom; p--) {
       p->check ();
-      if (p->count () == 0) {
+      if (p->count () == -1) {
 	_free_ptrslots.push_back (p);
-      } else {
-	last = p;
-      }
+      } 
+      last = p;
     }
     if (last)
       _nxt_ptrslot = reinterpret_cast<memptr_t *> (last - 1);
@@ -544,6 +559,7 @@ namespace cgc {
   void
   bigptr_t::deallocate ()
   {
+    warn ("D %p\n", this);
     check ();
     assert (_count == 0);
     _ms->check ();
@@ -565,6 +581,7 @@ namespace cgc {
   {
     check ();
     a->mark_free (this);
+    _count = -1;
   }
 
 
