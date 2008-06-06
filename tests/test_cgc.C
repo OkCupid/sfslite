@@ -5,6 +5,7 @@
 class bar_t {
 public:
   bar_t (int a) : _x (a) {}
+  int val () const { return _x; }
 private:
   int _x;
   char _pad[1501];
@@ -13,11 +14,32 @@ private:
 static void
 test1(void)
 {
-  vec<cgc::ptr<bar_t> > v;
-  for (size_t i = 0; i < 4; i++) {
-    v.push_back (cgc::alloc<bar_t> (i));
+  for (size_t j = 0; j < 10; j++) {
+
+    // Note; this x must be deallocated by the end of the loop, otherwise
+    // it will hold a reference to an bar_t and we won't have spcae.
+    // There's only enough room for exactly 4 of these things.
+    cgc::ptr<bar_t> x; 
+    vec<cgc::ptr<bar_t> > v;
+    for (size_t i = 0; i < 4; i++) {
+      cgc::ptr<bar_t> x = cgc::alloc<bar_t> (i);
+      assert (x);
+      v.push_back (x);
+    }
+
+    // Must clear v[0] before allocating new one, otherwise we're out of 
+    // space.
+    v[0] = NULL;
+    x = cgc::alloc<bar_t> (100);
+    assert (x);
+    v[0] = x;
+
+    for (int i = 1; i < 4; i++) {
+      assert (v[i]->val () == i);
+    }
+
+    assert (v[0]->val () == 100);
   }
-  v[0] = cgc::alloc<bar_t> (100);
 }
 
 class foo_t {
