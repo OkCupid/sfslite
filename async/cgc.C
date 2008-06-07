@@ -70,12 +70,12 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
-  redirect_ptr_t *
+  redirector_t
   mgr_t::aalloc (size_t sz)
   {
     arena_t *a = pick (sz);
     if (a) return a->aalloc (sz);
-    else return NULL;
+    else return redirector_t ();
   }
 
   //-----------------------------------------------------------------------
@@ -282,7 +282,7 @@ namespace cgc {
       sz += s->size ();
     }
 
-    warn ("bigobj_arena(%p -> %p): %zd in objs; %zd free; %zd unclaimed; "
+    warn (" bigobj_arena(%p -> %p): %zd in objs; %zd free; %zd unclaimed; "
 	  "%zd ptrslots; slotp=%p; ptrp=%p\n",
 	  _base, _top, 
 	  sz,
@@ -327,10 +327,10 @@ namespace cgc {
   
   //-----------------------------------------------------------------------
 
-  redirect_ptr_t *
+  redirector_t
   bigobj_arena_t::aalloc (size_t sz)
   {
-    bigptr_t *res = NULL;
+    redirector_t res;
     if (can_fit (sz)) {
 
       assert (_nxt_memslot < _nxt_ptrslot);
@@ -338,17 +338,18 @@ namespace cgc {
       bigslot_t *ms_tmp = reinterpret_cast<bigslot_t *> (_nxt_memslot);
       bigptr_t *p_tmp = get_free_ptrslot ();
       assert (p_tmp);
-      res = new (p_tmp) bigptr_t (ms_tmp);
+      bigptr_t *p = new (p_tmp) bigptr_t (ms_tmp);
       sz = boa_obj_align (sz);
-      bigslot_t *ms = new (_nxt_memslot) bigslot_t (sz, res);
+      bigslot_t *ms = new (_nxt_memslot) bigslot_t (sz, p);
       assert (ms == ms_tmp);
-      assert (res->count () == 0);
+      assert (p->count () == 0);
 
       if (debug_warnings)
 	warn ("allocated %p -> %p\n", ms, ms->_data + sz);
 
       _nxt_memslot += ms->size ();
       _memslots->insert_tail (ms);
+      res.init (p);
     }
     return res;
   }
@@ -562,14 +563,12 @@ namespace cgc {
     assert (_count == 0);
     _ms->check ();
     arena_t *a = mgr_t::get()->lookup (v_data ());
-    if (a) {
-      bigobj_arena_t *boa = reinterpret_cast<bigobj_arena_t *> (a);
-      boa->check ();
-      _ms->deallocate (boa);
-      deallocate (boa);
-    } else {
-      warn << "Arena lookup failed!\n";
-    }
+    assert (a);
+    bigobj_arena_t *boa = a->to_boa();
+    assert (boa);
+    boa->check ();
+    _ms->deallocate (boa);
+    deallocate (boa);
   }
 
   //-----------------------------------------------------------------------
@@ -584,5 +583,215 @@ namespace cgc {
 
 
   //=======================================================================
+
+  size_t smallobj_sizer_t::_sizes[] =  { 4, 8, 12, 16,
+					 24, 32, 40, 48, 56, 64,
+					 80, 96, 112, 128, 
+					 160, 192, 224, 256 };
+  
+  //-----------------------------------------------------------------------
+
+  smallobj_sizer_t::smallobj_sizer_t ()
+    : _n_sizes (sizeof (_sizes) / sizeof (_sizes[0])) {}
+
+  size_t
+  smallobj_sizer_t::find (size_t sz) const
+  {
+    // Binary search the sizes vector (above)
+
+    size_t l, m, h;
+    h = _n_sizes - 1;
+    l = 0;
+    while ( l <= h ) {
+      m = (l + h)/2;
+      if (_sizes[m] > sz) { h = m - 1; }
+      else if (_sizes[m] < sz) { l = m + 1; }
+      else { break; }
+    }
+
+    if (l < _n_sizes && _sizes[l] < sz) l++;
+    size_t ret = 0;
+    if (l < _n_sizes) 
+      ret = _sizes[l];
+
+    return ret;
+  }
+
+  //=======================================================================
+
+
+  //=======================================================================
+
+  smallobj_arena_t::smallobj_arena_t (memptr_t *b, size_t s, size_t l, size_t h)
+    : arena_t (b, s),
+      _top (b + s),
+      _nxt (b),
+      _min (l), 
+      _max (h) 
+  { 
+    debug_init (); 
+  }
+
+  //-----------------------------------------------------------------------
+
+  void
+  smallobj_arena_t::mark_free (smallptr_t *p)
+  {
+    smallptr_t *base = reinterpret_cast<smallptr_t *> (_base);
+    smallptr_t *top = reinterpret_cast<smallptr_t *> (_top);
+    assert (p >= base);
+    assert (p < top);
+    _freemap.dealloc (p - base);
+  }
+
+
+  //-----------------------------------------------------------------------
+
+  redirector_t
+  smallobj_arena_t::aalloc (size_t sz)
+  {
+    redirector_t ret;
+    assert (sz >= _min);
+    assert (sz <= _max);
+    memptr_t *mp = NULL;
+    int pos = _freemap.alloc ();
+    if (pos >= 0) {
+      mp = _base + pos * _max;
+    } else if (_nxt + _max  <= _top) {
+      mp = _nxt;
+      _nxt += _max;
+    }
+    assert (mp >= _base);
+    assert (mp < _top);
+    ret.init (reinterpret_cast<smallptr_t *> (mp));
+    return ret;
+  }
+
+  //-----------------------------------------------------------------------
+
+  void 
+  smallobj_arena_t::report () const
+  {
+    size_t nf = _freemap.nfree ();
+    size_t nl = 0;
+    if (_nxt < _top)
+      nl = (_top - _nxt) / _max;
+
+    warn (" smallobj_arena(%p -> %p): %zd-sized objs; %zd in freelist; "
+	  "%zd unallocated\n",
+	  _base, _top, _max, nf, nl); 
+  }
+
+  //=======================================================================
+  
+#define RDFN(nm, r, ...)	      \
+  assert (_big || _small);	      \
+  if (_big) r _big->nm (__VA_ARGS__); \
+  else r _small->nm (__VA_ARGS__); 
+
+  int32_t redirector_t::count () const { RDFN(count, return); }
+  void redirector_t::set_count (int32_t i) { RDFN(set_count,,i); }
+  size_t redirector_t::size () const { RDFN(size,return);  }
+  memptr_t *redirector_t::v_data () { RDFN(v_data,return); }
+  const memptr_t *redirector_t::v_data () const  { RDFN(v_data,return); }
+  void redirector_t::deallocate () { RDFN(deallocate,); }
+
+#undef RDFN
+
+  //-----------------------------------------------------------------------
+
+  memptr_t *
+  redirector_t::obj ()
+  {
+    assert (count() > 0);
+    return (v_data ()); 
+  }
+
+  //-----------------------------------------------------------------------
+  
+  const memptr_t *
+  redirector_t::obj () const 
+  { 
+    assert (count() > 0);
+    return (v_data ()); 
+  }
+
+  //-----------------------------------------------------------------------
+
+  const memptr_t *
+  redirector_t::lim () const
+  {
+    assert (count() > 0);
+    return (v_data() + size());
+  }
+    
+  //-----------------------------------------------------------------------
+
+  void
+  redirector_t::rc_inc ()
+  {
+    int32_t c = count ();
+    assert (c >= 0);
+    set_count (c + 1);
+  }
+
+  //-----------------------------------------------------------------------
+
+  bool 
+  redirector_t::rc_dec () 
+  {
+    bool ret;
+    
+    int c = count ();
+    assert (c > 0);
+    if (--c == 0) {
+      ret = false;
+    } else {
+      ret = true;
+    }
+    set_count (c);
+    return ret;
+  }
+  
+  //=======================================================================
+
+  smallobj_arena_t *
+  smallptr_t::lookup_arena () const
+  {
+    arena_t *a = mgr_t::get()->lookup (v_data ());
+    assert (a);
+    smallobj_arena_t *soa = a->to_soa ();
+    assert (soa);
+    soa->check ();
+    return soa;
+  }
+
+  //-----------------------------------------------------------------------
+
+  size_t
+  smallptr_t::size () const
+  {
+    return lookup_arena ()->slotsize ();
+  }
+
+  //-----------------------------------------------------------------------
+
+  void
+  smallptr_t::deallocate ()
+  {
+    deallocate (lookup_arena ());
+  }
+
+  //-----------------------------------------------------------------------
+
+  void
+  smallptr_t::deallocate (smallobj_arena_t *a) 
+  {
+    check ();
+    mark_free ();
+    a->mark_free (this);
+  }
+
+  //-----------------------------------------------------------------------
 
 };

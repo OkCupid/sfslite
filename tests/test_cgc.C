@@ -105,9 +105,12 @@ main (int argc, char *argv[])
   cfg._size_b_arenae = 1;
   cgc::mgr_t::set (New cgc::std_mgr_t (cfg));
 
-  test1();
-  cgc::mgr_t::get ()->sanity_check();
-
-  test2();
+  for (int i = 0; i < 10; i++) {
+    cgc::mgr_t::get ()->sanity_check();
+    test1();
+    cgc::mgr_t::get ()->sanity_check();
+    test2();
+    cgc::mgr_t::get ()->sanity_check();
+  }
 }
 

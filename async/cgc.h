@@ -6,6 +6,7 @@
 #include "list.h"
 #include "vec.h"
 #include "itree.h"
+#include "freemap.h"
 
 #define CGC_DEBUG 1
 
@@ -15,6 +16,7 @@ namespace cgc {
   typedef u_int8_t memptr_t;
 
   class bigptr_t;
+  class smallptr_t;
 
   extern bool debug_mem;
   extern int debug_warnings;
@@ -75,65 +77,46 @@ namespace cgc {
 
   //=======================================================================
 
-  class redirect_ptr_t {
+  class redirector_t {
   public:
-    
-    redirect_ptr_t () {}
-    virtual ~redirect_ptr_t () {}
-    
-    virtual int count() const = 0;
-    virtual void set_count (int i) = 0;
-    virtual size_t size () const = 0;
-    virtual memptr_t *v_data () = 0;
-    virtual const memptr_t *v_data () const = 0;
-    virtual void deallocate () = 0;
+    redirector_t (bigptr_t *b) : _big (b), _small (NULL) {}
+    redirector_t (smallptr_t *s) : _big (NULL), _small (s) {}
+    redirector_t () : _big (NULL), _small (NULL) {}
 
-    memptr_t *obj () 
-    { 
-      assert (count() > 0);
-      return (v_data ()); 
-    }
+    void init (bigptr_t *b) { _big = b; _small = NULL; }
+    void init (smallptr_t *s) { _small = s; _big = NULL; }
 
-    const memptr_t *obj () const 
-    { 
-      assert (count() > 0);
-      return (v_data ()); 
-    }
+    int32_t count() const;
+    void set_count (int32_t i);
+    size_t size () const;
+    memptr_t *v_data ();
+    const memptr_t *v_data () const;
+    void deallocate ();
 
-    const memptr_t *lim () const
-    {
-      assert (count() > 0);
-      return (v_data() + size());
-    }
+    memptr_t *obj ();
+    const memptr_t *obj () const;
+    const memptr_t *lim () const;
+    void rc_inc ();
+    bool rc_dec ();
+    operator bool() const { return (_big || _small); }
+    void clear () { _big = NULL; _small = NULL; }
 
-    void rc_inc () { set_count (count () + 1); }
-
-    bool rc_dec () {
-      bool ret;
-
-      int c = count ();
-      assert (c > 0);
-      if (--c == 0) {
-	ret = false;
-      } else {
-	ret = true;
-      }
-      set_count (c);
-      return ret;
-    }
+  private:
+    bigptr_t *_big;
+    smallptr_t *_small;
   };
 
   //=======================================================================
 
-  class bigptr_t : public redirect_ptr_t {
+  class bigptr_t { // implements the redirector_t interface
   public:
     bigptr_t (bigslot_t *m) : _ms (m), _count (0) { debug_init (); }
     void set_mem_slot (bigslot_t *ms) { _ms = ms; }
     bigslot_t *memslot () const { return _ms; }
-    void init (bigslot_t *m, int c)  { _ms = m; _count = c; }
+    void init (bigslot_t *m, int32_t c)  { _ms = m; _count = c; }
     void mark_free () { _count = -1; }
-    int count () const { return _count; }
-    void set_count (int i) { _count = i; }
+    int32_t count () const { return _count; }
+    void set_count (int32_t i) { _count = i; }
     size_t size () const { return _ms->size (); }
     memptr_t *v_data () { return _ms->v_data (); }
     const memptr_t *v_data () const { return _ms->v_data (); }
@@ -143,11 +126,6 @@ namespace cgc {
   protected:
     void deallocate (bigobj_arena_t *a);
     
-    bigslot_t *_ms;
-    int _count;
-
-  protected:
-
 #ifdef CGC_DEBUG
     u_int32_t _magic;
     enum { magic = 0xefbeefbe };
@@ -164,12 +142,14 @@ namespace cgc {
     void check () const {}
 #endif /*CGC_DEBUG */
 
+    bigslot_t *_ms;
+    int32_t _count;
+
   };
 
   //=======================================================================
 
   template<class T> class alloc;
-  template<class T> class alloc2;
 
   //=======================================================================
 
@@ -177,23 +157,20 @@ namespace cgc {
   class ptr {
   public:
     ptr (const ptr<T> &p) : _redir_ptr (p._redir_ptr) { rc_inc (); }
-    ptr () : _redir_ptr (NULL) {}
+    ptr () {}
     virtual ~ptr () { rc_dec(); }
 
     const T *volatile_ptr () const { return obj (); }
     T *volatile_ptr () { return obj (); }
 
-    void rc_inc ()
-    {
-      if (_redir_ptr) { _redir_ptr->rc_inc (); }
-    }
+    void rc_inc () { if (_redir_ptr) { _redir_ptr.rc_inc (); } }
 
     void rc_dec ()
     {
-      if (_redir_ptr && !_redir_ptr->rc_dec ()) {
+      if (_redir_ptr && !_redir_ptr.rc_dec ()) {
 	obj()->~T();
-	_redir_ptr->deallocate ();
-	_redir_ptr = NULL;
+	_redir_ptr.deallocate ();
+	_redir_ptr.clear ();
       }
     }
 
@@ -232,15 +209,14 @@ namespace cgc {
     {
       assert (i == 0);
       rc_dec ();
-      _redir_ptr = NULL;
+      _redir_ptr.clear ();
       v_clear ();
       return (*this);
     }
 
     friend class alloc<T>;
-    friend class alloc2<T>;
   protected:
-    explicit ptr (redirect_ptr_t *p) : _redir_ptr (p) { rc_inc (); }
+    explicit ptr (const redirector_t &p) : _redir_ptr (p) { rc_inc (); }
 
     bool base_eq (const ptr<T> &p) { return _redir_ptr == p._redir_ptr; }
 
@@ -248,24 +224,24 @@ namespace cgc {
 
     T *obj ()
     {
-      if (_redir_ptr) return reinterpret_cast<T *> (_redir_ptr->v_data ());
+      if (_redir_ptr) return reinterpret_cast<T *> (_redir_ptr.v_data ());
       else return NULL;
     }
 
     const T *obj () const
     {
       if (_redir_ptr) 
-	return reinterpret_cast<const T *> (_redir_ptr->v_data ());
+	return reinterpret_cast<const T *> (_redir_ptr.v_data ());
       else return NULL;
     }
 
     const T *lim () const
     {
-      if (_redir_ptr) return reinterpret_cast<const T*> (_redir_ptr->lim ());
+      if (_redir_ptr) return reinterpret_cast<const T*> (_redir_ptr.lim ());
       else return NULL;
     }
 
-    redirect_ptr_t *_redir_ptr;
+    redirector_t _redir_ptr;
 
   private:
     explicit ptr (int i); // do not call list
@@ -355,7 +331,7 @@ namespace cgc {
     }
 
   protected:
-    aptr (redirect_ptr_t *p, size_t s) : ptr<T> (p), _offset (s) {}
+    aptr (const redirector_t &p, size_t s) : ptr<T> (p), _offset (s) {}
 
   private:
 
@@ -437,16 +413,19 @@ namespace cgc {
   //=======================================================================
 
   class bigobj_arena_t;
+  class smallobj_arena_t;
 
   class arena_t {
   public:
     arena_t (memptr_t *base, size_t sz) : _base (base), _sz (sz) {}
     virtual ~arena_t () {}
 
-    virtual redirect_ptr_t *aalloc (size_t sz) = 0;
+    virtual redirector_t aalloc (size_t sz) = 0;
     virtual bool gc_make_room (size_t sz) { return false; }
     virtual void report (void) const {}
     virtual void gc (void) = 0;
+    virtual bigobj_arena_t *to_boa () { return NULL; }
+    virtual smallobj_arena_t *to_soa () { return NULL; }
 
     int cmp (const memptr_t *m) const;
 
@@ -479,7 +458,7 @@ namespace cgc {
 
     virtual ~bigobj_arena_t () {}
 
-    redirect_ptr_t *aalloc (size_t sz);
+    redirector_t aalloc (size_t sz);
     void gc (void);
     virtual bool gc_make_room (size_t sz);
 
@@ -496,6 +475,7 @@ namespace cgc {
     void mark_free (bigptr_t *p);
     void remove (bigslot_t *p);
     
+    bigobj_arena_t *to_boa () { return this; }
 
   protected:
     bigptr_t *get_free_ptrslot (void);
@@ -512,6 +492,85 @@ namespace cgc {
     memslot_list_t *_memslots;
     simple_stack_t<bigptr_t *> _free_ptrslots;
     size_t _unclaimed_space;
+  };
+
+  //=======================================================================
+
+  class smallobj_sizer_t {
+  public:
+    smallobj_sizer_t ();
+    size_t find (size_t sz) const;
+
+  private:
+    static size_t _sizes[];
+    size_t _n_sizes;
+  };
+
+  //=======================================================================
+
+  class smallobj_arena_t;
+
+  class smallptr_t { // implements redirector interface
+  public:
+    smallptr_t () : _count (0) { debug_init (); }
+    void init () { _count = 0; }
+    void mark_free () { _count = -1; }
+    int32_t count () const { return _count; }
+    void set_count (int32_t i) { _count = i; }
+    size_t size () const;
+    memptr_t *v_data () { return _data; }
+    const memptr_t *v_data () const { return _data; }
+    void deallocate ();
+
+    friend class smallobj_arena_t;
+  protected:
+    void deallocate (smallobj_arena_t *a);
+    smallobj_arena_t *lookup_arena () const;
+    
+#ifdef CGC_DEBUG
+    u_int32_t _magic;
+    enum { magic = 0x12beef43 };
+    void debug_init () 
+    {
+      _magic = magic;
+    }
+    void check () const
+    {
+      assert (_magic == magic);
+    }
+#else /* CGC_DEBUG */
+    void debug_init () {}
+    void check () const {}
+#endif /*CGC_DEBUG */
+
+    int32_t _count;
+    memptr_t _data[0];
+  };
+
+  //=======================================================================
+
+  class smallobj_arena_t : public arena_t {
+  public:
+    smallobj_arena_t (memptr_t *b, size_t sz, size_t l, size_t h);
+
+    redirector_t aalloc (size_t sz);
+    void report (void) const;
+    void gc (void) {}
+    size_t slotsize () const { return _max; }
+
+    smallobj_arena_t *to_soa () { return this; }
+    void check () { assert (_magic == magic); }
+    void mark_free (smallptr_t *p);
+
+  protected:
+    void debug_init () { _magic = magic; }
+
+    enum { magic = 0xdead1121 };
+    u_int32_t _magic;
+
+    memptr_t *_top, *_nxt;
+    freemap_t _freemap;
+    size_t _min, _max;
   };
 
   //=======================================================================
@@ -534,7 +593,6 @@ namespace cgc {
     virtual ptr<T> alloc () = 0;
   };
 
-
   //=======================================================================
 
   class mgr_t {
@@ -547,7 +605,7 @@ namespace cgc {
     template<class T> arena_t *
     lookup (ptr<T> p) { return lookup (p->volatile_ptr ()); }
 
-    redirect_ptr_t *aalloc (size_t sz) ;
+    redirector_t aalloc (size_t sz) ;
 
     arena_t *lookup (const memptr_t *p);
     virtual void sanity_check (void) const {}
@@ -567,32 +625,13 @@ namespace cgc {
   //=======================================================================
 
   template<class T>
-  class alloc2 {
-  public:
-    template<class A> explicit alloc2 (const A &a)
-    {
-      redirect_ptr_t *r = mgr_t::get()->aalloc(sizeof(T));
-      if (r) {
-	(void) new (r->v_data ()) T (a);
-	_p = ptr<T> (r);
-      }
-    }
-    operator ptr<T>& () { return _p; }
-    operator const ptr<T>& () const { return _p; }
-  private:
-    ptr<T> _p;
-  };
-
-  //=======================================================================
-
-  template<class T>
   class alloc {
   public:
     VA_TEMPLATE(explicit alloc ,					\
-		{ redirect_ptr_t *r = mgr_t::get()->aalloc(sizeof(T));	\
+		{ redirector_t r = mgr_t::get()->aalloc(sizeof(T));	\
 		  if (r) {						\
-		  (void) new (r->v_data ()) T ,				\
-		    ; _p = ptr<T> (r); } } )
+		    (void) new (r.v_data ()) T ,			\
+		      ; _p = ptr<T> (r); } } )
     operator ptr<T>&() { return _p; }
     operator const ptr<T> &() const { return _p; }
   private:
@@ -629,6 +668,7 @@ namespace cgc {
     std_cfg_t _cfg;
     boa_list_t _bigs;
     bigobj_arena_t *_next_big;
+    smallobj_sizer_t _sizer;
   };
 
 

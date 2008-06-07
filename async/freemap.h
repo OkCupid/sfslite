@@ -16,13 +16,13 @@ struct node_t {
   int topbit () const;
   int global_id (u_int i) const;
   int cmp (u_int32_t segid) const;
+  size_t nfree () const;
 
   enum { n_bits = 64 };
 
   static u_int32_t segid (u_int i) { return i / n_bits; }
   static u_int bitid (u_int i) { return i % n_bits; }
 
-  
   u_int32_t _id;
   itree_entry<node_t> _lnk;
 private:
@@ -36,6 +36,7 @@ public:
 
   int alloc ();
   void dealloc (u_int i);
+  size_t nfree () const;
 
 private:
   node_t *find (u_int32_t s);

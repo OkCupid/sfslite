@@ -14,6 +14,20 @@ node_t::getbit (u_int i) const
 
 //-----------------------------------------------------------------------
 
+size_t
+node_t::nfree () const 
+{
+  size_t r = 0;
+  u_int64_t b = _bits;
+  for (int i = 0; i < n_bits; i++) {
+    r += (b & 1);
+    b = b >> 1;
+  }
+  return r;
+}
+
+//-----------------------------------------------------------------------
+
 void
 node_t::setbit (u_int i, bool b) 
 {
@@ -139,6 +153,21 @@ freemap_t::find (u_int32_t segid)
 {
   return _segs.search (wrap (find_fn, segid));
 }
+
+//-----------------------------------------------------------------------
+
+size_t
+freemap_t::nfree () const
+{
+  size_t s = 0;
+  const node_t *n, *nn;
+  for (n = _segs.first (); n; n = nn) {
+    nn = _segs.next (n);
+    s += n->nfree ();
+  }
+  return s;
+}
+
 
 //-----------------------------------------------------------------------
 
