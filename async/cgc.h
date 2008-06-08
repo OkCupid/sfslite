@@ -27,10 +27,27 @@ namespace cgc {
 
   //=======================================================================
 
+  class lru_obj_t {
+  public:
+    virtual ~lru_obj_t () {}
+    virtual void touch () = 0;
+    virtual void mark () = 0;
+  };
+
+  //=======================================================================
+
+  class lru_mgr_t {
+  public:
+    virtual ~lru_mgr_t () {}
+    virtual void start_mark_phase () = 0;
+    virtual void end_mark_phase () = 0;
+  };
+
+  //=======================================================================
+
   class bigslot_t {
   public:
     bigslot_t (size_t sz, bigptr_t *p);
-
 
 #ifdef CGC_DEBUG
     u_int32_t _magic;
@@ -56,6 +73,9 @@ namespace cgc {
     tailq_entry<bigslot_t> _next;
     size_t _sz;
     bigptr_t *_ptrslot;
+    lru_obj_t *_lru_ptr;
+
+    void set_lru_ptr (lru_obj_t *l);
 
     memptr_t _data[0];
 
@@ -65,9 +85,11 @@ namespace cgc {
     memptr_t *v_data () { check(); return _data; }
     const memptr_t *v_data () const { check(); return _data; }
     void reseat ();
+    void mark () { if (_lru_ptr) _lru_ptr->mark (); }
 
     void copy_reinit (const bigslot_t*ms);
     void deallocate (bigobj_arena_t *a);
+    void touch ();
 
   };
 
@@ -92,6 +114,10 @@ namespace cgc {
     memptr_t *v_data ();
     const memptr_t *v_data () const;
     void deallocate ();
+
+    // LRU opts
+    void set_lru_ptr (lru_obj_t *p);
+    void touch ();
 
     memptr_t *obj ();
     const memptr_t *obj () const;
@@ -121,6 +147,8 @@ namespace cgc {
     memptr_t *v_data () { return _ms->v_data (); }
     const memptr_t *v_data () const { return _ms->v_data (); }
     void deallocate ();
+    void set_lru_ptr (lru_obj_t *o) { _ms->set_lru_ptr (o); }
+    void touch () { _ms->touch (); }
 
     friend class bigobj_arena_t;
   protected:
@@ -195,6 +223,9 @@ namespace cgc {
 
     bool operator== (const ptr<T> &p) const { return base_eq (p); }
     bool operator!= (const ptr<T> &p) const { return !base_eq (p); }
+
+    void set_lru_ptr (lru_obj_t *p) { _redir_ptr.set_lru_ptr (p); }
+    void touch () { _redir_ptr.touch (); }
 
     ptr<T> &operator= (const ptr<T> &p)
     {
@@ -423,7 +454,7 @@ namespace cgc {
     virtual redirector_t aalloc (size_t sz) = 0;
     virtual bool gc_make_room (size_t sz) { return false; }
     virtual void report (void) const {}
-    virtual void gc (void) = 0;
+    virtual void gc (lru_mgr_t *m) = 0;
     virtual bigobj_arena_t *to_boa () { return NULL; }
     virtual smallobj_arena_t *to_soa () { return NULL; }
 
@@ -459,7 +490,7 @@ namespace cgc {
     virtual ~bigobj_arena_t () {}
 
     redirector_t aalloc (size_t sz);
-    void gc (void);
+    void gc (lru_mgr_t *m);
     virtual bool gc_make_room (size_t sz);
 
     tailq_entry<bigobj_arena_t> _qlnk;
@@ -481,6 +512,7 @@ namespace cgc {
     bigptr_t *get_free_ptrslot (void);
     void collect_ptrslots (void);
     void compact_memslots (void);
+    void lru_accounting (lru_mgr_t *m);
 
     enum { magic = 0x4ee3beef };
     u_int32_t _magic;
@@ -559,7 +591,7 @@ namespace cgc {
 
     redirector_t aalloc (size_t sz);
     void report (void) const;
-    void gc (void) {}
+    void gc (lru_mgr_t *) {}
     size_t slotsize () const { return _max; }
 
     smallobj_arena_t *to_soa () { return this; }
@@ -695,6 +727,8 @@ namespace cgc {
     virtual void gc (void);
     redirector_t aalloc (size_t sz);
 
+    void set_lru_mgr (lru_mgr_t *m) { _lru_mgr = m; }
+
     friend class smallobj_arena_t;
   protected:
     redirector_t big_alloc (size_t sz);
@@ -710,6 +744,7 @@ namespace cgc {
 
     vec<soa_cluster_t *> _smalls;
     size_t _smallobj_lim;
+    lru_mgr_t *_lru_mgr;
   };
 
 

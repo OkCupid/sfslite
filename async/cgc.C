@@ -37,6 +37,23 @@ namespace cgc {
   //-----------------------------------------------------------------------
 
   void
+  bigslot_t::set_lru_ptr (lru_obj_t *o)
+  {
+    assert (!_lru_ptr);
+    _lru_ptr = o;
+  }
+
+  //-----------------------------------------------------------------------
+
+  void
+  bigslot_t::touch ()
+  {
+    if (_lru_ptr) _lru_ptr->touch ();
+  }
+
+  //-----------------------------------------------------------------------
+
+  void
   bigslot_t::deallocate (bigobj_arena_t *a)
   {
     check ();
@@ -205,7 +222,7 @@ namespace cgc {
   std_mgr_t::gc (void)
   {
     for (bigobj_arena_t *a = _bigs.first; a; a = _bigs.next (a)) {
-      a->gc ();
+      a->gc (_lru_mgr);
     }
   }
 
@@ -287,7 +304,8 @@ namespace cgc {
   
   std_mgr_t::std_mgr_t (const std_cfg_t &cfg)
     : _cfg (cfg),
-      _next_big (NULL)
+      _next_big (NULL),
+      _lru_mgr (NULL)
   {
     for (size_t i = 0; i < _cfg._n_b_arenae; i++) {
       mmap_bigobj_arena_t *a = New mmap_bigobj_arena_t (_cfg._size_b_arenae);
@@ -394,7 +412,7 @@ namespace cgc {
   {
     bool ret = false;
     if (sz <= _unclaimed_space  + free_space ()) {
-      gc ();
+      gc (NULL);
       ret = true;
     }
     return ret;
@@ -441,7 +459,7 @@ namespace cgc {
   //-----------------------------------------------------------------------
 
   bigslot_t::bigslot_t (size_t sz, bigptr_t *p)
-    : _sz (sz), _ptrslot (p) 
+    : _sz (sz), _ptrslot (p), _lru_ptr (NULL)
   { 
     debug_init(); 
     mark_unitialized (_data, _sz);
@@ -449,6 +467,7 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
+  // XXX - todo -- use a freemap to give back some of these ptrslots.
   void
   bigobj_arena_t::collect_ptrslots (void)
   {
@@ -511,10 +530,27 @@ namespace cgc {
   }
 
   //-----------------------------------------------------------------------
+ 
+  void
+  bigobj_arena_t::lru_accounting (lru_mgr_t *mgr)
+  {
+    mgr->start_mark_phase ();
+
+    for ( bigslot_t *m = _memslots->first; m ; m = _memslots->next (m)) {
+      m->check ();
+      m->mark ();
+    }
+
+    mgr->end_mark_phase ();
+  }
+
+
+  //-----------------------------------------------------------------------
 
   void
-  bigobj_arena_t::gc (void)
+  bigobj_arena_t::gc (lru_mgr_t *m)
   {
+    if (m) lru_accounting (m);
     collect_ptrslots ();
     compact_memslots ();
     mark_deallocated (_nxt_memslot, _nxt_ptrslot - _nxt_memslot);
@@ -819,6 +855,22 @@ namespace cgc {
   void redirector_t::deallocate () { RDFN(deallocate,); }
 
 #undef RDFN
+
+  //-----------------------------------------------------------------------
+
+  void
+  redirector_t::set_lru_ptr (lru_obj_t *o)
+  {
+    if (_big) _big->set_lru_ptr (o);
+  }
+
+  //-----------------------------------------------------------------------
+
+  void
+  redirector_t::touch ()
+  {
+    if (_big) _big->touch ();
+  }
 
   //-----------------------------------------------------------------------
 
