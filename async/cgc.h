@@ -120,12 +120,12 @@ namespace cgc {
 
   class redirector_t {
   public:
-    redirector_t (bigptr_t *b) : _big (b), _small (NULL) {}
-    redirector_t (smallptr_t *s) : _big (NULL), _small (s) {}
-    redirector_t () : _big (NULL), _small (NULL) {}
+    redirector_t (bigptr_t *b) : _sel (BIG), _big (b) {}
+    redirector_t (smallptr_t *s) : _sel (SMALL), _small (s) {}
+    redirector_t () : _sel (NONE), _none (NULL) {}
 
-    void init (bigptr_t *b) { _big = b; _small = NULL; }
-    void init (smallptr_t *s) { _small = s; _big = NULL; }
+    void init (bigptr_t *b) { _big = b; _sel = BIG; }
+    void init (smallptr_t *s) { _small = s; _sel = SMALL; }
 
     int32_t count() const;
     void set_count (int32_t i);
@@ -143,12 +143,20 @@ namespace cgc {
     const memptr_t *lim () const;
     void rc_inc ();
     bool rc_dec ();
-    operator bool() const { return (_big || _small); }
-    void clear () { _big = NULL; _small = NULL; }
+    operator bool() const { return is_non_null (); }
+    void clear () { _sel = NONE; _none = NULL; }
+
+    typedef enum { NONE, BIG, SMALL, STD } selector_t;
 
   private:
-    bigptr_t *_big;
-    smallptr_t *_small;
+    bool is_non_null () const { return (_sel != NONE && _none); }
+    bigptr_t *big () { return (_sel == BIG ? _big : NULL); }
+    selector_t _sel;
+    union {
+      void *_none;
+      bigptr_t *_big;
+      smallptr_t *_small;
+    };
   };
 
   //=======================================================================
@@ -738,12 +746,12 @@ namespace cgc {
     std_cfg_t ()
       : _n_b_arenae (0x10),
 	_size_b_arenae (0x100),
-	_smallobj_lim (0),
+	_smallobj_lim (-1),
 	_smallobj_max_overhead_pct (25) {}
 
     size_t _n_b_arenae;
     size_t _size_b_arenae;
-    size_t _smallobj_lim;
+    ssize_t _smallobj_lim;
     size_t _smallobj_max_overhead_pct;
     
   };

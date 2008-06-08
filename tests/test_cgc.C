@@ -50,7 +50,7 @@ public:
   int baz () const { return _x; }
 private:
   int _x;
-  char _pad[37];
+  char _pad[31];
 };
 
 static void
@@ -112,6 +112,7 @@ main (int argc, char *argv[])
   cgc::std_cfg_t cfg;
   cfg._n_b_arenae = 2;
   cfg._size_b_arenae = 1;
+  cfg._smallobj_lim = 0;
   cgc::mgr_t::set (New cgc::std_mgr_t (cfg));
 
   for (int i = 0; i < 10; i++) {
@@ -122,6 +123,6 @@ main (int argc, char *argv[])
     cgc::mgr_t::get ()->sanity_check();
   }
   
-  test3();
+  if (0) test3();
 }
 

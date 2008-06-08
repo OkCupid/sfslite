@@ -313,18 +313,22 @@ namespace cgc {
       _bigs.insert_tail (a);
     }
     
-    size_t tmp = _cfg._smallobj_lim;
-    if (tmp == 0) {
+    ssize_t tmp = _cfg._smallobj_lim;
+    if (tmp == -1) {
       tmp = bigslot_t::size (0) + sizeof (bigptr_t);
       tmp *= 2;
     }
-    int ind;
-    _smallobj_lim = _sizer.find (tmp, &ind);
-    assert (ind >= 0);
-    assert (_smallobj_lim);
-
-    for (int i = 0; i < ind; i++) {
-      _smalls.push_back (New soa_cluster_t (_sizer.ind2size (i)));
+    if (tmp != 0) {
+      int ind;
+      _smallobj_lim = _sizer.find (tmp, &ind);
+      assert (ind >= 0);
+      assert (_smallobj_lim);
+      
+      for (int i = 0; i < ind; i++) {
+	_smalls.push_back (New soa_cluster_t (_sizer.ind2size (i)));
+      }
+    } else {
+      _smallobj_lim = 0;
     }
   }
 
@@ -842,17 +846,25 @@ namespace cgc {
 
   //=======================================================================
   
-#define RDFN(nm, r, ...)	      \
-  assert (_big || _small);	      \
-  if (_big) r _big->nm (__VA_ARGS__); \
-  else r _small->nm (__VA_ARGS__); 
+#define RDFN(nm, r, dr, ...)	      \
+  switch (_sel) {		      \
+  case BIG:                           \
+    r _big->nm (__VA_ARGS__);	      \
+    break;			      \
+  case SMALL:			      \
+    r _small->nm (__VA_ARGS__);	      \
+    break;			      \
+  default:			      \
+    assert (false);		      \
+  }				      \
+  return dr;
 
-  int32_t redirector_t::count () const { RDFN(count, return); }
-  void redirector_t::set_count (int32_t i) { RDFN(set_count,,i); }
-  size_t redirector_t::size () const { RDFN(size,return);  }
-  memptr_t *redirector_t::v_data () { RDFN(v_data,return); }
-  const memptr_t *redirector_t::v_data () const  { RDFN(v_data,return); }
-  void redirector_t::deallocate () { RDFN(deallocate,); }
+  int32_t redirector_t::count () const { RDFN(count,return,0); }
+  void redirector_t::set_count (int32_t i) { RDFN(set_count,,,i); }
+  size_t redirector_t::size () const { RDFN(size,return,0);  }
+  memptr_t *redirector_t::v_data () { RDFN(v_data,return,0); }
+  const memptr_t *redirector_t::v_data () const { RDFN(v_data,return,NULL); }
+  void redirector_t::deallocate () { RDFN(deallocate,,); }
 
 #undef RDFN
 
@@ -861,7 +873,7 @@ namespace cgc {
   void
   redirector_t::set_lru_ptr (wkref<lru_obj_t> o)
   {
-    if (_big) _big->set_lru_ptr (o);
+    if (big ()) big()->set_lru_ptr (o);
   }
 
   //-----------------------------------------------------------------------
@@ -869,7 +881,7 @@ namespace cgc {
   void
   redirector_t::touch ()
   {
-    if (_big) _big->touch ();
+    if (big()) big()->touch ();
   }
 
   //-----------------------------------------------------------------------
