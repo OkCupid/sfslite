@@ -499,7 +499,8 @@ namespace cgc {
   class smallobj_sizer_t {
   public:
     smallobj_sizer_t ();
-    size_t find (size_t sz) const;
+    size_t find (size_t sz, int *ip = NULL) const;
+    size_t ind2size (int ind) const;
 
   private:
     static size_t _sizes[];
@@ -549,9 +550,12 @@ namespace cgc {
 
   //=======================================================================
 
+  class std_mgr_t;
+
   class smallobj_arena_t : public arena_t {
   public:
-    smallobj_arena_t (memptr_t *b, size_t sz, size_t l, size_t h);
+    smallobj_arena_t (memptr_t *b, size_t sz, size_t l, size_t h,
+		      std_mgr_t *m, int i);
 
     redirector_t aalloc (size_t sz);
     void report (void) const;
@@ -562,6 +566,10 @@ namespace cgc {
     void check () { assert (_magic == magic); }
     void mark_free (smallptr_t *p);
 
+    static size_t crud_size (size_t objsz);
+    bool vacancy () const { return _vacancy; }
+
+    tailq_entry<smallobj_arena_t> _soa_lnk;
   protected:
     void debug_init () { _magic = magic; }
 
@@ -571,6 +579,11 @@ namespace cgc {
     memptr_t *_top, *_nxt;
     freemap_t _freemap;
     size_t _min, _max;
+    bool _vacancy;
+    std_mgr_t *_mgr;
+    int _soa_index;
+  public:
+    bool _vacancy_list_id;
   };
 
   //=======================================================================
@@ -579,8 +592,6 @@ namespace cgc {
   public:
     mmap_bigobj_arena_t (size_t sz);
     ~mmap_bigobj_arena_t ();
-    
-    static size_t pagesz;
   };
 
   //=======================================================================
@@ -600,12 +611,10 @@ namespace cgc {
     mgr_t () {}
     virtual ~mgr_t () {}
 
-    virtual arena_t *pick (size_t sz) = 0;
-
     template<class T> arena_t *
     lookup (ptr<T> p) { return lookup (p->volatile_ptr ()); }
 
-    redirector_t aalloc (size_t sz) ;
+    virtual redirector_t aalloc (size_t sz) = 0;
 
     arena_t *lookup (const memptr_t *p);
     virtual void sanity_check (void) const {}
@@ -643,10 +652,32 @@ namespace cgc {
   struct std_cfg_t {
     std_cfg_t ()
       : _n_b_arenae (0x10),
-	_size_b_arenae (0x100) {}
+	_size_b_arenae (0x100),
+	_smallobj_lim (0),
+	_smallobj_max_overhead_pct (25) {}
 
     size_t _n_b_arenae;
     size_t _size_b_arenae;
+    size_t _smallobj_lim;
+    size_t _smallobj_max_overhead_pct;
+    
+  };
+
+  //=======================================================================
+
+  class soa_cluster_t {
+  public:
+    soa_cluster_t (size_t s) : _size (s) {}
+    typedef tailq<smallobj_arena_t, &smallobj_arena_t::_soa_lnk> soa_list_t;
+
+    redirector_t aalloc (size_t sz);
+    size_t _size;
+
+    void became_vacant (smallobj_arena_t *a);
+    void add (smallobj_arena_t *a);
+  private:
+    soa_list_t _vacancy;
+    soa_list_t _no_vacancy;
   };
 
   //=======================================================================
@@ -655,7 +686,6 @@ namespace cgc {
   class std_mgr_t : public mgr_t {
   public:
     std_mgr_t (const std_cfg_t &cfg);
-    arena_t *pick (size_t sz);
 
     typedef tailq<bigobj_arena_t, &bigobj_arena_t::_qlnk> boa_list_t;
 
@@ -663,14 +693,34 @@ namespace cgc {
     virtual void sanity_check (void) const;
     virtual void report (void) const;
     virtual void gc (void);
+    redirector_t aalloc (size_t sz);
 
-  private:
+    friend class smallobj_arena_t;
+  protected:
+    redirector_t big_alloc (size_t sz);
+    redirector_t small_alloc (size_t sz);
+    bigobj_arena_t *big_pick (size_t sz);
+    void became_vacant (smallobj_arena_t *a, int i);
+    smallobj_arena_t *alloc_soa (size_t sz, int ind);
+
     std_cfg_t _cfg;
     boa_list_t _bigs;
     bigobj_arena_t *_next_big;
     smallobj_sizer_t _sizer;
+
+    vec<soa_cluster_t *> _smalls;
+    size_t _smallobj_lim;
   };
 
+
+  //=======================================================================
+
+  class mmap_smallobj_arena_t : public smallobj_arena_t {
+  public:
+    mmap_smallobj_arena_t (size_t sz, size_t l, size_t h,
+			   std_mgr_t *m, int i);
+    ~mmap_smallobj_arena_t () {}
+  };
 
   //=======================================================================
 

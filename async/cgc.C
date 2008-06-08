@@ -7,6 +7,18 @@ namespace cgc {
 
   //=======================================================================
 
+  static size_t pagesz;
+
+  static size_t get_pagesz ()
+  {
+    if (!pagesz) {
+      pagesz = sysconf (_SC_PAGE_SIZE);
+    }
+    return pagesz;
+  }
+
+  //=======================================================================
+
   void bigslot_t::reseat () { check(); _ptrslot->set_mem_slot (this); }
 
   //-----------------------------------------------------------------------
@@ -66,16 +78,6 @@ namespace cgc {
   static int cmp_fn (const memptr_t *mp, const arena_t *a)
   {
     return a->cmp (mp);
-  }
-
-  //-----------------------------------------------------------------------
-
-  redirector_t
-  mgr_t::aalloc (size_t sz)
-  {
-    arena_t *a = pick (sz);
-    if (a) return a->aalloc (sz);
-    else return redirector_t ();
   }
 
   //-----------------------------------------------------------------------
@@ -149,8 +151,16 @@ namespace cgc {
 
   //=======================================================================
 
-  arena_t *
-  std_mgr_t::pick (size_t sz)
+  void
+  std_mgr_t::became_vacant (smallobj_arena_t *a, int soa_index)
+  {
+    _smalls[soa_index]->became_vacant (a);
+  }
+
+  //-----------------------------------------------------------------------
+
+  bigobj_arena_t *
+  std_mgr_t::big_pick (size_t sz)
   {
     cyclic_list_iterator_t<boa_list_t, bigobj_arena_t> it (&_bigs, _next_big);
     bigobj_arena_t *p;
@@ -167,6 +177,16 @@ namespace cgc {
 	sanity_check ();
     }
     return p;
+  }
+
+  //-----------------------------------------------------------------------
+
+  redirector_t 
+  std_mgr_t::big_alloc (size_t sz)
+  {
+    bigobj_arena_t *a = big_pick (sz);
+    if (a) return a->aalloc (sz);
+    else return redirector_t ();
   }
 
   //-----------------------------------------------------------------------
@@ -191,9 +211,59 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
+  redirector_t
+  std_mgr_t::aalloc (size_t sz)
+  {
+    if (sz < _smallobj_lim) return small_alloc (sz);
+    else return big_alloc (sz);
+  }
+
+  //-----------------------------------------------------------------------
+
+  redirector_t
+  std_mgr_t::small_alloc (size_t sz)
+  {
+    int i;
+    size_t roundup = _sizer.find (sz, &i);
+    assert (roundup != 0);
+    assert (i >= 0);
+
+    redirector_t ret = _smalls[i]->aalloc (sz);
+    if (!ret) {
+      smallobj_arena_t *a = alloc_soa (roundup, i);
+      ret = a->aalloc (sz);
+      assert (ret);
+    }
+    return ret;
+  }
+
+  //-----------------------------------------------------------------------
+
+  smallobj_arena_t *
+  std_mgr_t::alloc_soa (size_t sz, int ind)
+  {
+    int n = ( 100 * ( sizeof (smallobj_arena_t) +
+		      freemap_t::fixed_overhead () )) / 
+      (get_pagesz () * _cfg._smallobj_max_overhead_pct) + 1;
+
+    smallobj_arena_t *a = 
+      New mmap_smallobj_arena_t (n * get_pagesz (), 
+				 _sizer.ind2size(ind-1) + 1,
+				 sz, 
+				 this, 
+				 ind);
+    mgr_t::insert (a);
+    _smalls[ind]->add (a);
+
+    return a;
+  }
+
+  //-----------------------------------------------------------------------
+
   void
   std_mgr_t::report (void) const
   {
+    warn << "CGC Memory report-------------------\n";
     for (bigobj_arena_t *a = _bigs.first; a; a = _bigs.next (a)) {
       a->report ();
     }
@@ -223,6 +293,20 @@ namespace cgc {
       mmap_bigobj_arena_t *a = New mmap_bigobj_arena_t (_cfg._size_b_arenae);
       mgr_t::insert (a);
       _bigs.insert_tail (a);
+    }
+    
+    size_t tmp = _cfg._smallobj_lim;
+    if (tmp == 0) {
+      tmp = bigslot_t::size (0) + sizeof (bigptr_t);
+      tmp *= 2;
+    }
+    int ind;
+    _smallobj_lim = _sizer.find (tmp, &ind);
+    assert (ind >= 0);
+    assert (_smallobj_lim);
+
+    for (int i = 0; i < ind; i++) {
+      _smalls.push_back (New soa_cluster_t (_sizer.ind2size (i)));
     }
   }
 
@@ -496,19 +580,10 @@ namespace cgc {
   }
   
   //=======================================================================
-
-  size_t mmap_bigobj_arena_t::pagesz;
-
-  //-----------------------------------------------------------------------
-
-  mmap_bigobj_arena_t::mmap_bigobj_arena_t (size_t sz)
+  
+  static void *
+  cgc_mmap (size_t sz)
   {
-    if (!pagesz) {
-      pagesz = sysconf (_SC_PAGE_SIZE);
-    }
-
-    sz = align(sz, pagesz);
-
     void *v = mmap (NULL, sz, PROT_READ | PROT_WRITE, 
 		    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
@@ -516,7 +591,16 @@ namespace cgc {
 
     if (!v) 
       panic ("mmap failed: %m\n");
+    return v;
+  }
 
+  //-----------------------------------------------------------------------
+
+  mmap_bigobj_arena_t::mmap_bigobj_arena_t (size_t sz)
+  {
+
+    sz = align(sz, get_pagesz ());
+    void *v = cgc_mmap (sz);
     _base = static_cast<memptr_t *> (v);
     _sz = sz;
     init ();
@@ -529,6 +613,13 @@ namespace cgc {
     munmap (_base, _sz);
   }
 
+  //=======================================================================
+
+  mmap_smallobj_arena_t::mmap_smallobj_arena_t (size_t sz, size_t l, size_t h,
+						std_mgr_t *m, int i)
+    : smallobj_arena_t (static_cast<memptr_t *> (cgc_mmap (sz)),
+			sz, l, h, m, i) {}
+  
   //=======================================================================
 
 #ifdef CGC_DEBUG
@@ -587,20 +678,35 @@ namespace cgc {
   size_t smallobj_sizer_t::_sizes[] =  { 4, 8, 12, 16,
 					 24, 32, 40, 48, 56, 64,
 					 80, 96, 112, 128, 
-					 160, 192, 224, 256 };
+					 160, 192, 224, 256,
+					 320, 384, 448, 512,
+					 640, 768, 896, 1024 };
   
   //-----------------------------------------------------------------------
 
   smallobj_sizer_t::smallobj_sizer_t ()
     : _n_sizes (sizeof (_sizes) / sizeof (_sizes[0])) {}
 
+  //-----------------------------------------------------------------------
+
   size_t
-  smallobj_sizer_t::find (size_t sz) const
+  smallobj_sizer_t::ind2size (int sz) const
+  {
+    if (sz <= 0) return 0;
+    assert (sz < int (_n_sizes));
+    return _sizes[sz];
+  }
+
+  //-----------------------------------------------------------------------
+
+  size_t
+  smallobj_sizer_t::find (size_t sz, int *ip) const
   {
     // Binary search the sizes vector (above)
+    int lim = _n_sizes;
 
-    size_t l, m, h;
-    h = _n_sizes - 1;
+    int l, m, h;
+    h = lim - 1;
     l = 0;
     while ( l <= h ) {
       m = (l + h)/2;
@@ -609,10 +715,14 @@ namespace cgc {
       else { break; }
     }
 
-    if (l < _n_sizes && _sizes[l] < sz) l++;
+    if (l < lim && _sizes[l] < sz) l++;
+
     size_t ret = 0;
-    if (l < _n_sizes) 
-      ret = _sizes[l];
+    if (l < lim) ret = _sizes[l];
+    else         l = -1;
+
+    if (ip)
+      *ip = l;
 
     return ret;
   }
@@ -622,12 +732,16 @@ namespace cgc {
 
   //=======================================================================
 
-  smallobj_arena_t::smallobj_arena_t (memptr_t *b, size_t s, size_t l, size_t h)
+  smallobj_arena_t::smallobj_arena_t (memptr_t *b, size_t s, size_t l, 
+				      size_t h, std_mgr_t *m, int i)
     : arena_t (b, s),
       _top (b + s),
       _nxt (b),
       _min (l), 
-      _max (h) 
+      _max (h),
+      _vacancy (true),
+      _mgr (m),
+      _soa_index (i)
   { 
     debug_init (); 
   }
@@ -642,6 +756,10 @@ namespace cgc {
     assert (p >= base);
     assert (p < top);
     _freemap.dealloc (p - base);
+    if (!_vacancy) {
+      _mgr->became_vacant (this, _soa_index);
+      _vacancy = true;
+    }
   }
 
 
@@ -663,7 +781,11 @@ namespace cgc {
     }
     assert (mp >= _base);
     assert (mp < _top);
-    ret.init (reinterpret_cast<smallptr_t *> (mp));
+    if (mp) {
+      ret.init (reinterpret_cast<smallptr_t *> (mp));
+    } else {
+      _vacancy = false;
+    }
     return ret;
   }
 
@@ -792,6 +914,45 @@ namespace cgc {
     a->mark_free (this);
   }
 
+  //=======================================================================
+
+  redirector_t
+  soa_cluster_t::aalloc (size_t sz)
+  {
+    smallobj_arena_t *a, *n;
+    redirector_t ret;
+    for (a = _vacancy.first; !ret && a; a = n) {
+      assert (a->_vacancy_list_id == true);
+      n = _vacancy.next (a);
+      if (!(ret = a->aalloc (sz))) {
+	_vacancy.remove (a);
+	_no_vacancy.insert_tail (a);
+	a->_vacancy_list_id = false;
+      }
+    }
+    return ret;
+  }
+
   //-----------------------------------------------------------------------
+
+  void
+  soa_cluster_t::add (smallobj_arena_t *a)
+  {
+    _vacancy.insert_tail (a);
+    a->_vacancy_list_id = true;
+  }
+
+  //-----------------------------------------------------------------------
+
+  void
+  soa_cluster_t::became_vacant (smallobj_arena_t *a)
+  {
+    assert (a->_vacancy_list_id == false);
+    _no_vacancy.remove (a);
+    _vacancy.insert_tail (a);
+    a->_vacancy_list_id = true;
+  }
+
+  //=======================================================================
 
 };

@@ -3,10 +3,10 @@
 
 //=======================================================================
 
-node_t::node_t (u_int32_t i) : _id (i), _bits (0) {}
+freemap_t::node_t::node_t (u_int32_t i) : _id (i), _bits (0) {}
 
 bool
-node_t::getbit (u_int i) const
+freemap_t::node_t::getbit (u_int i) const
 {
   assert (i < n_bits);
   return (_bits & (1 << i));
@@ -15,7 +15,7 @@ node_t::getbit (u_int i) const
 //-----------------------------------------------------------------------
 
 size_t
-node_t::nfree () const 
+freemap_t::node_t::nfree () const 
 {
   size_t r = 0;
   u_int64_t b = _bits;
@@ -29,7 +29,7 @@ node_t::nfree () const
 //-----------------------------------------------------------------------
 
 void
-node_t::setbit (u_int i, bool b) 
+freemap_t::node_t::setbit (u_int i, bool b) 
 {
   assert (i < n_bits);
   if (b) {
@@ -42,7 +42,7 @@ node_t::setbit (u_int i, bool b)
 //-----------------------------------------------------------------------
 
 int
-node_t::topbit () const
+freemap_t::node_t::topbit () const
 {
   int ret = -1;
   if (!is_empty ()) {
@@ -57,7 +57,7 @@ node_t::topbit () const
 //-----------------------------------------------------------------------
 
 bool
-node_t::is_empty () const
+freemap_t::node_t::is_empty () const
 {
   return (_bits == 0);
 }
@@ -65,7 +65,7 @@ node_t::is_empty () const
 //-----------------------------------------------------------------------
 
 int
-node_t::global_id (u_int i) const
+freemap_t::node_t::global_id (u_int i) const
 {
   assert (i < n_bits);
   return _id * n_bits + i;
@@ -74,7 +74,7 @@ node_t::global_id (u_int i) const
 //-----------------------------------------------------------------------
 
 int 
-node_t::cmp (u_int32_t segid) const
+freemap_t::node_t::cmp (u_int32_t segid) const
 {
   return (segid - _id);
 }
@@ -131,24 +131,24 @@ freemap_t::~freemap_t ()
 
 //-----------------------------------------------------------------------
 
-node_t *
+freemap_t::node_t *
 freemap_t::findmax ()
 {
-  node_t *n, *nn;
+  freemap_t::node_t *n, *nn;
   for (n = _segs.root (); 
        n && ((nn = _segs.right (n)) || (nn = _segs.left (n))); 
        n = nn) ;
   return n;
 }
 
-static int find_fn (u_int32_t id, const node_t *n)
+static int find_fn (u_int32_t id, const freemap_t::node_t *n)
 {
   return n->cmp (id);
 }
 
 //-----------------------------------------------------------------------
 
-node_t *
+freemap_t::node_t *
 freemap_t::find (u_int32_t segid)
 {
   return _segs.search (wrap (find_fn, segid));
@@ -167,7 +167,6 @@ freemap_t::nfree () const
   }
   return s;
 }
-
 
 //-----------------------------------------------------------------------
 
