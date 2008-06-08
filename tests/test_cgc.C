@@ -97,6 +97,15 @@ test2(void) {
   }
 }
 
+static void
+test3()
+{
+  cgc::ptr<bool> b = cgc::alloc<bool> (true);
+  *b = false;
+  cgc::ptr<char> c = cgc::vecalloc<char,1000> ();
+}
+
+
 int
 main (int argc, char *argv[])
 {
@@ -112,5 +121,7 @@ main (int argc, char *argv[])
     test2();
     cgc::mgr_t::get ()->sanity_check();
   }
+  
+  test3();
 }
 

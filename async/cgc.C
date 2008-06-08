@@ -37,7 +37,7 @@ namespace cgc {
   //-----------------------------------------------------------------------
 
   void
-  bigslot_t::set_lru_ptr (lru_obj_t *o)
+  bigslot_t::set_lru_ptr (wkref<lru_obj_t> o)
   {
     assert (!_lru_ptr);
     _lru_ptr = o;
@@ -459,7 +459,7 @@ namespace cgc {
   //-----------------------------------------------------------------------
 
   bigslot_t::bigslot_t (size_t sz, bigptr_t *p)
-    : _sz (sz), _ptrslot (p), _lru_ptr (NULL)
+    : _sz (sz), _ptrslot (p)
   { 
     debug_init(); 
     mark_unitialized (_data, _sz);
@@ -859,7 +859,7 @@ namespace cgc {
   //-----------------------------------------------------------------------
 
   void
-  redirector_t::set_lru_ptr (lru_obj_t *o)
+  redirector_t::set_lru_ptr (wkref<lru_obj_t> o)
   {
     if (_big) _big->set_lru_ptr (o);
   }

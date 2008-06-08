@@ -27,6 +27,25 @@ namespace cgc {
 
   //=======================================================================
 
+  template<class T>
+  class wkref {
+  public:
+    wkref (T &obj) : _obj (&obj), _alive (obj->alive ()) {}
+    wkref () : _obj (NULL) {}
+    operator bool() const { return (*_alive && _obj); }
+    const T *operator-> () const { return obj(); }
+    T *operator->() { return obj (); }
+    T &operator* () const { return *obj(); }
+  private:
+    T *obj () { return (*_alive ? _obj : NULL); }
+    const T *obj () const { return (*_alive ? _obj : NULL); }
+    ptr<bool> _alive;
+    T *_obj;
+  };
+
+
+  //=======================================================================
+
   class lru_obj_t {
   public:
     virtual ~lru_obj_t () {}
@@ -73,9 +92,9 @@ namespace cgc {
     tailq_entry<bigslot_t> _next;
     size_t _sz;
     bigptr_t *_ptrslot;
-    lru_obj_t *_lru_ptr;
+    wkref<lru_obj_t> _lru_ptr;
 
-    void set_lru_ptr (lru_obj_t *l);
+    void set_lru_ptr (wkref<lru_obj_t> l);
 
     memptr_t _data[0];
 
@@ -116,7 +135,7 @@ namespace cgc {
     void deallocate ();
 
     // LRU opts
-    void set_lru_ptr (lru_obj_t *p);
+    void set_lru_ptr (wkref<lru_obj_t> p);
     void touch ();
 
     memptr_t *obj ();
@@ -147,7 +166,7 @@ namespace cgc {
     memptr_t *v_data () { return _ms->v_data (); }
     const memptr_t *v_data () const { return _ms->v_data (); }
     void deallocate ();
-    void set_lru_ptr (lru_obj_t *o) { _ms->set_lru_ptr (o); }
+    void set_lru_ptr (wkref<lru_obj_t> o) { _ms->set_lru_ptr (o); }
     void touch () { _ms->touch (); }
 
     friend class bigobj_arena_t;
@@ -178,10 +197,11 @@ namespace cgc {
   //=======================================================================
 
   template<class T> class alloc;
+  template<class T, size_t N> class vecalloc;
 
   //=======================================================================
 
-  template<class T>
+  template<class T, size_t N=1>
   class ptr {
   public:
     ptr (const ptr<T> &p) : _redir_ptr (p._redir_ptr) { rc_inc (); }
@@ -218,13 +238,14 @@ namespace cgc {
 
     const T *operator-> () const { return nonnull_volatile_ptr (); }
     T *operator-> () { return nonnull_volatile_ptr (); }
-    T &operator* () const { return nonnull_volatile_ptr (); }
+    T &operator* () { return *nonnull_volatile_ptr (); }
+    const T &operator* () const { return *nonnull_volatile_ptr (); }
     operator bool() const { return volatile_ptr () != NULL; }
 
     bool operator== (const ptr<T> &p) const { return base_eq (p); }
     bool operator!= (const ptr<T> &p) const { return !base_eq (p); }
 
-    void set_lru_ptr (lru_obj_t *p) { _redir_ptr.set_lru_ptr (p); }
+    void set_lru_ptr (wkref<lru_obj_t> p) { _redir_ptr.set_lru_ptr (p); }
     void touch () { _redir_ptr.touch (); }
 
     ptr<T> &operator= (const ptr<T> &p)
@@ -246,6 +267,7 @@ namespace cgc {
     }
 
     friend class alloc<T>;
+    friend class vecalloc<T,N>;
   protected:
     explicit ptr (const redirector_t &p) : _redir_ptr (p) { rc_inc (); }
 
@@ -677,6 +699,37 @@ namespace cgc {
     operator const ptr<T> &() const { return _p; }
   private:
     ptr<T> _p;
+  };
+
+  //=======================================================================
+
+#define COMMA ,
+
+  template<class T, size_t N>
+  class vecalloc {
+  public:
+    VA_TEMPLATE(explicit vecalloc ,					\
+		{ redirector_t r = mgr_t::get()->aalloc(sizeof(T)*N);	\
+		  if (r) {						\
+		    (void) new (r.v_data ()) T [N] ,			\
+		      ; _p = ptr<T COMMA N> (r); } } )
+    operator ptr<T>&() { return _p; }
+    operator const ptr<T> &() const { return _p; }
+  private:
+    ptr<T> _p;
+  };
+
+#undef COMMA
+
+  //=======================================================================
+
+  class referee_t {
+  public:
+    referee_t () : _alive (alloc<bool> (true)) {}
+    ~referee_t () { *_alive = false; }
+    ptr<bool> alive () { return _alive; }
+  private:
+    ptr<bool> _alive;
   };
 
   //=======================================================================
