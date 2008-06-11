@@ -74,14 +74,17 @@ namespace cgc {
     
     struct gc_obj_t {
       void mark () {}
+      void touch () {}
     };
+
+    typedef ptr_t<gc_obj_t> gc_ptr_t;
     
-    struct obj_t {};
+    struct t {};
   };
 
   //=======================================================================
 
-  template<class T, class G = nil::ptr_t<nil::gc_obj_t> >
+  template<class T, class G = nil::gc_ptr_t>
   class bigslot_t {
   public:
     bigslot_t (size_t sz, bigptr_t *p);
@@ -139,7 +142,7 @@ namespace cgc {
 
   //=======================================================================
     
-  template<class T, class G = nil::ptr_t<nil::gc_obj_t> >
+  template<class T, class G = nil::gc_ptr_t>
   class redirector_t {
   public:
     redirector_t (typename bigptr_t<T,G> *b) : _sel (BIG), _big (b) {}
@@ -183,10 +186,13 @@ namespace cgc {
 
   //=======================================================================
 
+  template<class T, class G = nil::gc_ptr_t>
   class bigptr_t { // implements the redirector_t interface
   public:
-    bigptr_t (bigslot_t *m) : _ms (m), _count (0) { debug_init (); }
-    void set_mem_slot (bigslot_t *ms) { _ms = ms; }
+    typedef typename bigslot_t<T,G> slot_t;
+
+    bigptr_t (slot_t *m) : _ms (m), _count (0) { debug_init (); }
+    void set_mem_slot (slot_t *ms) { _ms = ms; }
     bigslot_t *memslot () const { return _ms; }
     void init (bigslot_t *m, int32_t c)  { _ms = m; _count = c; }
     void mark_free () { _count = -1; }
@@ -196,10 +202,10 @@ namespace cgc {
     memptr_t *v_data () { return _ms->v_data (); }
     const memptr_t *v_data () const { return _ms->v_data (); }
     void deallocate ();
-    void set_lru_ptr (wkref<lru_obj_t> o) { _ms->set_lru_ptr (o); }
+    void set_lru_ptr (const G &o) { _ms->set_lru_ptr (o); }
     void touch () { _ms->touch (); }
 
-    friend class bigobj_arena_t;
+    friend class bigobj_arena_t<T,G>;
   protected:
     void deallocate (bigobj_arena_t *a);
     
@@ -219,9 +225,9 @@ namespace cgc {
     void check () const {}
 #endif /*CGC_DEBUG */
 
-    bigslot_t *_ms;
+    slot_t *_ms;
     int32_t _count;
-
+    
   };
 
   //=======================================================================
@@ -231,7 +237,7 @@ namespace cgc {
 
   //=======================================================================
 
-  template<class T, size_t N=1>
+  template<class T, class G = nil::gc_ptr_t >
   class ptr {
   public:
     ptr (const ptr<T> &p) : _redir_ptr (p._redir_ptr) { rc_inc (); }
@@ -275,7 +281,7 @@ namespace cgc {
     bool operator== (const ptr<T> &p) const { return base_eq (p); }
     bool operator!= (const ptr<T> &p) const { return !base_eq (p); }
 
-    void set_lru_ptr (wkref<lru_obj_t> p) { _redir_ptr.set_lru_ptr (p); }
+    void set_lru_ptr (const G &p) { _redir_ptr.set_lru_ptr (p); }
     void touch () { _redir_ptr.touch (); }
 
     ptr<T> &operator= (const ptr<T> &p)
@@ -297,9 +303,10 @@ namespace cgc {
     }
 
     friend class alloc<T>;
-    friend class vecalloc<T,N>;
+    friend class vecalloc<T>;
   protected:
-    explicit ptr (const redirector_t &p) : _redir_ptr (p) { rc_inc (); }
+    explicit ptr (typename const redirector_t<T,G> &p) 
+      : _redir_ptr (p) { rc_inc (); }
 
     bool base_eq (const ptr<T> &p) { return _redir_ptr == p._redir_ptr; }
 
@@ -324,7 +331,7 @@ namespace cgc {
       else return NULL;
     }
 
-    redirector_t _redir_ptr;
+    typename redirector_t<T,G> _redir_ptr;
 
   private:
     explicit ptr (int i); // do not call list
