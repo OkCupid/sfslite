@@ -14,15 +14,15 @@ namespace cgc {
 
   typedef u_int8_t memptr_t;
 
-  class bigptr_t;
-  class smallptr_t;
+  template<class T, class G> class bigptr_t;
+  template<class T, class G> class smallptr_t;
 
   extern bool debug_mem;
   extern int debug_warnings;
   void mark_deallocated (void *, size_t);
   void mark_unitialized (void *, size_t);
 
-  class bigobj_arena_t;
+  template class bigobj_arena_t<class T, class G>;
 
   //=======================================================================
 
@@ -131,14 +131,17 @@ namespace cgc {
     void mark () { if (_gcp) _gcp->mark (); }
 
     void copy_reinit (const bigslot_t*ms);
-    void deallocate (bigobj_arena_t *a);
+    void deallocate (typename bigobj_arena_t<T,G> *a);
     void touch ();
 
   };
 
   //=======================================================================
 
-  typedef tailq<bigslot_t, &bigslot_t::_next> memslot_list_t;
+  template<class T, class G>
+  struct types {
+    typedef tailq<bigslot_t<T,G>, &bigslot_t<T,G>::_next> memslot_list_t;
+  };
 
   //=======================================================================
     
@@ -205,9 +208,9 @@ namespace cgc {
     void set_lru_ptr (const G &o) { _ms->set_lru_ptr (o); }
     void touch () { _ms->touch (); }
 
-    friend class bigobj_arena_t<T,G>;
+    friend class typename bigobj_arena_t<T,G>;
   protected:
-    void deallocate (bigobj_arena_t *a);
+    void deallocate (typename bigobj_arena_t<T,G> *a);
     
 #ifdef CGC_DEBUG
     u_int32_t _magic;
@@ -233,11 +236,34 @@ namespace cgc {
   //=======================================================================
 
   template<class T> class alloc;
-  template<class T, size_t N> class vecalloc;
+  template<class T> class vecalloc;
+
 
   //=======================================================================
 
-  template<class T, class G = nil::gc_ptr_t >
+  template<class T, class V> 
+  class caster_t {
+  public:
+  };
+
+  template<class T>
+  class caster_t<T,T> {
+  public:
+    static T *cast (T *in) { return in; }
+    static const T *cast (const T *in) { return in; }
+  };
+
+  template<class T>
+  class caster_t<T, memptr_t> {
+  public:
+    static T *cast (memptr_t *in) { return reinterpret_cast<T *> (in); }
+    static const T *cast (const memptr_t *in) 
+    { return reinterpret_cast<const T *> (in); }
+  };
+
+  //=======================================================================
+
+  template<class T, class V, class G = nil::gc_ptr_t >
   class ptr {
   public:
     ptr (const ptr<T> &p) : _redir_ptr (p._redir_ptr) { rc_inc (); }
@@ -305,7 +331,7 @@ namespace cgc {
     friend class alloc<T>;
     friend class vecalloc<T>;
   protected:
-    explicit ptr (typename const redirector_t<T,G> &p) 
+    explicit ptr (typename const redirector_t<V,G> &p) 
       : _redir_ptr (p) { rc_inc (); }
 
     bool base_eq (const ptr<T> &p) { return _redir_ptr == p._redir_ptr; }
@@ -314,24 +340,23 @@ namespace cgc {
 
     T *obj ()
     {
-      if (_redir_ptr) return reinterpret_cast<T *> (_redir_ptr.v_data ());
+      if (_redir_ptr) return caster_t<T,V>::cast (_redir_ptr.data ());
       else return NULL;
     }
 
     const T *obj () const
     {
-      if (_redir_ptr) 
-	return reinterpret_cast<const T *> (_redir_ptr.v_data ());
+      if (_redir_ptr) return caster_t<T,V>::cast (_redir_ptr.data ());
       else return NULL;
     }
 
     const T *lim () const
     {
-      if (_redir_ptr) return reinterpret_cast<const T*> (_redir_ptr.lim ());
+      if (_redir_ptr) return caster_t<T,V>::cast (_redir_ptr.lim ());
       else return NULL;
     }
 
-    typename redirector_t<T,G> _redir_ptr;
+    typename redirector_t<V,G> _redir_ptr;
 
   private:
     explicit ptr (int i); // do not call list
@@ -339,77 +364,77 @@ namespace cgc {
 
   //=======================================================================
 
-  template<class T>
-  class aptr : public ptr<T> {
+  template<class T, class V, class G = nil:gc_ptr_t>
+  class aptr : public ptr<T,V,G> {
   public:
-    aptr () : ptr<T> (), _offset (0) {}
-    aptr (size_t s) : ptr<T> (), _offset (s) {}
+    aptr () : ptr<T,V,G> (), _offset (0) {}
+    aptr (size_t s) : ptr<T,V,G> (), _offset (s) {}
     
-    bool operator== (const aptr<T> &p) const
+    bool operator== (const aptr<T,V,G> &p) const
     { return base_eq (p) && _offset = p._offset;  }
 
-    bool operator== (const aptr<T> &p) const
+    bool operator== (const aptr<T,V,G> &p) const
     { return ! ( (*this) == p); }
     
-    aptr<T> &operator= (aptr<T> &p)
+    aptr<T,V,G> &operator= (aptr<T,V,G> &p)
     {
-      ptr<T>::rc_dec ();
-      ptr<T>::_redir_ptr = p._redir_ptr;
+      ptr<T,V,G>::rc_dec ();
+      ptr<T,V,G>::_redir_ptr = p._redir_ptr;
       _offset = p._offset;
-      ptr<T>::rc_inc ();
+      ptr<T,V,G>::rc_inc ();
       return (*this);
     }
 
-    aptr<T> operator+ (size_t s) const
+    aptr<T,V,G> operator+ (size_t s) const
     {
-      aptr<T> ret (ptr<T>::_redir_ptr, _offset + s);
+      aptr<T,V,G> ret (ptr<T,V,G>::_redir_ptr, _offset + s);
       assert (ret.inbounds ());
       return ret;
     }
 
-    aptr<T> operator- (size_t s) const
+    aptr<T,V,G> operator- (size_t s) const
     {
       assert (s <= _offset);
-      aptr<T> ret (ptr<T>::_redir_ptr, _offset - s);
+      aptr<T,V,G> ret (ptr<T,V,G>::_redir_ptr, _offset - s);
       return ret;
     }
 
-    aptr<T> operator++ (size_t s) { return (*this) += 1; }
-    aptr<T> operator-- (size_t s) { return (*this) -= 1; }
+    aptr<T,V,G> operator++ (size_t s) { return (*this) += 1; }
+    aptr<T,V,G> operator-- (size_t s) { return (*this) -= 1; }
 
-    aptr<T> &operator+= (size_t s) 
+    aptr<T,V,G> &operator+= (size_t s) 
     {
       _offset += s;
       assert (inbounds ());
       return (*this);
     }
 
-    aptr<T> &operator-= (size_t s) 
+    aptr<T,V,G> &operator-= (size_t s) 
     {
       assert (s <= _offset);
       _offset -= s;
       return (*this);
     }
 
-    bool operator< (const aptr<T> &p) const 
+    bool operator< (const aptr<T,V,G> &p) const 
     { 
       assert (base_eq (p));
       return (_offset < p._offset); 
     } 
 
-    bool operator<= (const aptr<T> &p) const 
+    bool operator<= (const aptr<T,V,G> &p) const 
     { 
       assert (base_eq (p));
       return (_offset <= p._offset); 
     }
  
-    bool operator>= (const aptr<T> &p) const 
+    bool operator>= (const aptr<T,V,G> &p) const 
     { 
       assert (base_eq (p));
       return (_offset >= p._offset); 
     } 
 
-    bool operator> (const aptr<T> &p) const 
+    bool operator> (const aptr<T,V,G> &p) const 
     { 
       assert (base_eq (p));
       return (_offset > p._offset); 
@@ -417,18 +442,18 @@ namespace cgc {
 
     bool inbounds ()
     {
-      return (ptr<T>::obj() + _offset <= ptr<T>::lim());
+      return (ptr<T,V,G>::obj() + _offset <= ptr<T,V,G>::lim());
     }
 
   protected:
-    aptr (const redirector_t &p, size_t s) : ptr<T> (p), _offset (s) {}
+    aptr (const redirector_t &p, size_t s) : ptr<T,V,G> (p), _offset (s) {}
 
   private:
 
     T *obj ()
     {
       assert (inbounds ());
-      return (ptr<T>::obj() + _offset);
+      return (ptr<T,V,G>::obj() + _offset);
     }
 
     void v_clear () { _offset = 0; }
@@ -502,9 +527,9 @@ namespace cgc {
 
   //=======================================================================
 
-  class bigobj_arena_t;
   class smallobj_arena_t;
 
+  template<class T, class G = nil::gc_ptr_t>
   class arena_t {
   public:
     arena_t (memptr_t *base, size_t sz) : _base (base), _sz (sz) {}
@@ -514,14 +539,14 @@ namespace cgc {
     virtual bool gc_make_room (size_t sz) { return false; }
     virtual void report (void) const {}
     virtual void gc (lru_mgr_t *m) = 0;
-    virtual bigobj_arena_t *to_boa () { return NULL; }
-    virtual smallobj_arena_t *to_soa () { return NULL; }
+    virtual bigobj_arena_t<T,G> *to_boa () { return NULL; }
+    virtual smallobj_arena_t<T,G> *to_soa () { return NULL; }
 
     int cmp (const memptr_t *m) const;
 
     // make a tree of all active arenas, so that we can take an
     // object and figure out which arena it lives in.
-    itree_entry<arena_t> _tlnk;
+    itree_entry<arena_t<T,G> > _tlnk;
     memptr_t *_base;
   protected:
     size_t _sz;
@@ -530,29 +555,30 @@ namespace cgc {
 
   //=======================================================================
 
+  template<class T = memptr_t, class G = nil::gc_ptr_t>
   class bigobj_arena_t : public arena_t {
   public:
     bigobj_arena_t (memptr_t *base, size_t sz) 
       : arena_t (base, sz), 
-	_memslots (New memslot_list_t ()),
+	_memslots (New types<T,G>::memslot_list_t ()),
 	_unclaimed_space (0) { debug_init(); init(); }
     bigobj_arena_t () 
       : arena_t (NULL, 0), 
 	_top (NULL), 
 	_nxt_ptrslot (NULL), 
 	_nxt_memslot (NULL),
-	_memslots (New memslot_list_t ()),
+	_memslots (New types<T,G>::memslot_list_t ()),
 	_unclaimed_space (0) { debug_init(); }
 
     void init ();
 
     virtual ~bigobj_arena_t () {}
 
-    redirector_t aalloc (size_t sz);
+    typename redirector_t<T,G> aalloc (size_t sz);
     void gc (lru_mgr_t *m);
     virtual bool gc_make_room (size_t sz);
 
-    tailq_entry<bigobj_arena_t> _qlnk;
+    tailq_entry<bigobj_arena_t<T,G> > _qlnk;
 
     bool can_fit (size_t sz) const;
     size_t free_space () const;
@@ -562,13 +588,13 @@ namespace cgc {
 
     void debug_init () { _magic = magic; }
     void check() { assert (magic == _magic); }
-    void mark_free (bigptr_t *p);
-    void remove (bigslot_t *p);
+    void mark_free (typename bigptr_t<T,G>  *p);
+    void remove (typename bigslot_t<T,G> *p);
     
     bigobj_arena_t *to_boa () { return this; }
 
   protected:
-    bigptr_t *get_free_ptrslot (void);
+    typename bigptr_t<T,G> *get_free_ptrslot (void);
     void collect_ptrslots (void);
     void compact_memslots (void);
     void lru_accounting (lru_mgr_t *m);
@@ -580,8 +606,8 @@ namespace cgc {
     memptr_t *_nxt_ptrslot;
     memptr_t *_nxt_memslot;
 
-    memslot_list_t *_memslots;
-    simple_stack_t<bigptr_t *> _free_ptrslots;
+    types<T,G>::memslot_list_t *_memslots;
+    simple_stack_t<bigptr_t<T,G> *> _free_ptrslots;
     size_t _unclaimed_space;
   };
 
@@ -602,6 +628,7 @@ namespace cgc {
 
   class smallobj_arena_t;
 
+  template<class T, class G = nil::gc_ptr_t>
   class smallptr_t { // implements redirector interface
   public:
     smallptr_t () : _count (0) { debug_init (); }
@@ -610,13 +637,13 @@ namespace cgc {
     int32_t count () const { return _count; }
     void set_count (int32_t i) { _count = i; }
     size_t size () const;
-    memptr_t *v_data () { return _data; }
-    const memptr_t *v_data () const { return _data; }
+    T *data () { return _data; }
+    const T *data () const { return _data; }
     void deallocate ();
 
-    friend class smallobj_arena_t;
+    friend class smallobj_arena_t<T,G>;
   protected:
-    void deallocate (smallobj_arena_t *a);
+    void deallocate (smallobj_arena_t<T,G> *a);
     smallobj_arena_t *lookup_arena () const;
     
 #ifdef CGC_DEBUG
@@ -636,42 +663,44 @@ namespace cgc {
 #endif /*CGC_DEBUG */
 
     int32_t _count;
-    memptr_t _data[0];
+    G _gc_obj;
+    T _data[0];
   };
 
   //=======================================================================
 
   class std_mgr_t;
 
+  template<class T, class G = nil::gc_ptr_t>
   class smallobj_arena_t : public arena_t {
   public:
     smallobj_arena_t (memptr_t *b, size_t sz, size_t l, size_t h,
-		      std_mgr_t *m, int i);
+		      std_mgr_t<T,G> *m, int i);
 
     redirector_t aalloc (size_t sz);
     void report (void) const;
     void gc (lru_mgr_t *) {}
     size_t slotsize () const { return _max; }
 
-    smallobj_arena_t *to_soa () { return this; }
+    smallobj_arena_t<T,G> *to_soa () { return this; }
     void check () { assert (_magic == magic); }
     void mark_free (smallptr_t *p);
 
     static size_t crud_size (size_t objsz);
     bool vacancy () const { return _vacancy; }
 
-    tailq_entry<smallobj_arena_t> _soa_lnk;
+    tailq_entry<smallobj_arena_t<T,G> > _soa_lnk;
   protected:
     void debug_init () { _magic = magic; }
 
     enum { magic = 0xdead1121 };
     u_int32_t _magic;
 
-    memptr_t *_top, *_nxt;
+    T *_top, *_nxt;
     freemap_t _freemap;
     size_t _min, _max;
     bool _vacancy;
-    std_mgr_t *_mgr;
+    std_mgr_t<T,G> *_mgr;
     int _soa_index;
   public:
     bool _vacancy_list_id;
@@ -679,7 +708,8 @@ namespace cgc {
 
   //=======================================================================
 
-  class mmap_bigobj_arena_t : public bigobj_arena_t {
+  template<class T, class G = nil::gc_ptr_t>
+  class mmap_bigobj_arena_t : public bigobj_arena_t<T,G> {
   public:
     mmap_bigobj_arena_t (size_t sz);
     ~mmap_bigobj_arena_t ();
@@ -697,66 +727,70 @@ namespace cgc {
 
   //=======================================================================
 
+  template<class T, class G = nil::gc_ptr_t>
   class mgr_t {
   public:
     mgr_t () {}
     virtual ~mgr_t () {}
 
-    template<class T> arena_t *
-    lookup (ptr<T> p) { return lookup (p->volatile_ptr ()); }
+    template<class R> arena_t *
+    lookup (ptr<R,T,G> p) { return lookup (p->volatile_ptr ()); }
 
-    virtual redirector_t aalloc (size_t sz) = 0;
+    virtual redirector_t<T,G> aalloc (size_t sz) = 0;
 
-    arena_t *lookup (const memptr_t *p);
+    arena_t<T,G> *lookup (const memptr_t *p);
     virtual void sanity_check (void) const {}
     virtual void report (void) const {}
 
-    void insert (arena_t *a);
-    void remove (arena_t *a);
-    static mgr_t *get ();
-    static void set (mgr_t *m);
+    void insert (arena_t<T,G> *a);
+    void remove (arena_t<T,G> *a);
+    static mgr_t<T,G> *get ();
+    static void set (mgr_t<T,G> *m);
     virtual void gc (void) = 0;
 
   private:
-    itree<memptr_t *, arena_t, &arena_t::_base, &arena_t::_tlnk> _tree;
-
+    itree<memptr_t *, arena_t<T,G>, 
+	  &arena_t<T,G>::_base, &arena_t<T,G>::_tlnk> _tree;
   };
   
   //=======================================================================
 
-  template<class T>
+#define COMMA ,
+
+  template<class T, class V = memptr, class G = nil::gc_ptr_t>
   class alloc {
   public:
     VA_TEMPLATE(explicit alloc ,					\
-		{ redirector_t r = mgr_t::get()->aalloc(sizeof(T));	\
+		{ redirector_t<V,G> r =					\
+		    mgr_t::get()->aalloc(sizeof(T));			\
 		  if (r) {						\
-		    (void) new (r.v_data ()) T ,			\
-		      ; _p = ptr<T> (r); } } )
-    operator ptr<T>&() { return _p; }
-    operator const ptr<T> &() const { return _p; }
+		    (void) new (r.data ()) T ,				\
+		      ; _p = ptr<T COMMA V COMMA G> (r); } } )
+    operator ptr<T,V,G>&() { return _p; }
+    operator const ptr<T,V,G> &() const { return _p; }
   private:
-    ptr<T> _p;
-  };
-
-  //=======================================================================
-
-#define COMMA ,
-
-  template<class T, size_t N>
-  class vecalloc {
-  public:
-    VA_TEMPLATE(explicit vecalloc ,					\
-		{ redirector_t r = mgr_t::get()->aalloc(sizeof(T)*N);	\
-		  if (r) {						\
-		    (void) new (r.v_data ()) T [N] ,			\
-		      ; _p = ptr<T COMMA N> (r); } } )
-    operator ptr<T>&() { return _p; }
-    operator const ptr<T> &() const { return _p; }
-  private:
-    ptr<T> _p;
+    ptr<T,V,G> _p;
   };
 
 #undef COMMA
+
+  //=======================================================================
+
+  template<class T, class V = memptr, class G = nil::gc_ptr_t>
+  class vecalloc {
+  public:
+    explicit vecalloc (size_t n) {
+      redirector_t<V,G> r = mgr_t<V,G>::get()->aalloc(sizeof(T)*n);
+      if (r) {
+	(void) new (r.data ()) T [n];
+	_p = ptr<T,V,G> (r); 
+      } 
+    } 
+    operator ptr<T,V,G>&() { return _p; }
+    operator const ptr<T,V,G> &() const { return _p; }
+  private:
+    ptr<T,V,G> _p;
+  };
 
   //=======================================================================
 
@@ -787,16 +821,18 @@ namespace cgc {
 
   //=======================================================================
 
+  template<class T, class G = nil::gc_obj_t>
   class soa_cluster_t {
   public:
     soa_cluster_t (size_t s) : _size (s) {}
-    typedef tailq<smallobj_arena_t, &smallobj_arena_t::_soa_lnk> soa_list_t;
+    typedef tailq<smallobj_arena_t<T,G>, 
+		  &smallobj_arena_t<T,G>::_soa_lnk> soa_list_t;
 
     redirector_t aalloc (size_t sz);
     size_t _size;
 
-    void became_vacant (smallobj_arena_t *a);
-    void add (smallobj_arena_t *a);
+    void became_vacant (smallobj_arena_t<T,G> *a);
+    void add (smallobj_arena_t<T,G> *a);
   private:
     soa_list_t _vacancy;
     soa_list_t _no_vacancy;
@@ -804,46 +840,47 @@ namespace cgc {
 
   //=======================================================================
 
-
+  template<class T, class G = nil::gc_obj_t>
   class std_mgr_t : public mgr_t {
   public:
     std_mgr_t (const std_cfg_t &cfg);
 
-    typedef tailq<bigobj_arena_t, &bigobj_arena_t::_qlnk> boa_list_t;
+    typedef tailq<bigobj_arena_t<T,G>, &bigobj_arena_t<T,G>::_qlnk> boa_list_t;
 
-    virtual bigobj_arena_t *gc_make_room_big (size_t sz);
+    virtual bigobj_arena_t<T,G> *gc_make_room_big (size_t sz);
     virtual void sanity_check (void) const;
     virtual void report (void) const;
     virtual void gc (void);
-    redirector_t aalloc (size_t sz);
+    redirector_t<T,G> aalloc (size_t sz);
 
-    void set_lru_mgr (lru_mgr_t *m) { _lru_mgr = m; }
+    void set_lru_mgr (lru_mgr_t<G> *m) { _lru_mgr = m; }
 
-    friend class smallobj_arena_t;
+    friend class smallobj_arena_t<T,G>;
   protected:
-    redirector_t big_alloc (size_t sz);
-    redirector_t small_alloc (size_t sz);
-    bigobj_arena_t *big_pick (size_t sz);
-    void became_vacant (smallobj_arena_t *a, int i);
-    smallobj_arena_t *alloc_soa (size_t sz, int ind);
+    redirector_t<T,G> big_alloc (size_t sz);
+    redirector_t<T,G> small_alloc (size_t sz);
+    bigobj_arena_t<T,G> *big_pick (size_t sz);
+    void became_vacant (smallobj_arena_t<T,G> *a, int i);
+    smallobj_arena_t<T,G> *alloc_soa (size_t sz, int ind);
 
     std_cfg_t _cfg;
     boa_list_t _bigs;
-    bigobj_arena_t *_next_big;
+    bigobj_arena_t<T,G> *_next_big;
     smallobj_sizer_t _sizer;
 
-    vec<soa_cluster_t *> _smalls;
+    vec<soa_cluster_t<T,G> *> _smalls;
     size_t _smallobj_lim;
-    lru_mgr_t *_lru_mgr;
+    lru_mgr_t<G> *_lru_mgr;
   };
 
 
   //=======================================================================
 
-  class mmap_smallobj_arena_t : public smallobj_arena_t {
+  template<class T, class G = nil::gc_obj_t>
+  class mmap_smallobj_arena_t : public smallobj_arena_t<T,G> {
   public:
     mmap_smallobj_arena_t (size_t sz, size_t l, size_t h,
-			   std_mgr_t *m, int i);
+			   std_mgr_t<T,G> *m, int i);
     ~mmap_smallobj_arena_t () {}
   };
 
