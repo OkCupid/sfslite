@@ -747,8 +747,10 @@ namespace cgc {
     static mgr_t<T,G> *get ();
     static void set (mgr_t<T,G> *m);
     virtual void gc (void) = 0;
-
+    
   private:
+    static mgr_t<T,G> *_mgr;
+
     itree<memptr_t *, arena_t<T,G>, 
 	  &arena_t<T,G>::_base, &arena_t<T,G>::_tlnk> _tree;
   };
@@ -828,7 +830,7 @@ namespace cgc {
     typedef tailq<smallobj_arena_t<T,G>, 
 		  &smallobj_arena_t<T,G>::_soa_lnk> soa_list_t;
 
-    redirector_t aalloc (size_t sz);
+    redirector_t<T,G> aalloc (size_t sz);
     size_t _size;
 
     void became_vacant (smallobj_arena_t<T,G> *a);
@@ -887,3 +889,5 @@ namespace cgc {
   //=======================================================================
 
 };
+
+#include "cgc2-impl.h"
