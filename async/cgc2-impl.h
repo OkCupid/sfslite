@@ -527,6 +527,7 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
+  template<class T, class G>
   void
   bigobj_arena_t<T,G>::compact_memslots (void)
   {
@@ -568,6 +569,7 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
  
+  template<class T, class G>
   void
   bigobj_arena_t<T,G>::lru_accounting (lru_mgr_t *mgr)
   {
@@ -584,6 +586,7 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
+  template<class T, class G>
   void
   bigobj_arena_t<T,G>::gc (lru_mgr_t *m)
   {
@@ -596,6 +599,7 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
+  template<class T, class G>
   void
   bigobj_arena_t<T,G>::init ()
   {
@@ -606,6 +610,7 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
+  template<class T, class G>
   int
   arena_t<T,G>::cmp (const memptr_t *mp) const
   {
@@ -618,6 +623,7 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
+  template<class T, class G>
   static void
   dump_list (types<T,G>::memslot_list_t *ml)
   {
@@ -631,6 +637,7 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
+  template<class T, class G>
   void
   bigobj_arena_t<T,G>::remove (bigslot_t<T,G> *s)
   { 
@@ -669,6 +676,7 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
+  template<class T, class G>
   mmap_bigobj_arena_t<T,G>::mmap_bigobj_arena_t (size_t sz)
   {
 
@@ -681,6 +689,7 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
+  template<class T, class G>
   mmap_bigobj_arena_t<T,G>::~mmap_bigobj_arena_t ()
   {
     munmap (_base, _sz);
@@ -688,6 +697,7 @@ namespace cgc {
 
   //=======================================================================
 
+  template<class T, class G>
   mmap_smallobj_arena_t<T,G>::mmap_smallobj_arena_t (size_t sz, 
 						     size_t l, size_t h,
 						     std_mgr_t<T,G> *m, int i)
@@ -721,6 +731,7 @@ namespace cgc {
 
  //=======================================================================
 
+  template<class T, class G>
   void
   bigptr_t<T,G>::deallocate ()
   {
@@ -738,6 +749,7 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
+  template<class T, class G>
   void
   bigptr_t<T,G>::deallocate (bigobj_arena_t<T,G> *a)
   {
@@ -806,6 +818,7 @@ namespace cgc {
 
   //=======================================================================
 
+  template<class T, class G>
   smallobj_arena_t<T,G>::smallobj_arena_t (memptr_t *b, size_t s, size_t l, 
 				      size_t h, std_mgr_t<T,G> *m, int i)
     : arena_t (b, s),
@@ -822,6 +835,7 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
+  template<class T, class G>
   void
   smallobj_arena_t<T,G>::mark_free (smallptr_t *p)
   {
@@ -839,6 +853,7 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
+  template<class T, class G>
   redirector_t<T,G>
   smallobj_arena_t<T,G>::aalloc (size_t sz)
   {
@@ -865,12 +880,14 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
+  template<class T, class G>
   void 
   smallobj_arena_t<T,G>::report () const
   {
     size_t nf = _freemap.nfree ();
     size_t nl = 0;
-    if (_nxt < _top)
+    if (_nxt < _top)  template<class T, class G>
+
       nl = (_top - _nxt) / _max;
 
     warn (" smallobj_arena(%p -> %p): %zd-sized objs; %zd in freelist; "
@@ -893,17 +910,29 @@ namespace cgc {
   }				      \
   return dr;
 
+  template<class T, class G>
   int32_t redirector_t<T,G>::count () const { RDFN(count,return,0); }
+
+  template<class T, class G>
   void redirector_t<T,G>::set_count (int32_t i) { RDFN(set_count,,,i); }
+
+  template<class T, class G>
   size_t redirector_t<T,G>::size () const { RDFN(size,return,0);  }
+
+  template<class T, class G>
   T *redirector_t<T,G>::data () { RDFN(data,return,0); }
+
+  template<class T, class G>
   const T *redirector_t<T,G>::data () const { RDFN(data,return,NULL); }
+
+  template<class T, class G>
   void redirector_t<T,G>::deallocate () { RDFN(deallocate,,); }
 
 #undef RDFN
 
   //-----------------------------------------------------------------------
 
+  template<class T, class G>
   void
   redirector_t<T,G>::set_lru_ptr (const G &r)
   {
@@ -912,6 +941,7 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
+  template<class T, class G>
   void
   redirector_t<T,G>::touch ()
   {
@@ -920,6 +950,7 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
+  template<class T, class G>
   T *
   redirector_t<T,G>::obj ()
   {
@@ -929,6 +960,7 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
   
+  template<class T, class G>
   const T *
   redirector_t<T,G>::obj () const 
   { 
@@ -938,6 +970,7 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
+  template<class T, class G>
   const T *
   redirector_t<T,G>::lim () const
   {
@@ -949,8 +982,9 @@ namespace cgc {
     
   //-----------------------------------------------------------------------
 
+  template<class T, class G>
   void
-  redirector_t::rc_inc ()
+  redirector_t<T,G>::rc_inc ()
   {
     int32_t c = count ();
     assert (c >= 0);
@@ -959,8 +993,9 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
+  template<class T, class G>
   bool 
-  redirector_t::rc_dec () 
+  redirector_t<T,G>::rc_dec () 
   {
     bool ret;
     
@@ -977,12 +1012,13 @@ namespace cgc {
   
   //=======================================================================
 
+  template<class T, class G>
   smallobj_arena_t *
-  smallptr_t::lookup_arena () const
+  smallptr_t<T,G>::lookup_arena () const
   {
-    arena_t *a = mgr_t::get()->lookup (v_data ());
+    arena_t<T,G> *a = mgr_t<T,G>::get()->lookup (data ());
     assert (a);
-    smallobj_arena_t *soa = a->to_soa ();
+    smallobj_arena_t<T,G> *soa = a->to_soa ();
     assert (soa);
     soa->check ();
     return soa;
@@ -990,24 +1026,27 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
+  template<class T, class G>
   size_t
-  smallptr_t::size () const
+  smallptr_t<T,G>::size () const
   {
     return lookup_arena ()->slotsize ();
   }
 
   //-----------------------------------------------------------------------
 
+  template<class T, class G>
   void
-  smallptr_t::deallocate ()
+  smallptr_t<T,G>::deallocate ()
   {
     deallocate (lookup_arena ());
   }
 
   //-----------------------------------------------------------------------
 
+  template<class T, class G>
   void
-  smallptr_t::deallocate (smallobj_arena_t *a) 
+  smallptr_t<T,G>::deallocate (smallobj_arena_t<T,G> *a) 
   {
     check ();
     mark_free ();
@@ -1016,11 +1055,12 @@ namespace cgc {
 
   //=======================================================================
 
+  template<class T, class G>
   redirector_t
   soa_cluster_t::aalloc (size_t sz)
   {
-    smallobj_arena_t *a, *n;
-    redirector_t ret;
+    smallobj_arena_t<T,G> *a, *n;
+    redirector_t<T,G> ret;
     for (a = _vacancy.first; !ret && a; a = n) {
       assert (a->_vacancy_list_id == true);
       n = _vacancy.next (a);
@@ -1035,8 +1075,9 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
+  template<class T, class G>
   void
-  soa_cluster_t::add (smallobj_arena_t *a)
+  soa_cluster_t<T,G>::add (smallobj_arena_t<T,G> *a)
   {
     _vacancy.insert_tail (a);
     a->_vacancy_list_id = true;
@@ -1044,8 +1085,9 @@ namespace cgc {
 
   //-----------------------------------------------------------------------
 
+  template<class T, class G>
   void
-  soa_cluster_t::became_vacant (smallobj_arena_t *a)
+  soa_cluster_t<T,G>::became_vacant (smallobj_arena_t<T,G> *a)
   {
     assert (a->_vacancy_list_id == false);
     _no_vacancy.remove (a);
