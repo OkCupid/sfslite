@@ -139,6 +139,28 @@ dearmor64A (str asc)
   return dearmor64A (asc.cstr (), asc.len ());
 }
 
+/*
+ * PHP and Python-complaint Base-64 encoding.
+ */
+str armor64X (const void *s, size_t len);
+size_t armor64Xlen (const u_char *s);
+str dearmor64X (const char *s, ssize_t len);
+
+inline str
+armor64X (str bin)
+{
+  return armor64X (bin.cstr (), bin.len ());
+}
+
+inline str
+dearmor64X (str asc)
+{
+  if (armor64Xlen (reinterpret_cast<const u_char *> (asc.cstr ()))
+      != asc.len ())
+    return NULL;
+  return dearmor64X (asc.cstr (), asc.len ());
+}
+
 
 /*
  * Base-32 encoding, using '2'-'9','a'-'k','m','n','p'-'z'

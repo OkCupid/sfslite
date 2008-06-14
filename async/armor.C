@@ -295,18 +295,22 @@ _dearmor64 (const signed char *a2b, const u_char *s, ssize_t len)
   return bin;
 }
 
-size_t
-armor64len (const u_char *s)
+static size_t
+_armor64len (const signed char *a2b, bool pad, const u_char *s)
 {
   const u_char *p = s;
-  while (a2b64[*p] >= 0)
+  while (a2b[*p] >= 0)
     p++;
-  if (*p == '=')
-    p++;
-  if (*p == '=')
-    p++;
+  if (pad) {
+    if (*p == '=')
+      p++;
+    if (*p == '=')
+      p++;
+  }
   return p - s;
 }
+
+size_t armor64len (const u_char *s) { return _armor64len (a2b64, true, s); }
 
 str
 dearmor64 (const char *_s, ssize_t len)
@@ -349,20 +353,50 @@ static const signed char a2b64A[256] = {
   -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 };
 
+static char b2a64X[64] = {
+  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
+  'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+  'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
+  'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
+  'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
+  'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+  'w', 'x', 'y', 'z', '0', '1', '2', '3',
+  '4', '5', '6', '7', '8', '9', '@', '_',
+};
+
+static const signed char a2b64X[256] = {
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    52, 53, 54, 55, 56, 57, 58, 59, 60, 61, -1, -1, -1, -1, -1, -1,
+    62, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+    15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, -1, -1, -1, -1, 63,
+    -1, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+    41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+};
+
 str
 armor64A (const void *s, size_t len)
 {
   return _armor64 (b2a64A, false, s, len);
 }
 
-size_t
-armor64Alen (const u_char *s)
+str
+armor64X(const void* s, size_t len)
 {
-  const u_char *p = s;
-  while (a2b64A[*p] >= 0)
-    p++;
-  return p - s;
+    return _armor64(b2a64X, true, s, len);
 }
+
+size_t armor64Alen (const u_char *s) { return _armor64len (a2b64A, false, s); }
+size_t armor64Xlen (const u_char *s) { return _armor64len (a2b64X, true, s); }
 
 str
 dearmor64A (const char *_s, ssize_t len)
@@ -373,3 +407,13 @@ dearmor64A (const char *_s, ssize_t len)
   return _dearmor64 (a2b64A, s, len);
 }
 
+str
+dearmor64X (const char *_s, ssize_t len)
+{
+  const u_char *s = reinterpret_cast<const u_char *> (_s);
+  if (len < 0)
+    len = armor64Xlen (s);
+  if (len & 3)
+    return NULL;
+  return _dearmor64 (a2b64X, s, len);
+}
