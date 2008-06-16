@@ -105,6 +105,23 @@ test3()
   cgc::ptr<char> c = cgc::vecalloc<char,1000> ();
 }
 
+class wrobj_t : public cgc::referee2_t<wrobj_t> 
+{
+public:
+  wrobj_t (int i) : _i (i) {}
+  void bar () { warn << "bar! " << _i << "\n"; }
+private:
+  int _i;
+};
+
+static void
+test0 ()
+{
+  wrobj_t foo (10);
+  cgc::wkref2<wrobj_t> r (foo);
+  r->bar ();
+}
+
 
 int
 main (int argc, char *argv[])
@@ -114,6 +131,8 @@ main (int argc, char *argv[])
   cfg._size_b_arenae = 1;
   cfg._smallobj_lim = 0;
   cgc::mgr_t::set (New cgc::std_mgr_t (cfg));
+
+  test0 ();
 
   for (int i = 0; i < 10; i++) {
     cgc::mgr_t::get ()->sanity_check();

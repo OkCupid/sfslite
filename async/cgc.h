@@ -742,6 +742,80 @@ namespace cgc {
 
   //=======================================================================
 
+  template<class T> class referee2_t;
+
+  template<class T>
+  class wkref2  {
+  public:
+    wkref2 (T *o) : _obj (o) { linkup (); }
+    wkref2 (T &o) : _obj (&o) { linkup (); }
+    wkref2 () : _obj (NULL) {}
+    ~wkref2 () { clear (); }
+    operator bool() const { return (obj ()); }
+    const T *operator-> () const { return obj ();}
+    T *operator-> () { return obj ();}
+    T &operator* () const { return *obj (); }
+
+    wkref2<T> &operator= (const wkref2<T> &w2) {
+      clear ();
+      _obj = w2._obj;
+      linkup ();
+      return *this;
+    }
+    
+    wkref2<T> &operator= (T* o) {
+      clear ();
+      _obj = o;
+      linkup ();
+      return *this;
+    }
+
+    wkref2<T> &operator= (T &o) {
+      clear ();
+      _obj = o;
+      linkup ();
+      return *this;
+    }
+
+    bool operator== (const wkref2<T> &w2) const { return _obj == w2._obj; }
+    bool operator!= (const wkref2<T> &w2) const { return _obj != w2._obj; }
+
+    friend class referee2_t<T>;
+  private:
+    void clear () { if (_obj) _obj->rm (this); _obj = NULL; }
+    void linkup () { if (_obj) { _obj->add (this); } }
+
+    const T *obj () const { return _obj; }
+    T *obj () { return _obj; }
+    list_entry<wkref2<T> > _lnk;
+
+
+    T *_obj;
+  };
+  
+
+  //=======================================================================
+
+  template<class T>
+  class referee2_t {
+  public:
+    referee2_t () {}
+    ~referee2_t ()
+    {
+      while (_lst.first) {
+	wkref2<T> *i = _lst.first;
+	assert (*i);
+	i->clear (); // will remove i from list!
+      }
+    }
+    void add (wkref2<T> *i) { _lst.insert_head (i); } 
+    void rm (wkref2<T> *i) { _lst.remove (i); } 
+  private:
+    list<wkref2<T>, &wkref2<T>::_lnk> _lst;
+  };
+
+  //=======================================================================
+
   struct std_cfg_t {
     std_cfg_t ()
       : _n_b_arenae (0x10),
