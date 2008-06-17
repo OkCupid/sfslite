@@ -13,15 +13,15 @@
 //
 // XXX todo
 //
-//   - compile
 //   - debug small objects
 //   - bptr<T> -- boolean pointer, either NULL or legit, but nothing
 //       in between. i.e., can say if the obj is there, but will always
 //       point to a valid object.  might be the base of all other pointers.
 //
 
-namespace cgc2 {
-
+namespace sp {
+namespace gc {
+    
   typedef u_int8_t memptr_t;
 
   template<class T, class G> class bigptr_t;
@@ -31,86 +31,12 @@ namespace cgc2 {
   extern int debug_warnings;
   void mark_deallocated (void *, size_t);
   void mark_unitialized (void *, size_t);
+  size_t get_pagesz ();
+  void *cgc_mmap (size_t sz);
+  size_t align (size_t in, size_t a);
+  size_t boa_obj_align (size_t sz);
 
   template<class T, class G> class bigobj_arena_t;
-
-  //=======================================================================
-
-  template<class T> class referee;
-
-  //=======================================================================
-
-  template<class T>
-  class wkref  {
-  public:
-    wkref (T *o) : _obj (o) { linkup (); }
-    wkref (T &o) : _obj (&o) { linkup (); }
-    wkref () : _obj (NULL) {}
-    ~wkref () { clear (); }
-    operator bool() const { return (obj ()); }
-    const T *operator-> () const { return obj ();}
-    T *operator-> () { return obj ();}
-    T &operator* () const { return *obj (); }
-
-    wkref<T> &operator= (const wkref<T> &w2) {
-      clear ();
-      _obj = w2._obj;
-      linkup ();
-      return *this;
-    }
-    
-    wkref<T> &operator= (T* o) {
-      clear ();
-      _obj = o;
-      linkup ();
-      return *this;
-    }
-
-    wkref<T> &operator= (T &o) {
-      clear ();
-      _obj = o;
-      linkup ();
-      return *this;
-    }
-
-    bool operator== (const wkref<T> &w2) const { return _obj == w2._obj; }
-    bool operator!= (const wkref<T> &w2) const { return _obj != w2._obj; }
-
-    friend class referee<T>;
-  private:
-    void clear () { if (_obj) _obj->rm (this); _obj = NULL; }
-    void linkup () { if (_obj) { _obj->add (this); } }
-
-    const T *obj () const { return _obj; }
-    T *obj () { return _obj; }
-    list_entry<wkref<T> > _lnk;
-
-
-    T *_obj;
-  };
-  
-
-  //=======================================================================
-
-  template<class T>
-  class referee {
-  public:
-    referee () {}
-    ~referee ()
-    {
-      while (_lst.first) {
-	wkref<T> *i = _lst.first;
-	assert (*i);
-	i->clear (); // will remove i from list!
-      }
-    }
-    void add (wkref<T> *i) { _lst.insert_head (i); } 
-    void rm (wkref<T> *i) { _lst.remove (i); } 
-  private:
-    list<wkref<T>, &wkref<T>::_lnk> _lst;
-  };
-
-  //=======================================================================
 
   class lru_obj_t {
   public:
@@ -339,7 +265,7 @@ namespace cgc2 {
   //=======================================================================
 
   template<class T, class V = memptr_t, class G = nil::gc_ptr_t >
-  class ptr {
+  class ptr : public base_ptr<T> {
   public:
     ptr (const ptr<T,V,G> &p) : _redir_ptr (p._redir_ptr) { rc_inc (); }
     ptr () {}
@@ -359,28 +285,8 @@ namespace cgc2 {
       }
     }
 
-    const T *nonnull_volatile_ptr () const 
-    {
-      const T *ret = obj();
-      assert (ret);
-      return ret;
-    }
-
-    T *nonnull_volatile_ptr () 
-    {
-      T *ret = volatile_ptr ();
-      assert (ret);
-      return ret;
-    }
-
-    const T *operator-> () const { return nonnull_volatile_ptr (); }
-    T *operator-> () { return nonnull_volatile_ptr (); }
-    T &operator* () { return *nonnull_volatile_ptr (); }
-    const T &operator* () const { return *nonnull_volatile_ptr (); }
-    operator bool() const { return volatile_ptr () != NULL; }
-
-    bool operator== (const ptr<T,V,G> &p) const { return base_eq (p); }
-    bool operator!= (const ptr<T,V,G> &p) const { return !base_eq (p); }
+    virtual bool operator== (const ptr<T,V,G> &p) const { return base_eq (p); }
+    virtual bool operator!= (const ptr<T,V,G> &p) const { return !base_eq (p); }
 
     void set_lru_ptr (const G &p) { _redir_ptr.set_lru_ptr (p); }
     void touch () { _redir_ptr.touch (); }
@@ -413,13 +319,13 @@ namespace cgc2 {
 
     virtual void v_clear () {}
 
-    T *obj ()
+    virtual T *obj ()
     {
       if (_redir_ptr) return caster_t<T,V>::cast (_redir_ptr.data ());
       else return NULL;
     }
 
-    const T *obj () const
+    virtual const T *obj () const
     {
       if (_redir_ptr) return caster_t<T,V>::cast (_redir_ptr.data ());
       else return NULL;
@@ -526,6 +432,12 @@ namespace cgc2 {
   private:
 
     T *obj ()
+    {
+      assert (inbounds ());
+      return (ptr<T,V,G>::obj() + _offset);
+    }
+
+    const T *obj () const
     {
       assert (inbounds ());
       return (ptr<T,V,G>::obj() + _offset);
@@ -964,4 +876,4 @@ namespace cgc2 {
 
 };
 
-#include "cgc2-impl.h"
+};
