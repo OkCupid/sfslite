@@ -798,8 +798,8 @@ namespace cgc2 {
   class meta_mgr_t {
   public:
     meta_mgr_t () {}
-    mgr_t<T,G> *get ();
-    void set (mgr_t<T,G> *s);
+    static mgr_t<T,G> *get ();
+    static void set (mgr_t<T,G> *s);
   };
 
   //-----------------------------------------------------------------------
@@ -808,8 +808,8 @@ namespace cgc2 {
   class meta_mgr_t<memptr_t, nil::gc_ptr_t> {
   public:
     meta_mgr_t () {}
-    mgr_t<memptr_t, nil::gc_ptr_t> *get ();
-    void set (mgr_t<memptr_t, nil::gc_ptr_t> *s);
+    static mgr_t<memptr_t, nil::gc_ptr_t> *get ();
+    static void set (mgr_t<memptr_t, nil::gc_ptr_t> *s);
   };
 
   //=======================================================================
@@ -831,13 +831,11 @@ namespace cgc2 {
 
     void insert (arena_t<T,G> *a);
     void remove (arena_t<T,G> *a);
-    static mgr_t<T,G> *get () { return _mm.get (); }
-    static void set (mgr_t<T,G> *m) { _mm.set (m); }
+    static mgr_t<T,G> *get () { return meta_mgr_t<T,G>::get (); }
+    static void set (mgr_t<T,G> *m) { meta_mgr_t<T,G>::set (m); }
     virtual void gc (void) = 0;
     
   private:
-    static meta_mgr_t<T,G> _mm;
-
     itree<memptr_t *, arena_t<T,G>, 
 	  &arena_t<T,G>::_base, &arena_t<T,G>::_tlnk> _tree;
   };
