@@ -257,7 +257,7 @@ done
 dnl
 dnl Everything can come AFTER the standard libraries
 dnl
-for lib in arpc sfsmisc libtame; do
+for lib in libsafeptr arpc sfsmisc libtame; do
     CPPFLAGS="$CPPFLAGS -I"'$(top_srcdir)'"/$lib"
 done
 
@@ -271,6 +271,8 @@ done
 CPPFLAGS="$CPPFLAGS -I"'$(top_srcdir)'"/svc"
 AC_SUBST(LIBASYNC)
 LIBASYNC='$(top_builddir)/async/libasync.la'
+AC_SUBST(LIBSAFEPTR)
+LIBSAFEPTR='$(top_builddir)/libsafeptr/libsafeptr.la'
 AC_SUBST(LIBARPC)
 LIBARPC='$(top_builddir)/arpc/libarpc.la'
 AC_SUBST(LIBSFSCRYPT)
@@ -285,13 +287,13 @@ AC_SUBST(LIBSFSMISC)
 LIBSFSMISC='$(top_builddir)/sfsmisc/libsfsmisc.la'
 AC_SUBST(LIBTAME)
 LIBTAME='$(top_builddir)/libtame/libtame.la'
-LDADD='$(LIBTAME) $(LIBSVC) $(LIBSFSMISC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC) $(LIBGMP)'
+LDADD='$(LIBTAME) $(LIBSVC) $(LIBSFSMISC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBSAFEPTR) $(LIBASYNC) $(LIBGMP)'
 LDADD="$LDADD "'$(LIBPY) $(LDADD_THR)'
 
 if test "$enable_shared" = yes; then
     LDEPS=
 else
-    LDEPS='$(LIBSFSMISC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC)'
+    LDEPS='$(LIBSFSMISC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBSAFEPTR) $(LIBASYNC)'
 fi
 
 unset AUTH_HELPER_STYLE
@@ -467,10 +469,11 @@ SFS_LIBSFS
 SFS_CALLBACK
 SFS_ALL
 
-AC_OUTPUT(Makefile async/Makefile rpcc/Makefile arpc/Makefile
-	crypt/Makefile sfsmisc/Makefile contrib/Makefile tame/Makefile
-	svc/Makefile libtame/Makefile arpcgen/Makefile libsfs/Makefile
-	tests/Makefile tutorial/Makefile)
+AC_OUTPUT(Makefile async/Makefile libsafeptr/Makefile rpcc/Makefile 
+        arpc/Makefile crypt/Makefile sfsmisc/Makefile contrib/Makefile 
+        tame/Makefile svc/Makefile libtame/Makefile arpcgen/Makefile 
+        libsfs/Makefile tests/Makefile tutorial/Makefile)
+
 dnl
 dnl end SFSlite changes
 dnl

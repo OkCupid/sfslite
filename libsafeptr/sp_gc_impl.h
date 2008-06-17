@@ -4,6 +4,7 @@
 #include <sys/mman.h>
 #include <async.h>
 
+namespace sp { 
 namespace gc {
 
   template<class T, class G>
@@ -937,4 +938,5 @@ namespace gc {
 
   //=======================================================================
 
+};
 };

@@ -1684,6 +1684,7 @@ if test -f ${with_sfs}/Makefile -a -f ${with_sfs}/autoconf.h; then
     done
     CPPFLAGS="$CPPFLAGS -I${with_sfs}/svc"
     LIBASYNC=${with_sfs}/async/libasync.la
+    LIBSAFEPTR=${with_sfs}/libsafeptr/libsafeptr.la
     LIBARPC=${with_sfs}/arpc/libarpc.la
     LIBSFSCRYPT=${with_sfs}/crypt/libsfscrypt.la
     LIBSFSMISC=${with_sfs}/sfsmisc/libsfsmisc.la
@@ -1706,6 +1707,7 @@ elif test -f ${with_sfs}/include/${sfsprfx}/autoconf.h \
     fi
     CPPFLAGS="$CPPFLAGS -I${sfsincludedir}"
     LIBASYNC=${sfslibdir}/libasync.la
+    LIBSAFEPTR=${sfslibdir}/libsafeptr.la
     LIBARPC=${sfslibdir}/libarpc.la
     LIBSFSCRYPT=${sfslibdir}/libsfscrypt.la
     LIBSFSMISC=${sfslibdir}/libsfsmisc.la
@@ -1760,6 +1762,7 @@ AC_SUBST(sfslibdir)
 AC_SUBST(sfsincludedir)
 
 AC_SUBST(LIBASYNC)
+AC_SUBST(LIBSAFEPTR)
 AC_SUBST(LIBARPC)
 AC_SUBST(LIBSFSCRYPT)
 AC_SUBST(LIBSFSMISC)
@@ -1775,7 +1778,7 @@ AC_SUBST(NOPAGING)
 SFS_GMP
 SFS_DMALLOC
 
-LDEPS='$(LIBTAME) $(LIBSFSMISC) $(LIBSVC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC)'
+LDEPS='$(LIBTAME) $(LIBSFSMISC) $(LIBSVC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBSAFEPTR) $(LIBASYNC)'
 LDADD="$LDEPS "'$(LIBGMP) $(LIBPY)'
 AC_SUBST(LDEPS)
 AC_SUBST(LDADD)

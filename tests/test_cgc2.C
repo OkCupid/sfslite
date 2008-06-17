@@ -1,6 +1,7 @@
 
 #include "async.h"
-#include "cgc2.h"
+#include "sp_gc.h"
+#include "sp_wkref.h"
 
 class bar_t {
 public:
@@ -19,10 +20,10 @@ test1(void)
     // Note; this x must be deallocated by the end of the loop, otherwise
     // it will hold a reference to an bar_t and we won't have spcae.
     // There's only enough room for exactly 4 of these things.
-    cgc2::ptr<bar_t> x; 
-    vec<cgc2::ptr<bar_t> > v;
+    sp::gc::ptr<bar_t> x; 
+    vec<sp::gc::ptr<bar_t> > v;
     for (size_t i = 0; i < 4; i++) {
-      cgc2::ptr<bar_t> x = cgc2::alloc<bar_t> (i);
+      sp::gc::ptr<bar_t> x = sp::gc::alloc<bar_t> (i);
       assert (x);
       v.push_back (x);
     }
@@ -30,7 +31,7 @@ test1(void)
     // Must clear v[0] before allocating new one, otherwise we're out of 
     // space.
     v[0] = NULL;
-    x = cgc2::alloc<bar_t> (100);
+    x = sp::gc::alloc<bar_t> (100);
     assert (x);
     v[0] = x;
 
@@ -56,17 +57,17 @@ private:
 static void
 test2(void) {
 
-  cgc2::ptr<foo_t> x = cgc2::alloc<foo_t> (10,23);
-  cgc2::ptr<foo_t> y = x;
+  sp::gc::ptr<foo_t> x = sp::gc::alloc<foo_t> (10,23);
+  sp::gc::ptr<foo_t> y = x;
   assert (y->baz () == 33);
   assert (x->baz () == 33);
   x = y = NULL;
-  x = cgc2::alloc<foo_t> (40,50);
+  x = sp::gc::alloc<foo_t> (40,50);
 
-  vec<cgc2::ptr<foo_t> > v;
+  vec<sp::gc::ptr<foo_t> > v;
   for (int j = 0; j < 10; j++) {
     for (size_t i = 0; i < 100; i++) {
-      x = cgc2::alloc<foo_t> (i, 0);
+      x = sp::gc::alloc<foo_t> (i, 0);
       assert (x);
       v.push_back (x);
     }
@@ -74,7 +75,7 @@ test2(void) {
   }
 
   for (size_t i = 0; i < 100; i++) {
-    v.push_back (cgc2::alloc<foo_t> (2*i, 0));
+    v.push_back (sp::gc::alloc<foo_t> (2*i, 0));
   }
 
   for (size_t i = 0; i < 20; i++) {
@@ -82,7 +83,7 @@ test2(void) {
   }
 
   for (size_t i = 0; i < 20; i++) {
-    x = cgc2::alloc<foo_t> (i,300);
+    x = sp::gc::alloc<foo_t> (i,300);
     assert (x);
     v[i*5] = x;
   }
@@ -100,12 +101,12 @@ test2(void) {
 static void
 test3()
 {
-  cgc2::ptr<bool> b = cgc2::alloc<bool> (true);
+  sp::gc::ptr<bool> b = sp::gc::alloc<bool> (true);
   *b = false;
-  cgc2::ptr<char> c = cgc2::vecalloc<char> (1000);
+  sp::gc::ptr<char> c = sp::gc::vecalloc<char> (1000);
 }
 
-class wrobj_t : public cgc2::referee<wrobj_t> 
+class wrobj_t : public sp::referee<wrobj_t> 
 {
 public:
   wrobj_t (int i) : _i (i) {}
@@ -118,7 +119,7 @@ static void
 test0 ()
 {
   wrobj_t foo (10);
-  cgc2::wkref<wrobj_t> r (foo);
+  sp::wkref<wrobj_t> r (foo);
   r->bar ();
 }
 
@@ -126,20 +127,20 @@ test0 ()
 int
 main (int argc, char *argv[])
 {
-  cgc2::std_cfg_t cfg;
+  sp::gc::std_cfg_t cfg;
   cfg._n_b_arenae = 2;
   cfg._size_b_arenae = 1;
   cfg._smallobj_lim = 0;
-  cgc2::mgr_t<>::set (New cgc2::std_mgr_t<> (cfg));
+  sp::gc::mgr_t<>::set (New sp::gc::std_mgr_t<> (cfg));
 
   test0 ();
 
   for (int i = 0; i < 10; i++) {
-    cgc2::mgr_t<>::get ()->sanity_check();
+    sp::gc::mgr_t<>::get ()->sanity_check();
     test1();
-    cgc2::mgr_t<>::get ()->sanity_check();
+    sp::gc::mgr_t<>::get ()->sanity_check();
     test2();
-    cgc2::mgr_t<>::get ()->sanity_check();
+    sp::gc::mgr_t<>::get ()->sanity_check();
   }
   
   if (0) test3();

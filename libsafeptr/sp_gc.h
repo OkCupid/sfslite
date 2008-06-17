@@ -7,6 +7,7 @@
 #include "vec.h"
 #include "itree.h"
 #include "freemap.h"
+#include "safeptr.h"
 
 #define CGC_DEBUG 1
 
@@ -315,7 +316,8 @@ namespace gc {
     explicit ptr (const redirector_t<V,G> &p) 
       : _redir_ptr (p) { rc_inc (); }
 
-    bool base_eq (const ptr<T,V,G> &p) { return _redir_ptr == p._redir_ptr; }
+    bool base_eq (const ptr<T,V,G> &p) const 
+    { return _redir_ptr == p._redir_ptr; }
 
     virtual void v_clear () {}
 
@@ -875,5 +877,6 @@ namespace gc {
   //=======================================================================
 
 };
-
 };
+
+#include "sp_gc_impl.h"

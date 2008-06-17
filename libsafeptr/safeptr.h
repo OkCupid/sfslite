@@ -36,9 +36,9 @@ namespace sp {
 
     virtual operator bool() const { return obj(); }
 
-    virtual bool operator== (const ptr<T> &p2) const 
+    virtual bool operator== (const base_ptr<T> &p2) const 
     { return obj() == p2.obj (); }
-    virtual bool operator!= (const ptr<T> &p2) const 
+    virtual bool operator!= (const base_ptr<T> &p2) const 
     { return obj() != p2.obj (); }
 
   protected:
@@ -48,6 +48,3 @@ namespace sp {
   };
 };
 
-#include "sp_wkref.h"
-#include "sp_gc.h"
-#include "sp_gc_impl.h"

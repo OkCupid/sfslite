@@ -1,7 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 # $Id$
 
-LDADD = $(LIBTAME) $(LIBSFSCRYPT) $(LIBARPC) $(LIBASYNC) $(LIBGMP) 
+LDADD = $(LIBTAME) $(LIBSFSCRYPT) $(LIBARPC) $(LIBSAFEPTR) $(LIBASYNC) $(LIBGMP) 
 
 TESTS = test_aes \
 	test_aiod \
