@@ -4,7 +4,7 @@
 #include <sys/mman.h>
 #include <async.h>
 
-namespace cgc {
+namespace cgc2 {
 
   //=======================================================================
 
@@ -41,18 +41,9 @@ namespace cgc {
 
   template<class T, class G>
   void
-  bigslot_t::set_lru_ptr (const G &r)
-  {
-    _lru_ptr = r;
-  }
-
-  //-----------------------------------------------------------------------
-
-  template<class T, class G>
-  void
   bigslot_t<T,G>::touch ()
   {
-    if (_gcp) _gcpr->touch ();
+    if (_gcp) _gcp->touch ();
   }
 
   //-----------------------------------------------------------------------
@@ -103,7 +94,7 @@ namespace cgc {
   //-----------------------------------------------------------------------
 
   template<class T, class G>
-  typename arena_t<T,G> *
+  arena_t<T,G> *
   mgr_t<T,G>::lookup (const memptr_t *p)
   {
     return _tree.search (wrap (cmp_fn, p));
@@ -136,7 +127,7 @@ namespace cgc {
     if (!_mgr) {
       _mgr = New std_mgr_t<T,G> (std_cfg_t ());
     }
-    return _g_mgr;
+    return _mgr;
   }
 
   //-----------------------------------------------------------------------
@@ -210,11 +201,11 @@ namespace cgc {
 
   template<class T, class G>
   redirector_t<T,G>
-  std_mgr_t:<T,G>:big_alloc (size_t sz)
+  std_mgr_t<T,G>::big_alloc (size_t sz)
   {
     bigobj_arena_t<T,G> *a = big_pick (sz);
     if (a) return a->aalloc (sz);
-    else return redirector_t ();
+    else return redirector_t<T,G> ();
   }
 
   //-----------------------------------------------------------------------
@@ -232,7 +223,7 @@ namespace cgc {
 
   template<class T, class G>
   void
-  std_mgr_t::gc (void)
+  std_mgr_t<T,G>::gc (void)
   {
     for (bigobj_arena_t<T,G> *a = _bigs.first; a; a = _bigs.next (a)) {
       a->gc (_lru_mgr);
@@ -275,7 +266,7 @@ namespace cgc {
   smallobj_arena_t<T,G> *
   std_mgr_t<T,G>::alloc_soa (size_t sz, int ind)
   {
-    int n = ( 100 * ( sizeof (smallobj_arena_t) +
+    int n = ( 100 * ( sizeof (smallobj_arena_t<T,G>) +
 		      freemap_t::fixed_overhead () )) / 
       (get_pagesz () * _cfg._smallobj_max_overhead_pct) + 1;
 
@@ -336,7 +327,7 @@ namespace cgc {
     
     ssize_t tmp = _cfg._smallobj_lim;
     if (tmp == -1) {
-      tmp = bigslot_t<T,G>::size (0) + sizeof (bigptr_t);
+      tmp = bigslot_t<T,G>::size (0) + sizeof (bigptr_t<T,G>);
       tmp *= 2;
     }
     if (tmp != 0) {
@@ -377,7 +368,7 @@ namespace cgc {
   //-----------------------------------------------------------------------
 
   template<class T, class G>
-  void bigobj_arena_t<T,G>::mark_free (bigptr_t *p) {}
+  void bigobj_arena_t<T,G>::mark_free (bigptr_t<T,G> *p) {}
 
   //-----------------------------------------------------------------------
 
@@ -416,7 +407,7 @@ namespace cgc {
 
     warn (" bigobj_arena(%p -> %p): %zd in objs; %zd free; %zd unclaimed; "
 	  "%zd ptrslots; slotp=%p; ptrp=%p\n",
-	  _base, _top, 
+	  arena_t<T,G>::_base, _top, 
 	  sz,
 	  free_space (), _unclaimed_space, 
 	  _free_ptrslots.n_elem(),
@@ -494,7 +485,7 @@ namespace cgc {
   //-----------------------------------------------------------------------
 
   template<class T, class G>
-  bigslot_t<T,G>::bigslot_t (size_t sz, bigptr_t *p)
+  bigslot_t<T,G>::bigslot_t (size_t sz, bigptr_t<T,G> *p)
     : _sz (sz), _ptrslot (p)
   { 
     debug_init(); 
@@ -531,11 +522,12 @@ namespace cgc {
   void
   bigobj_arena_t<T,G>::compact_memslots (void)
   {
-    memptr_t *p = _base;
+    memptr_t *p = this->_base;
     bigslot_t<T,G> *m = _memslots->first;
     bigslot_t<T,G> *n = NULL;
 
-    types<T,G>::memslot_list_t *nl = New types<T,G>::memslot_list_t ();
+    typename types<T,G>::memslot_list_t *nl = 
+      New typename types<T,G>::memslot_list_t ();
 
     sanity_check();
 
@@ -603,8 +595,8 @@ namespace cgc {
   void
   bigobj_arena_t<T,G>::init ()
   {
-    _top = _base + _sz;
-    _nxt_memslot = _base;
+    _top = this->_base + this->_sz;
+    _nxt_memslot = this->_base;
     _nxt_ptrslot = _top - sizeof (bigptr_t<T,G>);
   }
 
@@ -625,7 +617,7 @@ namespace cgc {
 
   template<class T, class G>
   static void
-  dump_list (types<T,G>::memslot_list_t *ml)
+  dump_list (typename types<T,G>::memslot_list_t *ml)
   {
     bigslot_t<T,G> *p;
     warn ("List dump %p: ", ml);
@@ -682,9 +674,9 @@ namespace cgc {
 
     sz = align(sz, get_pagesz ());
     void *v = cgc_mmap (sz);
-    _base = static_cast<memptr_t *> (v);
-    _sz = sz;
-    init ();
+    this->_base = static_cast<memptr_t *> (v);
+    this->_sz = sz;
+    this->init ();
   }
 
   //-----------------------------------------------------------------------
@@ -692,7 +684,7 @@ namespace cgc {
   template<class T, class G>
   mmap_bigobj_arena_t<T,G>::~mmap_bigobj_arena_t ()
   {
-    munmap (_base, _sz);
+    munmap (this->_base, this->_sz);
   }
 
   //=======================================================================
@@ -821,7 +813,7 @@ namespace cgc {
   template<class T, class G>
   smallobj_arena_t<T,G>::smallobj_arena_t (memptr_t *b, size_t s, size_t l, 
 				      size_t h, std_mgr_t<T,G> *m, int i)
-    : arena_t (b, s),
+    : arena_t<T,G> (b, s),
       _top (b + s),
       _nxt (b),
       _min (l), 
@@ -837,9 +829,9 @@ namespace cgc {
 
   template<class T, class G>
   void
-  smallobj_arena_t<T,G>::mark_free (smallptr_t *p)
+  smallobj_arena_t<T,G>::mark_free (smallptr_t<T,G> *p)
   {
-    smallptr_t<T,G> *base = reinterpret_cast<smallptr_t<T,G> *> (_base);
+    smallptr_t<T,G> *base = reinterpret_cast<smallptr_t<T,G> *> (this->_base);
     smallptr_t<T,G> *top = reinterpret_cast<smallptr_t<T,G> *> (_top);
     assert (p >= base);
     assert (p < top);
@@ -857,18 +849,18 @@ namespace cgc {
   redirector_t<T,G>
   smallobj_arena_t<T,G>::aalloc (size_t sz)
   {
-    redirector_t ret;
+    redirector_t<T,G> ret;
     assert (sz >= _min);
     assert (sz <= _max);
     memptr_t *mp = NULL;
     int pos = _freemap.alloc ();
     if (pos >= 0) {
-      mp = _base + pos * _max;
+      mp = this->_base + pos * _max;
     } else if (_nxt + _max  <= _top) {
       mp = _nxt;
       _nxt += _max;
     }
-    assert (mp >= _base);
+    assert (mp >= this->_base);
     assert (mp < _top);
     if (mp) {
       ret.init (reinterpret_cast<smallptr_t<T,G> *> (mp));
@@ -886,13 +878,12 @@ namespace cgc {
   {
     size_t nf = _freemap.nfree ();
     size_t nl = 0;
-    if (_nxt < _top)  template<class T, class G>
-
+    if (_nxt < _top)
       nl = (_top - _nxt) / _max;
 
     warn (" smallobj_arena(%p -> %p): %zd-sized objs; %zd in freelist; "
 	  "%zd unallocated\n",
-	  _base, _top, _max, nf, nl); 
+	  this->_base, _top, _max, nf, nl); 
   }
 
   //=======================================================================
@@ -975,7 +966,7 @@ namespace cgc {
   redirector_t<T,G>::lim () const
   {
     assert (count() > 0);
-    const memptr *m = reinterpret_cast<const memptr_t *> (data ());
+    const memptr_t *m = reinterpret_cast<const memptr_t *> (data ());
     m += size ();
     return (reinterpret_cast<const T *> (m));
   }
@@ -1013,7 +1004,7 @@ namespace cgc {
   //=======================================================================
 
   template<class T, class G>
-  smallobj_arena_t *
+  smallobj_arena_t<T,G> *
   smallptr_t<T,G>::lookup_arena () const
   {
     arena_t<T,G> *a = mgr_t<T,G>::get()->lookup (data ());
@@ -1056,8 +1047,8 @@ namespace cgc {
   //=======================================================================
 
   template<class T, class G>
-  redirector_t
-  soa_cluster_t::aalloc (size_t sz)
+  redirector_t<T,G>
+  soa_cluster_t<T,G>::aalloc (size_t sz)
   {
     smallobj_arena_t<T,G> *a, *n;
     redirector_t<T,G> ret;

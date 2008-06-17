@@ -28,7 +28,8 @@ TESTS = test_aes \
 	test_schnorr \
 	test_rctree \
 	test_vec \
-	test_cgc
+	test_cgc \
+	test_cgc2
 
 check_PROGRAMS = $(TESTS)
 
@@ -58,6 +59,7 @@ test_schnorr_SOURCES = test_schnorr.C
 test_rctree_SOURCES = test_rctree.C
 test_vec_SOURCES = test_vec.C
 test_cgc_SOURCES = test_cgc.C
+test_cgc2_SOURCES = test_cgc2.C
 
 $(check_PROGRAMS): $(LDEPS)
 

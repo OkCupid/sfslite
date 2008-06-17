@@ -22,7 +22,7 @@ ihash.C itree.C lockfile.C malloc.C msb.C myaddrs.C myname.C		\
 parseopt.C pipe2str.C refcnt.C rxx.C sigio.C socket.C spawn.C str.C	\
 str2file.C straux.C suio++.C suio_vuprintf.C tcpconnect.C litetime.C \
 select.C select_std.C select_epoll.C select_kqueue.C dynenum.C \
-vec.C cgc.C freemap.C
+vec.C cgc.C freemap.C cgc2.C
 
 aiod_SOURCES = aiod.C
 aiod_LDADD = $(LIBASYNC) $(LIBPY) $(LDADD_THR)
@@ -35,7 +35,7 @@ fdlim.h ihash.h init.h itree.h keyfunc.h list.h msb.h opnew.h		\
 parseopt.h pcre.h qhash.h refcnt.h rxx.h serial.h stllike.h str.h	\
 suio++.h sysconf.h union.h vatmpl.h vec.h rwfd.h litetime.h       	\
 corebench.h callback.h qtailq.h sfs_select.h rclist.h dynenum.h         \
-rctailq.h rctree.h freemap.h cgc.h
+rctailq.h rctree.h freemap.h cgc.h cgc2.h cgc2-impl.h
 
 #
 # begin sfslite changes
