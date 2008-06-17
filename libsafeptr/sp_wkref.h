@@ -1,5 +1,6 @@
 
 // -*- c++ -*-
+#include "safeptr.h"
 
 namespace sp {
 

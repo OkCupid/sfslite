@@ -15,9 +15,9 @@
 // XXX todo
 //
 //   - debug small objects
-//   - bptr<T> -- boolean pointer, either NULL or legit, but nothing
-//       in between. i.e., can say if the obj is there, but will always
-//       point to a valid object.  might be the base of all other pointers.
+//   - never use *'s in user-facing calls, only use sp::base_ptr<T>'s.
+//   - use a trivial linked list instead of a freemap for smallptr_t
+//     free objs.
 //
 
 namespace sp {
@@ -653,7 +653,11 @@ namespace gc {
 
     int32_t _count;
     G _gc_obj;
-    T _data[0];
+
+    union {
+      T _data[0];
+      int32_t _free_ptr;
+    };
   };
 
   //=======================================================================

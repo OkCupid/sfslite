@@ -4,6 +4,10 @@
 //
 // Safe pointers!
 //
+
+#ifndef __LIBSAFEPTR_SAFEPTR_H__
+#define __LIBSAFEPTR_SAFEPTR_H__
+
 namespace sp {
 
   // 
@@ -48,3 +52,5 @@ namespace sp {
   };
 };
 
+
+#endif /* __LIBSAFEPTR_SAFEPTR_H__ */
