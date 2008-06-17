@@ -97,7 +97,7 @@ namespace cgc2 {
   arena_t<T,G> *
   mgr_t<T,G>::lookup (const memptr_t *p)
   {
-    return _tree.search (wrap (cmp_fn, p));
+    return _tree.search (wrap (cmp_fn<T,G>, p));
   }
 
   //-----------------------------------------------------------------------
@@ -116,27 +116,6 @@ namespace cgc2 {
   mgr_t<T,G>::remove (arena_t<T,G> *a)
   {
     _tree.remove (a);
-  }
-
-  //-----------------------------------------------------------------------
-
-  template<class T, class G>
-  mgr_t<T,G> *
-  mgr_t<T,G>::get () 
-  {
-    if (!_mgr) {
-      _mgr = New std_mgr_t<T,G> (std_cfg_t ());
-    }
-    return _mgr;
-  }
-
-  //-----------------------------------------------------------------------
-
-  template<class T, class G>
-  void
-  mgr_t<T,G>::set (mgr_t<T,G> *m)
-  {
-    _mgr = m;
   }
 
   //=======================================================================
@@ -539,7 +518,7 @@ namespace cgc2 {
       n = _memslots->next (m);
       _memslots->remove (m);
       bigslot_t<T,G> *ns = reinterpret_cast<bigslot_t<T,G> *> (p);
-      if (m->v_data () > p) {
+      if (m->data () > p) {
 	ns->copy_reinit (m);
 	ns->reseat ();
 	p += ns->size ();
@@ -634,7 +613,7 @@ namespace cgc2 {
   bigobj_arena_t<T,G>::remove (bigslot_t<T,G> *s)
   { 
     if (debug_warnings >= 2) {
-      dump_list (_memslots);
+      dump_list<T,G> (_memslots);
     }
 
     if (debug_warnings) {
@@ -645,7 +624,7 @@ namespace cgc2 {
     _memslots->remove (s); 
 
     if (debug_warnings >= 2)
-      dump_list (_memslots);
+      dump_list<T,G> (_memslots);
 
     _unclaimed_space += s->size ();
     mgr_t<T,G>::get ()->sanity_check ();

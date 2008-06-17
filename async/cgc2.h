@@ -36,7 +36,7 @@ namespace cgc2 {
 
   //=======================================================================
 
-  template<class T> class referee2_t;
+  template<class T> class referee;
 
   //=======================================================================
 
@@ -76,7 +76,7 @@ namespace cgc2 {
     bool operator== (const wkref<T> &w2) const { return _obj == w2._obj; }
     bool operator!= (const wkref<T> &w2) const { return _obj != w2._obj; }
 
-    friend class referee2_t<T>;
+    friend class referee<T>;
   private:
     void clear () { if (_obj) _obj->rm (this); _obj = NULL; }
     void linkup () { if (_obj) { _obj->add (this); } }
@@ -194,6 +194,10 @@ namespace cgc2 {
 
     T *data () { check(); return _data; }
     const T *data () const { check(); return _data; }
+    T *v_data () { check(); return reinterpret_cast<memptr_t *> (_data); }
+    const T *v_data () const 
+    { check(); return reinterpret_cast<const memptr_t *> (_data); }
+
     void reseat ();
     void mark () { if (_gcp) _gcp->mark (); }
 
@@ -269,8 +273,13 @@ namespace cgc2 {
     int32_t count () const { return _count; }
     void set_count (int32_t i) { _count = i; }
     size_t size () const { return _ms->size (); }
+
+    T *data () { return _ms->data (); }
+    const T *data () const { return _ms->data (); }
     memptr_t *v_data () { return _ms->v_data (); }
     const memptr_t *v_data () const { return _ms->v_data (); }
+
+
     void deallocate ();
     void set_lru_ptr (const G &o) { _ms->set_lru_ptr (o); }
     void touch () { _ms->touch (); }
@@ -329,7 +338,7 @@ namespace cgc2 {
 
   //=======================================================================
 
-  template<class T, class V, class G = nil::gc_ptr_t >
+  template<class T, class V = memptr_t, class G = nil::gc_ptr_t >
   class ptr {
   public:
     ptr (const ptr<T,V,G> &p) : _redir_ptr (p._redir_ptr) { rc_inc (); }
@@ -430,7 +439,7 @@ namespace cgc2 {
 
   //=======================================================================
 
-  template<class T, class V, class G = nil::gc_ptr_t>
+  template<class T, class V = memptr_t, class G = nil::gc_ptr_t>
   class aptr : public ptr<T,V,G> {
   public:
     aptr () : ptr<T,V,G> (), _offset (0) {}
@@ -783,6 +792,28 @@ namespace cgc2 {
 
   //=======================================================================
 
+  template<class T, class G> class mgr_t;
+
+  template<class T = memptr_t, class G = nil::gc_ptr_t>
+  class meta_mgr_t {
+  public:
+    meta_mgr_t () {}
+    mgr_t<T,G> *get ();
+    void set (mgr_t<T,G> *s);
+  };
+
+  //-----------------------------------------------------------------------
+
+  template<>
+  class meta_mgr_t<memptr_t, nil::gc_ptr_t> {
+  public:
+    meta_mgr_t () {}
+    mgr_t<memptr_t, nil::gc_ptr_t> *get ();
+    void set (mgr_t<memptr_t, nil::gc_ptr_t> *s);
+  };
+
+  //=======================================================================
+
   template<class T = memptr_t, class G = nil::gc_ptr_t>
   class mgr_t {
   public:
@@ -800,30 +831,15 @@ namespace cgc2 {
 
     void insert (arena_t<T,G> *a);
     void remove (arena_t<T,G> *a);
-    static mgr_t<T,G> *get ();
-    static void set (mgr_t<T,G> *m);
+    static mgr_t<T,G> *get () { return _mm.get (); }
+    static void set (mgr_t<T,G> *m) { _mm.set (m); }
     virtual void gc (void) = 0;
     
   private:
-    static mgr_t<T,G> *_mgr;
+    static meta_mgr_t<T,G> _mm;
 
     itree<memptr_t *, arena_t<T,G>, 
 	  &arena_t<T,G>::_base, &arena_t<T,G>::_tlnk> _tree;
-  };
-
-  //=======================================================================
-
-  class meta_mgr_t {
-  public:
-
-    template<class T = memptr_t, class G = nil::gc_ptr_t>
-    mgr<T,G> *
-    get ()
-    {
-
-    }
-
-
   };
 
   //=======================================================================
@@ -902,7 +918,7 @@ namespace cgc2 {
 
   //=======================================================================
 
-  template<class T = memptr_t, class G = nil::gc_obj_t>
+  template<class T = memptr_t, class G = nil::gc_ptr_t>
   class std_mgr_t : public mgr_t<T,G> {
   public:
     std_mgr_t (const std_cfg_t &cfg);

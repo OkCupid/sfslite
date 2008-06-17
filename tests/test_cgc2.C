@@ -102,10 +102,10 @@ test3()
 {
   cgc2::ptr<bool> b = cgc2::alloc<bool> (true);
   *b = false;
-  cgc2::ptr<char> c = cgc2::vecalloc<char,1000> ();
+  cgc2::ptr<char> c = cgc2::vecalloc<char> (1000);
 }
 
-class wrobj_t : public cgc2::referee2_t<wrobj_t> 
+class wrobj_t : public cgc2::referee<wrobj_t> 
 {
 public:
   wrobj_t (int i) : _i (i) {}
@@ -118,7 +118,7 @@ static void
 test0 ()
 {
   wrobj_t foo (10);
-  cgc2::wkref2<wrobj_t> r (foo);
+  cgc2::wkref<wrobj_t> r (foo);
   r->bar ();
 }
 
@@ -130,16 +130,16 @@ main (int argc, char *argv[])
   cfg._n_b_arenae = 2;
   cfg._size_b_arenae = 1;
   cfg._smallobj_lim = 0;
-  cgc2::mgr_t::set (New cgc2::std_mgr_t (cfg));
+  cgc2::mgr_t<>::set (New cgc2::std_mgr_t<> (cfg));
 
   test0 ();
 
   for (int i = 0; i < 10; i++) {
-    cgc2::mgr_t::get ()->sanity_check();
+    cgc2::mgr_t<>::get ()->sanity_check();
     test1();
-    cgc2::mgr_t::get ()->sanity_check();
+    cgc2::mgr_t<>::get ()->sanity_check();
     test2();
-    cgc2::mgr_t::get ()->sanity_check();
+    cgc2::mgr_t<>::get ()->sanity_check();
   }
   
   if (0) test3();
