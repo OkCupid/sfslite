@@ -678,14 +678,56 @@ namespace gc {
   //-----------------------------------------------------------------------
 
   template<class T, class G>
+  int32_t
+  smallobj_arena_t<T,G>::obj2ind (const smallptr_t<T,G> *p) const
+  {
+    p->check ();
+    assert (p >= base());
+    assert (p < top());
+    int32_t ret = p - base();
+    assert (ret >= 0 && ret < n_items ());
+    return ret;
+  }
+
+  //-----------------------------------------------------------------------
+
+  template<class T, class G>
+  smallptr_t<T,G> *
+  smallobj_arena_t<T,G>::ind2obj (int32_t i)
+  {
+    assert (i >= 0);
+    assert (i < n_items ());
+    smallptr_t<T,G> *ret = base () + i;
+    ret->check ();
+    return ret;
+  }
+
+  //------------------------------------------------------------------------
+
+  template<class T, class G>
+  const smallptr_t<T,G> *
+  smallobj_arena_t<T,G>::ind2obj (int32_t i) const
+  {
+    assert (i >= 0);
+    assert (i < n_items ());
+    const smallptr_t<T,G> *ret = base () + i;
+    assert (ret < top ());
+    ret->check ();
+    return ret;
+  }
+
+  //----------------------------------------------------------------------
+
+  template<class T, class G>
   void
   smallobj_arena_t<T,G>::mark_free (smallptr_t<T,G> *p)
   {
-    smallptr_t<T,G> *base = reinterpret_cast<smallptr_t<T,G> *> (this->_base);
-    smallptr_t<T,G> *top = reinterpret_cast<smallptr_t<T,G> *> (_top);
-    assert (p >= base);
-    assert (p < top);
-    _freemap.dealloc (p - base);
+    int32_t ind = obj2ind (p);
+
+    int32_t head = _free_list;
+    p->_free_ptr = head;
+    _free_list = ind;
+
     if (!_vacancy) {
       _mgr->became_vacant (this, _soa_index);
       _vacancy = true;
@@ -702,18 +744,21 @@ namespace gc {
     redirector_t<T,G> ret;
     assert (sz >= _min);
     assert (sz <= _max);
-    memptr_t *mp = NULL;
-    int pos = _freemap.alloc ();
-    if (pos >= 0) {
-      mp = this->_base + pos * _max;
+    smallptr_t<T,G> *mp = NULL;
+
+    int32_t ind = _free_list;
+    if (ind >= 0) {
+      mp = ind2obj (ind);
+      _free_list = mp->_free_ptr;
+      mp->_free_ptr = -1;
     } else if (_nxt + _max  <= _top) {
-      mp = _nxt;
+      mp = next ();
       _nxt += _max;
     }
-    assert (mp >= this->_base);
-    assert (mp < _top);
     if (mp) {
-      ret.init (reinterpret_cast<smallptr_t<T,G> *> (mp));
+      assert (mp >= base ());
+      assert (mp < top ());
+      ret.init (mp);
     } else {
       _vacancy = false;
     }
@@ -726,12 +771,20 @@ namespace gc {
   void 
   smallobj_arena_t<T,G>::report () const
   {
-    size_t nf = _freemap.nfree ();
+    int nf = 0;
+    int32_t ind = _free_list;
+    const smallptr_t<T,G> *p;
+    while (ind >= 0) {
+      p = ind2obj (ind);
+      nf++;
+      ind = p->_free_ptr;
+    }
+
     size_t nl = 0;
     if (_nxt < _top)
       nl = (_top - _nxt) / _max;
 
-    warn (" smallobj_arena(%p -> %p): %zd-sized objs; %zd in freelist; "
+    warn (" smallobj_arena(%p -> %p): %zd-sized objs; %d in freelist; "
 	  "%zd unallocated\n",
 	  this->_base, _top, _max, nf, nl); 
   }

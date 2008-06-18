@@ -685,16 +685,34 @@ namespace gc {
     tailq_entry<smallobj_arena_t<T,G> > _soa_lnk;
   protected:
     void debug_init () { _magic = magic; }
+    int32_t obj2ind (const smallptr_t<T,G> *p) const;
+    smallptr_t<T,G> *ind2obj (int32_t i);
+    const smallptr_t<T,G> *ind2obj (int32_t i) const;
+
+    smallptr_t<T,G> *top () 
+    { return reinterpret_cast<smallptr_t<T,G> *> (_top); }
+    const smallptr_t<T,G> *top ()  const
+    { return reinterpret_cast<const smallptr_t<T,G> *> (_top); }
+
+    smallptr_t<T,G> *base () 
+    { return reinterpret_cast<smallptr_t<T,G> *> (this->_base); }
+    const smallptr_t<T,G> *base () const
+    { return reinterpret_cast<const smallptr_t<T,G> *> (this->_base); }
+
+    smallptr_t<T,G> *next () 
+    { return reinterpret_cast<smallptr_t<T,G> *> (_nxt); }
+
+    int32_t n_items () const { return top () - base (); }
 
     enum { magic = 0xdead1121 };
     u_int32_t _magic;
 
-    T *_top, *_nxt;
-    freemap_t _freemap;
+    memptr_t *_top, *_nxt;
     size_t _min, _max;
     bool _vacancy;
     std_mgr_t<T,G> *_mgr;
     int _soa_index;
+    int32_t _free_list;
   public:
     bool _vacancy_list_id;
   };
