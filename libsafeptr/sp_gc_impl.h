@@ -235,9 +235,15 @@ namespace gc {
   void
   std_mgr_t<T,G>::report (void) const
   {
-    warn << "CGC Memory report-------------------\n";
+    warn << "GC Memory report-------------------\n";
+    warn << " --- Big Object Arenae-------------\n";
     for (bigobj_arena_t<T,G> *a = _bigs.first; a; a = _bigs.next (a)) {
       a->report ();
+    }
+    warn << "--- Small Object Arenae-------------\n";
+    for (size_t i = 0; i < _smalls.size (); i++) {
+      if (_smalls[i])
+	_smalls[i]->report ();
     }
   }
 
@@ -557,6 +563,7 @@ namespace gc {
     if (mp < _base) ret = 1;
     else if (mp >= _base + _sz) ret = -1;
     else ret = 0;
+    warn ("cmp(a=%p, p=%p) => %d\n", _base, mp, ret);
     return ret;
   }
 
@@ -684,7 +691,7 @@ namespace gc {
     const memptr_t *vp = reinterpret_cast<const memptr_t *> (p);
     assert (vp >= this->_base);
     assert (vp < _top);
-    size_t objsz = smallptr_t<T,G>::size (_max);
+    size_t objsz = slotsize_gross ();
     assert (objsz > 0);
     size_t diff = vp - this->_base;
     assert (diff % objsz == 0);
@@ -702,7 +709,7 @@ namespace gc {
   {
     assert (i >= 0);
     assert (i < n_items ());
-    size_t objsz = smallptr_t<T,G>::size (_max);
+    size_t objsz = slotsize_gross ();
     memptr_t *vp = this->_base + objsz * i;
     assert (vp < _top);
     smallptr_t<T,G> *ret = reinterpret_cast<smallptr_t<T,G> *> (vp);
@@ -718,8 +725,10 @@ namespace gc {
   {
     assert (i >= 0);
     assert (i < n_items ());
-    const smallptr_t<T,G> *ret = base () + i;
-    assert (ret < top ());
+    size_t objsz = slotsize_gross ();
+    const memptr_t *vp = this->_base + objsz * i;
+    assert (vp < _top);
+    const smallptr_t<T,G> *ret = reinterpret_cast<const smallptr_t<T,G> *> (vp);
     ret->check ();
     return ret;
   }
@@ -731,6 +740,8 @@ namespace gc {
   smallobj_arena_t<T,G>::mark_free (smallptr_t<T,G> *p)
   {
     int32_t ind = obj2ind (p);
+
+    warn << "-free(" << ind << ")\n";
 
     int32_t head = _free_list;
     p->_free_ptr = head;
@@ -755,8 +766,9 @@ namespace gc {
     smallptr_t<T,G> *mp = NULL;
 
     int32_t ind = _free_list;
-    size_t inc = smallptr_t<T,G>::size (_max);
+    size_t inc = slotsize_gross ();
     if (ind >= 0) {
+      warn << "+reuse(" << ind << ")\n";
       mp = ind2obj (ind);
       _free_list = mp->_free_ptr;
     } else if (_nxt + inc  <= _top) {
@@ -793,7 +805,7 @@ namespace gc {
 
     size_t nl = 0;
     if (_nxt < _top)
-      nl = (_top - _nxt) / _max;
+      nl = (_top - _nxt) / slotsize_gross ();
 
     warn (" smallobj_arena(%p -> %p): %zd-sized objs; %d in freelist; "
 	  "%zd unallocated\n",
@@ -976,6 +988,24 @@ namespace gc {
       }
     }
     return ret;
+  }
+
+  //-----------------------------------------------------------------------
+  
+  template<class T, class G>
+  void
+  soa_cluster_t<T,G>::report (void) const
+  {
+    warn << "--Vacancy----------------\n";
+    for (smallobj_arena_t<T,G> *a = _vacancy.first; a; 
+	 a = soa_list_t::next (a)) {
+      a->report ();
+    }
+    warn << "--NoVacancy----------------\n";
+    for (smallobj_arena_t<T,G> *a = _no_vacancy.first; a; 
+	 a = soa_list_t::next (a)) {
+      a->report ();
+    }
   }
 
   //-----------------------------------------------------------------------

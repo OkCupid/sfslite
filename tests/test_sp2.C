@@ -32,8 +32,10 @@ test2(void) {
       assert (x);
       v.push_back (x);
     }
+    sp::gc::mgr_t<>::get ()->report ();
     v.clear ();
   }
+
 
   for (size_t i = 0; i < 100; i++) {
     v.push_back (sp::gc::alloc<foo_t> (2*i, 0));

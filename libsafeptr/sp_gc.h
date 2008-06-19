@@ -681,6 +681,7 @@ namespace gc {
     void report (void) const;
     void gc (lru_mgr_t *) {}
     size_t slotsize () const { return _max; }
+    size_t slotsize_gross () const { return smallptr_t<T,G>::size (_max); }
 
     smallobj_arena_t<T,G> *to_soa () { return this; }
     void check () { assert (_magic == magic); }
@@ -853,6 +854,7 @@ namespace gc {
 
     void became_vacant (smallobj_arena_t<T,G> *a);
     void add (smallobj_arena_t<T,G> *a);
+    void report (void) const;
   private:
     soa_list_t _vacancy;
     soa_list_t _no_vacancy;
