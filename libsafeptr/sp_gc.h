@@ -523,6 +523,11 @@ namespace gc {
 
   //=======================================================================
 
+  //
+  // Must specify explicit comparison for itree.  Implicitly,
+  // memptr*'s will be treated as char*'s, and therefore we will
+  // get a bogus sort order.
+  //
   struct memptr_compare {
     memptr_compare () {}
     int operator() (const memptr_t *a, const memptr_t *b) const
@@ -686,7 +691,7 @@ namespace gc {
 		      std_mgr_t<T,G> *m, int i);
 
     redirector_t<T,G> aalloc (size_t sz);
-    void report (void) const;
+    void report (const char *v = NULL) const;
     void gc (lru_mgr_t *) {}
     size_t slotsize () const { return _max; }
     size_t slotsize_gross () const { return smallptr_t<T,G>::size (_max); }

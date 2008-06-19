@@ -63,20 +63,10 @@ namespace gc {
 
   //-----------------------------------------------------------------------
 
-  template<class T, class G> static void
-  tree_debug (arena_t<T,G> *a)
-  {
-    warn ("   arena: %p\n", a->_base);
-  }
-
-  //-----------------------------------------------------------------------
-
   template<class T, class G>
   arena_t<T,G> *
   mgr_t<T,G>::lookup (const memptr_t *p)
   {
-    warn ("+lookup; debug dump-------------\n");
-    _tree.traverse (wrap (tree_debug<T,G>));
     return _tree.search (wrap (cmp_fn<T,G>, p));
   }
 
@@ -251,11 +241,9 @@ namespace gc {
   std_mgr_t<T,G>::report (void) const
   {
     warn << "GC Memory report-------------------\n";
-    warn << " --- Big Object Arenae-------------\n";
     for (bigobj_arena_t<T,G> *a = _bigs.first; a; a = _bigs.next (a)) {
       a->report ();
     }
-    warn << "--- Small Object Arenae-------------\n";
     for (size_t i = 0; i < _smalls.size (); i++) {
       if (_smalls[i])
 	_smalls[i]->report ();
@@ -373,7 +361,7 @@ namespace gc {
       sz += s->size ();
     }
 
-    warn (" bigobj_arena(%p -> %p): %zd in objs; %zd free; %zd unclaimed; "
+    warn ("  bigobj_arena(%p -> %p): %zd in objs; %zd free; %zd unclaimed; "
 	  "%zd ptrslots; slotp=%p; ptrp=%p\n",
 	  arena_t<T,G>::_base, _top, 
 	  sz,
@@ -578,7 +566,10 @@ namespace gc {
     if (mp < _base) ret = -1;
     else if (mp >= _base + _sz) ret = 1;
     else ret = 0;
-    warn ("cmp(a=%p, p=%p) => %d\n", _base, mp, ret);
+
+    /* debug itree stuff */
+    // warn ("cmp(a=%p, p=%p) => %d\n", _base, mp, ret);
+
     return ret;
   }
 
@@ -755,9 +746,6 @@ namespace gc {
   smallobj_arena_t<T,G>::mark_free (smallptr_t<T,G> *p)
   {
     int32_t ind = obj2ind (p);
-
-    warn << "-free(" << ind << ")\n";
-
     int32_t head = _free_list;
     p->_free_ptr = head;
     _free_list = ind;
@@ -783,7 +771,6 @@ namespace gc {
     int32_t ind = _free_list;
     size_t inc = slotsize_gross ();
     if (ind >= 0) {
-      warn << "+reuse(" << ind << ")\n";
       mp = ind2obj (ind);
       _free_list = mp->_free_ptr;
     } else if (_nxt + inc  <= _top) {
@@ -807,7 +794,7 @@ namespace gc {
 
   template<class T, class G>
   void 
-  smallobj_arena_t<T,G>::report () const
+  smallobj_arena_t<T,G>::report (const char *v) const
   {
     int nf = 0;
     int32_t ind = _free_list;
@@ -822,9 +809,10 @@ namespace gc {
     if (_nxt < _top)
       nl = (_top - _nxt) / slotsize_gross ();
 
-    warn (" smallobj_arena(%p -> %p): %zd-sized objs; %d in freelist; "
-	  "%zd unallocated\n",
-	  this->_base, _top, _max, nf, nl); 
+    if (!v) v = "";
+
+    warn ("  %s smallobj_arena(%p -> %p): %zd-sized objs; %d in freelist; "
+	  "%zd unallocated\n", v, this->_base, _top, _max, nf, nl); 
   }
 
   //=======================================================================
@@ -1011,15 +999,13 @@ namespace gc {
   void
   soa_cluster_t<T,G>::report (void) const
   {
-    warn << "--Vacancy----------------\n";
     for (smallobj_arena_t<T,G> *a = _vacancy.first; a; 
 	 a = soa_list_t::next (a)) {
-      a->report ();
+      a->report ("v ");
     }
-    warn << "--NoVacancy----------------\n";
     for (smallobj_arena_t<T,G> *a = _no_vacancy.first; a; 
 	 a = soa_list_t::next (a)) {
-      a->report ();
+      a->report ("nv");
     }
   }
 
