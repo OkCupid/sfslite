@@ -215,12 +215,10 @@ namespace gc {
   smallobj_arena_t<T,G> *
   std_mgr_t<T,G>::alloc_soa (size_t sz, int ind)
   {
-    int n = ( 100 * ( sizeof (smallobj_arena_t<T,G>) +
-		      freemap_t::fixed_overhead () )) / 
-      (get_pagesz () * _cfg._smallobj_max_overhead_pct) + 1;
+    size_t asz = align (sz * _cfg._smallobj_min_obj_per_arena, get_pagesz ());
 
     smallobj_arena_t<T,G> *a = 
-      New mmap_smallobj_arena_t<T,G> (n * get_pagesz (), 
+      New mmap_smallobj_arena_t<T,G> (asz,
 				      _sizer.ind2size(ind-1) + 1,
 				      sz, 
 				      this, 
@@ -670,7 +668,8 @@ namespace gc {
       _max (h),
       _vacancy (true),
       _mgr (m),
-      _soa_index (i)
+      _soa_index (i),
+      _free_list (-1)
   { 
     debug_init (); 
   }

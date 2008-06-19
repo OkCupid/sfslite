@@ -825,12 +825,12 @@ namespace gc {
       : _n_b_arenae (0x10),
 	_size_b_arenae (0x100),
 	_smallobj_lim (-1),
-	_smallobj_max_overhead_pct (25) {}
+	_smallobj_min_obj_per_arena (128) {}
 
     size_t _n_b_arenae;
     size_t _size_b_arenae;
     ssize_t _smallobj_lim;
-    size_t _smallobj_max_overhead_pct;
+    size_t _smallobj_min_obj_per_arena;
     
   };
 
