@@ -82,7 +82,8 @@ namespace sp {
   //
   // A 'manual' pointer class.  If you hold a pointer, you can manually
   // dealloc the object it points to, killing the object and resetting
-  // all references to the pointer.
+  // all references to the pointer.  Thus, one cannot double-deallocate
+  // it, and one cannot access the object it points to after deallocation.
   //
   template<class T>
   class man_ptr : public wkref<T> {
@@ -102,9 +103,20 @@ namespace sp {
 
 #define OP (
 #define CP )
+
+  //
+  // An allocator class for man_ptr's:
+  //
+  //  sp::man_ptr<foo_t> = sp::man_alloc<foo_t> (a, b, x);
+  //
   template<class T>
   class man_alloc {
   public:
+
+    //
+    // Note, need to use OP instead of '(' to satisfy the preprocessor.
+    // Same goes for CP instead of ')'
+    //
     VA_TEMPLATE( explicit man_alloc ,		\
 		 : _p OP man_ptr<T> OP New T ,	\
 				   CP CP {} )
