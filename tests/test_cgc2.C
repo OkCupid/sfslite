@@ -110,7 +110,7 @@ class wrobj_t : public sp::referee<wrobj_t>
 {
 public:
   wrobj_t (int i) : _i (i) {}
-  void bar () { warn << "bar! " << _i << "\n"; }
+  int val () const { return _i; }
 private:
   int _i;
 };
@@ -118,9 +118,24 @@ private:
 static void
 test0 ()
 {
-  wrobj_t foo (10);
-  sp::wkref<wrobj_t> r (foo);
-  r->bar ();
+  if (true) {
+    int val = 10;
+    wrobj_t foo (val);
+    sp::wkref<wrobj_t> r (foo);
+    assert (r->val () == val);
+  }
+
+  if (true) {
+    int val = 20;
+    sp::man_ptr<wrobj_t> x = sp::man_alloc<wrobj_t> (val);
+    sp::man_ptr<wrobj_t> y = x;
+    assert (x->val () == val);
+    assert (y->val () == val);
+    x.dealloc ();
+    assert (!x);
+    assert (!y);
+  }
+
 }
 
 

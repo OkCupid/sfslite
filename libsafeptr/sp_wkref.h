@@ -1,6 +1,7 @@
 
 // -*- c++ -*-
 #include "safeptr.h"
+#include "vatmpl.h"
 
 namespace sp {
 
@@ -43,7 +44,7 @@ namespace sp {
 
     friend class referee<T>;
 
-  private:
+  protected:
     void clear () { if (_obj) _obj->rm (this); _obj = NULL; }
     void linkup () { if (_obj) { _obj->add (this); } }
 
@@ -77,4 +78,48 @@ namespace sp {
   };
 
   //=======================================================================
+
+  //
+  // A 'manual' pointer class.  If you hold a pointer, you can manually
+  // dealloc the object it points to, killing the object and resetting
+  // all references to the pointer.
+  //
+  template<class T>
+  class man_ptr : public wkref<T> {
+  public:
+    man_ptr (T *o) : wkref<T> (o) {}
+
+    void dealloc () 
+    { 
+      if (this->obj ()) 
+	delete this->obj (); 
+      assert (!this->obj ());
+    }
+
+  };
+
+  //=======================================================================
+
+#define OP (
+#define CP )
+  template<class T>
+  class man_alloc {
+  public:
+    VA_TEMPLATE( explicit man_alloc ,		\
+		 : _p OP man_ptr<T> OP New T ,	\
+				   CP CP {} )
+    
+    operator man_ptr<T>&() { return _p; }
+    operator const man_ptr<T> &() const { return _p; }
+  private:
+    man_ptr<T> _p;
+  };
+
+#undef CP
+#undef OP
+
+
+  //=======================================================================
+
+
 };
