@@ -20,6 +20,9 @@
 //     free objs.
 //
 
+#ifndef __LIBSAFEPTR_SP_GC_H__
+#define __LIBSAFEPTR_SP_GC_H__
+
 namespace sp {
 namespace gc {
     
@@ -902,3 +905,5 @@ namespace gc {
 };
 
 #include "sp_gc_impl.h"
+
+#endif /* __LIBSAFEPTR_SP_GC_H__ */

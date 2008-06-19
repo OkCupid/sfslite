@@ -5,7 +5,8 @@ LIBSAFEPTR = libsafeptr.la
 libsafeptr_la_SOURCES = \
 	gc.C \
 	freemap.C \
-	cgc.C
+	cgc.C \
+	gc_str.C
 
 sfsinclude_HEADERS = \
 	safeptr.h \
@@ -13,4 +14,5 @@ sfsinclude_HEADERS = \
 	sp_gc.h \
 	sp_gc_impl.h \
 	freemap.h \
-	cgc.h
+	cgc.h \
+	sp_gc_str.h

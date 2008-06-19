@@ -1,8 +1,13 @@
 
 
 // -*- c++ -*-
+
+#ifndef __LIBSAFEPTR_FREEMAP_H__
+#define __LIBSAFEPTR_FREEMAP_H__
+
 #include "async.h"
 #include "itree.h"
+
 
 #undef setbit
 
@@ -48,3 +53,5 @@ private:
   node_t *findmax ();
   itree<u_int32_t, node_t, &node_t::_id, &node_t::_lnk> _segs;
 };
+
+#endif /* __LIBSAFEPTR_FREEMAP_H__ */

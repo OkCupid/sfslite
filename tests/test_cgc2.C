@@ -2,6 +2,7 @@
 #include "async.h"
 #include "sp_gc.h"
 #include "sp_wkref.h"
+#include "sp_gc_str.h"
 
 class bar_t {
 public:
@@ -135,7 +136,26 @@ test0 ()
     assert (!x);
     assert (!y);
   }
+}
 
+static void
+test4 ()
+{
+  const char *s = "hello everyone; WTF is up?" ;
+  sp::gc::str foo (s);
+  assert (foo == s);
+
+  // test that operator[] works
+  mstr m (foo.len ());
+  for (size_t i = 0; i < foo.len (); i++) { m[i] = foo[i]; }
+  ::str s2 = m;
+  assert (s2 == s);
+  assert (foo == s2);
+
+  ::str s3 = foo.copy ();
+  assert (s3 == s2);
+  assert (s3 == s);
+  assert (foo == s3);
 }
 
 
@@ -159,5 +179,6 @@ main (int argc, char *argv[])
   }
   
   if (0) test3();
+  test4();
 }
 
