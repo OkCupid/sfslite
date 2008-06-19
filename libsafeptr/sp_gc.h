@@ -632,6 +632,10 @@ namespace gc {
     T *data () { return _data; }
     const T *data () const { return _data; }
     void deallocate ();
+    void use () { _count = 0; debug_init (); }
+
+    static size_t size (size_t s) 
+    { return sizeof (smallptr_t<T,G>) - sizeof (int32_t) + s; }
 
     friend class smallobj_arena_t<T,G>;
   protected:
@@ -705,7 +709,8 @@ namespace gc {
     smallptr_t<T,G> *next () 
     { return reinterpret_cast<smallptr_t<T,G> *> (_nxt); }
 
-    int32_t n_items () const { return top () - base (); }
+    int32_t n_items () const 
+    { return (this->_sz / smallptr_t<T,G>::size (_max)); }
 
     enum { magic = 0xdead1121 };
     u_int32_t _magic;

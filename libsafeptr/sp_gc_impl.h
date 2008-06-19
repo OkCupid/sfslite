@@ -681,10 +681,16 @@ namespace gc {
   smallobj_arena_t<T,G>::obj2ind (const smallptr_t<T,G> *p) const
   {
     p->check ();
-    assert (p >= base());
-    assert (p < top());
-    int32_t ret = p - base();
-    assert (ret >= 0 && ret < n_items ());
+    const memptr_t *vp = reinterpret_cast<const memptr_t *> (p);
+    assert (vp >= this->_base);
+    assert (vp < _top);
+    size_t objsz = smallptr_t<T,G>::size (_max);
+    assert (objsz > 0);
+    size_t diff = vp - this->_base;
+    assert (diff % objsz == 0);
+    int32_t ret = diff / objsz;
+    assert (ret >= 0); 
+    assert (ret < n_items ());
     return ret;
   }
 
@@ -696,7 +702,10 @@ namespace gc {
   {
     assert (i >= 0);
     assert (i < n_items ());
-    smallptr_t<T,G> *ret = base () + i;
+    size_t objsz = smallptr_t<T,G>::size (_max);
+    memptr_t *vp = this->_base + objsz * i;
+    assert (vp < _top);
+    smallptr_t<T,G> *ret = reinterpret_cast<smallptr_t<T,G> *> (vp);
     ret->check ();
     return ret;
   }
@@ -746,21 +755,24 @@ namespace gc {
     smallptr_t<T,G> *mp = NULL;
 
     int32_t ind = _free_list;
+    size_t inc = smallptr_t<T,G>::size (_max);
     if (ind >= 0) {
       mp = ind2obj (ind);
       _free_list = mp->_free_ptr;
-      mp->_free_ptr = -1;
-    } else if (_nxt + _max  <= _top) {
+    } else if (_nxt + inc  <= _top) {
       mp = next ();
-      _nxt += _max;
+      _nxt += inc;
     }
+
     if (mp) {
+      mp->use ();
       assert (mp >= base ());
       assert (mp < top ());
       ret.init (mp);
     } else {
       _vacancy = false;
     }
+
     return ret;
   }
 
