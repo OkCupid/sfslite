@@ -63,10 +63,20 @@ namespace gc {
 
   //-----------------------------------------------------------------------
 
+  template<class T, class G> static void
+  tree_debug (arena_t<T,G> *a)
+  {
+    warn ("   arena: %p\n", a->_base);
+  }
+
+  //-----------------------------------------------------------------------
+
   template<class T, class G>
   arena_t<T,G> *
   mgr_t<T,G>::lookup (const memptr_t *p)
   {
+    warn ("+lookup; debug dump-------------\n");
+    _tree.traverse (wrap (tree_debug<T,G>));
     return _tree.search (wrap (cmp_fn<T,G>, p));
   }
 
@@ -76,6 +86,11 @@ namespace gc {
   void
   mgr_t<T,G>::insert (arena_t<T,G> *a)
   {
+
+    // Make sure the arenae don't overlap!
+    arena_t<T,G> *o = lookup (a->_base);
+    assert (!o);
+
     _tree.insert (a);
   }
 
@@ -560,8 +575,8 @@ namespace gc {
   arena_t<T,G>::cmp (const memptr_t *mp) const
   {
     int ret;
-    if (mp < _base) ret = 1;
-    else if (mp >= _base + _sz) ret = -1;
+    if (mp < _base) ret = -1;
+    else if (mp >= _base + _sz) ret = 1;
     else ret = 0;
     warn ("cmp(a=%p, p=%p) => %d\n", _base, mp, ret);
     return ret;

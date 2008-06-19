@@ -523,6 +523,14 @@ namespace gc {
 
   //=======================================================================
 
+  struct memptr_compare {
+    memptr_compare () {}
+    int operator() (const memptr_t *a, const memptr_t *b) const
+    { return a < b ? -1 : b < a; }
+  };
+
+  //=======================================================================
+
   template<class T, class G = nil::gc_ptr_t>
   class arena_t {
   public:
@@ -782,7 +790,7 @@ namespace gc {
     
   private:
     itree<memptr_t *, arena_t<T,G>, 
-	  &arena_t<T,G>::_base, &arena_t<T,G>::_tlnk> _tree;
+	  &arena_t<T,G>::_base, &arena_t<T,G>::_tlnk, memptr_compare> _tree;
   };
 
   //=======================================================================
