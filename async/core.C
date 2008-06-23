@@ -37,16 +37,20 @@
 bool amain_panic;
 int maxfd;
 
-static timeval selwait;
 
 /* Global variables used for configuring the core select behavior */
 
-static bool g_sfs_core_busywait;
+static timeval selwait;
 
+namespace sfs_core {
+  static bool g_busywait;
+  static bool g_zombie_collect;
+  static selector_t *selector;
 
-static sfs_core::selector_t *selector;
+  void set_busywait (bool b) { g_busywait = b; }
+  void set_zombie_collect (bool b) { g_zombie_collect = b; }
+};
 
-void sfs_core::set_busywait (bool b) { g_sfs_core_busywait = b; }
 
 /*
  * returns: 0 if no change, -1 if changed to an unavailable policy,
@@ -126,6 +130,14 @@ struct child {
 };
 static ihash<pid_t, child, &child::pid, &child::link> chldcbs;
 
+struct zombie_t {
+  pid_t _pid;
+  int _status;
+  ihash_entry<zombie_t> _link;
+  zombie_t (pid_t p, int s) : _pid (p), _status (s) {}
+};
+static ihash<pid_t, zombie_t, &zombie_t::_pid, &zombie_t::_link> zombies;
+
 struct timecb_t {
   timespec ts;
   const cbv cb;
@@ -179,8 +191,17 @@ chldcb (pid_t pid, cbi::ptr cb)
     chldcbs.remove (c);
     delete c;
   }
-  if (cb)
+
+  zombie_t *z;
+  if ((z = zombies[pid])) {
+    int s = z->_status;
+    zombies.remove (z);
+    delete z;
+    if (cb) 
+      (*cb) (s);
+  } else if (cb) {
     chldcbs.insert (New child (pid, cb));
+  }
 }
 
 void
@@ -203,6 +224,13 @@ chldcb_check ()
       (*c->cb) (status);
       START_ACHECK_TIMER ();
       delete c;
+    } else if (sfs_core::g_zombie_collect) {
+      zombie_t *z = zombies[pid];
+      if (z) {
+	z->_status = status;
+      } else {
+	zombies.insert (New zombie_t (pid, status));
+      }
     }
   }
 }
@@ -282,7 +310,7 @@ timecb_check ()
 
   selwait.tv_usec = 0;
   selwait.tv_sec = 0;
-  if (!g_sfs_core_busywait && !sigdocheck) {
+  if (!sfs_core::g_busywait && !sigdocheck) {
     if (!(tp = timecbs.first ()))
       selwait.tv_sec = 86400;
     else {
@@ -307,8 +335,10 @@ timecb_check ()
   }
 }
 
-void fdcb_check () { selector->fdcb_check (&selwait); }
-void fdcb (int fd, selop op, cbv::ptr cb) { selector->fdcb (fd, op, cb); }
+void fdcb_check () { sfs_core::selector->fdcb_check (&selwait); }
+
+void fdcb (int fd, selop op, cbv::ptr cb) 
+{ sfs_core::selector->fdcb (fd, op, cb); }
 
 static void
 sigcatch (int sig)
@@ -538,7 +568,7 @@ async_init::start ()
   }
 
   sfs_core::selector_t::init ();
-  selector = New sfs_core::std_selector_t ();
+  sfs_core::selector = New sfs_core::std_selector_t ();
 
   lazylist = New list<lazycb_t, &lazycb_t::link>;
 
@@ -574,6 +604,9 @@ async_init::start ()
       case 'k':
 	if (sfs_core::set_select_policy (sfs_core::SELECT_KQUEUE) < 0)
 	  warn ("failed to switch select policy to KQUEUE\n");
+	break;
+      case 'z':
+	sfs_core::set_zombie_collect (true);
 	break;
       default:
 	warn ("unknown SFS_OPTION: '%c'\n", *cp);
