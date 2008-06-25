@@ -10,8 +10,10 @@ namespace gc {
     : _len (strlen (p)),
       _p (sp::gc::vecalloc<char> (_len + 1))
   {
-    memcpy (_p.volatile_ptr (), p, _len);
-    _p.volatile_ptr()[_len] = '\0';
+    if (_p) {
+      memcpy (_p.volatile_ptr (), p, _len);
+      _p.volatile_ptr()[_len] = '\0';
+    }
   }
 
   //-----------------------------------------------------------------------
@@ -20,8 +22,10 @@ namespace gc {
     : _len (l),
       _p (sp::gc::vecalloc<char> (_len + 1))
   {
-    memcpy (_p.volatile_ptr (), p, _len);
-    _p.volatile_ptr()[_len] = '\0';
+    if (_p) {
+      memcpy (_p.volatile_ptr (), p, _len);
+      _p.volatile_ptr()[_len] = '\0';
+    }
   }
 
   //=======================================================================

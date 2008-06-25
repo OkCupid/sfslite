@@ -18,9 +18,13 @@ namespace gc {
   {
     if (debug_warnings)
       warn ("copy data from %p to %p (%u bytes)\n", ms->_data, _data, ms->_sz);
+
     _ptrslot = ms->_ptrslot;
-    memcpy (_data, ms->_data, ms->_sz);
-    _sz = ms->_sz;
+    _sz = ms->_sz; 
+
+    // Note, after doing this memmove, the input (ms) can be
+    // totally horked, so don't access it again!
+    memmove (_data, ms->_data, ms->_sz);
     debug_init ();
   }
 
@@ -292,7 +296,7 @@ namespace gc {
       assert (ind >= 0);
       assert (_smallobj_lim);
       
-      for (int i = 0; i < ind; i++) {
+      for (int i = 0; i < ind + 1; i++) {
 	_smalls.push_back (New soa_cluster_t<T,G> (_sizer.ind2size (i)));
       }
     } else {
@@ -496,9 +500,30 @@ namespace gc {
       _memslots->remove (m);
       bigslot_t<T,G> *ns = reinterpret_cast<bigslot_t<T,G> *> (p);
       if (m->data () > p) {
+
+	// Sanity check this object before we use it to trample all
+	// over other data.  We might, in the future, suppress thess
+	// checks.
+	{
+	  memptr_t *d = m->data ();
+	  memptr_t *t = d + m->_sz;
+	  assert (d >= this->_base);
+	  assert (t >= this->_base);
+	  assert (d < this->_top);
+	  assert (t < this->_top);
+	}
+
+	// Note: calling copy_reinit might hork m, so don't access
+	// m again after this call, ok?
 	ns->copy_reinit (m);
+
 	ns->reseat ();
 	p += ns->size ();
+
+	// make sure ns->size () wasn't something stupid.
+	assert (p > this->_base);
+	assert (p < this->_top);
+
       }
       nl->insert_tail (ns);
       m = n;

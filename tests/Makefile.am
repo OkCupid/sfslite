@@ -29,7 +29,8 @@ TESTS = test_aes \
 	test_rctree \
 	test_vec \
 	test_sp1 \
-	test_sp2
+	test_sp2 \
+	test_sp3
 
 check_PROGRAMS = $(TESTS)
 
@@ -60,6 +61,7 @@ test_rctree_SOURCES = test_rctree.C
 test_vec_SOURCES = test_vec.C
 test_sp1_SOURCES = test_sp1.C
 test_sp2_SOURCES = test_sp2.C
+test_sp3_SOURCES = test_sp3.C
 
 $(check_PROGRAMS): $(LDEPS)
 

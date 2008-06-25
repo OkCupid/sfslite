@@ -63,7 +63,7 @@ namespace gc {
   size_t
   smallobj_sizer_t::ind2size (int sz) const
   {
-    if (sz <= 0) return 0;
+    if (sz < 0) return 0;
     assert (sz < int (_n_sizes));
     return _sizes[sz];
   }
@@ -83,7 +83,7 @@ namespace gc {
       m = (l + h)/2;
       if (_sizes[m] > sz) { h = m - 1; }
       else if (_sizes[m] < sz) { l = m + 1; }
-      else { break; }
+      else { l = m; break; }
     }
 
     if (l < lim && _sizes[l] < sz) l++;
