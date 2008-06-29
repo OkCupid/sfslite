@@ -76,7 +76,7 @@ namespace sfs_core {
   void set_busywait (bool b);   
   void set_compact_interval (u_int i);
   int  set_select_policy (select_policy_t i);
-  bool set_zombie_collection (bool b);
+  void set_zombie_collect (bool b);
 
   //
   // end public API
