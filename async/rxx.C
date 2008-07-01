@@ -24,6 +24,10 @@
 #include "rxx.h"
 #include "amisc.h"
 
+// the default behavior is to panic on any rxx errors.
+bool sfs_rxx_panic = true;
+
+
 struct rcbase {
   enum { magicval = int (0xa5e10288) };
   int32_t cnt;
@@ -142,28 +146,52 @@ rxx::init (const char *pat, const char *opt)
   return NULL;
 }
 
-void
+bool
 rxx::_exec (const char *p, size_t len, int options)
 {
+  bool ok = true;
   subj = NULL;
+  _errcode = 0;
+		
   if (!ovector)
     ovector = New int[ovecsize];
   nsubpat = pcre_exec (re, extra, p, len, 0,
 		       options, ovector, ovecsize);
-  if (nsubpat <= 0 && nsubpat != PCRE_ERROR_NOMATCH)
-    panic ("rxx/pcre_exec error %d\n", nsubpat);
+  if (nsubpat <= 0 && nsubpat != PCRE_ERROR_NOMATCH)  {
+    _errcode = nsubpat;
+    ok = false;
+    if (sfs_rxx_panic) {
+      panic ("rxx/pcre_exec error %d\n", nsubpat);
+    } else {
+      warn ("rxx/pcre_exec error %d\n", nsubpat);
+      nsubpat = 0;
+    }
+  }
+  return ok;
 }
 
-void
+bool
 rxx::exec (str s, int options)
 {
+  bool ok = true;
   subj = s;
+  _errcode = 0;
+
   if (!ovector)
     ovector = New int[ovecsize];
   nsubpat = pcre_exec (re, extra, s.cstr (), s.len (), 0,
 		       options, ovector, ovecsize);
-  if (nsubpat <= 0 && nsubpat != PCRE_ERROR_NOMATCH)
-    panic ("rxx/pcre_exec error %d\n", nsubpat);
+  if (nsubpat <= 0 && nsubpat != PCRE_ERROR_NOMATCH) {
+    _errcode = nsubpat;
+    ok = false;
+    if (sfs_rxx_panic) {
+      panic ("rxx/pcre_exec error %d\n", nsubpat);
+    } else {
+      warn ("rxx/pcre_exec error %d\n", nsubpat);
+      nsubpat = 0;
+    }
+  }
+  return ok;
 }
 
 str
@@ -198,7 +226,9 @@ split (vec<str> *out, rxx pat, str expr, size_t lim, bool emptylast)
     out->clear ();
 
   for (n = 0; n + 1 < lim; n++) {
-    pat._exec (p, e - p, 0);
+    if (!pat._exec (p, e - p, 0)) {
+      return 0;
+    }
     if (!pat.success ())
       break;
     if (out)

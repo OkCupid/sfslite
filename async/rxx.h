@@ -38,6 +38,8 @@ extern "C" void *rcmalloc (size_t n);
 extern "C" void rcfree (void *p);
 extern "C" void *rccopy (void *p);
 
+extern bool sfs_rxx_panic;
+
 class rxx {
 protected:
   pcre *re;
@@ -47,6 +49,7 @@ protected:
   int *ovector;
   int ovecsize;
   str subj;
+  int _errcode;
 
   str init (const char *pat, const char *opt);
   void copy (const rxx &r) {
@@ -70,8 +73,8 @@ protected:
 
 
 public:
-  void _exec (const char *p, size_t len, int options);
-  void exec (str s, int options);
+  bool _exec (const char *p, size_t len, int options);
+  bool exec (str s, int options);
 
   class matchresult {
     const rxx &r;
@@ -93,13 +96,15 @@ public:
 
   matchresult search (str s, int opt = 0) { exec (s, opt); return *this; }
   matchresult match (str s, int opt = 0) {
-    exec (s, opt | PCRE_ANCHORED);
-    if (nsubpat > 0 && implicit_cast<size_t> (ovector[1]) != s.len ())
-      nsubpat = 0;
+    if (exec (s, opt | PCRE_ANCHORED)) {
+      if (nsubpat > 0 && implicit_cast<size_t> (ovector[1]) != s.len ())
+	nsubpat = 0;
+    }
     return *this;
   }
 
   bool success () const { return nsubpat > 0; }
+  int errcode () const { return _errcode; }
 
   str at (ptrdiff_t n) const;
   int start (int n) const
