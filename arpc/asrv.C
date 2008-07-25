@@ -24,6 +24,7 @@
 
 #include "arpc.h"
 #include "xdr_suio.h"
+#include "rpc_stats.h"
 
 #ifdef MAINTAINER
 int asrvtrace (getenv ("ASRV_TRACE") ? atoi (getenv ("ASRV_TRACE")) : 0);
@@ -107,6 +108,9 @@ svccb::init (asrv *s, const sockaddr *src)
     addr = (sockaddr *) opnew (addrlen);
     memcpy (addr, src, addrlen);
   }
+
+  // keep track of when this RPC started
+  ts_start = sfs_get_tsnow();
 }
 
 void *
@@ -164,6 +168,8 @@ svccb::reply (const void *reply, sfs::xdrproc_t xdr, bool nocache)
   rm.acpted_rply.ar_results.where = (char *) reply;
   rm.acpted_rply.ar_results.proc
     = reinterpret_cast<sun_xdrproc_t> (xdr ? xdr : srv->tbl[proc ()].xdr_res);
+
+  get_rpc_stats ().end_call (this, ts_start);
 
   xdrsuio x (XDR_ENCODE);
   if (!xdr_replymsg (x.xdrp (), &rm)) {

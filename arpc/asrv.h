@@ -55,6 +55,8 @@ class svccb {
 
   u_int64_t offset;             // Byte offset in underlying transport
 
+  timespec ts_start;            // keep track of when it started
+
   svccb (const svccb &);	// No copying
   const svccb &operator= (const svccb &);
 

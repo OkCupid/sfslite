@@ -7,6 +7,7 @@
 #include "parseopt.h"
 #include "tame.h"
 #include "tame_rpcserver.h"
+#include "rpc_stats.h"
 
 class exsrv_t : public tame::server_t {
 public:
@@ -111,6 +112,7 @@ main2 (int argc, char **argv)
 int
 main (int argc, char *argv[])
 {
+  get_rpc_stats ().set_active (true).set_interval (3);
   setprogname (argv[0]);
   main2 (argc, argv);
   amain ();

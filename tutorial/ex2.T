@@ -7,11 +7,13 @@
 #include "ex_prot.h"
 #include "tame_rpc.h"
 
+#if 0
 static callbase *
 foo (ptr<aclnt> c, u_int32_t rpc, const void *a, void *r, aclnt_cb cb)
 {
   return c->call (rpc, a, r, cb);
 }
+#endif
 
 tamed static void 
 try_rpc (str h, int port, evb_t cb)
