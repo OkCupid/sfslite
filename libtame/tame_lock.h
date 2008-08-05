@@ -40,7 +40,7 @@ namespace tame {
     mode_t mode () const { return _mode; }
     
   protected:
-    void call (waiter_t *w);
+    void call (waiter_t *w, bool from_main = false);
     
     tailq<waiter_t, &waiter_t::_lnk> _waiters;
     mode_t _mode;

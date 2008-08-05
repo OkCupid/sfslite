@@ -181,7 +181,7 @@ protected:
     if (!--refcount_cnt)
       refcount_call_finalize ();
   }
-  u_int refcount_getcnt () { return refcount_cnt; }
+  u_int refcount_getcnt () const { return refcount_cnt; }
 };
 
 class refpriv {

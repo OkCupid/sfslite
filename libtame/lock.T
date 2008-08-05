@@ -1,6 +1,7 @@
 
 // -*-c++-*-
 #include "tame_lock.h"
+#include "tame_trigger.h"
 
 namespace tame {
 
@@ -49,12 +50,15 @@ lock_t::acquire (lock_t::mode_t m, evv_t cb)
 }
 
 void
-lock_t::call (waiter_t *w)
+lock_t::call (waiter_t *w, bool delay)
 {
   _waiters.remove (w);
   evv_t cb (w->_cb);
   delete w;
-  cb->trigger ();
+  if (delay)
+    dtrigger (cb);
+  else
+    cb->trigger ();
 }
 
 void
@@ -98,7 +102,12 @@ lock_t::release ()
     waiter_t *w = _waiters.first;
     if (w) {
       if (w->_mode == SHARED) {
+
+	// In other words, assert that we've plucked all sharers
+	// off the list below.  If we haven't, we're in shaky
+	// recursive release waters (see below).
 	assert (old_mode != SHARED);
+
 	_mode = SHARED;
 
 	waiter_t *n, *p;
@@ -106,7 +115,14 @@ lock_t::release ()
 	  n = _waiters.next (p);
 	  if (p->_mode == SHARED) {
 	    _sharers ++;
-	    call (p);
+
+	    // Walter Mundt 8/5/08 points out that calling p's callback has
+	    // to take place from the main loop.  If not, then calling
+	    // p can release right away, which will recursively call into
+	    // this method, failing the above assertion (old_mode != SHARED)
+	    // and also fouling our traversal through the list
+	    call (p, true);
+
 	  }
 	}
       } else {
