@@ -23,33 +23,40 @@ namespace rpc_stats {
   }
   
   rpc_stat_collector_t::rpc_stat_collector_t() 
-    : m_active(false) // start it off inactive
-    , m_interval(10*60) // default to once every 10 mins
+    : m_active(false),     // start it off inactive
+      m_interval(10*60),   // default to once every 10 mins
+      m_n_per_line(10)     // num stats to print per line
+      
   {
     clock_gettime(CLOCK_REALTIME, &m_last_print);
   }
   
+  
+  static void appendStat(strbuf &out, const rpc_proc_t &proc, 
+			 const rpc_stats_t &stats)
+  {
+    out << " | " 
+	<< proc.prog << " "
+	<< proc.vers << " "
+	<< proc.proc << " " 
+	<< stats.count << " " 
+	<< stats.time_sum << " " 
+	<< stats.time_squared_sum << " "
+	<< stats.min_time << " " 
+	<< stats.max_time;
+  }
+
+  void 
+  rpc_stat_collector_t::output_line (size_t i, const strbuf &prfx, 
+				     strbuf &line, bool frc)
+  {
+    if ( ( (i % m_n_per_line) == 0 || frc) && line.tosuio ()->resid ()) {
+      warn << prfx << line << "\n";
+      line.tosuio ()->clear ();
+    }
+  }
+  
   void rpc_stat_collector_t::print_info() 
-  {
-    str line = get_stat_line();
-    warn ( str(line << "\n") );
-    reset();
-  }
-  
-  static void stat2str(strbuf *out, const rpc_proc_t &proc, rpc_stats_t *stats)
-  {
-    *out << " | " 
-	 << proc.prog << " "
-	 << proc.vers << " "
-	 << proc.proc << " " 
-	 << stats->count << " " 
-	 << stats->time_sum << " " 
-	 << stats->time_squared_sum << " "
-	 << stats->min_time << " " 
-	 << stats->max_time;
-  }
-  
-  str rpc_stat_collector_t::get_stat_line() 
   {
     // first we print the duration in seconds
     int64_t duration = timespec_diff(sfs_get_tsnow(), m_last_print);
@@ -57,11 +64,21 @@ namespace rpc_stats {
     // print the epoch duration in milliseconds
     duration /= 1000;
 
-    strbuf b;
-    b << "RPC-STATS " << time(NULL) << " " << duration;
-    // now we add each entry in the m_stats member
-    m_stats.traverse(wrap(stat2str, &b));
-    return b;
+    strbuf prefix;
+    prefix << "RPC-STATS " << time (NULL) << " " << duration;
+
+    qhash_const_iterator_t<rpc_proc_t, rpc_stats_t> it (m_stats);
+
+    const rpc_proc_t *key;
+    rpc_stats_t value;
+    strbuf line;
+
+    for (size_t i = 1; (key = it.next (&value)); i++) {
+      appendStat (line, *key, value);
+      output_line (i, prefix, line, false);
+    }
+    output_line (0, prefix, line, true);
+    reset();
   }
   
   void rpc_stat_collector_t::reset() 

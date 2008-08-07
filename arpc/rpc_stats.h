@@ -89,8 +89,8 @@ namespace rpc_stats {
     rpc_stat_collector_t ();
     
     void print_info();
-    str get_stat_line();
-    /** Only resets RPC stats, not when the last line was printed */
+
+    /** Reset stats and m_last_print */
     void reset();
     
     rpc_stat_collector_t &set_active(bool active) 
@@ -98,15 +98,21 @@ namespace rpc_stats {
 
     rpc_stat_collector_t &set_interval(u_int32_t secs) 
     { m_interval = secs; return (*this); }
+
+    rpc_stat_collector_t &set_n_per_line (size_t n)
+    { m_n_per_line = n; return (*this); }
     
     /** Call this at the end of an RPC handler */
     void end_call(svccb *call_obj, const timespec &strt);
-    
+
   protected:
     bool m_active;
     u_int32_t m_interval;
     timespec m_last_print;
+    size_t m_n_per_line;
     qhash<rpc_proc_t, rpc_stats_t> m_stats;
+
+    void output_line (size_t i, const strbuf &p, strbuf &l, bool frc);
   };
   
 } // namespace rpc_stats
