@@ -116,7 +116,7 @@ namespace gc {
   cgc_mmap (size_t sz)
   {
     void *v = mmap (NULL, sz, PROT_READ | PROT_WRITE, 
-		    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+		    MAP_PRIVATE | MAP_ANON , -1, 0);
 
     mark_unitialized (v, sz);
 
