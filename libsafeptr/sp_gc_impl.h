@@ -17,7 +17,7 @@ namespace gc {
   bigslot_t<T,G>::copy_reinit (const bigslot_t<T,G> *ms)
   {
     if (debug_warnings)
-      warn ("copy data from %p to %p (%u bytes)\n", ms->_data, _data, ms->_sz);
+      warn ("copy data from %p to %p (%zd bytes)\n", ms->_data, _data, ms->_sz);
 
     _ptrslot = ms->_ptrslot;
     _sz = ms->_sz; 
