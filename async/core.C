@@ -35,8 +35,6 @@
 #include <stdio.h>
 
 bool amain_panic;
-int maxfd;
-
 
 /* Global variables used for configuring the core select behavior */
 

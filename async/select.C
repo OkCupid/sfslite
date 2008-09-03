@@ -103,8 +103,6 @@ namespace sfs_core {
   int selector_t::fd_set_bytes;
   int selector_t::maxfd;
 
-  
-
   //-----------------------------------------------------------------------
   
 };
