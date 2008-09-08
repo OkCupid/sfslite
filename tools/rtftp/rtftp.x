@@ -49,12 +49,12 @@ program RTFTP_PROGRAM {
 	RTFTP_PUT(rtftp_put_arg_t) = 2;
 
 	rtftp_get_res_t
-	RTFTP_PUT(rtftp_get_arg_t) = 3;
+	RTFTP_GET(rtftp_get_arg_t) = 3;
 
 	} = 1;
-} = 54044;	  
+} = 5401;	  
 
 };
 
-%#define RTFTP_TCP_PORT 54044
-%#define RTFTP_UDP_PORT 54045
+%#define RTFTP_TCP_PORT 5401
+%#define RTFTP_UDP_PORT 5402
