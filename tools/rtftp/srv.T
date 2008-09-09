@@ -7,7 +7,7 @@
 #include "parseopt.h"
 #include "arpc.h"
 #include "rtftp_prot.h"
-#include "sha1.h"
+#include "crypt.h"
 #include "rxx.h"
 #include "rtftp.h"
 
@@ -37,8 +37,8 @@ public:
       _addr (a) {}
   void dispatch (svccb *sbp);
 private:
-  void do_put (const rtftp_file_t *arg, rtftp_status_t *res);
-  void do_get (const rtftp_id_t *arg, rtftp_get_res_t *res);
+  rtftp_status_t do_put (const rtftp_file_t *arg);
+  void do_get (const rtftp_id_t &arg, rtftp_get_res_t *res);
   int _fd;
   ptr<axprt> _x;
   ptr<asrv> _srv;
@@ -55,18 +55,33 @@ usage ()
 
 //-----------------------------------------------------------------------
 
-void
-cli_t::do_put (const rtftp_file_t *arg, rtftp_status_t *res)
+rtftp_status_t
+cli_t::do_put (const rtftp_file_t *arg)
 {
-
+  rtftp_status_t st;
+  if (!check_file (*arg)) {
+    st = RTFTP_CORRUPT;
+  } else {
+    str s = xdr2str (*arg);
+    st = (write_file (arg->name, s) == 0) ? RTFTP_OK :  RTFTP_EFS;
+  }
+  return st;
 }
 
 //-----------------------------------------------------------------------
 
 void
-cli_t::do_get (const rtftp_id_t *arg, rtftp_get_res_t *res)
+cli_t::do_get (const rtftp_id_t &arg, rtftp_get_res_t *res)
 {
-
+  str d = file2str (arg);
+  res->set_status (RTFTP_OK);
+  if (!str2xdr (*res->file, d)) {
+    warn << "cannot un-XDR file: " << arg << "\n";
+    res->set_status (RTFTP_CORRUPT);
+  } else if (!check_file (*res->file)) {
+    warn << "checksum failed on read file: " << arg << "\n";
+    res->set_status (RTFTP_CORRUPT);
+  }
 }
 
 //-----------------------------------------------------------------------
@@ -89,9 +104,8 @@ cli_t::dispatch (svccb *sbp)
 
   case RTFTP_PUT:
     {
-      rtftp_status_t s;
       RPC::rtftp_program_1::rtftp_put_srv_t<svccb> srv (sbp);
-      do_put (srv.getarg (), &s);
+      rtftp_status_t s = do_put (srv.getarg ());
       srv.reply (s);
       break;
     }
@@ -100,7 +114,7 @@ cli_t::dispatch (svccb *sbp)
     {
       rtftp_get_res_t res;
       RPC::rtftp_program_1::rtftp_get_srv_t<svccb> srv (sbp);
-      do_get (srv.getarg (), &res);
+      do_get (*srv.getarg (), &res);
       srv.reply (res);
       break;
     }

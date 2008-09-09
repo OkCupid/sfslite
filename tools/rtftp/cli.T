@@ -221,34 +221,6 @@ put_cli_t::perform_T (evi_t ev)
 
 //-----------------------------------------------------------------------
 
-static int
-dir_ok (const char *d)
-{
-  int rc;
-  struct stat sb;
-  if (stat (d, &sb) == 0) {
-    if (S_ISDIR (sb.st_mode)) rc = 1;
-    else rc = -1;
-  } else {
-    rc = 0;
-  }
-  return rc;
-}
-
-//-----------------------------------------------------------------------
-
-static const char *
-mywd ()
-{
-#define SZ 1024
-  static char buf[SZ];
-  return getcwd (buf, SZ);
-#undef SZ
-}
-
-
-//-----------------------------------------------------------------------
-
 //
 // write out the data 's' to the file given by _file.  Might need to make
 // some parent directories if the filename contains slashes.
@@ -261,41 +233,13 @@ get_cli_t::write_file (const str &s)
   int rc = 0;
   if (chdir (_dir) != 0) {
     warn << "cannot chdir to " << _dir << "\n";
+    rc = -1;
   } else {
-    char *s = strdup (_file.cstr ());
-    char *file = NULL;
-    char *np;
-    for (char *p = s; rc >= 0 && p && *p; np = p) {
-      char *sl = strchr (p, '/');
-      if (sl && *sl) {
-	file = np = sl ++;
-	*np = 0;
-	int rc = dir_ok (p);
-	if (rc < 0) {
-	  warn ("cannot access dir %s from dir %s\n", p, mywd ());
-	} else if (mkdir (p, 0777) != 0) {
-	  warn ("mkdir failed in %s on dir %s: %m\n", mywd (), p);
-	  rc = -1;
-	}
-	if (chdir (p) != 0) {
-	  warn ("cannot chdir to %s from dir %s: %m\n", p, mywd ());
-	  rc = -1;
-	}
-      }
-    }
-    if (!file || *file) {
-      warn ("no file to write!\n");
-      rc = -1;
-    } else if (!str2file (file, s, 0666, false)) {
-      warn ("cannot create file %s in dir %s: %m\n", file, mywd ());
-      rc = -1;
-    } else {
-      rc = 0;
-    }
+    rc = ::write_file (_file, s);
   }
   return rc;
 }
-
+ 
 //-----------------------------------------------------------------------
 
 // Trigger: -2 on RPC failure
