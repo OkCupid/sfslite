@@ -5,7 +5,8 @@ enum rftp_status_t {
      RTFTP_NOENT = 1,
      RTFTP_CORRUPT = 2,
      RTFTP_EOF = 3,
-     RTFTP_EEXISTS = 4
+     RTFTP_EEXISTS = 4,
+     RTFTP_EFS = 5
 };
 
 %#define RTFTP_HASHSZ 20

@@ -30,7 +30,7 @@ protected:
   int _port;
 
   ptr<axptr_stream> _x;
-  ptr<aclnt> _c;
+  ptr<aclnt> _cli;
 
 };
 
@@ -180,18 +180,22 @@ put_cli_t::perform_T (evb_t ev)
   tvars {
     int fd;
     rendezvous_t<> rv;
-    int rc;
+    ssize_t rc;
     rtftp_chnk_t arg (RTFTP_OK);
     u_int32_t chnk_id (0);
     u_int64_t xfer_id;
     rtftp_file_t file_id;
     rtftp_put_res_t put_res;
-    bool go (true);
     clnt_stat err;
     int wsize (10);
     sha1ctx sha;
     bool eof (false);
     int nsent (0), nrecv (0);
+    size_t sz (0);
+
+    vec<clnt_stat> errs;
+    vec<rftp_status_t> stats;
+    vec<size_t> indexes;
   }
 
   fd = open (_file.cstr (), O_RDONLY);
@@ -216,20 +220,39 @@ put_cli_t::perform_T (evb_t ev)
       warn << "cannot initiate PUT transfer: " << int (put_res.status);
     } else {
       xfer_id = *put_res.xfer_id;
-      while (go) {
 
-	arg.dat->xfer_id = xfer_id;
-	arg.chnk_id = chnk_id++;
+      errs.set_size (wsize);
+      stats.set_size (wsize);
+      for (int i = 0; i < wsize; i++) {
+	indexes.push_back (i);
+      }
 	
-	arg.dat->dat.set_size (CHNKSZ);
-	rc = read (fd, arg.dat->dat.base (), CHNKSZ);
-	if (rc > 0) {
-	  arg->dat->dat.set_size (rc);
-	  sha.update (arg.dat->dat.base (), rc);
-	} else if (rc == 0) {
-	  eof = true;
-	  arg->set_status (RTFTP_EOF);
-	  arg->footer
+      while (!eof || nrecv < nsent) {
+
+	if (!eof) {
+	  arg.set_status (RTFTP_OK);
+	  arg.dat->xfer_id = xfer_id;
+	  arg.chnk_id = chnk_id++;
+	  arg.dat->dat.set_size (CHNKSZ);
+	  rc = read (fd, arg.dat->dat.base (), CHNKSZ);
+	  if (rc > 0) {
+	    size += rc;
+	    arg.dat->dat.set_size (rc);
+	    sha.update (arg.dat->dat.base (), rc);
+	  } else if (rc == 0) {
+	    eof = true;
+	    arg.set_status (RTFTP_EOF);
+	    arg.footer->xfer_id = xfer_id;
+	    arg.footer->size = size;
+	    sha.final (arg.footer->hash.base ());
+	  } else {
+	    warn ("put error; cannot read file %s: %m\n", _file_cstr ());
+	    arg.set_status (RTFTP_ERRFS);
+	    eof = true;
+	  }
+
+	  if (nsent - nrecv >= wsize) {
+	    twait (rv, i);
 	}
       }
     }
