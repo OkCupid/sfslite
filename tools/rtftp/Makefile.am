@@ -1,9 +1,19 @@
 
-
 sfsbin_PROGRAMS = rtftpc rtftpd
 
 rtftpc_SOURCES = cli.C rtftp_prot.C util.C
 rtftpd_SOURCES = srv.C rtftp_prot.C util.C
+
+if USE_SFSMISC
+LIBSVC_ME = $(LIBSVC)
+else
+LIBSVC_ME =
+endif
+
+LDADD = $(LIBASYNC) $(LIBARPC) $(LIBTAME) $(LIBSFSCRYPT) $(LIBSFSMISC) $(LIBSVC_ME) $(LIBGMP)
+
+rtftpc_LDADD = $(LDADD)
+rtftpd_LDADD = $(LDADD)
 
 TAMEIN = cli.T srv.T
 TAMEOUT = cli.C srv.C
