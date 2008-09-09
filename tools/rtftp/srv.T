@@ -15,12 +15,15 @@
 
 class srv_t {
 public:
-  srv_t () : _verbose (false), _port (RTFTP_TCP_PORT), _sfd (-1) {}
+  srv_t () 
+    : _verbose (false), _debug (false), _port (RTFTP_TCP_PORT), _sfd (-1) {}
   int config (int argc, char *argv[]);
   void newcli ();
-  bool run ();
+  bool init ();
+  void run ();
 private:
-  bool _verbose;
+  void shutdown (int sig);
+  bool _verbose, _debug;
   str _dir;
   int _port;
   int _sfd;
@@ -146,10 +149,23 @@ srv_t::newcli ()
 
 //-----------------------------------------------------------------------
 
+void
+srv_t::shutdown (int sig)
+{
+  warn << "shutting down with signal=" << sig << "\n";
+  exit (0);
+}
+
+
+//-----------------------------------------------------------------------
+
 bool
-srv_t::run ()
+srv_t::init ()
 {
   bool rc = true;
+
+  sigcb (SIGTERM, wrap (this, &srv_t::shutdown, SIGTERM));
+
   if (chdir (_dir.cstr ()) != 0) {
     warn ("cannot change to data directory %s: %m\n", _dir.cstr ());
     rc = false;
@@ -161,12 +177,23 @@ srv_t::run ()
     if (_sfd < 0) {
       warn ("cannot bind to port %d: %m\n", _port);
       rc = false;
-    } else {
-      listen (_sfd, 200);
-      fdcb (_sfd, selread, wrap (this, &srv_t::newcli));
     }
   }
   return rc;
+}
+
+//-----------------------------------------------------------------------
+
+void
+srv_t::run ()
+{
+  if (!_debug) {
+    daemonize ();
+  }
+  warn << "starting up (pid=" << getpid () << ")\n";
+
+  listen (_sfd, 200);
+  fdcb (_sfd, selread, wrap (this, &srv_t::newcli));
 }
 
 //-----------------------------------------------------------------------
@@ -177,8 +204,11 @@ srv_t::config (int argc, char *argv[])
   int ch;
   int rc = 1;
 
-  while ((ch = getopt (argc, argv, "v")) != -1) {
+  while ((ch = getopt (argc, argv, "vd")) != -1) {
     switch (ch) {
+    case 'd':
+      _debug = true;
+      break;
     case 'v':
       _verbose = true;
       break;
@@ -222,6 +252,10 @@ main (int argc, char *argv[])
 
   if ((rc = srv.config (argc, argv)) <= 0) {
     return rc;
+  }
+
+  if (!srv.init ()) {
+    return -1;
   }
 
   srv.run ();
