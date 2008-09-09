@@ -1,5 +1,6 @@
 
 #include "rtftp.h"
+#include "sha1.h"
 
 bool
 check_file (const rtftp_file_t &f)

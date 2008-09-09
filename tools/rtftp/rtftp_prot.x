@@ -1,6 +1,6 @@
 
 
-enum rftp_status_t {
+enum rtftp_status_t {
      RTFTP_OK = 0,
      RTFTP_NOENT = 1,
      RTFTP_CORRUPT = 2,
@@ -15,7 +15,7 @@ enum rftp_status_t {
 typedef opaque rtftp_hash_t[RTFTP_HASHSZ];
 
 typedef string rtftp_id_t<>;
-typedef string rtftp_data_t<>;
+typedef opaque rtftp_data_t<>;
 
 struct rtftp_file_t {
        rtftp_id_t name;
@@ -54,4 +54,6 @@ program RTFTP_PROGRAM {
 
 %#define RTFTP_TCP_PORT 5401
 %#define RTFTP_UDP_PORT 5402
+
+%#define MAX_PACKET_SIZE 0x8000000
 

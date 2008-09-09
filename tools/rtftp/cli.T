@@ -6,14 +6,16 @@
 #include "tame.h"
 #include "parseopt.h"
 #include "arpc.h"
-#include "rtftp_prot.x"
+#include "rtftp_prot.h"
 #include "sha1.h"
+#include "rxx.h"
+#include "rtftp.h"
 
 //-----------------------------------------------------------------------
 
 class cli_t {
 public:
-  cli_t (const str &s, const str &h, int p) 
+  cli_t (const str &f, const str &h, int p) 
     : _verbose (false), _file (f), _host (h), _port (p) {}
 
   virtual ~cli_t () {}
@@ -29,7 +31,7 @@ protected:
   str _host;
   int _port;
 
-  ptr<axptr_stream> _x;
+  ptr<axprt_stream> _x;
   ptr<aclnt> _cli;
 
 };
@@ -52,6 +54,7 @@ public:
     : cli_t (f, h, p), _dir (d) {}
   void perform (evi_t ev) { perform_T (ev); }
 private:
+  int write_file (const str &s);
   void perform_T (evi_t ev, CLOSURE);
   str _dir;
 };
@@ -70,7 +73,7 @@ usage ()
 static bool
 parse_host (const str &s, str *hp, int *pp) 
 {
-  static rxx x ("([^:]+)(:(\d+))?");
+  static rxx x ("([^:]+)(:(\\d+))?");
   bool ret = x.match (s);
   if (ret) {
     *hp = x[1];
@@ -85,7 +88,7 @@ parse_host (const str &s, str *hp, int *pp)
 //-----------------------------------------------------------------------
 
 static int
-config (cli_t **clip, int argc, const char *const *argv)
+config (cli_t **clip, int argc, char *argv[])
 {
   int rc = 1;
   bool verbose = false;
@@ -94,11 +97,12 @@ config (cli_t **clip, int argc, const char *const *argv)
   str file;
   str dir;
   cli_t *cli = NULL;
+  int ch;
   
   while ((ch = getopt (argc, argv, "vh"))) {
     switch (ch) {
     case 'v':
-      verbse = true;
+      verbose = true;
       break;
     case 'h':
       usage ();
@@ -128,7 +132,6 @@ config (cli_t **clip, int argc, const char *const *argv)
       }
       cli = New put_cli_t (file, host, port);
     } else if (strcmp (argv[0], "get") == 0) {
-      mode = GET;
       if (argc != 4) {
 	err = true;
       } else {
@@ -190,12 +193,14 @@ put_cli_t::perform_T (evi_t ev)
   }
 
   if (!(dat = file2str (_file))) {
-    warn ("cannot open file %s: %\m", _file.cstr ());
+    warn ("cannot open file %s: %m\n", _file.cstr ());
   } else {
     file.name = _file;
     file.data = dat;
     sha1_hash (file.hash.base (), file.data.base (), file.data.size ());
-    twait { RPC::rtftp_program_1::rtftp_put (file, &status, mkevent (err)); }
+    twait { 
+      RPC::rtftp_program_1::rtftp_put (_cli, file, &status, mkevent (err)); 
+    }
     if (err) {
       warn  << "RPC failure: "  << err << "\n";
       rc = -2;
@@ -204,8 +209,8 @@ put_cli_t::perform_T (evi_t ev)
 	warn << "file already exists\n";
       }
       rc = 1;
-    } else if (put_res.status != RTFTP_OK) {
-      warn << "cannot do PUT transfer: " << int (put_res.status);
+    } else if (status != RTFTP_OK) {
+      warn << "cannot do PUT transfer: " << int (status);
       rc = -1;
     } else {
       rc = 0;
@@ -232,6 +237,18 @@ dir_ok (const char *d)
 
 //-----------------------------------------------------------------------
 
+static const char *
+mywd ()
+{
+#define SZ 1024
+  static char buf[SZ];
+  return getcwd (buf, SZ);
+#undef SZ
+}
+
+
+//-----------------------------------------------------------------------
+
 //
 // write out the data 's' to the file given by _file.  Might need to make
 // some parent directories if the filename contains slashes.
@@ -255,13 +272,13 @@ get_cli_t::write_file (const str &s)
 	*np = 0;
 	int rc = dir_ok (p);
 	if (rc < 0) {
-	  warn ("cannot access dir %s from dir %s\n", p, getcwd ());
-	} else if (mkdir (p) != 0) {
-	  warn ("mkdir failed in %s on dir %s: %m\n", getcwd (), p);
+	  warn ("cannot access dir %s from dir %s\n", p, mywd ());
+	} else if (mkdir (p, 0777) != 0) {
+	  warn ("mkdir failed in %s on dir %s: %m\n", mywd (), p);
 	  rc = -1;
 	}
 	if (chdir (p) != 0) {
-	  warn ("cannot chdir to %s from dir %s: %m\n", p, getcwd ());
+	  warn ("cannot chdir to %s from dir %s: %m\n", p, mywd ());
 	  rc = -1;
 	}
       }
@@ -270,7 +287,7 @@ get_cli_t::write_file (const str &s)
       warn ("no file to write!\n");
       rc = -1;
     } else if (!str2file (file, s, 0666, false)) {
-      warn ("cannot create file %s in dir %s: %m\n", file, getcwd ());
+      warn ("cannot create file %s in dir %s: %m\n", file, mywd ());
       rc = -1;
     } else {
       rc = 0;
@@ -296,11 +313,11 @@ get_cli_t::perform_T (evi_t ev)
   }
 
   arg = _file;
-  twait { RPC::rtftp_program_1::rtftp_get (arg, &res, mkevent (err)); }
+  twait { RPC::rtftp_program_1::rtftp_get (_cli, arg, &res, mkevent (err)); }
   if (err) {
     warn << "RPC failure: " << err << "\n";
     rc = -2;
-  } else if (res.stauts == RTFTP_NOENT) {
+  } else if (res.status == RTFTP_NOENT) {
     rc = 1;
   } else if (res.status != RTFTP_OK) {
     warn << "GET failed: " << int (res.status) << "\n";
@@ -310,7 +327,9 @@ get_cli_t::perform_T (evi_t ev)
       warn << "hash mismatch on file!\n";
       rc = -1;
     } else {
-      rc = write_file (res.file->data);
+      mstr dat (res.file->data.size ());
+      memcpy (dat.cstr (), res.file->data.base (), res.file->data.size ());
+      rc = write_file (dat);
     }
   }
   ev->trigger (rc);

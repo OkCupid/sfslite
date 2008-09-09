@@ -30,6 +30,12 @@ else
 TESTS = 
 endif
 
+if USE_TOOLS
+TOOLS = tools
+else
+TOOLS =
+endif
+
 SUBDIRS = \
 	async \
 	libsafeptr \
@@ -44,7 +50,8 @@ SUBDIRS = \
 	tame \
 	libtame \
 	$(TESTS) \
-	$(TUTORIAL) 
+	$(TUTORIAL) \
+	$(TOOLS)
 
 DIST_SUBDIRS = $(SUBDIRS)
 #

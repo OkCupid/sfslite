@@ -2095,6 +2095,16 @@ DO_USE_SFSMISC
 ])
 
 dnl
+dnl Compile tools
+dnl
+AC_DEFUN([SFS_TOOLS],
+[AC_ARG_ENABLE(tools,
+--enable-tools     compile fun/optional tools)
+test "${enable_tools+set}" = "set" && with_tools="yes"
+AM_CONDITIONAL(USE_TOOLS, test "$with_tools" = "yes")
+])
+
+dnl
 dnl Call this function if we're using SFS_MISC (can be turned on
 dnl in multiple places)
 dnl
@@ -2151,7 +2161,8 @@ then
 	AM_CONDITIONAL(USE_TUTORIAL, test "$with_tutorial" = "yes")
 	with_tests="yes"
 	AM_CONDITIONAL(USE_TESTS, test "$with_tests" = "yes")
-
+	with_tools="yes"
+ 	AM_CONDITIONAL(USE_TOOLS, test "$with_tools" = "yes")
 fi
 ])
 dnl
