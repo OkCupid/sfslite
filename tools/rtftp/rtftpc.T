@@ -21,7 +21,7 @@ public:
   void run (CLOSURE);
 
 protected:
-  virtual void perform (evb_t ev) = 0;
+  virtual void perform (evi_t ev) = 0;
   void connect (evb_t ev, CLOSURE);
 
   bool _verbose;
@@ -39,9 +39,9 @@ protected:
 class put_cli_t : public cli_t {
 public:
   put_cli_t (const str &f, const str &h, int p) : cli_t (f, h, p) {}
-  void perform (evb_t ev) { perform_T (ev); }
+  void perform (evi_t ev) { perform_T (ev); }
 private:
-  void perform_T (evb_t ev, CLOSURE);
+  void perform_T (evi_t ev, CLOSURE);
 };
 
 //-----------------------------------------------------------------------
@@ -50,9 +50,9 @@ class get_cli_t : public cli_t {
 public:
   get_cli_t (const str &f, const str &h, int p, const str &d) 
     : cli_t (f, h, p), _dir (d) {}
-  void perform (evb_t ev) { perform_T (ev); }
+  void perform (evi_t ev) { perform_T (ev); }
 private:
-  void perform_T (evb_t ev, CLOSURE);
+  void perform_T (evi_t ev, CLOSURE);
   str _dir;
 };
 
@@ -174,92 +174,147 @@ cli_t::connect (evb_t ev)
 
 //-----------------------------------------------------------------------
 
+// trigger: -2 on RPC failure
+//          -1 on internal failure
+//           0 on success
+//           1 if no put due to file already existing
 tamed void
-put_cli_t::perform_T (evb_t ev)
+put_cli_t::perform_T (evi_t ev)
 {
   tvars {
-    int fd;
-    rendezvous_t<> rv;
-    ssize_t rc;
-    rtftp_chnk_t arg (RTFTP_OK);
-    u_int32_t chnk_id (0);
-    u_int64_t xfer_id;
-    rtftp_file_t file_id;
-    rtftp_put_res_t put_res;
+    str dat;
+    rtftp_file_t file;
+    rtftp_status_t status;
     clnt_stat err;
-    int wsize (10);
-    sha1ctx sha;
-    bool eof (false);
-    int nsent (0), nrecv (0);
-    size_t sz (0);
-
-    vec<clnt_stat> errs;
-    vec<rftp_status_t> stats;
-    vec<size_t> indexes;
+    int rc (0);
   }
 
-  fd = open (_file.cstr (), O_RDONLY);
-  if (fd < 0) {
+  if (!(dat = file2str (_file))) {
     warn ("cannot open file %s: %\m", _file.cstr ());
   } else {
-
-    file_id = _file;
-
-    twait { 
-      RPC::rtftp_program_1::rtftp_put (file_id, &st, &put_res, mkevent (err)); 
-    }
-
+    file.name = _file;
+    file.data = dat;
+    sha1_hash (file.hash.base (), file.data.base (), file.data.size ());
+    twait { RPC::rtftp_program_1::rtftp_put (file, &status, mkevent (err)); }
     if (err) {
-      warn << "RPC failure in put: " << err << "\n";
-    } else if (put_res.status == RTFTP_EEXISTS) {
+      warn  << "RPC failure: "  << err << "\n";
+      rc = -2;
+    } else if (status == RTFTP_EEXISTS) {
       if (_verbose) {
 	warn << "file already exists\n";
       }
-      ok = true;
+      rc = 1;
     } else if (put_res.status != RTFTP_OK) {
-      warn << "cannot initiate PUT transfer: " << int (put_res.status);
+      warn << "cannot do PUT transfer: " << int (put_res.status);
+      rc = -1;
     } else {
-      xfer_id = *put_res.xfer_id;
+      rc = 0;
+    }
+  }
+  ev->trigger (rc);
+}
 
-      errs.set_size (wsize);
-      stats.set_size (wsize);
-      for (int i = 0; i < wsize; i++) {
-	indexes.push_back (i);
-      }
-	
-      while (!eof || nrecv < nsent) {
+//-----------------------------------------------------------------------
 
-	if (!eof) {
-	  arg.set_status (RTFTP_OK);
-	  arg.dat->xfer_id = xfer_id;
-	  arg.chnk_id = chnk_id++;
-	  arg.dat->dat.set_size (CHNKSZ);
-	  rc = read (fd, arg.dat->dat.base (), CHNKSZ);
-	  if (rc > 0) {
-	    size += rc;
-	    arg.dat->dat.set_size (rc);
-	    sha.update (arg.dat->dat.base (), rc);
-	  } else if (rc == 0) {
-	    eof = true;
-	    arg.set_status (RTFTP_EOF);
-	    arg.footer->xfer_id = xfer_id;
-	    arg.footer->size = size;
-	    sha.final (arg.footer->hash.base ());
-	  } else {
-	    warn ("put error; cannot read file %s: %m\n", _file_cstr ());
-	    arg.set_status (RTFTP_ERRFS);
-	    eof = true;
-	  }
+static int
+dir_ok (const char *d)
+{
+  int rc;
+  struct stat sb;
+  if (stat (d, &sb) == 0) {
+    if (S_ISDIR (sb.st_mode)) rc = 1;
+    else rc = -1;
+  } else {
+    rc = 0;
+  }
+  return rc;
+}
 
-	  if (nsent - nrecv >= wsize) {
-	    twait (rv, i);
+//-----------------------------------------------------------------------
+
+//
+// write out the data 's' to the file given by _file.  Might need to make
+// some parent directories if the filename contains slashes.
+//
+// return -1 if failure, and 0 if wrote the file out OK.
+//
+int
+get_cli_t::write_file (const str &s)
+{
+  int rc = 0;
+  if (chdir (_dir) != 0) {
+    warn << "cannot chdir to " << _dir << "\n";
+  } else {
+    char *s = strdup (_file.cstr ());
+    char *file = NULL;
+    char *np;
+    for (char *p = s; rc >= 0 && p && *p; np = p) {
+      char *sl = strchr (p, '/');
+      if (sl && *sl) {
+	file = np = sl ++;
+	*np = 0;
+	int rc = dir_ok (p);
+	if (rc < 0) {
+	  warn ("cannot access dir %s from dir %s\n", p, getcwd ());
+	} else if (mkdir (p) != 0) {
+	  warn ("mkdir failed in %s on dir %s: %m\n", getcwd (), p);
+	  rc = -1;
+	}
+	if (chdir (p) != 0) {
+	  warn ("cannot chdir to %s from dir %s: %m\n", p, getcwd ());
+	  rc = -1;
 	}
       }
     }
+    if (!file || *file) {
+      warn ("no file to write!\n");
+      rc = -1;
+    } else if (!str2file (file, s, 0666, false)) {
+      warn ("cannot create file %s in dir %s: %m\n", file, getcwd ());
+      rc = -1;
+    } else {
+      rc = 0;
+    }
   }
+  return rc;
 }
 
-#undef BUFSZ
+//-----------------------------------------------------------------------
+
+// Trigger: -2 on RPC failure
+//          -1 on internal failure
+//           0 if file found and gotten
+//           1 if file not found
+tamed void
+get_cli_t::perform_T (evi_t ev)
+{
+  tvars {
+    rtftp_get_res_t res;
+    rtftp_id_t arg;
+    clnt_stat err;
+    int rc (0);
+  }
+
+  arg = _file;
+  twait { RPC::rtftp_program_1::rtftp_get (arg, &res, mkevent (err)); }
+  if (err) {
+    warn << "RPC failure: " << err << "\n";
+    rc = -2;
+  } else if (res.stauts == RTFTP_NOENT) {
+    rc = 1;
+  } else if (res.status != RTFTP_OK) {
+    warn << "GET failed: " << int (res.status) << "\n";
+    rc = -1;
+  } else {
+    if (!check_file (*res.file)) {
+      warn << "hash mismatch on file!\n";
+      rc = -1;
+    } else {
+      rc = write_file (res.file->data);
+    }
+  }
+  ev->trigger (rc);
+}
 
 //-----------------------------------------------------------------------
 
@@ -273,11 +328,7 @@ cli_t::run ()
 
   twait { connect (mkevent (ok)); }
   if (ok) {
-    twait { perform (mkevent (ok)); }
-    if (!ok) {
-      warn << "operation failed\n";
-      rc = -1;
-    }
+    twait { perform (mkevent (rc)); }
   } else {
     warn << "connection failed: " << _host << ":" << _port << "\n";
     rc = -1;

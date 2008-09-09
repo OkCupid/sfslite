@@ -15,61 +15,20 @@ enum rftp_status_t {
 typedef opaque rtftp_hash_t[RTFTP_HASHSZ];
 
 typedef string rtftp_id_t<>;
+typedef string rtftp_data_t<>;
 
-struct rtftp_header_t {
-       rtftp_id_t id;
-       rtftp_hash_t hsh;
-       unsigned size;
-};
-
-struct rtftp_footer_t {
-       unsigned xfer_id;
-       unsigned size;
+struct rtftp_file_t {
+       rtftp_id_t name;
+       rtftp_data_t data;
        rtftp_hash_t hash;
-};
-
-struct rtftp_put_arg_t {
-       rtftp_header_t file;
-};
-
-struct rtftp_get_arg_t {
-       rtftp_id_t file;
-};
-
-struct rtftp_datchnk_t {
-       unsigned hyper xfer_id;
-       unsigned chnk_id;
-       opaque dat<CHNKSZ>;
-};
-
-union rtftp_chnk_t switch (rtftp_status_t eof) {
-case RTFTOP_EOF:
-       rtftp_footer_t footer;
-case RTFTP_OK:
-       rtftp_datchnk_t dat;
-default:
-       void;
 };
 
 union rtftp_get_res_t switch (rtftp_status_t status) {
 case RTFTP_OK:
-        unsigned hyper xfer_id;
+       rtftp_file_t file;
 default:
-	void;
+       void;
 };
-
-struct rtftp_getchnk_arg_t {
-       unsigned hyper file_id;
-       unsigned chunk_id;
-};
-
-union rtftp_put_res_t switch (rtftp_status_t status) {
-case RTFTP_OK:
-       unsigned hyper file_id;
-default:
-	void;
-};
-
 
 namespace RPC {
 
@@ -82,17 +41,11 @@ program RTFTP_PROGRAM {
 	rtftp_status_t
 	RTFTP_CHECK(rtftp_id_t) = 1;
 
-	rtftp_put_res_t
-	RTFTP_PUT(rtftp_id_t) = 2;
+	rtftp_status_t
+	RTFTP_PUT(rtftp_file_t) = 2;
 
 	rtftp_get_res_t
-	RTFTP_GET(rtftp_get_arg_t) = 3;
-
-	rtftp_chnk_t 
-	RTFTP_GETCHNK(rtftp_getchnk_arg_t) = 4;
-
-	rtftp_status_t
-	RTFTP_PUTCHNK(rtftp_chnk_t) = 5;
+	RTFTP_GET(rtftp_id_t) = 3;
 
 	} = 1;
 } = 5401;	  
@@ -102,6 +55,3 @@ program RTFTP_PROGRAM {
 %#define RTFTP_TCP_PORT 5401
 %#define RTFTP_UDP_PORT 5402
 
-/* Maximum packet size is 1MB */
-
-%#define MAX_PACKET_SZ 0x100000
