@@ -190,7 +190,7 @@ void
 srv_t::run ()
 {
   if (!_debug) {
-    daemonize ();
+    daemonize ("rtftpd");
   }
   warn << "starting up (pid=" << getpid () << ")\n";
 

@@ -37,7 +37,7 @@ namespace sfs_core {
     short filter = (op == selread) ? EVFILT_READ : EVFILT_WRITE;
     u_short flags = cb ? EV_ADD : EV_DELETE;
 
-    assert (_change_indx < CHANGE_Q_SZ);
+    assert (_change_indx < CHANGE_Q_SZ!);
 
     EV_SET(&_kq_changes[_change_indx++], fd, filter, flags, 0, 0, 0);
 
@@ -47,9 +47,13 @@ namespace sfs_core {
       int rc;
       do {
 	rc = kevent (_kq, _kq_changes, _change_indx, NULL, 0, NULL);
-	if (rc < 0 && errno != EINTR) {
-	  panic ("kqueue failure: %m\n");
-	}
+	if (rc < 0) {
+	  if (errno == EINTR) {
+	    warn ("kqueue interruption: %m\n");
+	  } else {
+	    panic ("kqueue failure: %m\n");
+	  }
+	} 
       } while (rc < 0);
       _change_indx = 0;
     }
