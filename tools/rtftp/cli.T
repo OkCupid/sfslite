@@ -15,8 +15,8 @@
 
 class cli_t {
 public:
-  cli_t (const str &f, const str &h, int p) 
-    : _verbose (false), _file (f), _host (h), _port (p) {}
+  cli_t (const str &d, const str &f, const str &h, int p) 
+    : _verbose (false), _dir (d), _file (f), _host (h), _port (p) {}
 
   virtual ~cli_t () {}
   void set_verbose (bool b) { _verbose = b; }
@@ -27,6 +27,7 @@ protected:
   void connect (evb_t ev, CLOSURE);
 
   bool _verbose;
+  str _dir;
   str _file;
   str _host;
   int _port;
@@ -40,7 +41,8 @@ protected:
 
 class put_cli_t : public cli_t {
 public:
-  put_cli_t (const str &f, const str &h, int p) : cli_t (f, h, p) {}
+  put_cli_t (const str &d, const str &f, const str &h, int p) 
+    : cli_t (d, f, h, p) {}
   void perform (evi_t ev) { perform_T (ev); }
 private:
   void perform_T (evi_t ev, CLOSURE);
@@ -50,13 +52,12 @@ private:
 
 class get_cli_t : public cli_t {
 public:
-  get_cli_t (const str &f, const str &h, int p, const str &d) 
-    : cli_t (f, h, p), _dir (d) {}
+  get_cli_t (const str &d, const str &f, const str &h, int p)
+    : cli_t (d, f, h, p) {}
   void perform (evi_t ev) { perform_T (ev); }
 private:
   int write_file (const str &s);
   void perform_T (evi_t ev, CLOSURE);
-  str _dir;
 };
 
 //-----------------------------------------------------------------------
@@ -64,8 +65,7 @@ private:
 static void
 usage ()
 {
-  warnx << "usage: " << progname << " [-v] put <file> <host>\n"
-	<< "            get <file> <host> <dir>\n";
+  warnx << "usage: " << progname << " [-v] <put|get> <dir> <file> <host>\n";
 }
 
 //-----------------------------------------------------------------------
@@ -99,7 +99,7 @@ config (cli_t **clip, int argc, char *argv[])
   cli_t *cli = NULL;
   int ch;
   
-  while ((ch = getopt (argc, argv, "vh"))) {
+  while ((ch = getopt (argc, argv, "vh")) != -1) {
     switch (ch) {
     case 'v':
       verbose = true;
@@ -119,29 +119,22 @@ config (cli_t **clip, int argc, char *argv[])
 
   if (rc > 0) {
     bool err = false;
-    if (argc < 3 || argc > 4) {
+    if (argc != 4) {
       err = true;
-    } else if (!parse_host (argv[2], &host, &port)) {
-      warn << "bad hostname/port: " << argv[2];
+    } else if (!parse_host (argv[3], &host, &port)) {
+      warn << "bad hostname/port: " << argv[3];
       err = true;
-    } else if (strcmp (argv[0], "put") == 0) {
-      if (argc != 3) {
-	err = true;
-      } else {
-	file = argv[1];
-      }
-      cli = New put_cli_t (file, host, port);
-    } else if (strcmp (argv[0], "get") == 0) {
-      if (argc != 4) {
-	err = true;
-      } else {
-	file = argv[1];
-	dir = argv[3];
-      }
-      cli = New get_cli_t (file, host, port, dir);
     } else {
-      warn << "need either put/get operation mode\n";
-      err = true;
+      dir = argv[1];
+      file = argv[2];
+      if (strcmp (argv[0], "put") == 0) {
+	cli = New put_cli_t (dir, file, host, port);
+      } else if (strcmp (argv[0], "get") == 0) {
+	cli = New get_cli_t (dir, file, host, port);
+      } else {
+	warn << "need either put/get operation mode\n";
+	err = true;
+      }
     }
    
     if (err) {
@@ -190,9 +183,16 @@ put_cli_t::perform_T (evi_t ev)
     rtftp_status_t status;
     clnt_stat err;
     int rc (0);
+    str file_full;
+  }
+  
+  {
+    strbuf b;
+    b << _dir << "/" << _file;
+    file_full = b;
   }
 
-  if (!(dat = file2str (_file))) {
+  if (!(dat = file2str (file_full))) {
     warn ("cannot open file %s: %m\n", _file.cstr ());
   } else {
     file.name = _file;
