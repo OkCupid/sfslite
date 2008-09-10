@@ -78,7 +78,9 @@ cli_t::do_get (const rtftp_id_t &arg, rtftp_get_res_t *res)
 {
   str d = file2str (arg);
   res->set_status (RTFTP_OK);
-  if (!str2xdr (*res->file, d)) {
+  if (!d) {
+    res->set_status (RTFTP_NOENT);
+  } else if (!str2xdr (*res->file, d)) {
     warn << "cannot un-XDR file: " << arg << "\n";
     res->set_status (RTFTP_CORRUPT);
   } else if (!check_file (*res->file)) {

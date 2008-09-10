@@ -210,7 +210,7 @@ put_cli_t::perform_T (evi_t ev)
       }
       rc = 1;
     } else if (status != RTFTP_OK) {
-      warn << "cannot do PUT transfer: " << int (status);
+      warn << "cannot do PUT transfer: " << int (status) << "\n";;
       rc = -1;
     } else {
       rc = 0;
@@ -273,6 +273,7 @@ get_cli_t::perform_T (evi_t ev)
     } else {
       mstr dat (res.file->data.size ());
       memcpy (dat.cstr (), res.file->data.base (), res.file->data.size ());
+      dat.setlen (res.file->data.size ());
       rc = write_file (dat);
     }
   }
