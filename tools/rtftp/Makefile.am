@@ -26,6 +26,10 @@ rtftp_prot.lo: rtftp_prot.h rtftp_prot.C
 rtftp_prot.o: rtftp_prot.h rtftp_prot.C
 cli.lo: rtftp_prot.h cli.C
 cli.o: rtftp_prot.h cli.C
+srv.o: rtftp_prot.h cli.C
+srv.lo: rtftp_prot.h 
+util.o: rtftp_prot.h
+util.lo: rtftp_prot.h
 
 rtftp_prot.h: $(srcdir)/rtftp_prot.x
 	@rm -f $@
