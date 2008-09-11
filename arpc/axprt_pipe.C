@@ -245,8 +245,9 @@ axprt_pipe::ungetpkt (const void *pkt, size_t len)
   assert (len <= pktsize);
   assert (!pktlen);
 
-  if (!pktbuf)
+  if (!pktbuf) {
     pktbuf = (char *) xmalloc (bufsize);
+  }
 
   pktlen = len + 4;
   putint (pktbuf, 0x80000000|len);
@@ -313,8 +314,9 @@ axprt_pipe::input ()
 
   ref<axprt> hold (mkref (this)); // Don't let this be freed under us
 
-  if (!pktbuf)
+  if (!pktbuf) {
     pktbuf = (char *) xmalloc (bufsize);
+  }
 
   ssize_t n = doread (pktbuf + pktlen, bufsize - pktlen);
   if (n <= 0) {

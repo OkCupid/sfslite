@@ -1,5 +1,6 @@
 
 #include "rtftp.h"
+#include "rtftp_prot.h"
 #include "sha1.h"
 #include "serial.h"
 

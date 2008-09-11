@@ -33,11 +33,12 @@ private:
 
 class cli_t {
 public:
-  cli_t (int f, const char *a)
+  cli_t (int f, const char *a, bool v)
     : _fd (f), 
       _x (axprt_stream::alloc (f, MAX_PACKET_SIZE)),
       _srv (asrv::alloc (_x, rtftp_program_1, wrap (this, &cli_t::dispatch))),
-      _addr (a) {}
+      _addr (a),
+      _verbose (v) {}
   void dispatch (svccb *sbp);
 private:
   rtftp_status_t do_put (const rtftp_file_t *arg);
@@ -46,6 +47,7 @@ private:
   ptr<axprt> _x;
   ptr<asrv> _srv;
   const str _addr;
+  bool _verbose;
 };
 
 //-----------------------------------------------------------------------
@@ -53,7 +55,7 @@ private:
 static void
 usage ()
 {
-  warnx << "usage: " << progname << " [-p <port>] <dir>\n";
+  warnx << "usage: " << progname << " [-dv] [-p <port>] <dir>\n";
 }
 
 //-----------------------------------------------------------------------
@@ -67,6 +69,11 @@ cli_t::do_put (const rtftp_file_t *arg)
   } else {
     str s = xdr2str (*arg);
     st = (write_file (arg->name, s) == 0) ? RTFTP_OK :  RTFTP_EFS;
+  }
+  if (_verbose) {
+    warn << "PUT: " << arg->name << " -> ";
+    rpc_print (warnx, st, 0, NULL, NULL);
+    warnx << "\n";
   }
   return st;
 }
@@ -87,6 +94,11 @@ cli_t::do_get (const rtftp_id_t &arg, rtftp_get_res_t *res)
     warn << "checksum failed on read file: " << arg << "\n";
     res->set_status (RTFTP_CORRUPT);
   }
+  if (_verbose) {
+    warn << "GET: " << arg << " -> ";
+    rpc_print (warnx, res->status, 0, NULL, NULL);
+    warnx << "\n";
+  }
 }
 
 //-----------------------------------------------------------------------
@@ -95,6 +107,8 @@ void
 cli_t::dispatch (svccb *sbp)
 {
   if (!sbp) {
+    _srv = NULL;
+    _x = NULL;
     delete this;
     return;
   }
@@ -145,7 +159,7 @@ srv_t::newcli ()
   if (fd < 0) {
     warn ("accept error: %m\n");
   } else {
-    vNew cli_t (fd, inet_ntoa (sin.sin_addr));
+    vNew cli_t (fd, inet_ntoa (sin.sin_addr), _verbose);
   }
 }
 
@@ -167,6 +181,8 @@ srv_t::init ()
   bool rc = true;
 
   sigcb (SIGTERM, wrap (this, &srv_t::shutdown, SIGTERM));
+  sigcb (SIGQUIT, wrap (this, &srv_t::shutdown, SIGQUIT));
+  sigcb (SIGINT , wrap (this, &srv_t::shutdown, SIGINT));
 
   if (chdir (_dir.cstr ()) != 0) {
     warn ("cannot change to data directory %s: %m\n", _dir.cstr ());
