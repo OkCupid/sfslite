@@ -67,7 +67,21 @@ private:
 static void
 usage ()
 {
-  warnx << "usage: " << progname << " [-dv] [-p <port>] <dir>\n";
+  warnx << "usage: " << progname 
+	<< " [-r] [-u<usr>] [-g<grp>] [-dv] [-p<prt>] [-l<log>] <dir>\n"
+	<< "\n"
+	<< "Options:\n"
+	<< "   -d       debug mode (no backgrounding)\n"
+	<< "   -g<grp>  run-as group\n"
+	<< "   -l<log>  log priority (e.g. daemon.notice)\n"
+	<< "   -p<prt>  port to bind to\n"
+	<< "   -r       chrooted operation\n"
+	<< "   -u<usr>  run-as user\n"
+	<< "   -v       verbose mode (display hits/misses)\n"
+	<< "\n"
+	<< "Arguments:\n"
+	<< "   <dir>    the cache directory\n"
+    ;
 }
 
 //-----------------------------------------------------------------------
@@ -266,7 +280,9 @@ srv_t::init_perms ()
     warn ("Cannot set group id to %s/%d: %m\n", _group.cstr (), _gid);
   } else if (setuid (_uid) != 0) {
     warn ("Cannot set user id to %s/%d: %m\n", _user.cstr (), _uid);
-  } else { 
+  } else if (chdir ("/") != 0) {
+    warn ("Cannot chdir to top directory after chroot: %m\n");
+  } else {
     rc = true;
   }
   return rc;
@@ -317,6 +333,10 @@ void
 srv_t::run ()
 {
   warn << "starting up (pid=" << getpid () << ")\n";
+  if (_verbose) {
+    warn ("running in dir=%s as user=%s and group=%s\n",
+	  _dir.cstr (), _user.cstr (), _group.cstr ());
+  }
   listen (_sfd, 200);
   fdcb (_sfd, selread, wrap (this, &srv_t::newcli));
 }
@@ -329,8 +349,11 @@ srv_t::config (int argc, char *argv[])
   int ch;
   int rc = 1;
 
-  while ((ch = getopt (argc, argv, "vdru:g:")) != -1) {
+  while ((ch = getopt (argc, argv, "vdru:g:l:")) != -1) {
     switch (ch) {
+    case 'l':
+      syslog_priority = optarg;
+      break;
     case 'r':
       _chroot = true;
       break;

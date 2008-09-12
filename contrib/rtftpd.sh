@@ -14,7 +14,7 @@
 #
 
 rtftpd_enable=${rtftpd_enable-"NO"}
-rtftpd_flags=${rtftpd_flags-"-rv -u rtftp -g okc /disk/rtftp/ccache"}
+rtftpd_flags=${rtftpd_flags-"-rv -u rtftp -g okc -l local4.info /disk/rtftp/ccache"}
 
 . /etc/rc.subr
 

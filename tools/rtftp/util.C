@@ -74,7 +74,7 @@ int write_file (const str &nm, const str &dat)
   char *s = strdup (nm.cstr ());
   int rc = 0;
 
-  for (char *p = s; p && *p; ) {
+  for (char *p = s; rc == 0 && p && *p; ) {
     p = strchr (p, '/');
     if (p && *p) {
       rc = mymkdir (s, p);
@@ -82,7 +82,9 @@ int write_file (const str &nm, const str &dat)
     }
   }
 
-  if (!s || !*s) {
+  if (rc != 0) {
+    warn ("cannot create file %s due to mkdir failures\n", s);
+  } else if (!s || !*s) {
     warn ("no file to write!\n");
     rc = -1;
   } else if (rc == 0 && !str2file (s, dat, 0666, false)) {
