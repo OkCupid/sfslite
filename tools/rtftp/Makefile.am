@@ -35,7 +35,7 @@ rtftp_prot.C: $(srcdir)/rtftp_prot.x
 	$(RPCC) -c $< || (rm -f $@ && false)
 
 
-CLEANFILES = core *.core *~ *_config *_log $(TAMEOUNT)
+CLEANFILES = core *.core *~ *_config *_log $(TAMEOUT)
 EXTRA_DIST = $(TAMEIN) rtftp_prot.x
 MAINTAINERCLEANFILES = Makefile.in
 

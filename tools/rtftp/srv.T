@@ -10,23 +10,35 @@
 #include "crypt.h"
 #include "rxx.h"
 #include "rtftp.h"
+#include <grp.h>
 
 //-----------------------------------------------------------------------
 
 class srv_t {
 public:
   srv_t () 
-    : _verbose (false), _debug (false), _port (RTFTP_TCP_PORT), _sfd (-1) {}
+    : _verbose (false), _debug (false), _port (RTFTP_TCP_PORT), _sfd (-1),
+      _chroot (false) {}
   int config (int argc, char *argv[]);
   void newcli ();
   bool init ();
   void run ();
 private:
   void shutdown (int sig);
+  bool init_chroot ();
+  bool init_port ();
+  bool init_signals ();
+  bool init_daemon ();
+  bool init_perms ();
+
   bool _verbose, _debug;
   str _dir;
   int _port;
   int _sfd;
+
+  bool _chroot;
+  str _user, _group;
+  int _uid, _gid;
 };
 
 //-----------------------------------------------------------------------
@@ -176,28 +188,127 @@ srv_t::shutdown (int sig)
 //-----------------------------------------------------------------------
 
 bool
-srv_t::init ()
+srv_t::init_signals ()
 {
-  bool rc = true;
-
   sigcb (SIGTERM, wrap (this, &srv_t::shutdown, SIGTERM));
   sigcb (SIGQUIT, wrap (this, &srv_t::shutdown, SIGQUIT));
   sigcb (SIGINT , wrap (this, &srv_t::shutdown, SIGINT));
+  return true;
+}
 
-  if (chdir (_dir.cstr ()) != 0) {
-    warn ("cannot change to data directory %s: %m\n", _dir.cstr ());
+//-----------------------------------------------------------------------
+
+bool
+srv_t::init ()
+{
+  return 
+    init_signals () && 
+    init_port () && 
+    init_chroot () &&
+    init_daemon () &&
+    init_perms ();
+}
+
+//-----------------------------------------------------------------------
+
+static int
+gname2gid (const str &g)
+{
+  struct group *gr;
+  int ret = -1;
+  if ((gr = getgrnam (g))) {
+    ret = gr->gr_gid;
+  }
+  endgrent ();
+  return ret;
+}
+
+//-----------------------------------------------------------------------
+
+static int
+uname2uid (const str &n)
+{
+  struct passwd *pw;
+  int ret = -1;
+  if ((pw = getpwnam (n))) {
+    ret = pw->pw_uid;
+  }
+  endpwent ();
+  return ret;
+}
+
+//-----------------------------------------------------------------------
+
+bool
+srv_t::init_port ()
+{
+  bool rc = true;
+  u_int32_t addr = INADDR_ANY;
+  u_int16_t port = _port;
+  int type = SOCK_STREAM;
+  _sfd = inetsocket (type, port, addr);
+  if (_sfd < 0) {
+    warn ("cannot bind to port %d: %m\n", _port);
     rc = false;
-  } else {
-    u_int32_t addr = INADDR_ANY;
-    u_int16_t port = _port;
-    int type = SOCK_STREAM;
-    _sfd = inetsocket (type, port, addr);
-    if (_sfd < 0) {
-      warn ("cannot bind to port %d: %m\n", _port);
-      rc = false;
-    }
   }
   return rc;
+}
+
+//-----------------------------------------------------------------------
+
+bool
+srv_t::init_perms ()
+{
+  bool rc = false;
+  if (chroot (_dir.cstr ()) != 0) {
+    warn ("Cannot chroot to directory %s: %m\n", _dir.cstr ());
+  } else if (setgid (_gid) != 0) {
+    warn ("Cannot set group id to %s/%d: %m\n", _group.cstr (), _gid);
+  } else if (setuid (_uid) != 0) {
+    warn ("Cannot set user id to %s/%d: %m\n", _user.cstr (), _uid);
+  } else { 
+    rc = true;
+  }
+  return rc;
+}
+
+//-----------------------------------------------------------------------
+
+bool
+srv_t::init_chroot ()
+{
+  bool rc = false;
+  if (access (_dir.cstr (), X_OK|R_OK) != 0) {
+    warn ("Cannot access directory %s: %m\n", _dir.cstr ());
+  } else if (getuid () == 0) {
+    if (_chroot) {
+      if ((_uid  = uname2uid (_user)) < 0) {
+	warn ("Cannot find user %s\n", _user.cstr ());
+      } else if ((_gid = gname2gid (_group)) < 0) {
+	warn ("Cannot find group %s\n", _group.cstr ());
+      } else {
+	rc = true;
+      }
+    } else {
+      warn ("Cannot run as root without chroot!\n");
+    }
+  } else if (chdir (_dir.cstr ()) != 0) {
+    warn ("cannot change to data directory %s: %m\n", _dir.cstr ());
+  } else {
+    rc = true;
+  }
+  return rc;
+}
+
+//-----------------------------------------------------------------------
+
+bool
+srv_t::init_daemon ()
+{
+  if (!_debug) {
+    daemonize ("rtftpd");
+  }
+  return true;
 }
 
 //-----------------------------------------------------------------------
@@ -205,11 +316,7 @@ srv_t::init ()
 void
 srv_t::run ()
 {
-  if (!_debug) {
-    daemonize ("rtftpd");
-  }
   warn << "starting up (pid=" << getpid () << ")\n";
-
   listen (_sfd, 200);
   fdcb (_sfd, selread, wrap (this, &srv_t::newcli));
 }
@@ -222,8 +329,17 @@ srv_t::config (int argc, char *argv[])
   int ch;
   int rc = 1;
 
-  while ((ch = getopt (argc, argv, "vd")) != -1) {
+  while ((ch = getopt (argc, argv, "vdru:g:")) != -1) {
     switch (ch) {
+    case 'r':
+      _chroot = true;
+      break;
+    case 'u':
+      _user = optarg;
+      break;
+    case 'g':
+      _group = optarg;
+      break;
     case 'd':
       _debug = true;
       break;
@@ -246,6 +362,12 @@ srv_t::config (int argc, char *argv[])
       break;
     }
   }
+
+  if (_chroot && (!_user || !_group)) {
+    warn << "With -r, need to supply -u<user> and -g<group>\n";
+    rc = -1;
+  }
+
   if (rc > 0) {
     argc -= optind;
     argv += optind;
@@ -277,6 +399,7 @@ main (int argc, char *argv[])
   }
 
   srv.run ();
+
   amain ();
   return 0;
 }
