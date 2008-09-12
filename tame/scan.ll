@@ -64,7 +64,7 @@ XNUM 	[+-]?0x[0-9a-fA-F]
 %x EXPR_LIST_BR EXPR_LIST_BR_BASE
 %x DEFRET_ENTER DEFRET_BASE DEFRET
 %x TEMPLATE_ENTER TEMPLATE TEMPLATE_BASE
-%x SIG_PARSE QUOTE
+%x SIG_PARSE QUOTE SQUOTE
 
 %%
 
@@ -273,12 +273,14 @@ __LOC__         { return loc_return (); }
 
 <TWAIT_BODY_BASE,TWAIT_BODY>{
 \n			{ ++lineno; return std_ret (T_PASSTHROUGH); }
-[^ "gr\t{}\n/]+|[ \tgr/]  { return std_ret (T_PASSTHROUGH); }
+[^ "'gr\t{}\n/]+|[ \tgr/]  { return std_ret (T_PASSTHROUGH); }
 [{]			{ yy_push_state (TWAIT_BODY); 
 			  return std_ret (T_PASSTHROUGH); }
 goto/[ \t\n]		{ return yyerror ("cannot goto within twait{..}"); }
 return/[ \t\n(;]	{ return yyerror ("cannot return withint twait{..}"); }
 \"		        { yy_push_state (QUOTE); 
+                          return std_ret (T_PASSTHROUGH); }
+\'		        { yy_push_state (SQUOTE); 
                           return std_ret (T_PASSTHROUGH); }
 }
 
@@ -293,7 +295,7 @@ return/[ \t\n(;]	{ return yyerror ("cannot return withint twait{..}"); }
 <TAME,TAME_BASE>{
 \n		{ yylval.str = yytext; ++lineno; return T_PASSTHROUGH; }
 
-[^ \t{}"\n/trD_]+|[ \t/trD_] { yylval.str = yytext; return T_PASSTHROUGH; }
+[^ \t{}"'\n/trD_]+|[ \t/trD_] { yylval.str = yytext; return T_PASSTHROUGH; }
 
 [{]		{ yylval.str = yytext; yy_push_state (TAME); 
 		  return T_PASSTHROUGH; }
@@ -303,7 +305,8 @@ DEFAULT_RETURN	    { return tame_ret (DEFRET_ENTER, T_DEFAULT_RETURN); }
 
 return/[ \t\n(/;]   { yy_push_state (RETURN_PARAMS); return T_RETURN; }
 
-\"		    { yy_push_state (QUOTE); return std_ret (T_PASSTHROUGH); }
+\"		    { yy_push_state (QUOTE);  return std_ret (T_PASSTHROUGH); }
+\'		    { yy_push_state (SQUOTE); return std_ret (T_PASSTHROUGH); }
 }
 
 <TAME,TAME_BASE,INITIAL>{
@@ -314,6 +317,12 @@ twait/[ \t\n({/]           { return tame_ret (TWAIT_ENTER, T_TWAIT); }
 [^\\"]+|\\\"	    { return std_ret (T_PASSTHROUGH); }
 \\		    { return std_ret (T_PASSTHROUGH); }
 \"		    { yy_pop_state (); return std_ret (T_PASSTHROUGH); }
+}
+
+<SQUOTE>{
+[^\\']+|\\\'	    { return std_ret (T_PASSTHROUGH); }
+\\                  { return std_ret (T_PASSTHROUGH); }
+\'		    { yy_pop_state (); return std_ret (T_PASSTHROUGH); }
 }
 
 <TAME>{
@@ -335,9 +344,10 @@ twait/[ \t\n({/]           { return tame_ret (TWAIT_ENTER, T_TWAIT); }
 
 <INITIAL>{
 tamed/[ \t\n/]   { return tame_ret (SIG_PARSE, T_TAMED); }
-[^t\n"/]+|[t/]   { yylval.str = yytext; return T_PASSTHROUGH ; }
+[^t\n"'/]+|[t/]   { yylval.str = yytext; return T_PASSTHROUGH ; }
 \n		 { ++lineno; yylval.str = yytext; return T_PASSTHROUGH; }
 \"		 { yy_push_state (QUOTE); return std_ret (T_PASSTHROUGH); }
+\'		 { yy_push_state (SQUOTE); return std_ret (T_PASSTHROUGH); }
 }
 
 <CXX_COMMENT>{
