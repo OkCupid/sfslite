@@ -1,8 +1,8 @@
 
 sfsbin_PROGRAMS = rtftpc rtftpd
 
-rtftpc_SOURCES = cli.C rtftp_prot.C util.C
-rtftpd_SOURCES = srv.C rtftp_prot.C util.C
+rtftpc_SOURCES = rtftp_prot.C cli.C util.C
+rtftpd_SOURCES = rtftp_prot.C srv.C util.C
 
 if USE_SFSMISC
 LIBSVC_ME = $(LIBSVC)
@@ -22,14 +22,9 @@ SUFFIXES = .x .T
 .T.C:
 	$(TAME) -o $@ $< || (rm -f $@ && false)
 
+rtftp_prot.C: rtftp_prot.h
 rtftp_prot.lo: rtftp_prot.h rtftp_prot.C
 rtftp_prot.o: rtftp_prot.h rtftp_prot.C
-cli.lo: rtftp_prot.h cli.C
-cli.o: rtftp_prot.h cli.C
-srv.o: rtftp_prot.h cli.C
-srv.lo: rtftp_prot.h 
-util.o: rtftp_prot.h
-util.lo: rtftp_prot.h
 
 rtftp_prot.h: $(srcdir)/rtftp_prot.x
 	@rm -f $@
