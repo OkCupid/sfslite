@@ -13,6 +13,8 @@
 
 //-----------------------------------------------------------------------
 
+enum { RC_OK = 0, RC_ERPC = -2, RC_ERR = -1, RC_EXISTS = 1 };
+
 class cli_t {
 public:
   cli_t (const str &d, const str &f, const str &h, int p) 
@@ -50,9 +52,40 @@ private:
 
 //-----------------------------------------------------------------------
 
+class put2_cli_t : public cli_t {
+public:
+  put2_cli_t (const str &d, const str &f, const str &h, int p) 
+    : cli_t (d, f, h, p) , _sz (0) {}
+  void perform (evi_t ev) { perform_T (ev); }
+private:
+  void perform_T (evi_t ev, CLOSURE);
+  void register_file (evi_t ev, CLOSURE);
+  void transfer_file (evi_t ev, CLOSURE);
+  void send_footer (evi_t ev, CLOSURE);
+
+  int _fd;
+  rtftp_xfer_id_t _id;
+  sha1ctx _ctx;
+  size_t _sz;
+};
+
+//-----------------------------------------------------------------------
+
 class get_cli_t : public cli_t {
 public:
   get_cli_t (const str &d, const str &f, const str &h, int p)
+    : cli_t (d, f, h, p) {}
+  void perform (evi_t ev) { perform_T (ev); }
+private:
+  int write_file (const str &s);
+  void perform_T (evi_t ev, CLOSURE);
+};
+
+//-----------------------------------------------------------------------
+
+class get2_cli_t : public cli_t {
+public:
+  get2_cli_t (const str &d, const str &f, const str &h, int p)
     : cli_t (d, f, h, p) {}
   void perform (evi_t ev) { perform_T (ev); }
 private:
@@ -98,9 +131,13 @@ config (cli_t **clip, int argc, char *argv[])
   str dir;
   cli_t *cli = NULL;
   int ch;
+  int version = 1;
   
-  while ((ch = getopt (argc, argv, "vh")) != -1) {
+  while ((ch = getopt (argc, argv, "vh2")) != -1) {
     switch (ch) {
+    case '2':
+      version = 2;
+      break;
     case 'v':
       verbose = true;
       break;
@@ -128,9 +165,17 @@ config (cli_t **clip, int argc, char *argv[])
       dir = argv[1];
       file = argv[2];
       if (strcmp (argv[0], "put") == 0) {
-	cli = New put_cli_t (dir, file, host, port);
+	if (version == 1) {
+	  cli = New put_cli_t (dir, file, host, port);
+	} else {
+	  cli = New put2_cli_t (dir, file, host, port);
+	}
       } else if (strcmp (argv[0], "get") == 0) {
-	cli = New get_cli_t (dir, file, host, port);
+	if (version == 1) {
+	  cli = New get_cli_t (dir, file, host, port);
+	} else {
+	  cli = New get2_cli_t (dir, file, host, port);
+	}
       } else {
 	warn << "need either put/get operation mode\n";
 	err = true;
@@ -170,6 +215,101 @@ cli_t::connect (evb_t ev)
 
 //-----------------------------------------------------------------------
 
+tamed void
+put2_cli_t::register_file (evi_t ev)
+{
+  tvars {
+    rtftp_arg2_t arg (RTFTP_BEGIN);
+    rtftp_put2_res_t res;
+    clnt_stat err;
+    int rc;
+  }
+
+  *arg.name = _file;
+  twait { RPC::rtftp_program_1::rtftp_put2 (_cli, arg, &res, mkevent (err)); }
+  if (err) { 
+    warn << "RPC error: " << err << "\n";
+    rc = RC_ERPC;
+  } else if (res.status == RTFTP_EEXISTS) {
+    warn << "File exists: " << _file << "\n";
+    rc = RC_EXISTS;
+  } else if (res.status != RTFTP_BEGIN) {
+    warn << "Put failure on file " << _file << ": " << int (res.status) << "\n";
+    rc = RC_ERR;
+  } else {
+    _id = *res.xfer_id;
+    rc = RC_OK;
+  }
+  ev->trigger (rc);
+}
+
+//-----------------------------------------------------------------------
+
+tamed void
+get2_cli_t::perform_T (evi_t ev)
+{
+  ev->trigger (RC_ERR);
+}
+
+//-----------------------------------------------------------------------
+
+tamed void
+put2_cli_t::transfer_file (evi_t ev)
+{
+  ev->trigger (RC_ERR);
+}
+
+//-----------------------------------------------------------------------
+
+tamed void
+put2_cli_t::send_footer (evi_t ev)
+{
+  ev->trigger (RC_ERR);
+}
+
+//-----------------------------------------------------------------------
+
+tamed void
+put2_cli_t::perform_T (evi_t ev)
+{
+  tvars {
+    str file_full;
+    int rc;
+  }
+
+  {
+    strbuf b;
+    b << _dir << "/" << _file;
+    file_full = b;
+  }
+
+  if ((_fd = open (file_full.cstr(), O_RDONLY)) < 0) {
+    warn ("cannot open file %s: %m\n", file_full.cstr ());
+    rc = -1;
+  } else {
+    twait { register_file (mkevent (rc)); }
+    if (rc < 0) {
+      warn ("failed to register file %s\n", _file.cstr ());
+    } else {
+      twait { transfer_file (mkevent (rc)); }
+      if (rc < 0) {
+	warn ("file transfer failed on file %s\n", _file.cstr ()); 
+      } else {
+	twait { send_footer (mkevent (rc)); }
+	if (rc < 0) {
+	  warn ("failed to send footer on file %s\n", _file.cstr ()); 
+	}
+      }
+    }
+  }
+  if (_fd >= 0) 
+    close (_fd);
+
+  ev->trigger (rc);
+}
+
+//-----------------------------------------------------------------------
+
 // trigger: -2 on RPC failure
 //          -1 on internal failure
 //           0 on success
@@ -193,7 +333,8 @@ put_cli_t::perform_T (evi_t ev)
   }
 
   if (!(dat = file2str (file_full))) {
-    warn ("cannot open file %s: %m\n", _file.cstr ());
+    warn ("cannot open file %s: %m\n", file_full.cstr ());
+    rc = -1;
   } else {
     file.name = _file;
     file.data = dat;
@@ -319,3 +460,5 @@ main (int argc, char *argv[])
 
   return 0; // never get here
 }
+
+//-----------------------------------------------------------------------
