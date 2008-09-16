@@ -11,7 +11,7 @@ enum rtftp_status_t {
 };
 
 %#define RTFTP_HASHSZ 20
-%#define CHUNKSZ 0x2000
+%#define CHUNKSZ 0x8000
 
 typedef opaque rtftp_hash_t[RTFTP_HASHSZ];
 
@@ -56,11 +56,22 @@ default:
      void;
 };
 
-union rtftp_arg2_t switch (rtftp_status_t status) {
+union rtftp_put2_arg_t switch (rtftp_status_t status) {
 case RTFTP_BEGIN:
      rtftp_id_t name;
 case RTFTP_OK:
      rtftp_chunk_t data;
+case RTFTP_EOF:
+     rtftp_footer_t footer;
+default:
+     void;
+};
+
+union rtftp_get2_arg_t switch (rtftp_status_t status) {
+case RTFTP_BEGIN:
+     rtftp_id_t name;
+case RTFTP_OK:
+     rtftp_chunkid_t chunk;
 case RTFTP_EOF:
      rtftp_footer_t footer;
 default:
@@ -97,10 +108,10 @@ program RTFTP_PROGRAM {
 	RTFTP_GET(rtftp_id_t) = 3;
 
 	rtftp_put2_res_t
-	RTFTP_PUT2(rtftp_arg2_t) = 4;
+	RTFTP_PUT2(rtftp_put2_arg_t) = 4;
 
 	rtftp_get2_res_t
-	RTFTP_GET2(rtftp_arg2_t) = 5;
+	RTFTP_GET2(rtftp_get2_arg_t) = 5;
 
 	} = 1;
 } = 5401;	  

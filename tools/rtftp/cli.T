@@ -15,6 +15,8 @@
 
 enum { RC_OK = 0, RC_ERPC = -2, RC_ERR = -1, RC_EXISTS = 1 };
 
+#define WINDOWSZ  30
+
 class cli_t {
 public:
   cli_t (const str &d, const str &f, const str &h, int p) 
@@ -23,6 +25,7 @@ public:
   virtual ~cli_t () {}
   void set_verbose (bool b) { _verbose = b; }
   void run (CLOSURE);
+  virtual bool init () { return true; }
 
 protected:
   virtual void perform (evi_t ev) = 0;
@@ -76,6 +79,7 @@ public:
   get_cli_t (const str &d, const str &f, const str &h, int p)
     : cli_t (d, f, h, p) {}
   void perform (evi_t ev) { perform_T (ev); }
+  bool init ();
 private:
   int write_file (const str &s);
   void perform_T (evi_t ev, CLOSURE);
@@ -86,11 +90,19 @@ private:
 class get2_cli_t : public cli_t {
 public:
   get2_cli_t (const str &d, const str &f, const str &h, int p)
-    : cli_t (d, f, h, p) {}
+    : cli_t (d, f, h, p) , _fd (-1), _sz (0) {}
   void perform (evi_t ev) { perform_T (ev); }
+  bool init ();
 private:
-  int write_file (const str &s);
   void perform_T (evi_t ev, CLOSURE);
+  int open_file (int mode);
+  void transfer_file (evi_t ev, CLOSURE);
+  void request_file (evi_t ev, CLOSURE);
+  
+  int _fd;
+  rtftp_xfer_id_t _id;
+  sha1ctx _ctx;
+  size_t _sz;
 };
 
 //-----------------------------------------------------------------------
@@ -219,7 +231,7 @@ tamed void
 put2_cli_t::register_file (evi_t ev)
 {
   tvars {
-    rtftp_arg2_t arg (RTFTP_BEGIN);
+    rtftp_put2_arg_t arg (RTFTP_BEGIN);
     rtftp_put2_res_t res;
     clnt_stat err;
     int rc;
@@ -245,10 +257,203 @@ put2_cli_t::register_file (evi_t ev)
 
 //-----------------------------------------------------------------------
 
+bool
+get2_cli_t::init ()
+{
+  bool rc;
+  if (chdir (_dir) != 0) {
+    warn ("cannot chdir to directory %s: %m\n", _dir.cstr ());
+    rc = false;
+  } else {
+    rc = true;
+  }
+  return rc;
+}
+//-----------------------------------------------------------------------
+
+bool
+get_cli_t::init ()
+{
+  bool rc;
+  if (chdir (_dir) != 0) {
+    warn ("cannot chdir to directory %s: %m\n", _dir.cstr ());
+    rc = false;
+  } else {
+    rc = true;
+  }
+  return rc;
+}
+
+//-----------------------------------------------------------------------
+
+int 
+get2_cli_t::open_file (int mode)
+{
+  return ::open_file (_file.cstr (), mode);
+}
+
+//-----------------------------------------------------------------------
+
+tamed void
+get2_cli_t::request_file (evi_t ev)
+{
+  tvars {
+    rtftp_get2_arg_t arg (RTFTP_BEGIN);
+    rtftp_get2_res_t res;
+    clnt_stat err;
+    int rc (0);
+  }
+  *arg.name = _file;
+  twait { RPC::rtftp_program_1::rtftp_get2 (_cli, arg, &res, mkevent (err)); }
+  if (err) {
+    warn << "RPC error in file request for " << _file << ": " << err << "\n";
+    rc = RC_ERPC;
+  } else if (res.status == RTFTP_NOENT) {
+    rc = RC_EXISTS;
+  } else if (res.status != RTFTP_OK) {
+    warn << "Server error in GET for file " << _file << ": " 
+	 << int (res.status) << "\n";
+    rc = RC_ERR;
+  } else {
+    _id = *res.xfer_id;
+  }
+  ev->trigger (rc);
+}
+
+//-----------------------------------------------------------------------
+
+tamed void
+get2_cli_t::transfer_file (evi_t ev)
+{
+  tvars {
+    vec<int> ids;
+    vec<rtftp_get2_arg_t> args;
+    vec<rtftp_get2_res_t> ress;
+    size_t wsz (WINDOWSZ);
+    size_t fsz (0);
+    u_int32_t cr (0), cs (0); // chunk receive, chunk sent
+    rendezvous_t<int> rv (__FILE__, __LINE__);
+    vec<clnt_stat> stats;
+    bool eof (false);
+    int rc (0);
+    int id, eof_id;
+  }
+
+  ids.setsize (wsz);
+  args.setsize (wsz);
+  stats.setsize (wsz);
+  ress.setsize (wsz);
+  for (size_t i = 0; i < wsz; i++) { ids[i] = wsz - (i + 1); }
+
+  while ((!eof || ids.size ()) && rc >= 0) {
+    assert (cr <= cs);
+    if (ids.size ()) {
+      id = ids.pop_back ();
+
+      clnt_stat &stat = stats[id];
+      rtftp_get2_arg_t &arg = args[id];
+      rtftp_get2_res_t &res = ress[id];
+
+      arg.set_status (RTFTP_OK);
+      arg.chunk->xfer_id = _id;
+      arg.chunk->seqno = cs++;
+
+      RPC::rtftp_program_1::rtftp_get2 (_cli, arg, &res,
+					mkevent (rv, id, stat));
+    } else {
+      twait (rv, id);
+      {
+	const clnt_stat &stat = stats[id];
+	const rtftp_get2_res_t &res = ress[id];
+
+	if (stat) {
+	  warn << "RPC failure in get2 for file " << _file 
+	       << ": " << stat << "\n";
+	  rc = RC_ERPC;
+	} else if (res.status == RTFTP_EOF) {
+	  eof = true;
+	  eof_id = id;
+	} else if (res.status != RTFTP_OK) {
+	  warn << "Sever failure for file " << _file << ": " 
+	       << int (res.status) << "\n";
+	  rc = RC_ERR;
+	} else if (res.chunk->id.xfer_id != _id) {
+	  warn << "Got data for wrong file; expected " 
+	       << _id << " but got " << res.chunk->id.xfer_id << "\n";
+	  rc = RC_ERR;
+	} else if (res.chunk->id.seqno != cr) {
+	  warn << "Chunks out of sequence; expected " 
+	       << rc << " but got " << res.chunk->id.seqno << "\n";
+	  rc = RC_ERR;
+	} else if ((rc = write (_fd, res.chunk->data.base (),
+				res.chunk->data.size ()))
+		   != int (res.chunk->data.size ())) {
+	  warn ("Short write on file %s: %m\n", _file.cstr ());
+	  rc = RC_ERR;
+	} else {
+	  _ctx.update (res.chunk->data.base (), res.chunk->data.size ());
+	  fsz += res.chunk->data.size ();
+	}
+	cr ++;
+	ids.push_back (id);
+      }
+    }
+  }
+
+  if (rc == 0) {
+    assert (cr == cs);
+    assert (eof);
+    assert (ids.size () == wsz);
+    char hsh[RTFTP_HASHSZ];
+    _ctx.final (hsh);
+    const rtftp_footer_t &footer = *args[eof_id].footer;
+
+    if (_id != footer.xfer_id) {
+      warn << "Transfer ID mismatch for file " << _file << "; "
+	   << "expected " << _id << ", but got " << footer.xfer_id << "\n";
+      rc = RC_ERR;
+    } else if (fsz != footer.size) {
+      warn << "File size mismatch for file " << _file << "; "
+	   << "expected " << fsz << ", but got " << footer.size << "\n";
+      rc = RC_ERR;
+    } else if (footer.n_chunks != cr) {
+      warn << "Round chunk count for file " << _file << "; "
+	   << "expected " << footer.n_chunks << " but got "
+	   << cr << "\n";
+    } else if (memcmp (hsh, footer.hash.base (), RTFTP_HASHSZ) != 0) {
+      warn ("Hash mismatch on file %s\n", _file.cstr ());
+      rc = RC_ERR;
+    }
+  }
+
+  ev->trigger (rc);
+}
+
+//-----------------------------------------------------------------------
+
 tamed void
 get2_cli_t::perform_T (evi_t ev)
 {
-  ev->trigger (RC_ERR);
+  tvars {
+    int rc;
+  }
+  twait { request_file (mkevent (rc)); }
+  if (rc < 0) {
+    warn ("failed to start transfer for file %s\n", _file.cstr ());
+  } else {
+    if ((_fd = open_file (O_WRONLY|O_CREAT)) < 0) {
+      warn ("cannot create/open file %s: %m\n", _file.cstr ());
+    } else {
+      twait { transfer_file (mkevent (rc)); }
+      if (rc < 0) {
+	warn ("failed to transfer file %s\n", _file.cstr ());
+      }
+    }
+  }
+  if (_fd) {
+    close (_fd);
+  }
+  ev->trigger (rc);
 }
 
 //-----------------------------------------------------------------------
@@ -258,10 +463,10 @@ put2_cli_t::transfer_file (evi_t ev)
 {
   tvars {
     vec<int> ids;
-    vec<rtftp_arg2_t> args;
+    vec<rtftp_put2_arg_t> args;
     vec<rtftp_put2_res_t> ress;
-    size_t csz (0x10000);
-    size_t wsz (30);
+    size_t csz (CHUNKSZ);
+    size_t wsz (WINDOWSZ);
     size_t fsz;
     u_int32_t cr (0), cs (0); // chunk receive, chunk sent
     rendezvous_t<int> rv (__FILE__, __LINE__);
@@ -282,7 +487,7 @@ put2_cli_t::transfer_file (evi_t ev)
     if (ids.size ()) {
       id = ids.pop_back ();
       clnt_stat &stat = stats[id];
-      rtftp_arg2_t &arg = args[id];
+      rtftp_put2_arg_t &arg = args[id];
       rtftp_put2_res_t &res = ress[id];
 
       arg.set_status (RTFTP_OK);
@@ -308,7 +513,7 @@ put2_cli_t::transfer_file (evi_t ev)
       twait (rv, id);
       {
 	const clnt_stat &stat = stats[id];
-	const rtftp_arg2_t &arg = args[id];
+	const rtftp_put2_arg_t &arg = args[id];
 	const rtftp_put2_res_t &res = ress[id];
 	if (stat) {
 	  warn << "RPC error in putting file " << _file << ": " << stat << "\n";
@@ -347,7 +552,7 @@ tamed void
 put2_cli_t::put_footer (size_t fsz, u_int32_t nchnk, evi_t ev)
 {
   tvars {
-    rtftp_arg2_t arg;
+    rtftp_put2_arg_t arg;
     clnt_stat stat;
     rtftp_put2_res_t res;
     int rc (0);
@@ -472,13 +677,7 @@ put_cli_t::perform_T (evi_t ev)
 int
 get_cli_t::write_file (const str &s)
 {
-  int rc = 0;
-  if (chdir (_dir) != 0) {
-    warn << "cannot chdir to " << _dir << "\n";
-    rc = -1;
-  } else {
-    rc = ::write_file (_file, s);
-  }
+  int rc = ::write_file (_file, s);
   return rc;
 }
  
@@ -554,6 +753,10 @@ main (int argc, char *argv[])
 
   if ((rc = config (&cli, argc, argv)) <= 0) {
     return rc;
+  }
+
+  if (!cli->init ()) {
+    return -1;
   }
 
   cli->run ();

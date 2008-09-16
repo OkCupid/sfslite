@@ -63,6 +63,28 @@ mymkdir (char *dir, char *end)
 
 //-----------------------------------------------------------------------
 
+static int
+make_and_chdir (char *s)
+{
+  int rc = 0;
+  for (char *p = s; rc == 0 && p && *p; ) {
+    p = strchr (p, '/');
+    if (p && *p) {
+      rc = mymkdir (s, p);
+      p++;
+    }
+  }
+  if (rc != 0) {
+    warn ("cannot create file %s due to mkdir failures\n", s);
+  } else if (!s || !*s) {
+    warn ("no file to write!\n");
+    rc = -1;
+  }
+  return rc;
+}
+
+//-----------------------------------------------------------------------
+
 //
 // write out the data 's' to the file given by _file.  Might need to make
 // some parent directories if the filename contains slashes.
@@ -74,20 +96,9 @@ int write_file (const str &nm, const str &dat)
   char *s = strdup (nm.cstr ());
   int rc = 0;
 
-  for (char *p = s; rc == 0 && p && *p; ) {
-    p = strchr (p, '/');
-    if (p && *p) {
-      rc = mymkdir (s, p);
-      p++;
-    }
-  }
+  rc = make_and_chdir (s);
 
-  if (rc != 0) {
-    warn ("cannot create file %s due to mkdir failures\n", s);
-  } else if (!s || !*s) {
-    warn ("no file to write!\n");
-    rc = -1;
-  } else if (rc == 0 && !str2file (s, dat, 0666, false)) {
+  if (rc == 0 && !str2file (s, dat, 0666, false)) {
     warn ("cannot create file %s in dir %s: %m\n", s, mywd ());
     rc = -1;
   } else {
@@ -97,3 +108,19 @@ int write_file (const str &nm, const str &dat)
   if (s) free (s);
   return rc;
 }
+
+//-----------------------------------------------------------------------
+
+int
+open_file (const str &nm, int mode)
+{
+  char *s = strdup (nm.cstr ());
+  int rc = 0;
+
+  rc = make_and_chdir (s);
+  if (rc == 0)
+    rc = ::open (nm.cstr (), mode);
+  return rc;
+}
+
+//-----------------------------------------------------------------------
