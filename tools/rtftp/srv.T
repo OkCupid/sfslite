@@ -43,6 +43,29 @@ private:
 
 //-----------------------------------------------------------------------
 
+class file_t {
+public:
+  file_t (const str &n) 
+    : _file (n), _fd (-1), _seqno (0), _sz (0), _id (0),
+      _eof (false) {}
+  ~file_t () { if (_fd >= 0) close (_fd); }
+  bool open ();
+  void set_id (rtftp_xfer_id_t i) { _id = i; }
+  void read_chunk (u_int32_t seq, rtftp_get2_res_t *res);
+  void handle_eof (rtftp_get2_res_t *res);
+  bool eof () const { return _eof; }
+private:
+  const str _file;
+  int _fd;
+  u_int32_t _seqno;
+  size_t _sz;
+  rtftp_xfer_id_t _id;
+  sha1ctx _ctx;
+  bool _eof;
+};
+
+//-----------------------------------------------------------------------
+
 class cli_t {
 public:
   cli_t (int f, const char *a, bool v)
@@ -50,16 +73,21 @@ public:
       _x (axprt_stream::alloc (f, MAX_PACKET_SIZE)),
       _srv (asrv::alloc (_x, rtftp_program_1, wrap (this, &cli_t::dispatch))),
       _addr (a),
-      _verbose (v) {}
+      _verbose (v),
+      _id (0) {}
   void dispatch (svccb *sbp);
 private:
   rtftp_status_t do_put (const rtftp_file_t *arg);
   void do_get (const rtftp_id_t &arg, rtftp_get_res_t *res);
+  void do_get2 (const rtftp_get2_arg_t &arg, rtftp_get2_res_t *res);
+  void do_put2 (const rtftp_put2_arg_t &arg, rtftp_put2_res_t *res);
   int _fd;
   ptr<axprt> _x;
   ptr<asrv> _srv;
   const str _addr;
   bool _verbose;
+  qhash<rtftp_xfer_id_t, ptr<file_t> > _tab;
+  rtftp_xfer_id_t _id;
 };
 
 //-----------------------------------------------------------------------
@@ -103,6 +131,107 @@ cli_t::do_put (const rtftp_file_t *arg)
   }
   return st;
 }
+
+//-----------------------------------------------------------------------
+
+bool
+file_t::open ()
+{
+  return ((_fd = ::open (_file.cstr (), O_RDONLY)) >= 0);
+}
+
+//-----------------------------------------------------------------------
+
+void
+file_t::handle_eof (rtftp_get2_res_t *res)
+{
+  res->set_status (RTFTP_EOF);
+  res->footer->xfer_id = _id;
+  res->footer->size = _sz;
+  res->footer->n_chunks = _seqno;
+  _ctx.final (res->footer->hash.base ());
+  _eof = true;
+}
+
+//-----------------------------------------------------------------------
+
+void
+file_t::read_chunk (u_int32_t se, rtftp_get2_res_t *res)
+{
+  if (se != _seqno) {
+    res->set_status (RTFTP_OUT_OF_SEQ);
+  } else {
+    res->set_status (RTFTP_OK);
+    int rc = read (_fd, res->chunk->data.base (), CHUNKSZ);
+    if (rc == 0) {
+      handle_eof (res);
+    } else if (rc < 0) {
+      warn ("read error on file %s: %m\n", _file.cstr ());
+      res->set_status (RTFTP_EFS);
+    } else {
+      res->chunk->id.xfer_id = _id;
+      res->chunk->id.seqno = _seqno ++;
+      _ctx.update (res->chunk->data.base (), rc);
+      _sz += rc;
+    }
+  }
+}
+
+//-----------------------------------------------------------------------
+
+void
+cli_t::do_put2 (const rtftp_put2_arg_t &arg, rtftp_put2_res_t *res)
+{
+
+}
+
+//-----------------------------------------------------------------------
+
+void
+cli_t::do_get2 (const rtftp_get2_arg_t &arg, rtftp_get2_res_t *res)
+{
+  switch (arg.status) {
+
+  case RTFTP_BEGIN:
+    {
+      ptr<file_t> f = New refcounted<file_t> (*arg.name);
+      if (!f->open ()) {
+	res->set_status (RTFTP_NOENT);
+      } else {
+	rtftp_xfer_id_t id = _id ++;
+	f->set_id (id);
+	_tab.insert (id, f);
+	res->set_status (RTFTP_BEGIN);
+	*res->xfer_id = id;
+      }
+      if (_verbose) {
+	warn << "GET2: " << *arg.name << " -> ";
+	rpc_print (warnx, res->status, 0, NULL, NULL);
+	warnx << "\n";
+      }
+    }
+    break;
+
+  case RTFTP_OK:
+    {
+      rtftp_xfer_id_t id = arg.chunk->xfer_id;
+      ptr<file_t> *f = _tab[id];
+      if (f) {
+	(*f)->read_chunk (arg.chunk->seqno, res);
+	if ((*f)->eof ())
+	  _tab.remove (id);
+      } else {
+	res->set_status (RTFTP_NOENT);
+      }
+    }
+    break;
+
+  default:
+    res->set_status (RTFTP_ERR);
+    break;
+  }
+}
+
 
 //-----------------------------------------------------------------------
 
@@ -160,6 +289,24 @@ cli_t::dispatch (svccb *sbp)
       rtftp_get_res_t res;
       RPC::rtftp_program_1::rtftp_get_srv_t<svccb> srv (sbp);
       do_get (*srv.getarg (), &res);
+      srv.reply (res);
+      break;
+    }
+
+  case RTFTP_GET2:
+    {
+      rtftp_get2_res_t res;
+      RPC::rtftp_program_1::rtftp_get2_srv_t<svccb> srv (sbp);
+      do_get2 (*srv.getarg (), &res);
+      srv.reply (res);
+      break;
+    }
+
+  case RTFTP_PUT2:
+    {
+      rtftp_put2_res_t res;
+      RPC::rtftp_program_1::rtftp_put2_srv_t<svccb> srv (sbp);
+      do_put2 (*srv.getarg (), &res);
       srv.reply (res);
       break;
     }

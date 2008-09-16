@@ -362,41 +362,41 @@ get2_cli_t::transfer_file (evi_t ev)
 					mkevent (rv, id, stat));
     } else {
       twait (rv, id);
-      {
-	const clnt_stat &stat = stats[id];
-	const rtftp_get2_res_t &res = ress[id];
 
-	if (stat) {
-	  warn << "RPC failure in get2 for file " << _file 
-	       << ": " << stat << "\n";
-	  rc = RC_ERPC;
-	} else if (res.status == RTFTP_EOF) {
-	  eof = true;
-	  eof_id = id;
-	} else if (res.status != RTFTP_OK) {
-	  warn << "Sever failure for file " << _file << ": " 
-	       << int (res.status) << "\n";
-	  rc = RC_ERR;
-	} else if (res.chunk->id.xfer_id != _id) {
-	  warn << "Got data for wrong file; expected " 
-	       << _id << " but got " << res.chunk->id.xfer_id << "\n";
-	  rc = RC_ERR;
-	} else if (res.chunk->id.seqno != cr) {
-	  warn << "Chunks out of sequence; expected " 
-	       << rc << " but got " << res.chunk->id.seqno << "\n";
-	  rc = RC_ERR;
-	} else if ((rc = write (_fd, res.chunk->data.base (),
-				res.chunk->data.size ()))
-		   != int (res.chunk->data.size ())) {
+      const clnt_stat &stat = stats[id];
+      const rtftp_get2_res_t &res = ress[id];
+      
+      if (stat) {
+	warn << "RPC failure in get2 for file " << _file 
+	     << ": " << stat << "\n";
+	rc = RC_ERPC;
+      } else if (res.status == RTFTP_EOF) {
+	eof = true;
+	eof_id = id;
+      } else if (res.status != RTFTP_OK) {
+	warn << "Sever failure for file " << _file << ": " 
+	     << int (res.status) << "\n";
+	rc = RC_ERR;
+      } else if (res.chunk->id.xfer_id != _id) {
+	warn << "Got data for wrong file; expected " 
+	     << _id << " but got " << res.chunk->id.xfer_id << "\n";
+	rc = RC_ERR;
+      } else if (res.chunk->id.seqno != cr) {
+	warn << "Chunks out of sequence; expected " 
+	     << rc << " but got " << res.chunk->id.seqno << "\n";
+	rc = RC_ERR;
+      } else {
+	size_t sz = res.chunk->data.size ();
+	if ((rc = write (_fd, res.chunk->data.base (), sz)) != int (sz)) {
 	  warn ("Short write on file %s: %m\n", _file.cstr ());
 	  rc = RC_ERR;
 	} else {
-	  _ctx.update (res.chunk->data.base (), res.chunk->data.size ());
-	  fsz += res.chunk->data.size ();
+	  _ctx.update (res.chunk->data.base (), sz);
+	  fsz += sz;
 	}
-	cr ++;
-	ids.push_back (id);
       }
+      cr ++;
+      ids.push_back (id);
     }
   }
 
@@ -511,25 +511,24 @@ put2_cli_t::transfer_file (evi_t ev)
       }
     } else {
       twait (rv, id);
-      {
-	const clnt_stat &stat = stats[id];
-	const rtftp_put2_arg_t &arg = args[id];
-	const rtftp_put2_res_t &res = ress[id];
-	if (stat) {
-	  warn << "RPC error in putting file " << _file << ": " << stat << "\n";
-	  rc = RC_ERPC;
-	} else if (res.status != RTFTP_OK) {
-	  warn ("Server rejected put on file %s: %d\n", _file.cstr (), 
-		int (res.status));
-	  rc = RC_ERR;
-	} else if (arg.data->id.seqno != cr) {
-	  warn  << "Sequence out-of-order; expected " << cr << "; got "
-		<< arg.data->id.seqno << "\n";
-	  rc = RC_ERR;
-	}
-	cr ++;
-	ids.push_back (id);
+
+      const clnt_stat &stat = stats[id];
+      const rtftp_put2_arg_t &arg = args[id];
+      const rtftp_put2_res_t &res = ress[id];
+      if (stat) {
+	warn << "RPC error in putting file " << _file << ": " << stat << "\n";
+	rc = RC_ERPC;
+      } else if (res.status != RTFTP_OK) {
+	warn ("Server rejected put on file %s: %d\n", _file.cstr (), 
+	      int (res.status));
+	rc = RC_ERR;
+      } else if (arg.data->id.seqno != cr) {
+	warn  << "Sequence out-of-order; expected " << cr << "; got "
+	      << arg.data->id.seqno << "\n";
+	rc = RC_ERR;
       }
+      cr ++;
+      ids.push_back (id);
     }
   }
 
