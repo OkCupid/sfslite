@@ -32,10 +32,11 @@ struct rtftp_chunkid_t {
 
 struct rtftp_chunk_t {
        rtftp_chunkid_t id;
-       rtftp_data_t dat;
+       rtftp_data_t data;
 };
 
 struct rtftp_footer_t {
+       rtftp_xfer_id_t xfer_id;
        unsigned size;
        unsigned n_chunks;
        rtftp_hash_t hash;

@@ -61,7 +61,7 @@ private:
   void perform_T (evi_t ev, CLOSURE);
   void register_file (evi_t ev, CLOSURE);
   void transfer_file (evi_t ev, CLOSURE);
-  void send_footer (evi_t ev, CLOSURE);
+  void put_footer (size_t fsz, u_int32_t nchnk, evi_t ev, CLOSURE);
 
   int _fd;
   rtftp_xfer_id_t _id;
@@ -256,15 +256,122 @@ get2_cli_t::perform_T (evi_t ev)
 tamed void
 put2_cli_t::transfer_file (evi_t ev)
 {
-  ev->trigger (RC_ERR);
+  tvars {
+    vec<int> ids;
+    vec<rtftp_arg2_t> args;
+    vec<rtftp_put2_res_t> ress;
+    size_t csz (0x10000);
+    size_t wsz (30);
+    size_t fsz;
+    u_int32_t cr (0), cs (0); // chunk receive, chunk sent
+    rendezvous_t<int> rv (__FILE__, __LINE__);
+    vec<clnt_stat> stats;
+    bool eof (false);
+    int rc (0);
+    int id;
+    rtftp_hash_t hash;
+  }
+
+  ids.setsize (wsz);
+  args.setsize (wsz);
+  stats.setsize (wsz);
+  ress.setsize (wsz);
+  for (size_t i = 0; i < wsz; i++) { ids[i] = wsz - (i + 1); }
+
+  while ((!eof || ids.size ()) && rc >= 0) {
+    assert (cr <= cs);
+    if (ids.size ()) {
+      id = ids.pop_back ();
+      clnt_stat &stat = stats[id];
+      rtftp_arg2_t &arg = args[id];
+      rtftp_put2_res_t &res = ress[id];
+
+      arg.set_status (RTFTP_OK);
+      arg.data->data.setsize (csz);
+      rc = read (_fd, arg.data->data.base (), csz);
+      if (rc < 0) {
+	warn ("read error on file %s: %m\n", _file.cstr ());
+      } else if (rc == 0) {
+	eof = true;
+      } else {
+	fsz += rc;
+
+	assert (size_t (rc) <= csz);
+	arg.data->id.xfer_id = _id;
+	arg.data->id.seqno = cs++;
+
+	arg.data->data.setsize (rc);
+	_ctx.update (arg.data->data.base (), rc);
+	RPC::rtftp_program_1::rtftp_put2 (_cli, arg, &res, 
+					  mkevent (rv, id, stat));
+      }
+    } else {
+      twait (rv, id);
+      {
+	const clnt_stat &stat = stats[id];
+	const rtftp_arg2_t &arg = args[id];
+	const rtftp_put2_res_t &res = ress[id];
+	if (stat) {
+	  warn << "RPC error in putting file " << _file << ": " << stat << "\n";
+	  rc = RC_ERPC;
+	} else if (res.status != RTFTP_OK) {
+	  warn ("Server rejected put on file %s: %d\n", _file.cstr (), 
+		int (res.status));
+	  rc = RC_ERR;
+	} else if (arg.data->id.seqno != cr) {
+	  warn  << "Sequence out-of-order; expected " << cr << "; got "
+		<< arg.data->id.seqno << "\n";
+	  rc = RC_ERR;
+	}
+	cr ++;
+	ids.push_back (id);
+      }
+    }
+  }
+
+  if (rc == 0) {
+    assert (eof);
+    assert (ids.size () == wsz);
+    assert (cr == cs);
+    twait { put_footer (fsz, cr, mkevent (rc)); }
+
+  } else {
+    rv.cancel ();
+  }
+
+  ev->trigger (rc);
 }
 
 //-----------------------------------------------------------------------
 
 tamed void
-put2_cli_t::send_footer (evi_t ev)
+put2_cli_t::put_footer (size_t fsz, u_int32_t nchnk, evi_t ev)
 {
-  ev->trigger (RC_ERR);
+  tvars {
+    rtftp_arg2_t arg;
+    clnt_stat stat;
+    rtftp_put2_res_t res;
+    int rc (0);
+  }
+    
+  arg.set_status (RTFTP_EOF);
+  arg.footer->xfer_id = _id;
+  arg.footer->size = fsz;
+  arg.footer->n_chunks = nchnk;
+  _ctx.final (arg.footer->hash.base ());
+  twait { 
+    RPC::rtftp_program_1::rtftp_put2 (_cli, arg, &res, mkevent (stat));
+  }
+  if (stat) {
+    warn << "RPC error in putting footer for file " << _file << ": "
+	 << int (stat) << "\n";
+    rc = RC_ERPC;
+  } else if (res.status != RTFTP_OK) {
+    warn << "Server reported error when putting footer for file "
+	 << _file << ": " << int (res.status) << "\n";
+    rc = RC_ERR;
+  }
+  ev->trigger (rc);
 }
 
 //-----------------------------------------------------------------------
@@ -294,11 +401,6 @@ put2_cli_t::perform_T (evi_t ev)
       twait { transfer_file (mkevent (rc)); }
       if (rc < 0) {
 	warn ("file transfer failed on file %s\n", _file.cstr ()); 
-      } else {
-	twait { send_footer (mkevent (rc)); }
-	if (rc < 0) {
-	  warn ("failed to send footer on file %s\n", _file.cstr ()); 
-	}
       }
     }
   }
