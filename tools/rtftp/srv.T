@@ -53,9 +53,10 @@ public:
   void set_id (rtftp_xfer_id_t i) { _id = i; }
   void read_chunk (u_int32_t seq, rtftp_get2_res_t *res);
   void handle_eof (rtftp_get2_res_t *res);
-  rtftp_status_t write_chunk (u_int32_t seq);
+  rtftp_status_t write_chunk (const rtftp_chunk_t &dat);
   bool write_header_placeholder ();
-  rtftp_status_t put_footer ();
+  bool write_header (const rtftp_header_t &h);
+  rtftp_status_t put_footer (const rtftp_footer_t &footer);
   bool eof () const { return _eof; }
 private:
   const str _file;
@@ -159,9 +160,26 @@ file_t::handle_eof (rtftp_get2_res_t *res)
 //-----------------------------------------------------------------------
 
 rtftp_status_t
-file_t::write_chunk (u_int32_t seq)
+file_t::write_chunk (const rtftp_chunk_t &arg)
 {
-  return RTFTP_ERR;
+  rtftp_status_t st;
+  if (arg.id.seqno != _seqno) {
+    st = RTFTP_OUT_OF_SEQ;
+  } else {
+    _ctx.update (arg.data.base (), arg.data.size ());
+    int rc = write (_fd, arg.data.base (), arg.data.size ());
+    if (rc < 0) {
+      st = RTFTP_EFS;
+      warn ("write failed on file %s: %m\n", _file.cstr ());
+    } else if (size_t (rc) != arg.data.size ()) {
+      st = RTFTP_EFS;
+      warn ("short write on file %s\n", _file.cstr ());
+    } else {
+      st = RTFTP_OK;
+      _seqno ++;
+    }
+  }
+  return st;
 }
 
 //-----------------------------------------------------------------------
@@ -172,6 +190,15 @@ file_t::write_header_placeholder ()
   rtftp_header_t h;
   h.name = _file;
   memset (h.hash.base (), 0, RTFTP_HASHSZ);
+  return write_header (h);
+}
+
+
+//-----------------------------------------------------------------------
+
+bool
+file_t::write_header (const rtftp_header_t &h)
+{
   str s = xdr2str (h);
   int rc = write (_fd, s.cstr(), s.len ());
   bool ok = false;
@@ -229,15 +256,15 @@ cli_t::do_put2 (const rtftp_put2_arg_t &arg, rtftp_put2_res_t *res)
 	res->set_status (RTFTP_BEGIN);
 	*res->xfer_id = id;
       }
-      break;
     }
+    break;
 
   case RTFTP_OK:
     {
       rtftp_xfer_id_t id = arg.data->id.xfer_id;
       ptr<file_t> *f = _tab[id];
       if (f) {
-	rtftp_status_t s = (*f)->write_chunk (arg.data->id.seqno);
+	rtftp_status_t s = (*f)->write_chunk (*arg.data);
 	res->set_status (s);
       } else {
 	res->set_status (RTFTP_NOENT);
@@ -250,7 +277,7 @@ cli_t::do_put2 (const rtftp_put2_arg_t &arg, rtftp_put2_res_t *res)
       rtftp_xfer_id_t id = arg.data->id.xfer_id;
       ptr<file_t> *f = _tab[id];
       if (f) {
-	rtftp_status_t s = (*f)->put_footer ();
+	rtftp_status_t s = (*f)->put_footer (*arg.footer);
 	res->set_status (s);
       } else {
 	res->set_status (RTFTP_NOENT);
@@ -267,9 +294,36 @@ cli_t::do_put2 (const rtftp_put2_arg_t &arg, rtftp_put2_res_t *res)
 //-----------------------------------------------------------------------
 
 rtftp_status_t
-file_t::put_footer ()
+file_t::put_footer (const rtftp_footer_t &footer)
 {
-  return RTFTP_ERR;
+  rtftp_status_t st;
+  char buf[RTFTP_HASHSZ];
+  _ctx.final (buf);
+  if (_seqno != footer.n_chunks) {
+    warn << "wrong number of file chunks for " << _file << "; "
+	 << "expected " << _seqno << " but got " << footer.n_chunks << "\n";
+    st = RTFTP_CORRUPT;
+  } else if (_sz != footer.size) {
+    warn << "wrong number of bytes in file " << _file << "; "
+	 << "expected " << _sz << " but got " << footer.size << "\n";
+    st = RTFTP_CORRUPT;
+  } else if (memcmp (footer.hash.base (), buf, RTFTP_HASHSZ) != 0) {
+    warn << "hash mismatch for file " << _file << "\n";
+    st = RTFTP_CORRUPT;
+  } else {
+    st = RTFTP_OK;
+    off_t rc = lseek (_fd, 0, SEEK_SET);
+    if (rc < 0) {
+      warn ("cannot seek through file %s: %m\n", _file.cstr ());
+      st = RTFTP_EFS;
+    } else {
+      rtftp_header_t h;
+      h.name = _file;
+      memcpy (h.hash.base (), buf, RTFTP_HASHSZ);
+      st = write_header (h) ? RTFTP_OK : RTFTP_EFS;
+    }
+  }
+  return st;
 }
 
 //-----------------------------------------------------------------------
