@@ -269,7 +269,6 @@ put2_cli_t::transfer_file (evi_t ev)
     bool eof (false);
     int rc (0);
     int id;
-    rtftp_hash_t hash;
   }
 
   ids.setsize (wsz);
