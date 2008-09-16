@@ -27,6 +27,11 @@ struct rtftp_file_t {
        rtftp_hash_t hash;
 };
 
+struct rtftp_header_t {
+       rtftp_id_t name;
+       rtftp_hash_t hash;
+};
+
 struct rtftp_chunkid_t {
        rtftp_xfer_id_t xfer_id;
        unsigned seqno;

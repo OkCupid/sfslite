@@ -49,10 +49,13 @@ public:
     : _file (n), _fd (-1), _seqno (0), _sz (0), _id (0),
       _eof (false) {}
   ~file_t () { if (_fd >= 0) close (_fd); }
-  bool open ();
+  bool open (int m);
   void set_id (rtftp_xfer_id_t i) { _id = i; }
   void read_chunk (u_int32_t seq, rtftp_get2_res_t *res);
   void handle_eof (rtftp_get2_res_t *res);
+  rtftp_status_t write_chunk (u_int32_t seq);
+  bool write_header_placeholder ();
+  rtftp_status_t put_footer ();
   bool eof () const { return _eof; }
 private:
   const str _file;
@@ -135,9 +138,9 @@ cli_t::do_put (const rtftp_file_t *arg)
 //-----------------------------------------------------------------------
 
 bool
-file_t::open ()
+file_t::open (int m)
 {
-  return ((_fd = ::open (_file.cstr (), O_RDONLY)) >= 0);
+  return ((_fd = ::open (_file.cstr (), m)) >= 0);
 }
 
 //-----------------------------------------------------------------------
@@ -151,6 +154,35 @@ file_t::handle_eof (rtftp_get2_res_t *res)
   res->footer->n_chunks = _seqno;
   _ctx.final (res->footer->hash.base ());
   _eof = true;
+}
+
+//-----------------------------------------------------------------------
+
+rtftp_status_t
+file_t::write_chunk (u_int32_t seq)
+{
+  return RTFTP_ERR;
+}
+
+//-----------------------------------------------------------------------
+
+bool
+file_t::write_header_placeholder ()
+{
+  rtftp_header_t h;
+  h.name = _file;
+  memset (h.hash.base (), 0, RTFTP_HASHSZ);
+  str s = xdr2str (h);
+  int rc = write (_fd, s.cstr(), s.len ());
+  bool ok = false;
+  if (rc < 0) {
+    warn ("header write failed for file %s: %m\n", _file.cstr ());
+  } else if (size_t (rc) != s.len ()) {
+    warn ("short header write for file %s\n", _file.cstr ());
+  } else {
+    ok = true;
+  }
+  return ok;
 }
 
 //-----------------------------------------------------------------------
@@ -182,7 +214,62 @@ file_t::read_chunk (u_int32_t se, rtftp_get2_res_t *res)
 void
 cli_t::do_put2 (const rtftp_put2_arg_t &arg, rtftp_put2_res_t *res)
 {
+  switch (arg.status) {
+  case RTFTP_BEGIN:
+    {
+      ptr<file_t> f = New refcounted<file_t> (*arg.name);
+      if (!f->open (O_WRONLY|O_CREAT) || !f->write_header_placeholder ()) {
+	str s = *arg.name;
+	warn ("failed to write file %s: %m\n", s.cstr ());
+	res->set_status (RTFTP_EFS);
+      } else {
+	rtftp_xfer_id_t id = _id ++;
+	f->set_id (id);
+	_tab.insert (id, f);
+	res->set_status (RTFTP_BEGIN);
+	*res->xfer_id = id;
+      }
+      break;
+    }
 
+  case RTFTP_OK:
+    {
+      rtftp_xfer_id_t id = arg.data->id.xfer_id;
+      ptr<file_t> *f = _tab[id];
+      if (f) {
+	rtftp_status_t s = (*f)->write_chunk (arg.data->id.seqno);
+	res->set_status (s);
+      } else {
+	res->set_status (RTFTP_NOENT);
+      }
+    }
+    break;
+
+  case RTFTP_EOF:
+    {
+      rtftp_xfer_id_t id = arg.data->id.xfer_id;
+      ptr<file_t> *f = _tab[id];
+      if (f) {
+	rtftp_status_t s = (*f)->put_footer ();
+	res->set_status (s);
+      } else {
+	res->set_status (RTFTP_NOENT);
+      }
+    }
+    break;
+
+  default:
+    res->set_status (RTFTP_ERR);
+    break;
+  }
+}
+
+//-----------------------------------------------------------------------
+
+rtftp_status_t
+file_t::put_footer ()
+{
+  return RTFTP_ERR;
 }
 
 //-----------------------------------------------------------------------
@@ -195,7 +282,7 @@ cli_t::do_get2 (const rtftp_get2_arg_t &arg, rtftp_get2_res_t *res)
   case RTFTP_BEGIN:
     {
       ptr<file_t> f = New refcounted<file_t> (*arg.name);
-      if (!f->open ()) {
+      if (!f->open (O_RDONLY)) {
 	res->set_status (RTFTP_NOENT);
       } else {
 	rtftp_xfer_id_t id = _id ++;
