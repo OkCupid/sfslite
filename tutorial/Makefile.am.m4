@@ -111,7 +111,7 @@ rpcclean:
 tameclean:
 	rm -f tame_clean
 
-CLEANFILES = core *.core $(RPC_AUTOGEN_FILES) tame_clean 
+CLEANFILES = core *.core *~ *.rpo $(RPC_AUTOGEN_FILES) tame_clean 
 
 dist-hook:
 	cd $(distdir) && rm -f $(CLEANFILES) 
