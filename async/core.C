@@ -614,6 +614,40 @@ async_init::start ()
   }
 }
 
+sfs_core::select_policy_t 
+sfs_core::select_policy_from_str (const str &s)
+{
+  sfs_core::select_policy_t ret = SELECT_NONE;
+  if (s && s.len () > 0) {
+    char c = s[0];
+    ret = select_policy_from_char (c);
+  }
+  return ret;
+}
+
+sfs_core::select_policy_t
+sfs_core::select_policy_from_char (char c)
+{
+  select_policy_t ret = SELECT_NONE;
+  switch (c) {
+  case 'k':
+  case 'K':
+    ret = SELECT_KQUEUE;
+    break;
+  case 'p':
+  case 'P':
+    ret = SELECT_EPOLL;
+    break;
+  case 's':
+  case 'S':
+    ret = SELECT_STD;
+    break;
+  default:
+    break;
+  }
+  return ret;
+}
+
 void
 async_init::stop ()
 {

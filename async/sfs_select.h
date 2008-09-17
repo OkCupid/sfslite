@@ -73,6 +73,9 @@ namespace sfs_core {
 		 SELECT_EPOLL, 
 		 SELECT_KQUEUE } select_policy_t;
 
+  select_policy_t select_policy_from_str  (const str &s);
+  select_policy_t select_policy_from_char (char c);
+
   void set_busywait (bool b);   
   void set_compact_interval (u_int i);
   int  set_select_policy (select_policy_t i);
