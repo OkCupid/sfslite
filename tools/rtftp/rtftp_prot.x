@@ -14,6 +14,7 @@ enum rtftp_status_t {
 
 %#define RTFTP_HASHSZ 20
 %#define CHUNKSZ 0x8000
+%#define MAGIC 0xbeef4989
 
 typedef opaque rtftp_hash_t[RTFTP_HASHSZ];
 
@@ -22,19 +23,29 @@ typedef opaque rtftp_data_t<>;
 typedef hyper rtftp_xfer_id_t;
 
 struct rtftp_file_t {
+       unsigned magic;
        rtftp_id_t name;
-       rtftp_data_t data;
        rtftp_hash_t hash;
+       rtftp_data_t data;
 };
 
 struct rtftp_header_t {
+       unsigned magic;
        rtftp_id_t name;
+       rtftp_hash_t hash;
+       unsigned size;
+};
+
+struct rtftp_xfer_header_t {
+       rtftp_xfer_id_t xfer_id;
+       unsigned size;
        rtftp_hash_t hash;
 };
 
 struct rtftp_chunkid_t {
        rtftp_xfer_id_t xfer_id;
-       unsigned seqno;
+       unsigned offset;
+       unsigned size;
 };
 
 struct rtftp_chunk_t {
@@ -80,18 +91,16 @@ case RTFTP_BEGIN:
 case RTFTP_OK:
      rtftp_chunkid_t chunk;
 case RTFTP_EOF:
-     rtftp_footer_t footer;
+     rtftp_xfer_id_t id;
 default:
      void;
 };
 
 union rtftp_get2_res_t switch (rtftp_status_t status) {
 case RTFTP_BEGIN:
-     rtftp_xfer_id_t xfer_id;
+     rtftp_xfer_header_t header;
 case RTFTP_OK:
      rtftp_chunk_t chunk;
-case RTFTP_EOF:
-     rtftp_footer_t footer;
 default:
      void;
 

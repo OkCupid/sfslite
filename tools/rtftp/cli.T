@@ -98,11 +98,14 @@ private:
   int open_file (int mode);
   void transfer_file (evi_t ev, CLOSURE);
   void request_file (evi_t ev, CLOSURE);
+  bool check_file ();
   
   int _fd;
   rtftp_xfer_id_t _id;
   sha1ctx _ctx;
   size_t _sz;
+  char _hsh[RTFTP_HASHSZ];
+  size_t _recv_bytes;
 };
 
 //-----------------------------------------------------------------------
@@ -310,12 +313,14 @@ get2_cli_t::request_file (evi_t ev)
     rc = RC_ERPC;
   } else if (res.status == RTFTP_NOENT) {
     rc = RC_EXISTS;
-  } else if (res.status != RTFTP_OK) {
+  } else if (res.status != RTFTP_BEGIN) {
     warn << "Server error in GET for file " << _file << ": " 
 	 << int (res.status) << "\n";
     rc = RC_ERR;
   } else {
-    _id = *res.xfer_id;
+    _id = res.header->xfer_id;
+    _sz = res.header->size;
+    memcpy (_hsh, res.header->hash.base (), RTFTP_HASHSZ);
   }
   ev->trigger (rc);
 }
@@ -330,13 +335,13 @@ get2_cli_t::transfer_file (evi_t ev)
     vec<rtftp_get2_arg_t> args;
     vec<rtftp_get2_res_t> ress;
     size_t wsz (WINDOWSZ);
-    size_t fsz (0);
     u_int32_t cr (0), cs (0); // chunk receive, chunk sent
     rendezvous_t<int> rv (__FILE__, __LINE__);
     vec<clnt_stat> stats;
     bool eof (false);
     int rc (0);
     int id, eof_id;
+    size_t nbrq (0), nbrc (0); // n bytes requsted and received
   }
 
   ids.setsize (wsz);
@@ -345,9 +350,9 @@ get2_cli_t::transfer_file (evi_t ev)
   ress.setsize (wsz);
   for (size_t i = 0; i < wsz; i++) { ids[i] = wsz - (i + 1); }
 
-  while ((!eof || ids.size ()) && rc >= 0) {
+  while ((nbrq < _sz || ids.size () < wsz) && rc >= 0) {
     assert (cr <= cs);
-    if (ids.size ()) {
+    if (ids.size () && (nbrq < _sz)) {
       id = ids.pop_back ();
 
       clnt_stat &stat = stats[id];
@@ -356,7 +361,11 @@ get2_cli_t::transfer_file (evi_t ev)
 
       arg.set_status (RTFTP_OK);
       arg.chunk->xfer_id = _id;
-      arg.chunk->seqno = cs++;
+      arg.chunk->offset = nbrq;
+      arg.chunk->size = CHUNKSZ;
+
+      nbrq += arg.chunk->size;
+      cs++;
 
       RPC::rtftp_program_1::rtftp_get2 (_cli, arg, &res,
 					mkevent (rv, id, stat));
@@ -371,28 +380,34 @@ get2_cli_t::transfer_file (evi_t ev)
 	     << ": " << stat << "\n";
 	rc = RC_ERPC;
       } else if (res.status == RTFTP_EOF) {
-	eof = true;
-	eof_id = id;
+	if (!eof) {
+	  eof = true;
+	  eof_id = id;
+	}
       } else if (res.status != RTFTP_OK) {
-	warn << "Sever failure for file " << _file << ": " 
+	warn << "Server failure for file " << _file << ": " 
 	     << int (res.status) << "\n";
 	rc = RC_ERR;
       } else if (res.chunk->id.xfer_id != _id) {
 	warn << "Got data for wrong file; expected " 
 	     << _id << " but got " << res.chunk->id.xfer_id << "\n";
 	rc = RC_ERR;
-      } else if (res.chunk->id.seqno != cr) {
-	warn << "Chunks out of sequence; expected " 
-	     << rc << " but got " << res.chunk->id.seqno << "\n";
+      } else if (res.chunk->id.offset != nbrc) {
+	warn << "Chunks out of sequence; expected offset " 
+	     << nbrc << " but got " << res.chunk->id.offset << "\n";
 	rc = RC_ERR;
       } else {
 	size_t sz = res.chunk->data.size ();
-	if ((rc = write (_fd, res.chunk->data.base (), sz)) != int (sz)) {
-	  warn ("Short write on file %s: %m\n", _file.cstr ());
+	ssize_t wrc = write (_fd, res.chunk->data.base (), sz);
+	if (wrc < 0) {
+	  warn ("failed write on file %s: %m\n", _file.cstr ());
+	  rc = RC_ERR;
+	} else if (wrc != ssize_t (sz)) {
+	  warn ("short write on file %s\n", _file.cstr ());
 	  rc = RC_ERR;
 	} else {
 	  _ctx.update (res.chunk->data.base (), sz);
-	  fsz += sz;
+	  nbrc += sz;
 	}
       }
       cr ++;
@@ -400,33 +415,39 @@ get2_cli_t::transfer_file (evi_t ev)
     }
   }
 
+  _recv_bytes = nbrc;
+
   if (rc == 0) {
     assert (cr == cs);
-    assert (eof);
+    assert (nbrq >= _sz);
     assert (ids.size () == wsz);
-    char hsh[RTFTP_HASHSZ];
-    _ctx.final (hsh);
-    const rtftp_footer_t &footer = *args[eof_id].footer;
-
-    if (_id != footer.xfer_id) {
-      warn << "Transfer ID mismatch for file " << _file << "; "
-	   << "expected " << _id << ", but got " << footer.xfer_id << "\n";
-      rc = RC_ERR;
-    } else if (fsz != footer.size) {
-      warn << "File size mismatch for file " << _file << "; "
-	   << "expected " << fsz << ", but got " << footer.size << "\n";
-      rc = RC_ERR;
-    } else if (footer.n_chunks != cr) {
-      warn << "Round chunk count for file " << _file << "; "
-	   << "expected " << footer.n_chunks << " but got "
-	   << cr << "\n";
-    } else if (memcmp (hsh, footer.hash.base (), RTFTP_HASHSZ) != 0) {
-      warn ("Hash mismatch on file %s\n", _file.cstr ());
-      rc = RC_ERR;
-    }
+  } else {
+    rv.cancel ();
   }
 
   ev->trigger (rc);
+
+}
+
+//-----------------------------------------------------------------------
+
+bool
+get2_cli_t::check_file ()
+{
+  char hsh[RTFTP_HASHSZ];
+  _ctx.final (hsh);
+
+  bool ok (false);
+
+  if (_recv_bytes != _sz) {
+    warn << "File size mismatch for file " << _file << "; "
+	 << "expected " << _sz << ", but got " << _recv_bytes << "\n";
+  } else if (memcmp (hsh, _hsh, RTFTP_HASHSZ) != 0) {
+    warn ("Hash mismatch on file %s\n", _file.cstr ());
+  } else {
+    ok = true;
+  }
+  return ok;
 }
 
 //-----------------------------------------------------------------------
@@ -447,6 +468,8 @@ get2_cli_t::perform_T (evi_t ev)
       twait { transfer_file (mkevent (rc)); }
       if (rc < 0) {
 	warn ("failed to transfer file %s\n", _file.cstr ());
+      } else if (!check_file ()) {
+	rc = RC_ERR;
       }
     }
   }
@@ -482,9 +505,9 @@ put2_cli_t::transfer_file (evi_t ev)
   ress.setsize (wsz);
   for (size_t i = 0; i < wsz; i++) { ids[i] = wsz - (i + 1); }
 
-  while ((!eof || ids.size ()) && rc >= 0) {
+  while ((!eof || ids.size () < wsz) && rc >= 0) {
     assert (cr <= cs);
-    if (ids.size ()) {
+    if (ids.size () && !eof) {
       id = ids.pop_back ();
       clnt_stat &stat = stats[id];
       rtftp_put2_arg_t &arg = args[id];
@@ -495,14 +518,21 @@ put2_cli_t::transfer_file (evi_t ev)
       rc = read (_fd, arg.data->data.base (), csz);
       if (rc < 0) {
 	warn ("read error on file %s: %m\n", _file.cstr ());
+	ids.push_back (id);
       } else if (rc == 0) {
 	eof = true;
+	ids.push_back (id);
       } else {
-	fsz += rc;
 
 	assert (size_t (rc) <= csz);
 	arg.data->id.xfer_id = _id;
-	arg.data->id.seqno = cs++;
+	arg.data->id.offset = fsz;
+	arg.data->id.size = rc;
+
+	fsz += rc;
+
+	warn << "send sequno..." << cs << "\n";
+	cs++;
 
 	arg.data->data.setsize (rc);
 	_ctx.update (arg.data->data.base (), rc);
@@ -513,7 +543,6 @@ put2_cli_t::transfer_file (evi_t ev)
       twait (rv, id);
 
       const clnt_stat &stat = stats[id];
-      const rtftp_put2_arg_t &arg = args[id];
       const rtftp_put2_res_t &res = ress[id];
       if (stat) {
 	warn << "RPC error in putting file " << _file << ": " << stat << "\n";
@@ -522,10 +551,8 @@ put2_cli_t::transfer_file (evi_t ev)
 	warn ("Server rejected put on file %s: %d\n", _file.cstr (), 
 	      int (res.status));
 	rc = RC_ERR;
-      } else if (arg.data->id.seqno != cr) {
-	warn  << "Sequence out-of-order; expected " << cr << "; got "
-	      << arg.data->id.seqno << "\n";
-	rc = RC_ERR;
+      } else {
+	warn << "read seqno..." << cr << "\n";
       }
       cr ++;
       ids.push_back (id);
@@ -641,6 +668,7 @@ put_cli_t::perform_T (evi_t ev)
     warn ("cannot open file %s: %m\n", file_full.cstr ());
     rc = -1;
   } else {
+    file.magic = MAGIC;
     file.name = _file;
     file.data = dat;
     sha1_hash (file.hash.base (), file.data.base (), file.data.size ());

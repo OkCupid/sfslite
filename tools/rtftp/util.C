@@ -112,14 +112,14 @@ int write_file (const str &nm, const str &dat)
 //-----------------------------------------------------------------------
 
 int
-open_file (const str &nm, int mode)
+open_file (const str &nm, int flags)
 {
   char *s = strdup (nm.cstr ());
   int rc = 0;
 
   rc = make_and_chdir (s);
   if (rc == 0)
-    rc = ::open (nm.cstr (), mode);
+    rc = ::open (nm.cstr (), flags, 0666);
   return rc;
 }
 

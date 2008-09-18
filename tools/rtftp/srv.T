@@ -46,26 +46,33 @@ private:
 class file_t {
 public:
   file_t (const str &n) 
-    : _file (n), _fd (-1), _seqno (0), _sz (0), _id (0),
-      _eof (false) {}
+    : _file (n), _fd (-1), _sz (0), _id (0),
+      _eof (false), _offset (0), _header_offset (0) {}
   ~file_t () { if (_fd >= 0) close (_fd); }
   bool open (int m);
   void set_id (rtftp_xfer_id_t i) { _id = i; }
-  void read_chunk (u_int32_t seq, rtftp_get2_res_t *res);
-  void handle_eof (rtftp_get2_res_t *res);
+  void read_chunk (const rtftp_chunkid_t &chnk, rtftp_get2_res_t *res);
   rtftp_status_t write_chunk (const rtftp_chunk_t &dat);
   bool write_header_placeholder ();
   bool write_header (const rtftp_header_t &h);
   rtftp_status_t put_footer (const rtftp_footer_t &footer);
   bool eof () const { return _eof; }
+  bool read_header ();
+  size_t expected_size () const { return _expected_sz; }
+  void set_xfer_header (rtftp_get2_res_t *res);
 private:
+  bool my_write (const void *v, size_t len);
   const str _file;
   int _fd;
-  u_int32_t _seqno;
   size_t _sz;
   rtftp_xfer_id_t _id;
   sha1ctx _ctx;
   bool _eof;
+  off_t _offset;
+  off_t _header_offset;
+
+  size_t _expected_sz;
+  char _expected_hash[RTFTP_HASHSZ];
 };
 
 //-----------------------------------------------------------------------
@@ -141,20 +148,7 @@ cli_t::do_put (const rtftp_file_t *arg)
 bool
 file_t::open (int m)
 {
-  return ((_fd = ::open (_file.cstr (), m)) >= 0);
-}
-
-//-----------------------------------------------------------------------
-
-void
-file_t::handle_eof (rtftp_get2_res_t *res)
-{
-  res->set_status (RTFTP_EOF);
-  res->footer->xfer_id = _id;
-  res->footer->size = _sz;
-  res->footer->n_chunks = _seqno;
-  _ctx.final (res->footer->hash.base ());
-  _eof = true;
+  return ((_fd = ::open (_file.cstr (), m, 0666)) >= 0);
 }
 
 //-----------------------------------------------------------------------
@@ -163,20 +157,15 @@ rtftp_status_t
 file_t::write_chunk (const rtftp_chunk_t &arg)
 {
   rtftp_status_t st;
-  if (arg.id.seqno != _seqno) {
+  if (arg.id.offset != _sz) {
     st = RTFTP_OUT_OF_SEQ;
   } else {
     _ctx.update (arg.data.base (), arg.data.size ());
-    int rc = write (_fd, arg.data.base (), arg.data.size ());
-    if (rc < 0) {
+    if (!my_write (arg.data.base (), arg.data.size ())) {
       st = RTFTP_EFS;
-      warn ("write failed on file %s: %m\n", _file.cstr ());
-    } else if (size_t (rc) != arg.data.size ()) {
-      st = RTFTP_EFS;
-      warn ("short write on file %s\n", _file.cstr ());
     } else {
       st = RTFTP_OK;
-      _seqno ++;
+      _sz += arg.data.size ();
     }
   }
   return st;
@@ -189,6 +178,8 @@ file_t::write_header_placeholder ()
 {
   rtftp_header_t h;
   h.name = _file;
+  h.magic = MAGIC;
+  h.size = 0;
   memset (h.hash.base (), 0, RTFTP_HASHSZ);
   return write_header (h);
 }
@@ -200,12 +191,24 @@ bool
 file_t::write_header (const rtftp_header_t &h)
 {
   str s = xdr2str (h);
-  int rc = write (_fd, s.cstr(), s.len ());
+  size_t sz = s.len ();
+
+  return 
+    my_write ((const void *)&sz, sizeof (sz)) &&
+    my_write (s.cstr (), s.len ());
+}
+
+//-----------------------------------------------------------------------
+
+bool
+file_t::my_write (const void *v, size_t len)
+{
+  ssize_t rc = write (_fd, v, len);
   bool ok = false;
   if (rc < 0) {
-    warn ("header write failed for file %s: %m\n", _file.cstr ());
-  } else if (size_t (rc) != s.len ()) {
-    warn ("short header write for file %s\n", _file.cstr ());
+    warn ("write failed for file %s: %m\n", _file.cstr ());
+  } else if (rc != ssize_t (len)) {
+    warn ("short write for file %s\n", _file.cstr ());
   } else {
     ok = true;
   }
@@ -215,23 +218,30 @@ file_t::write_header (const rtftp_header_t &h)
 //-----------------------------------------------------------------------
 
 void
-file_t::read_chunk (u_int32_t se, rtftp_get2_res_t *res)
+file_t::read_chunk (const rtftp_chunkid_t &chnk, rtftp_get2_res_t *res)
 {
-  if (se != _seqno) {
-    res->set_status (RTFTP_OUT_OF_SEQ);
-  } else {
-    res->set_status (RTFTP_OK);
-    int rc = read (_fd, res->chunk->data.base (), CHUNKSZ);
+  res->set_status (RTFTP_OK);
+  res->chunk->data.setsize (chnk.size);
+  off_t o = chnk.offset + _header_offset;
+  int rc = 0;
+  if (o != _offset) {
+    rc = lseek (_fd, o, SEEK_SET);
+    if (rc < 0) {
+      warn ("seek failed on file %s: %m\n", _file.cstr ());
+      res->set_status (RTFTP_EFS);
+    }
+  }
+  if (rc >= 0) {
+    int rc = read (_fd, res->chunk->data.base (), chnk.size);
     if (rc == 0) {
-      handle_eof (res);
+      res->set_status (RTFTP_EOF);
     } else if (rc < 0) {
       warn ("read error on file %s: %m\n", _file.cstr ());
       res->set_status (RTFTP_EFS);
     } else {
-      res->chunk->id.xfer_id = _id;
-      res->chunk->id.seqno = _seqno ++;
-      _ctx.update (res->chunk->data.base (), rc);
-      _sz += rc;
+      _offset += rc;
+      res->chunk->data.setsize (rc);
+      res->chunk->id = chnk;
     }
   }
 }
@@ -274,7 +284,7 @@ cli_t::do_put2 (const rtftp_put2_arg_t &arg, rtftp_put2_res_t *res)
 
   case RTFTP_EOF:
     {
-      rtftp_xfer_id_t id = arg.data->id.xfer_id;
+      rtftp_xfer_id_t id = arg.footer->xfer_id;
       ptr<file_t> *f = _tab[id];
       if (f) {
 	rtftp_status_t s = (*f)->put_footer (*arg.footer);
@@ -299,11 +309,7 @@ file_t::put_footer (const rtftp_footer_t &footer)
   rtftp_status_t st;
   char buf[RTFTP_HASHSZ];
   _ctx.final (buf);
-  if (_seqno != footer.n_chunks) {
-    warn << "wrong number of file chunks for " << _file << "; "
-	 << "expected " << _seqno << " but got " << footer.n_chunks << "\n";
-    st = RTFTP_CORRUPT;
-  } else if (_sz != footer.size) {
+  if (_sz != footer.size) {
     warn << "wrong number of bytes in file " << _file << "; "
 	 << "expected " << _sz << " but got " << footer.size << "\n";
     st = RTFTP_CORRUPT;
@@ -319,11 +325,66 @@ file_t::put_footer (const rtftp_footer_t &footer)
     } else {
       rtftp_header_t h;
       h.name = _file;
+      h.magic = MAGIC;
+      h.size = _sz;
       memcpy (h.hash.base (), buf, RTFTP_HASHSZ);
       st = write_header (h) ? RTFTP_OK : RTFTP_EFS;
     }
   }
   return st;
+}
+
+//-----------------------------------------------------------------------
+
+bool
+file_t::read_header ()
+{
+  size_t sz = 0;
+  size_t szsz = sizeof (sz);
+  bool ok = false;
+  
+  ssize_t rc = read (_fd, (void *)&sz, szsz);
+  if (rc < 0) {
+    warn ("read error on file %s: %m\n", _file.cstr ());
+  } else if (rc != ssize_t (szsz)) {
+    warn ("cannot read file size on file %s\n", _file.cstr ());
+  } else if (sz > 0x10000) {
+    warn ("size is way too big");
+  } else {
+    _offset += szsz;
+    char *buf = New char[sz];
+    rc = read (_fd, buf, sz);
+    if (rc != ssize_t (sz)) {
+      warn ("cannot read header on file %s\n", _file.cstr ());
+    } else {
+      rtftp_header_t h;
+      if (!buf2xdr (h, buf, sz)) {
+	warn ("cannot read header on file %s\n", _file.cstr ());
+      } else if (h.magic != MAGIC) {
+	warn ("corrupted magic on file %s\n", _file.cstr ());
+      } else {
+	_offset += sz;
+	memcpy (_expected_hash, h.hash.base (), RTFTP_HASHSZ);
+	_expected_sz = h.size;
+	ok = true;
+	_header_offset = _offset;
+      }
+    }
+    delete [] buf;
+  }
+  return ok;
+}
+
+
+//-----------------------------------------------------------------------
+
+void
+file_t::set_xfer_header (rtftp_get2_res_t *res)
+{
+  res->set_status (RTFTP_BEGIN);
+  res->header->xfer_id = _id;
+  res->header->size = _expected_sz;
+  memcpy (res->header->hash.base (), _expected_hash, RTFTP_HASHSZ);
 }
 
 //-----------------------------------------------------------------------
@@ -338,12 +399,13 @@ cli_t::do_get2 (const rtftp_get2_arg_t &arg, rtftp_get2_res_t *res)
       ptr<file_t> f = New refcounted<file_t> (*arg.name);
       if (!f->open (O_RDONLY)) {
 	res->set_status (RTFTP_NOENT);
+      } else if (!f->read_header ()) {
+	res->set_status (RTFTP_CORRUPT);
       } else {
 	rtftp_xfer_id_t id = _id ++;
 	f->set_id (id);
 	_tab.insert (id, f);
-	res->set_status (RTFTP_BEGIN);
-	*res->xfer_id = id;
+	f->set_xfer_header (res);
       }
       if (_verbose) {
 	warn << "GET2: " << *arg.name << " -> ";
@@ -358,9 +420,19 @@ cli_t::do_get2 (const rtftp_get2_arg_t &arg, rtftp_get2_res_t *res)
       rtftp_xfer_id_t id = arg.chunk->xfer_id;
       ptr<file_t> *f = _tab[id];
       if (f) {
-	(*f)->read_chunk (arg.chunk->seqno, res);
-	if ((*f)->eof ())
-	  _tab.remove (id);
+	(*f)->read_chunk (*arg.chunk, res);
+      } else {
+	res->set_status (RTFTP_NOENT);
+      }
+    }
+    break;
+
+  case RTFTP_EOF:
+    {
+      rtftp_xfer_id_t id = *arg.id;
+      if (_tab[id]) {
+	_tab.remove (id);
+	res->set_status (RTFTP_OK);
       } else {
 	res->set_status (RTFTP_NOENT);
       }
@@ -562,14 +634,18 @@ bool
 srv_t::init_perms ()
 {
   bool rc = false;
-  if (chroot (_dir.cstr ()) != 0) {
-    warn ("Cannot chroot to directory %s: %m\n", _dir.cstr ());
-  } else if (setgid (_gid) != 0) {
-    warn ("Cannot set group id to %s/%d: %m\n", _group.cstr (), _gid);
-  } else if (setuid (_uid) != 0) {
-    warn ("Cannot set user id to %s/%d: %m\n", _user.cstr (), _uid);
-  } else if (chdir ("/") != 0) {
-    warn ("Cannot chdir to top directory after chroot: %m\n");
+  if (_chroot) {
+    if (chroot (_dir.cstr ()) != 0) {
+      warn ("Cannot chroot to directory %s: %m\n", _dir.cstr ());
+    } else if (setgid (_gid) != 0) {
+      warn ("Cannot set group id to %s/%d: %m\n", _group.cstr (), _gid);
+    } else if (setuid (_uid) != 0) {
+      warn ("Cannot set user id to %s/%d: %m\n", _user.cstr (), _uid);
+    } else if (chdir ("/") != 0) {
+      warn ("Cannot chdir to top directory after chroot: %m\n");
+    } else {
+      rc = true;
+    }
   } else {
     rc = true;
   }
@@ -622,8 +698,12 @@ srv_t::run ()
 {
   warn << "starting up (pid=" << getpid () << ")\n";
   if (_verbose) {
-    warn ("running in dir=%s as user=%s and group=%s\n",
-	  _dir.cstr (), _user.cstr (), _group.cstr ());
+    if (_user && _group) {
+      warn ("running in dir=%s as user=%s and group=%s\n",
+	    _dir.cstr (), _user.cstr (), _group.cstr ());
+    } else {
+      warn ("running unprivileged in dir=%s\n", _dir.cstr ()); 
+    }
   }
   listen (_sfd, 200);
   fdcb (_sfd, selread, wrap (this, &srv_t::newcli));
