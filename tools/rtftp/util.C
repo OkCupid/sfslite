@@ -98,7 +98,7 @@ int write_file (const str &nm, const str &dat)
 
   rc = make_and_chdir (s);
 
-  if (rc == 0 && !str2file (s, dat, 0666, false)) {
+  if (rc == 0 && !str2file (s, dat, 0666, false, NULL, true)) {
     warn ("cannot create file %s in dir %s: %m\n", s, mywd ());
     rc = -1;
   } else {

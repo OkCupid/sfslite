@@ -267,6 +267,11 @@ cli_t::do_put2 (const rtftp_put2_arg_t &arg, rtftp_put2_res_t *res)
 	*res->xfer_id = id;
       }
     }
+    if (_verbose) {
+      warn << "PUT2: " << *arg.name << " -> ";
+      rpc_print (warnx, res->status, 0, NULL, NULL);
+      warnx << "\n";
+    }
     break;
 
   case RTFTP_OK:

@@ -15,12 +15,13 @@
 
 enum { RC_OK = 0, RC_ERPC = -2, RC_ERR = -1, RC_EXISTS = 1 };
 
-#define WINDOWSZ  30
+#define WINDOWSZ 30
 
 class cli_t {
 public:
-  cli_t (const str &d, const str &f, const str &h, int p) 
-    : _verbose (false), _dir (d), _file (f), _host (h), _port (p) {}
+  cli_t (const str &d, const str &f, const str &h, int p, size_t cs, size_t ws)
+    : _verbose (false), _dir (d), _file (f), _host (h), _port (p),
+      _chunk_sz (cs), _window_sz (ws) {}
 
   virtual ~cli_t () {}
   void set_verbose (bool b) { _verbose = b; }
@@ -39,15 +40,19 @@ protected:
 
   ptr<axprt_stream> _x;
   ptr<aclnt> _cli;
+  size_t _chunk_sz;
 
+public:
+  size_t _window_sz;
 };
 
 //-----------------------------------------------------------------------
 
 class put_cli_t : public cli_t {
 public:
-  put_cli_t (const str &d, const str &f, const str &h, int p) 
-    : cli_t (d, f, h, p) {}
+  put_cli_t (const str &d, const str &f, const str &h, int p, 
+	     size_t cs, size_t ws) 
+    : cli_t (d, f, h, p, cs, ws) {}
   void perform (evi_t ev) { perform_T (ev); }
 private:
   void perform_T (evi_t ev, CLOSURE);
@@ -57,8 +62,9 @@ private:
 
 class put2_cli_t : public cli_t {
 public:
-  put2_cli_t (const str &d, const str &f, const str &h, int p) 
-    : cli_t (d, f, h, p) , _sz (0) {}
+  put2_cli_t (const str &d, const str &f, const str &h, int p, 
+	      size_t cs, size_t ws)
+    : cli_t (d, f, h, p, cs, ws) , _sz (0) {}
   void perform (evi_t ev) { perform_T (ev); }
 private:
   void perform_T (evi_t ev, CLOSURE);
@@ -76,8 +82,9 @@ private:
 
 class get_cli_t : public cli_t {
 public:
-  get_cli_t (const str &d, const str &f, const str &h, int p)
-    : cli_t (d, f, h, p) {}
+  get_cli_t (const str &d, const str &f, const str &h, int p, 
+	     size_t cs, size_t ws)
+    : cli_t (d, f, h, p, cs, ws) {}
   void perform (evi_t ev) { perform_T (ev); }
   bool init ();
 private:
@@ -89,8 +96,9 @@ private:
 
 class get2_cli_t : public cli_t {
 public:
-  get2_cli_t (const str &d, const str &f, const str &h, int p)
-    : cli_t (d, f, h, p) , _fd (-1), _sz (0) {}
+  get2_cli_t (const str &d, const str &f, const str &h, int p, 
+	      size_t cs, size_t ws)
+    : cli_t (d, f, h, p, cs, ws) , _fd (-1), _sz (0) {}
   void perform (evi_t ev) { perform_T (ev); }
   bool init ();
 private:
@@ -113,7 +121,8 @@ private:
 static void
 usage ()
 {
-  warnx << "usage: " << progname << " [-v] <put|get> <dir> <file> <host>\n";
+  warnx << "usage: " << progname << " [-v] [-2] [-c<chnksz>] [-w<winsz>] "
+	<< "<put|get> <dir> <file> <host>\n";
 }
 
 //-----------------------------------------------------------------------
@@ -147,14 +156,28 @@ config (cli_t **clip, int argc, char *argv[])
   cli_t *cli = NULL;
   int ch;
   int version = 1;
+  size_t cs = CHUNKSZ;
+  size_t ws = WINDOWSZ;
   
-  while ((ch = getopt (argc, argv, "vh2")) != -1) {
+  while ((ch = getopt (argc, argv, "vh2c:w:")) != -1) {
     switch (ch) {
     case '2':
       version = 2;
       break;
     case 'v':
       verbose = true;
+      break;
+    case 'c':
+      if (!convertint (optarg, &cs)) {
+	warn << "cannot convert to int: " << optarg << "\n";
+	usage ();
+      }
+      break;
+    case 'w':
+      if (!convertint (optarg, &ws)) {
+	warn << "cannot convert to int: " << optarg << "\n";
+	usage ();
+      }
       break;
     case 'h':
       usage ();
@@ -181,15 +204,15 @@ config (cli_t **clip, int argc, char *argv[])
       file = argv[2];
       if (strcmp (argv[0], "put") == 0) {
 	if (version == 1) {
-	  cli = New put_cli_t (dir, file, host, port);
+	  cli = New put_cli_t (dir, file, host, port, cs, ws);
 	} else {
-	  cli = New put2_cli_t (dir, file, host, port);
+	  cli = New put2_cli_t (dir, file, host, port, cs, ws);
 	}
       } else if (strcmp (argv[0], "get") == 0) {
 	if (version == 1) {
-	  cli = New get_cli_t (dir, file, host, port);
+	  cli = New get_cli_t (dir, file, host, port, cs, ws);
 	} else {
-	  cli = New get2_cli_t (dir, file, host, port);
+	  cli = New get2_cli_t (dir, file, host, port, cs, ws);
 	}
       } else {
 	warn << "need either put/get operation mode\n";
@@ -334,7 +357,7 @@ get2_cli_t::transfer_file (evi_t ev)
     vec<int> ids;
     vec<rtftp_get2_arg_t> args;
     vec<rtftp_get2_res_t> ress;
-    size_t wsz (WINDOWSZ);
+    size_t wsz (_self->_window_sz);
     u_int32_t cr (0), cs (0); // chunk receive, chunk sent
     rendezvous_t<int> rv (__FILE__, __LINE__);
     vec<clnt_stat> stats;
@@ -362,7 +385,7 @@ get2_cli_t::transfer_file (evi_t ev)
       arg.set_status (RTFTP_OK);
       arg.chunk->xfer_id = _id;
       arg.chunk->offset = nbrq;
-      arg.chunk->size = CHUNKSZ;
+      arg.chunk->size = _chunk_sz;
 
       nbrq += arg.chunk->size;
       cs++;
@@ -414,6 +437,8 @@ get2_cli_t::transfer_file (evi_t ev)
       ids.push_back (id);
     }
   }
+  close (_fd);
+  _fd = -1;
 
   _recv_bytes = nbrc;
 
@@ -462,7 +487,7 @@ get2_cli_t::perform_T (evi_t ev)
   if (rc < 0) {
     warn ("failed to start transfer for file %s\n", _file.cstr ());
   } else {
-    if ((_fd = open_file (O_WRONLY|O_CREAT)) < 0) {
+    if ((_fd = open_file (O_WRONLY|O_CREAT|O_TRUNC)) < 0) {
       warn ("cannot create/open file %s: %m\n", _file.cstr ());
     } else {
       twait { transfer_file (mkevent (rc)); }
@@ -488,8 +513,7 @@ put2_cli_t::transfer_file (evi_t ev)
     vec<int> ids;
     vec<rtftp_put2_arg_t> args;
     vec<rtftp_put2_res_t> ress;
-    size_t csz (CHUNKSZ);
-    size_t wsz (WINDOWSZ);
+    size_t wsz (_self->_window_sz);
     size_t fsz;
     u_int32_t cr (0), cs (0); // chunk receive, chunk sent
     rendezvous_t<int> rv (__FILE__, __LINE__);
@@ -514,8 +538,8 @@ put2_cli_t::transfer_file (evi_t ev)
       rtftp_put2_res_t &res = ress[id];
 
       arg.set_status (RTFTP_OK);
-      arg.data->data.setsize (csz);
-      rc = read (_fd, arg.data->data.base (), csz);
+      arg.data->data.setsize (_chunk_sz);
+      rc = read (_fd, arg.data->data.base (), _chunk_sz);
       if (rc < 0) {
 	warn ("read error on file %s: %m\n", _file.cstr ());
 	ids.push_back (id);
@@ -524,14 +548,12 @@ put2_cli_t::transfer_file (evi_t ev)
 	ids.push_back (id);
       } else {
 
-	assert (size_t (rc) <= csz);
+	assert (size_t (rc) <= _chunk_sz);
 	arg.data->id.xfer_id = _id;
 	arg.data->id.offset = fsz;
 	arg.data->id.size = rc;
 
 	fsz += rc;
-
-	warn << "send sequno..." << cs << "\n";
 	cs++;
 
 	arg.data->data.setsize (rc);
@@ -551,8 +573,6 @@ put2_cli_t::transfer_file (evi_t ev)
 	warn ("Server rejected put on file %s: %d\n", _file.cstr (), 
 	      int (res.status));
 	rc = RC_ERR;
-      } else {
-	warn << "read seqno..." << cr << "\n";
       }
       cr ++;
       ids.push_back (id);

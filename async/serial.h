@@ -28,7 +28,7 @@
 #include "str.h"
 
 bool str2file (str file, str s, int perm = 0666, bool excl = false,
-	       struct stat *sbp = NULL);
+	       struct stat *sbp = NULL, bool binary = false);
 str file2str (str file);
 
 static inline void
