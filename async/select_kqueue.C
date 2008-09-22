@@ -7,6 +7,16 @@
 
 #ifdef HAVE_KQUEUE
 
+static void
+kq_warn (const kevent &kev)
+{
+  warn << "kq error: "
+       << "fd=" << kev.ident << "; "
+       << "filter=" << kev.filter << "; "
+       << "flags=" << kev.flags << "; "
+       << "data=" << kev.data << "\n";
+}
+
 
 namespace sfs_core {
 
@@ -48,7 +58,7 @@ namespace sfs_core {
       do {
 	rc = kevent (_kq, _kq_changes, _change_indx, NULL, 0, NULL);
 	if (rc < 0) {
-	  if (errno == EINTR || errno == ENOENT) {
+	  if (errno == EINTR) { 
 	    warn ("kqueue resumable error %d (%m)\n", errno);
 	  } else {
 	    panic ("kqueue failure: %m\n");
@@ -74,7 +84,7 @@ namespace sfs_core {
     int rc = kevent (_kq, _kq_changes, _change_indx, _kq_events_out, 
 		     _maxevents, &ts);
     if (rc < 0) {
-      if (errno == EINTR || errno == ENOENT) {
+      if (errno == EINTR) { 
 	warn ("kqueue resumable error %d (%m)\n", errno);
       } else if (errno != EINTR) {
 	panic ("kqueue failure: %m\n");
@@ -89,7 +99,9 @@ namespace sfs_core {
     for (int i = 0; i < rc; i++) {
       const struct kevent &kev = _kq_events_out[i];
       int op = -1;
-      if (kev.flags != EV_ERROR) {
+      if (kev.flags & EV_ERROR) {
+	kq_warn (kev);
+      } else {
 	switch (kev.filter) {
 	case EVFILT_READ:
 	  op = int (selread);
