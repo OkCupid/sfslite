@@ -539,7 +539,7 @@ put2_cli_t::transfer_file (evi_t ev)
     vec<rtftp_put2_arg_t> args;
     vec<rtftp_put2_res_t> ress;
     size_t wsz (_self->_window_sz);
-    size_t fsz;
+    size_t fsz (0);
     u_int32_t cr (0), cs (0); // chunk receive, chunk sent
     rendezvous_t<int> rv (__FILE__, __LINE__);
     vec<clnt_stat> stats;
