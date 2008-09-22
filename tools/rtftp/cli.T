@@ -389,7 +389,7 @@ get2_cli_t::transfer_file (evi_t ev)
     rendezvous_t<int> rv (__FILE__, __LINE__);
     vec<clnt_stat> stats;
     int rc (0);
-    int id, eof_id;
+    int id;
     size_t nbrq (0), nbrc (0); // n bytes requsted and received
   }
 
