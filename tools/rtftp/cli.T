@@ -107,6 +107,7 @@ private:
   void transfer_file (evi_t ev, CLOSURE);
   void request_file (evi_t ev, CLOSURE);
   bool check_file ();
+  void send_eof_to_srv (evv_t ev, CLOSURE);
   
   int _fd;
   rtftp_xfer_id_t _id;
@@ -155,12 +156,15 @@ config (cli_t **clip, int argc, char *argv[])
   str dir;
   cli_t *cli = NULL;
   int ch;
-  int version = 1;
+  int version = 2;
   size_t cs = CHUNKSZ;
   size_t ws = WINDOWSZ;
   
-  while ((ch = getopt (argc, argv, "vh2c:w:")) != -1) {
+  while ((ch = getopt (argc, argv, "vh12c:w:")) != -1) {
     switch (ch) {
+    case '1':
+      version = 1;
+      break;
     case '2':
       version = 2;
       break;
@@ -351,6 +355,29 @@ get2_cli_t::request_file (evi_t ev)
 //-----------------------------------------------------------------------
 
 tamed void
+get2_cli_t::send_eof_to_srv (evv_t ev)
+{
+  tvars {
+    rtftp_get2_arg_t arg (RTFTP_EOF);
+    rtftp_get2_res_t res;
+    clnt_stat s;
+  }
+
+  *arg.id = _id;
+
+  twait { RPC::rtftp_program_1::rtftp_get2 (_cli, arg, &res, mkevent (s)); }
+  if (s) {
+    warn << "RPC failure in sending EOF to server: " << s << "\n";
+  } else if (res.status != RTFTP_OK) {
+    warn ("Server failed to close file %s: %d\n", 
+	  _file.cstr (), int (res.status));
+  }
+  ev->trigger ();
+}
+
+//-----------------------------------------------------------------------
+
+tamed void
 get2_cli_t::transfer_file (evi_t ev)
 {
   tvars {
@@ -361,7 +388,6 @@ get2_cli_t::transfer_file (evi_t ev)
     u_int32_t cr (0), cs (0); // chunk receive, chunk sent
     rendezvous_t<int> rv (__FILE__, __LINE__);
     vec<clnt_stat> stats;
-    bool eof (false);
     int rc (0);
     int id, eof_id;
     size_t nbrq (0), nbrc (0); // n bytes requsted and received
@@ -402,11 +428,6 @@ get2_cli_t::transfer_file (evi_t ev)
 	warn << "RPC failure in get2 for file " << _file 
 	     << ": " << stat << "\n";
 	rc = RC_ERPC;
-      } else if (res.status == RTFTP_EOF) {
-	if (!eof) {
-	  eof = true;
-	  eof_id = id;
-	}
       } else if (res.status != RTFTP_OK) {
 	warn << "Server failure for file " << _file << ": " 
 	     << int (res.status) << "\n";
@@ -450,6 +471,8 @@ get2_cli_t::transfer_file (evi_t ev)
     rv.cancel ();
   }
 
+  twait { send_eof_to_srv (mkevent ()); }
+
   ev->trigger (rc);
 
 }
@@ -484,7 +507,9 @@ get2_cli_t::perform_T (evi_t ev)
     int rc;
   }
   twait { request_file (mkevent (rc)); }
-  if (rc < 0) {
+  if (rc == RC_EXISTS) {
+    /* file does not exist; noop! */
+  } else if (rc < 0) {
     warn ("failed to start transfer for file %s\n", _file.cstr ());
   } else {
     if ((_fd = open_file (O_WRONLY|O_CREAT|O_TRUNC)) < 0) {

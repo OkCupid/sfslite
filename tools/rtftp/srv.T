@@ -45,11 +45,23 @@ private:
 
 class file_t {
 public:
-  file_t (const str &n) 
-    : _file (n), _fd (-1), _sz (0), _id (0),
-      _eof (false), _offset (0), _header_offset (0) {}
+  typedef enum { FILE_NONE = 0, FILE_PUT = 1, FILE_GET = 2 } mode_t ;
+
+  file_t (const str &n, mode_t m) 
+    : _file (n), 
+      _fd (-1), 
+      _sz (0), 
+      _id (0),
+      _eof (false), 
+      _offset (0), 
+      _header_offset (0),
+      _mode (m), 
+      _put_status (RTFTP_INCOMPLETE) {}
+
   ~file_t () { if (_fd >= 0) close (_fd); }
   bool open (int m);
+  void set_mode (mode_t m) { _mode = m; }
+  void set_put_status (rtftp_status_t st);
   void set_id (rtftp_xfer_id_t i) { _id = i; }
   void read_chunk (const rtftp_chunkid_t &chnk, rtftp_get2_res_t *res);
   rtftp_status_t write_chunk (const rtftp_chunk_t &dat);
@@ -60,6 +72,7 @@ public:
   bool read_header ();
   size_t expected_size () const { return _expected_sz; }
   void set_xfer_header (rtftp_get2_res_t *res);
+  void clean (bool b);
 private:
   bool my_write (const void *v, size_t len);
   const str _file;
@@ -73,6 +86,8 @@ private:
 
   size_t _expected_sz;
   char _expected_hash[RTFTP_HASHSZ];
+  mode_t _mode;
+  rtftp_status_t _put_status;
 };
 
 //-----------------------------------------------------------------------
@@ -86,12 +101,16 @@ public:
       _addr (a),
       _verbose (v),
       _id (0) {}
+  ~cli_t () { clean_files (); }
   void dispatch (svccb *sbp);
 private:
   rtftp_status_t do_put (const rtftp_file_t *arg);
   void do_get (const rtftp_id_t &arg, rtftp_get_res_t *res);
   void do_get2 (const rtftp_get2_arg_t &arg, rtftp_get2_res_t *res);
   void do_put2 (const rtftp_put2_arg_t &arg, rtftp_put2_res_t *res);
+
+  void clean_files ();
+
   int _fd;
   ptr<axprt> _x;
   ptr<asrv> _srv;
@@ -149,6 +168,45 @@ bool
 file_t::open (int m)
 {
   return ((_fd = ::open (_file.cstr (), m, 0666)) >= 0);
+}
+
+//-----------------------------------------------------------------------
+
+void
+file_t::set_put_status (rtftp_status_t s)
+{
+  assert (_mode == FILE_PUT);
+  _put_status = s;
+}
+
+//-----------------------------------------------------------------------
+
+void
+file_t::clean (bool v)
+{
+  if (_mode == FILE_PUT && _put_status != RTFTP_OK) {
+    int rc = unlink (_file.cstr ());
+    if (rc != 0) {
+      warn ("Cannot unlink file %s: %m\n", _file.cstr ());
+    }
+    if (v) {
+      warn << "PUT2: " << _file << " -> ";
+      rpc_print (warnx, _put_status, 0, NULL, NULL);
+      warnx << " (transmission failed)\n";
+    }
+  }
+}
+
+//-----------------------------------------------------------------------
+
+void
+cli_t::clean_files ()
+{
+  qhash_const_iterator_t<rtftp_xfer_id_t, ptr<file_t> > it (_tab);
+  ptr<file_t> f;
+  while (it.next (&f)) {
+    f->clean (_verbose);
+  }
 }
 
 //-----------------------------------------------------------------------
@@ -254,7 +312,7 @@ cli_t::do_put2 (const rtftp_put2_arg_t &arg, rtftp_put2_res_t *res)
   switch (arg.status) {
   case RTFTP_BEGIN:
     {
-      ptr<file_t> f = New refcounted<file_t> (*arg.name);
+      ptr<file_t> f = New refcounted<file_t> (*arg.name, file_t::FILE_PUT);
       if (!f->open (O_WRONLY|O_CREAT) || !f->write_header_placeholder ()) {
 	str s = *arg.name;
 	warn ("failed to write file %s: %m\n", s.cstr ());
@@ -294,6 +352,7 @@ cli_t::do_put2 (const rtftp_put2_arg_t &arg, rtftp_put2_res_t *res)
       if (f) {
 	rtftp_status_t s = (*f)->put_footer (*arg.footer);
 	res->set_status (s);
+	(*f)->set_put_status (s);
       } else {
 	res->set_status (RTFTP_NOENT);
       }
@@ -401,7 +460,7 @@ cli_t::do_get2 (const rtftp_get2_arg_t &arg, rtftp_get2_res_t *res)
 
   case RTFTP_BEGIN:
     {
-      ptr<file_t> f = New refcounted<file_t> (*arg.name);
+      ptr<file_t> f = New refcounted<file_t> (*arg.name, file_t::FILE_GET);
       if (!f->open (O_RDONLY)) {
 	res->set_status (RTFTP_NOENT);
       } else if (!f->read_header ()) {

@@ -9,7 +9,8 @@ enum rtftp_status_t {
      RTFTP_EFS = 5,
      RTFTP_BEGIN = 6,
      RTFTP_ERR = 7,
-     RTFTP_OUT_OF_SEQ = 8
+     RTFTP_OUT_OF_SEQ = 8,
+     RTFTP_INCOMPLETE = 9
 };
 
 %#define RTFTP_HASHSZ 20
