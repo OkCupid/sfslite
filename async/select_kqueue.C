@@ -7,18 +7,18 @@
 
 #ifdef HAVE_KQUEUE
 
-static void
-kq_warn (const struct kevent &kev)
-{
-  warn << "kq error: "
-       << "fd=" << kev.ident << "; "
-       << "filter=" << kev.filter << "; "
-       << "flags=" << kev.flags << "; "
-       << "data=" << kev.data << "\n";
-}
-
 
 namespace sfs_core {
+  
+  static void
+  kq_warn (const struct kevent &kev)
+  {
+    warn << "kq error: "
+	 << "fd=" << kev.ident << "; "
+	 << "filter=" << kev.filter << "; "
+	 << "flags=" << kev.flags << "; "
+	 << "data=" << kev.data << "\n";
+  }
 
   kqueue_selector_t::kqueue_selector_t (selector_t *old)
     : selector_t (old),
