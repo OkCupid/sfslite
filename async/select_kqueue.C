@@ -8,7 +8,7 @@
 #ifdef HAVE_KQUEUE
 
 static void
-kq_warn (const kevent &kev)
+kq_warn (const struct kevent &kev)
 {
   warn << "kq error: "
        << "fd=" << kev.ident << "; "
