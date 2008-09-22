@@ -96,7 +96,7 @@ class cli_t {
 public:
   cli_t (int f, const char *a, bool v)
     : _fd (f), 
-      _x (axprt_stream::alloc (f, MAX_PACKET_SIZE)),
+      _x (axprt_stream::alloc (f)),
       _srv (asrv::alloc (_x, rtftp_program_1, wrap (this, &cli_t::dispatch))),
       _addr (a),
       _verbose (v),

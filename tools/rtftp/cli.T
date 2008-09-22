@@ -249,7 +249,7 @@ cli_t::connect (evb_t ev)
     warn << "connection to " << _host << ":" << _port << " failed\n";
     ret = false;
   } else {
-    _x = axprt_stream::alloc (fd, MAX_PACKET_SIZE);
+    _x = axprt_stream::alloc (fd);
     _cli = aclnt::alloc (_x, rtftp_program_1);
   }
   ev->trigger (ret);
