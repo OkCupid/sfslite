@@ -48,8 +48,8 @@ namespace sfs_core {
       do {
 	rc = kevent (_kq, _kq_changes, _change_indx, NULL, 0, NULL);
 	if (rc < 0) {
-	  if (errno == EINTR) {
-	    warn ("kqueue interruption: %m\n");
+	  if (errno == EINTR || errno == ENOENT) {
+	    warn ("kqueue resumable error %d (%m)\n", errno);
 	  } else {
 	    panic ("kqueue failure: %m\n");
 	  }
@@ -74,7 +74,9 @@ namespace sfs_core {
     int rc = kevent (_kq, _kq_changes, _change_indx, _kq_events_out, 
 		     _maxevents, &ts);
     if (rc < 0) {
-      if (errno != EINTR) {
+      if (errno == EINTR || errno == ENOENT) {
+	warn ("kqueue resumable error %d (%m)\n", errno);
+      } else if (errno != EINTR) {
 	panic ("kqueue failure: %m\n");
       }
     } else {
