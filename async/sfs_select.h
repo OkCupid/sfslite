@@ -90,7 +90,7 @@ namespace sfs_core {
     selector_t ();
     selector_t (selector_t *s);
     virtual ~selector_t ();
-    virtual void fdcb (int, selop, cbv::ptr) = 0;
+    virtual void _fdcb (int, selop, cbv::ptr, const char *, int) = 0;
     virtual void fdcb_check (struct timeval *timeout) = 0;
     virtual int set_compact_interval (u_int i) { return -1; }
     virtual int set_busywait (bool b) { return -1; }
@@ -112,7 +112,7 @@ namespace sfs_core {
     std_selector_t ();
     std_selector_t (selector_t *s);
     ~std_selector_t ();
-    void fdcb (int, selop, cbv::ptr);
+    void _fdcb (int, selop, cbv::ptr, const char *, int);
     void fdcb_check (struct timeval *timeout);
     int set_compact_interval (u_int i) { _compact_interval = i; return 0; }
     int set_busywait (bool b) { _busywait = b; return 0; }
@@ -140,7 +140,7 @@ namespace sfs_core {
   public:
     epoll_selector_t (selector_t *cur);
     ~epoll_selector_t ();
-    void fdcb (int, selop, cbv::ptr);
+    void _fdcb (int, selop, cbv::ptr, const char *, int);
     void fdcb_check (struct timeval *timeout);
     select_policy_t typ () const { return SELECT_EPOLL; }
 
@@ -168,22 +168,62 @@ namespace sfs_core {
 # include <sys/time.h>
 
 namespace sfs_core {
+
+  class kqueue_fd_t {
+  public:
+    kqueue_fd_t ();
+    bool toggle (bool on, const char *file, int line);
+    void clear ();
+    bool odd_flips () const { return (_flips % 2) == 1; }
+    bool on () const { return _on; }
+    const char *file () const { return _file; }
+    int line () const { return _line; }
+    void set_removal_bit () { _removal = !_on; }
+    bool removal () const { return _removal; }
+  private:
+    u_int32_t   _flips;
+    bool        _on;
+    bool        _removal;
+    const char *_file;
+    int         _line;
+  };
+
+  class kqueue_fd_id_t {
+  public:
+    kqueue_fd_id_t () : _fd (-1), _op (0) {}
+    kqueue_fd_id_t (int f, int o) : _fd (f), _op (o) {}
+    bool convert (const struct kevent &kev);
+    size_t fd () const { assert (_fd >= 0); return _fd; }
+    selop op () const { return selop (_op); }
+    int      _fd;
+    int      _op;
+  };
+
+  class kqueue_fd_set_t {
+  public:
+    void toggle (bool on, int fd, selop op, const char *file, int line);
+    void export_to_kernel (vec<struct kevent> *out);
+    const kqueue_fd_t *lookup (const struct kevent &kev) const;
+    const kqueue_fd_t *lookup (const kqueue_fd_id_t &id) const;
+  private:
+    vec<kqueue_fd_id_t>  _active;
+    vec<kqueue_fd_t>     _fds[selector_t::fdsn];
+  };
+
   class kqueue_selector_t : public selector_t {
   public:
     kqueue_selector_t (selector_t *t);
     ~kqueue_selector_t ();
-    void fdcb (int, selop, cbv::ptr);
+    void _fdcb (int, selop, cbv::ptr, const char *, int);
     void fdcb_check (struct timeval *timeout);
     select_policy_t typ () const { return SELECT_KQUEUE; }
 
-    enum { CHANGE_Q_SZ = 0x1000 };
-
+    enum { MIN_CHANGE_Q_SIZE = 0x1000 };
   private:
     int _kq;
-    struct kevent *_kq_events_out;
-    struct kevent _kq_changes[CHANGE_Q_SZ];
-    int _maxevents;
-    int _change_indx;
+    kqueue_fd_set_t _set;
+    vec<struct kevent> _kq_events_out;
+    vec<struct kevent> _kq_changes;
   };
 };
 #endif

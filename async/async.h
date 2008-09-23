@@ -37,12 +37,14 @@ void amain () __attribute__ ((noreturn));
 void acheck ();
 void chldcb (pid_t, cbi::ptr);
 cbv::ptr sigcb (int, cbv::ptr, int = 0);
-void fdcb (int, selop, cbv::ptr);
+void _fdcb (int, selop, cbv::ptr, const char *file = NULL, int l = -1);
 timecb_t *timecb (const timespec &ts, cbv cb);
 timecb_t *delaycb (time_t sec, u_int32_t nsec, cbv cb);
 void timecb_remove (timecb_t *);
 lazycb_t *lazycb (time_t min_interval, cbv cb);
 void lazycb_remove (lazycb_t *lazy);
+
+#define fdcb(f,s,c) _fdcb(f,s,c,__FILE__,__LINE__)
 
 /*
  * introduced in new factoring of core.C and select.C

@@ -335,8 +335,8 @@ timecb_check ()
 
 void fdcb_check () { sfs_core::selector->fdcb_check (&selwait); }
 
-void fdcb (int fd, selop op, cbv::ptr cb) 
-{ sfs_core::selector->fdcb (fd, op, cb); }
+void _fdcb (int fd, selop op, cbv::ptr cb, const char *file, int line) 
+{ sfs_core::selector->_fdcb (fd, op, cb, file, line); }
 
 static void
 sigcatch (int sig)

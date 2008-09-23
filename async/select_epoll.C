@@ -79,7 +79,7 @@ namespace sfs_core {
   //-----------------------------------------------------------------------
 
   void
-  epoll_selector_t::fdcb (int fd, selop op, cbv::ptr cb)
+  epoll_selector_t::_fdcb (int fd, selop op, cbv::ptr cb)
   {
     assert(fd >= 0);
     assert(fd < maxfd);

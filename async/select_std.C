@@ -56,7 +56,7 @@ namespace sfs_core {
   //-----------------------------------------------------------------------
 
   void
-  std_selector_t::fdcb (int fd, selop op, cbv::ptr cb)
+  std_selector_t::_fdcb (int fd, selop op, cbv::ptr cb, const char *f, int l)
   {
     assert (fd >= 0);
     assert (fd < maxfd);
