@@ -94,7 +94,7 @@ namespace sfs_core {
       size_t fd_i = id.fd ();
       assert (_fds[id._op].size () > fd_i);
       kqueue_fd_t &fd = _fds[id._op][fd_i];
-      if (fd.odd_flips ()) {
+      if (fd.any_flips ()) {
 	struct kevent &kev = out->push_back ();
 	short filter = (id._op == selread) ? EVFILT_READ : EVFILT_WRITE;
 	u_short flags = fd.on () ? EV_ADD : EV_DELETE;

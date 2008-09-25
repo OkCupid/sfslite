@@ -175,6 +175,7 @@ namespace sfs_core {
     bool toggle (bool on, const char *file, int line);
     void clear ();
     bool odd_flips () const { return (_flips % 2) == 1; }
+    bool any_flips () const { return (_flips > 0); }
     bool on () const { return _on; }
     const char *file () const { return _file; }
     int line () const { return _line; }
