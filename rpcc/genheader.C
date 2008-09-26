@@ -460,8 +460,13 @@ dump_tmpl_class (const str &arg, const str &res, const str &c, const str &spc)
 	 << "{ check_reply (); _sbp->reply (r); }\n";
     aout << spc << "  " << "void reply (const " << dcol << res << " &r) "
 	 << "{ check_reply (); _sbp->replyref (r); }\n";
-    aout << spc << "  " << "void reply (ptr<" << dcol << res << "> r) "
+    aout << spc << "  " << "void reply (ptr< " << dcol << res << "> r) "
 	 << "{ check_reply (); _sbp->reply (r); }\n";
+
+    aout << spc << "  " 
+	 << "VA_TEMPLATE(ptr<" << res << "> alloc_res, "
+	 << " { return New refcounted<" << res << "> "
+	 << ", ; } )\n";
   } else {
     aout << spc << "  " << "void reply () "
 	 << "{ check_reply (); _sbp->reply (NULL); }\n";
@@ -476,10 +481,6 @@ dump_tmpl_class (const str &arg, const str &res, const str &c, const str &spc)
        << spc << "  " << "void reject () "
        << "{ check_reply (); _sbp->reject (); }\n\n";
 
-  aout << spc << "  " 
-       << "VA_TEMPLATE(ptr<" << res << "> alloc_res, "
-       << " { return New refcounted<" << res << "> "
-       << ", ; } )\n";
 
   aout << spc << "private:\n"
        << spc << "  void check_reply () "
