@@ -79,7 +79,7 @@ namespace tame {
 
   //-----------------------------------------------------------------------
 
-  class proxy_t {
+  class proxy_t : public virtual refcount {
   public:
     proxy_t (const str &d = NULL) : 
       _debug_name (d), 

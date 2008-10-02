@@ -112,9 +112,9 @@ tamed void
 proxy (int infd, int outfd, evv_t ev)
 {
   tvars {
-    std_proxy_t px;
+    ref<std_proxy_t> px (New refcounted<std_proxy_t> ());
   }
-  twait { px.go (infd, outfd, mkevent ()); }
+  twait { px->go (infd, outfd, mkevent ()); }
   ev->trigger ();
 }
 
@@ -172,6 +172,7 @@ proxy_t::go (int infd, int outfd, evv_t ev)
     iofd_sticky_t read (infd, selread), write (outfd, selwrite);
     bool cancelled (false);
     str s;
+    holdvar ptr<proxy_t> hold (mkref (_self));
   }
 
   // If the parent process gives up on us, then we'll get a callback here
