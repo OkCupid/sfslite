@@ -261,13 +261,13 @@ axprt_pipe::checklen (int32_t *lenp)
 {
   int32_t len = *lenp;
   if (!(len & 0x80000000)) {
-    // warn ("axprt_pipe::checklen: invalid packet length: 0x%x\n", len);
+    warn ("axprt_pipe::checklen: invalid packet length: 0x%x\n", len);
     fail ();
     return false;
   }
   len &= 0x7fffffff;
   if ((u_int32_t) len > pktsize) {
-    // warn ("axprt_pipe::checklen: 0x%x byte packet is too large\n", len);
+    warn ("axprt_pipe::checklen: 0x%x byte packet is too large\n", len);
     fail ();
     return false;
   }
