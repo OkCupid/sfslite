@@ -31,6 +31,7 @@
 #include "union.h"
 #include "keyfunc.h"
 #include "err.h"
+#include "qhash.h"
 
 struct rpcgen_table {
   const char *name;
@@ -54,6 +55,7 @@ struct rpc_program {
   const struct rpcgen_table *tbl;
   size_t nproc;
   const char *name;
+  bool lookup (const char *rpc, u_int32_t *out) const;
 };
 
 enum { RPC_INFINITY = 0x7fffffff };
