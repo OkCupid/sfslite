@@ -238,6 +238,7 @@ public:
 ptr<asrv> asrv_alloc (ref<axprt>, const rpc_program &,
     		      callback<void, svccb *>::ptr, bool);
 
+str sock2str (const struct sockaddr *sp);
 #ifdef MAINTAINER
 void set_asrvtrace (int l);
 int get_asrvtrace (void);

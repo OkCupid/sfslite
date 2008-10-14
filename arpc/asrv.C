@@ -46,7 +46,7 @@ xidswap (u_int32_t xid)
   return htonl (xid);
 }
 
-static str
+str
 sock2str (const struct sockaddr *sp)
 {
   static str empty ("");
