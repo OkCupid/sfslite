@@ -167,7 +167,7 @@ cli_t::do_put (const rtftp_file_t *arg)
 bool
 file_t::open (int m)
 {
-  return ((_fd = ::open (_file.cstr (), m, 0666)) >= 0);
+  return ((_fd = open_file (_file, m)) >= 0);
 }
 
 //-----------------------------------------------------------------------

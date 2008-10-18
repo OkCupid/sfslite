@@ -64,7 +64,7 @@ mymkdir (char *dir, char *end)
 //-----------------------------------------------------------------------
 
 static int
-make_and_chdir (char *s)
+mkdir_p (char *s)
 {
   int rc = 0;
   for (char *p = s; rc == 0 && p && *p; ) {
@@ -96,10 +96,10 @@ int write_file (const str &nm, const str &dat)
   char *s = strdup (nm.cstr ());
   int rc = 0;
 
-  rc = make_and_chdir (s);
+  rc = mkdir_p (s);
 
-  if (rc == 0 && !str2file (s, dat, 0666, false, NULL, true)) {
-    warn ("cannot create file %s in dir %s: %m\n", s, mywd ());
+  if (rc == 0 && !str2file (nm, dat, 0666, false, NULL, true)) {
+    warn ("cannot create file %s: %m\n", nm.cstr ());
     rc = -1;
   } else {
     rc = 0;
@@ -117,9 +117,11 @@ open_file (const str &nm, int flags)
   char *s = strdup (nm.cstr ());
   int rc = 0;
 
-  rc = make_and_chdir (s);
+  rc = mkdir_p (s);
   if (rc == 0)
     rc = ::open (nm.cstr (), flags, 0666);
+
+  if (s) free (s);
   return rc;
 }
 
