@@ -13,7 +13,10 @@ namespace sfs_core {
       _compact_interval (0),
       _n_fdcb_iter (0),
       _nselfd (0),
-      _busywait (false)
+      _busywait (false),
+      _last_fd (-1),
+      _last_i (-1),
+      _n_repeats (0)
   {
     init_fdsets ();
   }
@@ -140,6 +143,21 @@ namespace sfs_core {
 	if (FD_ISSET (fd, _fdspt[i])) {
 	  n--;
 	  if (FD_ISSET (fd, _fdsp[i])) {
+
+	    if (_last_fd == fd && _last_i == i) {
+	      _n_repeats ++;
+	      if (_n_repeats > 0 && _n_repeats % 1000 == 0) {
+		warn << "XXX repeatedly (" << _n_repeats 
+		     << ") ready FD indidicates possible bug: "
+		     << "fd=" << fd << "; op=" << i << "\n";
+	      }
+	    } else {
+	      _n_repeats = 0;
+	      _last_fd = fd;
+	      _last_i = i;
+	    }
+
+
 #ifdef WRAP_DEBUG
 	    callback_trace_fdcb (i, fd, _fdcbs[i][fd]);
 #endif /* WRAP_DEBUG */

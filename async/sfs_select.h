@@ -131,6 +131,8 @@ namespace sfs_core {
 
     fd_set *_fdsp[fdsn];
     fd_set *_fdspt[fdsn];
+
+    int _last_fd, _last_i, _n_repeats;
   };
 
 #ifdef HAVE_EPOLL
