@@ -192,7 +192,7 @@ namespace sfs_core {
 		     &ts);
     if (rc < 0) {
       if (errno == EINTR) { 
-	warn ("kqueue resumable error %m (%d)\n", errno);
+	fprintf (stderr, "kqueue resumable error (%d)\n", errno);
       } else {
 	panic ("kqueue failure %m (%d)\n", errno);
       }
