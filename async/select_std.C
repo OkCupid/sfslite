@@ -147,9 +147,12 @@ namespace sfs_core {
 	    if (_last_fd == fd && _last_i == i) {
 	      _n_repeats ++;
 	      if (_n_repeats > 0 && _n_repeats % 1000 == 0) {
-		warn << "XXX repeatedly (" << _n_repeats 
-		     << ") ready FD indidicates possible bug: "
-		     << "fd=" << fd << "; op=" << i << "\n";
+		strbuf b;
+		b << "XXX repeatedly (" << _n_repeats 
+		  << ") ready FD indidicates possible bug: "
+		  << "fd=" << fd << "; op=" << i << "\n";
+		str s = b;
+		fprintf (stderr, s.cstr ());
 	      }
 	    } else {
 	      _n_repeats = 0;
