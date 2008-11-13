@@ -287,7 +287,7 @@ open_input (char *infile, char *define)
     }
   }
 #else
-  (void) pipe (pd);
+  RC_INT_IGNORE (pipe (pd));
   switch (fork ()) {
   case 0:
     putarg (0, CPP);

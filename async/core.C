@@ -349,7 +349,7 @@ sigcatch (int sig)
    * which select ends up being called with the original (non-zero)
    * value of selwait.  We avoid the problem by writing to a pipe that
    * will wake up the select. */
-  write (sigpipes[1], "", 1);
+  v_write (sigpipes[1], "", 1);
 }
 
 cbv::ptr

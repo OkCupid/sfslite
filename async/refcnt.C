@@ -22,6 +22,7 @@
  */
 
 #include "refcnt.h"
+#include "amisc.h"
 
 /*
  * XXX - workaround for egregious egcs bug.
@@ -70,5 +71,5 @@ refcnt_warn (const char *op, const std::type_info &type, void *addr, int cnt)
 	   progname ? progname.cstr () : "", progname ? ": " : "",
 	   op, type.name (), addr, cnt);
   assert (memchr (buf, 0, sizeof (buf)));
-  write (errfd, buf, strlen (buf));
+  v_write (errfd, buf, strlen (buf));
 }

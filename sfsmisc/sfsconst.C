@@ -392,7 +392,7 @@ sfsconst_init (bool lite_mode)
 	  setgid (sfs_gid);
 	  setuid (sb.st_uid);
 	  if (mkdir (sfsdir, 02770) >= 0)
-	    chown (sfsdir, (uid_t) -1, sfs_gid);
+	    rignore (chown (sfsdir, (uid_t) -1, sfs_gid));
 	  _exit (0);
 	}
       }

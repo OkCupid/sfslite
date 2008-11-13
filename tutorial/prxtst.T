@@ -133,8 +133,8 @@ int
 main (int argc, char *argv[])
 {
   static rxx x ("([^:]+):(\\d+)");
-  int lport;
-  int port;
+  int lport = 0;
+  int port = 0;
   str hn;
   setprogname (argv[0]);
 

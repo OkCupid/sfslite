@@ -154,7 +154,7 @@ getfilenoise (datasink *dst, const char *path, cbv cb, size_t maxbytes)
       size_t n = read (fd, buf, min (maxbytes, sizeof (buf)));
       if (n <= 0)
 	_exit (0);
-      write (fds[1], buf, n);
+      v_write (fds[1], buf, n);
       maxbytes -= n;
       if (!maxbytes)
 	_exit (0);
@@ -254,7 +254,7 @@ noise_from_prog::execprog (const char *const *av)
     if (fds[1] != 1 && fds[1] != 2)
       close (fds[1]);
     close (0);
-    chdir ("/");
+    rignore (chdir ("/"));
     open ("/dev/null", O_RDONLY);
 
     char *env[] = { NULL };

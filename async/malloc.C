@@ -31,7 +31,7 @@ static void
 default_xmalloc_handler (int size)
 {
   const char msg[] = "malloc failed\n";
-  write (errfd, msg, sizeof (msg) - 1);
+  v_write (errfd, msg, sizeof (msg) - 1);
   myabort ();
 }
 void (*xmalloc_handler) (int) = default_xmalloc_handler;

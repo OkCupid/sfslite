@@ -97,9 +97,10 @@ pathinfo (char *path)
     strcat (buf, "\n");
 
   sprintf (res, "0x%" U64F "x\n%s%s\n", (u_int64_t) dev, buf, rp);
-  if (isunixsocket (1) < 0)
-    write (1, res, strlen (res));
-  else
+  if (isunixsocket (1) < 0) {
+    int i = write (1, res, strlen (res));
+    i++;
+  } else
     writefd (1, res, strlen (res), fd);
 }
 

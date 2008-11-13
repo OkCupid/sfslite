@@ -142,3 +142,7 @@ void print_funcdef (definition *);
  * rpc_tblout routines
  */
 void write_tables (void);
+
+#define RC_INT_IGNORE(x) \
+  do { int i = x; i++; } while (0)	
+  

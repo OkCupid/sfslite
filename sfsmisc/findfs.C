@@ -40,7 +40,7 @@ nfsdbcat (int out)
     nfsdb = file2str (nfsdbpath);
   } while (!nfsdb && errno == ESTALE);
   if (nfsdb)
-    write (out, nfsdb, nfsdb.len ());
+    v_write (out, nfsdb, nfsdb.len ());
 }
 
 void
@@ -139,7 +139,7 @@ static void
 pathinfofetch_cb (callback<void, u_int64_t, str, str>::ref cb, str s)
 {
   static rxx pirx ("^(0x[0-9a-f]+)\n(.*)\n([\\x00-\\xff]*)\n$");
-  u_int64_t dev;
+  u_int64_t dev = 0;
   if (!s || !pirx.search (s) || !convertint (pirx[1], &dev))
     (*cb) (nodev, NULL, NULL);
   else

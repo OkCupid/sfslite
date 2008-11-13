@@ -365,10 +365,10 @@ aiosrv::pathop (aiomsg_t msg)
     unlink (rq->path1 ());
     break;
   case AIOD_LINK:
-    link (rq->path1 (), rq->path2 ());
+    rignore (link (rq->path1 (), rq->path2 ()));
     break;
   case AIOD_SYMLINK:
-    symlink (rq->path1 (), rq->path2 ());
+    rignore (symlink (rq->path1 (), rq->path2 ()));
     break;
   case AIOD_RENAME:
     rename (rq->path1 (), rq->path2 ());
@@ -467,7 +467,7 @@ aiosrv::fhop (aiomsg_t msg)
     fsync (fd);
     break;
   case AIOD_FTRUNC:
-    ftruncate (fd, rq->length);
+    rignore (ftruncate (fd, rq->length));
     break;
   case AIOD_READ:
 #ifdef HAVE_PREAD

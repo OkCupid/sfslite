@@ -22,6 +22,9 @@ SUFFIXES = .x .T
 .T.C:
 	$(TAME) -o $@ $< || (rm -f $@ && false)
 
+util.C: rtftp_prot.h
+util.o: rtftp_prot.h
+util.lo: rtftp_prot.h
 rtftp_prot.C: rtftp_prot.h
 rtftp_prot.lo: rtftp_prot.h rtftp_prot.C
 rtftp_prot.o: rtftp_prot.h rtftp_prot.C

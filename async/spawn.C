@@ -241,7 +241,7 @@ spawn (const char *path, char *const *argv,
       execv (path, argv);
 
     int saved_err = errno;
-    write (fds[1], &saved_err, sizeof (saved_err));
+    v_write (fds[1], &saved_err, sizeof (saved_err));
     close (fds[1]);
     // Since we return a useful errno, there is no need to print
     // anything in the child process.  Just exit.

@@ -401,7 +401,7 @@ resolv_conf::reload_dumpres (int fd)
   make_sync (fd);
   bzero (&_res, sizeof (_res));
   res_init ();
-  write (fd, &_res, sizeof (_res));
+  v_write (fd, &_res, sizeof (_res));
   _exit (0);
 }
 

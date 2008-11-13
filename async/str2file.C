@@ -99,7 +99,7 @@ str2file (str file, str s, int perm, bool excl, struct stat *sbp, bool binary)
     return false;
   }
   if (s.len () && s[s.len () - 1] != '\n' && !binary)
-    write (fd, "\n", 1);
+    v_write (fd, "\n", 1);
   int err = fsync (fd);
   if (sbp && !err)
     err = fstat (fd, sbp);

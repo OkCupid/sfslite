@@ -21,6 +21,7 @@
  *
  */
 
+#include "amisc.h"
 #include "bigint.h"
 #include "msb.h"
 
@@ -188,6 +189,6 @@ mpz_dump (const MP_INT *mp)
   char *str = (char *) xmalloc (mpz_sizeinbase (mp, 16) + 3);
   mpz_get_str (str, 16, mp);
   strcat (str, "\n");
-  write (2, str, strlen (str));
+  v_write (2, str, strlen (str));
   xfree (str);
 }

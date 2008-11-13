@@ -118,7 +118,8 @@ xxmalloc (size_t n)
   void *r = malloc (n);
   if (!r) {
     const char msg[] = "malloc failed\n";
-    write (2, msg, sizeof (msg) - 1);
+    int i = write (2, msg, sizeof (msg) - 1);
+    i ++;
     abort ();
   }
   return r;
