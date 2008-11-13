@@ -62,10 +62,15 @@ waitread (int fd, evv_t cb)
 tamed void
 iofd_t::on (evv_t cb)
 {
+  tvars {
+    outcome_t oc (OUTCOME_SUCC);
+  }
   _on = true;
-  twait { fdcb (_fd, _op, mkevent ()); }
+  twait { fdcb (_fd, _op, connector::cnc (mkevent (), cb, &oc)); }
   _on = false;
-  cb->trigger ();
+  if (oc != OUTCOME_CANCELLED) {
+    cb->trigger ();
+  }
   if (!_on) {
     off (false);
   }
