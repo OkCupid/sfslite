@@ -181,7 +181,7 @@ sfs_suidserv (str prog, suidservcb cb)
   if (lstat (sock.cstr (), &sb) < 0 || (sb.st_mode & S_IFMT) != S_IFSOCK)
     fatal << sock << ": bound but cannot stat\n";
   if (!runinplace && sb.st_gid != sfs_gid)
-    rignore (chown (sock.cstr (), (uid_t) -1, sfs_gid));
+    rc_ignore (chown (sock.cstr (), (uid_t) -1, sfs_gid));
 }
 
 static void

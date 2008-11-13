@@ -258,10 +258,10 @@ operator- (const timespec &a, const timespec &b)
   return ts;
 }
 
-template<class T> void rignore(const T &in) {}
+template<class T> void rc_ignore(const T &in) {}
 
 inline void v_write (int fd, const void *buf, size_t sz) 
-{ rignore (write (fd, buf, sz)); }
+{ rc_ignore (write (fd, buf, sz)); }
 
 
 #endif /* !_ASYNC_AMISC_H_ */

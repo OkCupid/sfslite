@@ -254,7 +254,7 @@ noise_from_prog::execprog (const char *const *av)
     if (fds[1] != 1 && fds[1] != 2)
       close (fds[1]);
     close (0);
-    rignore (chdir ("/"));
+    rc_ignore (chdir ("/"));
     open ("/dev/null", O_RDONLY);
 
     char *env[] = { NULL };

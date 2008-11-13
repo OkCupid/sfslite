@@ -135,7 +135,7 @@ agent_userdir (u_int32_t uid, bool create)
     }
   }
 
-  rignore (fchdir (fd));
+  rc_ignore (fchdir (fd));
   close (fd);
   return ret ? str (strbuf ("%s/", tmpdir) << ret) : str (NULL);
 }
