@@ -451,7 +451,7 @@ paillier_keygen (size_t nbits, size_t abits, u_int iter)
       q += a;
     
     n = p * q;
-  } while (n.nbits () != nbits && n.nbits () != (nbits+1) || p == q);
+  } while ((n.nbits () != nbits && n.nbits () != (nbits+1)) || p == q);
   
   paillier_gen (p, q, n, a, g, k);
   

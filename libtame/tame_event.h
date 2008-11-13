@@ -113,8 +113,8 @@ class _event_impl;
 template<class T1=void, class T2=void, class T3=void>
 class event {
 public:
-  typedef ref<_event<T1,T2,T3> > ref;
-  typedef ptr<_event<T1,T2,T3> > ptr;
+  typedef struct ref<_event<T1,T2,T3> > ref;
+  typedef struct ptr<_event<T1,T2,T3> > ptr;
 };
 
 

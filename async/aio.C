@@ -125,7 +125,7 @@ aiod::aiod (u_int nproc, ssize_t shmsize, size_t mb, bool sp,
 	    str path, str tmpdir)
   : closed (false), finalized (false), growlock (false),
     bufwakereq (false), bufwakelock (false), shmpin (sp),
-    refcnt (0), shmmax (shmsize + mb - 1 & ~(mb - 1)), shmlen (0),
+    refcnt (0), shmmax ((shmsize + mb - 1) & ~(mb - 1)), shmlen (0),
     bb (shmlen, minbuf, mb), ndaemons (nproc), fhno_ctr (1), maxbuf (mb)
 {
   assert (shmsize > 0);

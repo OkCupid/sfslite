@@ -53,13 +53,13 @@ public:
   void setkey (const void *key, size_t len);
 
   u_char getbyte () {
-    i = i + 1 & 0xff;
+    i = (i + 1) & 0xff;
     u_char si = s[i];
-    j = j + si & 0xff;
+    j = (j + si) & 0xff;
     u_char sj = s[j];
     s[i] = sj;
     s[j] = si;
-    return s[si + sj & 0xff];
+    return s[(si + sj) & 0xff];
   }
 };
 

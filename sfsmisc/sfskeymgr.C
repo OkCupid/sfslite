@@ -420,11 +420,13 @@ sfskeymgr::gotsig (ustate *st, sfs_sig2 *target, str err, ptr<sfs_sig2> sig)
   if (sig)
     *target = *sig;
 
-  if (!--st->sigs)
-    if (st->sigerr)
+  if (!(--st->sigs)) {
+    if (st->sigerr) {
       done (st, st->sigerr);
-     else 
+    } else {
        doupdate (st);
+    }
+  }
 }
 
 void

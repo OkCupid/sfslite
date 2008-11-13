@@ -62,7 +62,7 @@ slashsfs2sch (str path)
   if (firstslash)
     s = strbuf (nosfs, firstslash - nosfs);
   else
-    s = strbuf (nosfs);
+    s = strbuf ("%s", nosfs);
 
   if (sfs_parsepath (s))
     return s;

@@ -449,8 +449,8 @@ sfsconst_etcfile_required (const char *name, const char *const *path, bool ftl)
       msg << "  " << *d << "/" << name << "\n";
     }
     str m = msg;
-    if (ftl) fatal (m);
-    else warn (m);
+    if (ftl) fatal ("%s", m.cstr ());
+    else warn ("%s", m.cstr ());
   }
   return file;
 }

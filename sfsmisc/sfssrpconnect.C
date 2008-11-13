@@ -187,13 +187,14 @@ get_srp_params (ptr<aclnt> c, bigint *Np, bigint *gp)
     aqa.key.set_type (SFSAUTH_DBKEY_NULL);
     clnt_stat err = c->scall (SFSAUTH2_QUERY, &aqa, &aqr);
     if (!err && aqr.type == SFSAUTH_SRPPARMS &&
-	import_srp_params (aqr.srpparms->parms, &N, &g))
+	import_srp_params (aqr.srpparms->parms, &N, &g)) {
       if (!srp_base::checkparam (N, g)) {
 	warn << "Invalid SRP parameters read from sfsauthd.\n";
 	return false;
-      }
-      else
+      } else {
 	valid = true;
+      }
+    }
   }
   if (valid) {
     *Np = N;

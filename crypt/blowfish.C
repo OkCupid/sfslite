@@ -196,7 +196,7 @@ eksblowfish::eksched (u_int cost, const void *_key, size_t keybytes,
 		      const void *salt, size_t saltlen)
 {
   assert (cost <= 32);
-  u_int32_t nrounds = cost ? 1 << cost-1 : 0;
+  u_int32_t nrounds = cost ? 1 << (cost-1) : 0;
 #if 0
   u_int32_t saltw[4] = {
     getint (salt), getint (salt + 0x4),

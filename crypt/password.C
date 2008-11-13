@@ -65,7 +65,7 @@ pw_dearmorsalt (u_int *costp, str *bsaltp, str *ptextp, str armor)
 str
 pw_dorawcrypt (str ptext, size_t outsize, eksblowfish *eksb)
 {
-  wmstr m (outsize + 7 & ~7);
+  wmstr m ((outsize + 7) & ~7);
   hashptext (m, m.len (), ptext);
 
   cbc64iv iv (*eksb);
@@ -131,7 +131,7 @@ pw_crypt (str pwd, str salt, size_t outsize, eksblowfish *eksb)
 bigint
 pw_getint (str pwd, str salt, size_t nbits, eksblowfish *eksb)
 {
-  str raw = pw_crypt (pwd, salt, nbits + 7 >> 3, eksb);
+  str raw = pw_crypt (pwd, salt, (nbits + 7) >> 3, eksb);
   if (!raw)
     return 0;
   bigint res;

@@ -33,7 +33,7 @@ xdr_mpz_t (register XDR *xdrs, MP_INT *z)
 
   switch (xdrs->x_op) {
   case XDR_ENCODE:
-    size = mpz_rawsize (z) + 3 & ~3;
+    size = (mpz_rawsize (z) + 3) & ~3;
     if (!xdr_putint (xdrs, size))
       return FALSE;
     if (!(cp = (char *) XDR_INLINE (xdrs, size)))
@@ -46,7 +46,7 @@ xdr_mpz_t (register XDR *xdrs, MP_INT *z)
       mpz_init (z);
     if (!xdr_getint (xdrs, size) || (int32_t) size < 0)
       return FALSE;
-    if (!(cp = (char *) XDR_INLINE (xdrs, size + 3 & ~3)))
+    if (!(cp = (char *) XDR_INLINE (xdrs, (size + 3) & ~3)))
       return FALSE;
     mpz_set_raw (z, cp, size);
     break;

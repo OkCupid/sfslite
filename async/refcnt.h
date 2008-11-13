@@ -374,7 +374,7 @@ public:
   static rc_t *alloc (size_t n)
     { return new (opnew (n + (size_t) tptr (NULL))) rc_t; }
   static T *tptr (rc_t *rcp)
-    { return (T *) ((char *) rcp + (sizeof (*rcp) + 7 & ~7)); }
+    { return (T *) ((char *) rcp + ((sizeof (*rcp) + 7) & ~7)); }
 };
 
 #define REFOPS_DEFAULT(T)			\
@@ -420,7 +420,7 @@ class ref : public refpriv, public refops<T> {
 
 public:
   typedef T type;
-  typedef ptr<T> ptr;
+  typedef struct ptr<T> ptr;
 
   template<class U, reftype v>
   ref (refcounted<U, v> *pp)
@@ -482,7 +482,7 @@ class ptr : public refpriv, public refops <T> {
 
 public:
   typedef T type;
-  typedef ref<T> ref;
+  typedef struct ref<T> ref;
 
   explicit ptr (__bss_init) {}
   ptr () : refpriv (NULL) { p = NULL; }

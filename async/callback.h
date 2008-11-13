@@ -178,8 +178,8 @@ sub pcallback ($) {
 template<$tmpparam>
 class callback$specargs {
 public:
-  typedef ref<callback<$tmpargs> > ref;
-  typedef ptr<callback<$tmpargs> > ptr;
+  typedef struct ref<callback<$tmpargs> > ref;
+  typedef struct ptr<callback<$tmpargs> > ptr;
 
 #if WRAP_DEBUG
   const char *const dest;
@@ -677,8 +677,8 @@ template<class R, class B1 = void, class B2 = void, class B3 = void, class B4 = 
 template<class R>
 class callback<R> {
 public:
-  typedef ref<callback<R> > ref;
-  typedef ptr<callback<R> > ptr;
+  typedef struct ref<callback<R> > ref;
+  typedef struct ptr<callback<R> > ptr;
 
 #if WRAP_DEBUG
   const char *const dest;
@@ -1557,8 +1557,8 @@ wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, A4, A
 template<class R, class B1>
 class callback<R, B1> {
 public:
-  typedef ref<callback<R, B1> > ref;
-  typedef ptr<callback<R, B1> > ptr;
+  typedef struct ref<callback<R, B1> > ref;
+  typedef struct ptr<callback<R, B1> > ptr;
 
 #if WRAP_DEBUG
   const char *const dest;
@@ -2437,8 +2437,8 @@ wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, A4, A
 template<class R, class B1, class B2>
 class callback<R, B1, B2> {
 public:
-  typedef ref<callback<R, B1, B2> > ref;
-  typedef ptr<callback<R, B1, B2> > ptr;
+  typedef struct ref<callback<R, B1, B2> > ref;
+  typedef struct ptr<callback<R, B1, B2> > ptr;
 
 #if WRAP_DEBUG
   const char *const dest;
@@ -3317,8 +3317,8 @@ wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, A4, A
 template<class R, class B1, class B2, class B3>
 class callback<R, B1, B2, B3> {
 public:
-  typedef ref<callback<R, B1, B2, B3> > ref;
-  typedef ptr<callback<R, B1, B2, B3> > ptr;
+  typedef struct ref<callback<R, B1, B2, B3> > ref;
+  typedef struct ptr<callback<R, B1, B2, B3> > ptr;
 
 #if WRAP_DEBUG
   const char *const dest;
@@ -4197,8 +4197,8 @@ wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, A4, A
 template<class R, class B1, class B2, class B3, class B4>
 class callback {
 public:
-  typedef ref<callback<R, B1, B2, B3, B4> > ref;
-  typedef ptr<callback<R, B1, B2, B3, B4> > ptr;
+  typedef struct ref<callback<R, B1, B2, B3, B4> > ref;
+  typedef struct ptr<callback<R, B1, B2, B3, B4> > ptr;
 
 #if WRAP_DEBUG
   const char *const dest;

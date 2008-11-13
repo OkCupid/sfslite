@@ -80,7 +80,7 @@ authopaque_set (AUTH *auth, const authunix_parms *aup)
   xdrmem xdr (auth->ah_cred.oa_base, MAX_AUTH_BYTES);
   u_int ng = min<u_int> (aup->aup_len, 16);
   u_int mnl = strlen (aup->aup_machname);
-  auth->ah_cred.oa_length = 20 + 4*ng + (mnl + 3 & ~3);
+  auth->ah_cred.oa_length = 20 + 4*ng + ((mnl + 3) & ~3);
   xdr_putint (&xdr, aup->aup_time);
   xdr_putint (&xdr, mnl);
   xdr_putpadbytes (&xdr, aup->aup_machname, mnl);

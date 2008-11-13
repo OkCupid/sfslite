@@ -52,25 +52,36 @@ myname ()
   if (_res.dnsrch[0] && _res.dnsrch[0][0])
     return strbuf ("%s.%s", namebuf, _res.dnsrch[0]);
 
-  if (hostent *hp = gethostbyname (namebuf))
-    if (strchr (hp->h_name, '.'))
+  if (hostent *hp = gethostbyname (namebuf)) {
+    if (strchr (hp->h_name, '.')) {
       return hp->h_name;
-    else
-      for (char **np = hp->h_aliases; *np; np++)
-	if (strchr (*np, '.'))
+    } else {
+      for (char **np = hp->h_aliases; *np; np++) {
+	if (strchr (*np, '.')) {
 	  return *np;
+	}
+      }
+    }
+  }
 
   vec<in_addr> av;
-  if (myipaddrs (&av))
-    for (in_addr *ap = av.base (); ap < av.lim (); ap++)
-      if (ap->s_addr != htonl (INADDR_LOOPBACK))
-	if (hostent *hp = gethostbyaddr ((char *) ap, sizeof (*ap), AF_INET))
-	  if (strchr (hp->h_name, '.'))
+  if (myipaddrs (&av)) {
+    for (in_addr *ap = av.base (); ap < av.lim (); ap++) {
+      if (ap->s_addr != htonl (INADDR_LOOPBACK)) {
+	if (hostent *hp = gethostbyaddr ((char *) ap, sizeof (*ap), AF_INET)) {
+	  if (strchr (hp->h_name, '.')) {
 	    return hp->h_name;
-	  else
-	    for (char **np = hp->h_aliases; *np; np++)
-	      if (strchr (*np, '.'))
+	  } else {
+	    for (char **np = hp->h_aliases; *np; np++) {
+	      if (strchr (*np, '.')) {
 		return *np;
+	      }
+	    }
+	  }
+	}
+      }
+    }
+  }
 
   warn ("cannot find fully qualified domain name of this host\n");
   warn ("set system name to fully-qualified domain name "

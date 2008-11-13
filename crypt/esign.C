@@ -32,7 +32,7 @@ esign_pub::msg2bigint (bigint *resp, const str &msg, int bits)
 {
   assert (bits);
   bits--;
-  const size_t bytes = bits + 7 >> 3;
+  const size_t bytes = (bits + 7) >> 3;
   zcbuf buf (bytes);
   sha1oracle ora (bytes, 1);
   ora.update (msg.cstr (), msg.len ());

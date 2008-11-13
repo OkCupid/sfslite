@@ -91,7 +91,7 @@ rpc_traverse (fh3trans &fht, nfs_fh3 &fh)
 		       fh.data.size ());
     memcpy (&snl, fh.data.base (), 4);
     len = snl % NFS3_FHSIZE;
-    if (fh.data.size () != (len + 11 & ~7)) {
+    if (fh.data.size () != ((len + 11) & ~7)) {
       fht.err = NFS3ERR_STALE;
       return false;
     }

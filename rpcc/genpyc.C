@@ -86,7 +86,7 @@ pmshl (str id)
 }
 
 static str
-decltype (const rpc_decl *d)
+rpc_decltype (const rpc_decl *d)
 {
   str wt = pyw_type (d->type);
   strbuf b;
@@ -129,14 +129,14 @@ static void
 pdecl_py (str prefix, const rpc_decl *d)
 {
   str name = d->id;
-  aout << prefix << decltype (d) << " " << pyw_type (name) << ";\n";
+  aout << prefix << rpc_decltype (d) << " " << pyw_type (name) << ";\n";
 }
 
 static void
 pdecl (str prefix, const rpc_decl *d)
 {
   str name = d->id;
-  aout << prefix << decltype (d) << " " << name << ";\n";
+  aout << prefix << rpc_decltype (d) << " " << name << ";\n";
 }
 
 static str
@@ -1407,7 +1407,7 @@ dump_c_union (const rpc_sym *s)
     if (!rt->swval)
       hasdefault = true;
     if (rt->tagvalid && rt->tag.type != "void") {
-      str type = decltype (&rt->tag);
+      str type = rpc_decltype (&rt->tag);
       if (type[type.len ()-1] == '>')
 	type = type << " ";
       aout << "    union_entry<" << type << "> "

@@ -359,9 +359,6 @@ namespace gc {
     bool operator== (const aptr<T,V,G> &p) const
     { return base_eq (p) && _offset = p._offset;  }
 
-    bool operator== (const aptr<T,V,G> &p) const
-    { return ! ( (*this) == p); }
-    
     aptr<T,V,G> &operator= (aptr<T,V,G> &p)
     {
       ptr<T,V,G>::rc_dec ();

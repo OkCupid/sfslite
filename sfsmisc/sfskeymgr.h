@@ -364,11 +364,11 @@ private:
   void getcertinfo (ustate *s);
   bool setup_uinfo (ustate *s);
   void sign_updatereq (ustate *s);
-  void done (ustate *s, str s, bool gotconf = true);
+  void done (ustate *, str, bool gotconf = true);
   bool connect (const host_t &uh, concb c);
 
   // helpers for login function
-  void done (lstate *s, str s);
+  void done (lstate *, str );
   void unixlogin (lstate *s, int ntries = 0);
   void getpubkey (ptr<axprt> x, const str &un, fpkcb c);
   void dologin (lstate *ls, sfskeyinfo *ki);

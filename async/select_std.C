@@ -152,7 +152,7 @@ namespace sfs_core {
 		  << ") ready FD indidicates possible bug: "
 		  << "fd=" << fd << "; op=" << i << "\n";
 		str s = b;
-		fprintf (stderr, s.cstr ());
+		fprintf (stderr, "%s", s.cstr ());
 	      }
 	    } else {
 	      _n_repeats = 0;

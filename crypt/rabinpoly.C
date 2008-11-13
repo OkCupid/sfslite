@@ -45,7 +45,7 @@ polymod (u_int64_t nh, u_int64_t nl, u_int64_t d)
   for (int i = 63; i >= k; i--)
   {  
     if (nl & INT64 (1) << i)
-      nl ^= d >> 63 - i;
+      nl ^= d >> (63 - i);
   }
   
   return nl;

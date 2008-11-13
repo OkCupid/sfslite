@@ -232,7 +232,7 @@ rpc_traverse (XDR *xdrs, rpc_bytes<max> &obj)
        * however, then if size is garbage the program will die in
        * obj.setsize (size) from trying to allocate too much memory.
        */
-      char *dp = (char *) XDR_INLINE (xdrs, size + 3 & ~3);
+      char *dp = (char *) XDR_INLINE (xdrs, (size + 3) & ~3);
       if (!dp)
 	return false;
       obj.setsize (size);
@@ -257,7 +257,7 @@ rpc_traverse (XDR *xdrs, rpc_str<max> &obj)
       if (!xdr_getint (xdrs, size) || size > max)
 	return false;
       /* See comment for rpc_bytes */
-      char *dp = (char *) XDR_INLINE (xdrs, size + 3 & ~3);
+      char *dp = (char *) XDR_INLINE (xdrs, (size + 3) & ~3);
       if (!dp || memchr (dp, '\0', size))
 	return false;
       obj.setbuf (dp, size);

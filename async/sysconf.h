@@ -454,8 +454,9 @@ int clock_gettime (int, struct timespec *);
 #endif /* PATH_MAX */
 
 
-#ifndef HAVE_GETPEEREID
-# ifdef SO_PEERCRED
+#if 0 /* doesn't work on new linuxes, just forget it */
+# ifndef HAVE_GETPEEREID
+#  ifdef SO_PEERCRED
 static inline int
 getpeereid (int fd, uid_t *u, gid_t *g)
 {
@@ -471,8 +472,9 @@ getpeereid (int fd, uid_t *u, gid_t *g)
   return r;
 }
 #  define HAVE_GETPEEREID 1
-# endif /* SO_PEERCRED */
-#endif /* !HAVE_GETPEEREID */
+#  endif /* SO_PEERCRED */
+# endif /* !HAVE_GETPEEREID */
+#endif /* 0 */
 
 /*
  * Debug malloc

@@ -416,7 +416,7 @@ random_bigint (size_t bits)
 {
   if (!bits)
     return 0;
-  zcbuf buf (bits + 7 >> 3);
+  zcbuf buf ((bits + 7) >> 3);
   rnd.getbytes (buf, buf.size);
   bigint ret;
   buf[0] &= 0xff >> (-bits & 7);
@@ -432,7 +432,7 @@ random_zn (const bigint &n)
 {
   assert (sgn (n) > 0);
   const int bits = mpz_sizeinbase2 (&n);
-  zcbuf buf (bits + 7 >> 3);
+  zcbuf buf ((bits + 7) >> 3);
   bigint ret;
 
   do {
@@ -464,7 +464,7 @@ prime_test (const bigint &n, u_int iter)
   bigint r = n1 >> s;
   u_int nlimbs = n._mp_size;
   mp_limb_t mask = ((mp_limb_t) -1
-		    >> (-mpz_sizeinbase2 (&n) & 8*GMP_LIMB_SIZE - 1));
+		    >> (-mpz_sizeinbase2 (&n) & (8*GMP_LIMB_SIZE - 1)));
   bigint a, y;
   _mpz_realloc (&a, n._mp_alloc);
 

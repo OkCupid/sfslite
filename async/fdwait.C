@@ -42,7 +42,7 @@ fdwait (int rfd, int wfd, bool r, bool w, timeval *tvp)
   if (maxfd >= nfd) {
     // nfd = max (fd + 1, FD_SETSIZE);
     nfd = maxfd + 1;
-    nfd = nfd + 0x3f & ~0x3f;
+    nfd = (nfd + 0x3f) & ~0x3f;
     xfree (rfds);
     xfree (wfds);
     rfds = (fd_set *) xmalloc (nfd >> 3);

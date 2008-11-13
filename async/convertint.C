@@ -136,7 +136,7 @@ strtoi64 (const char *nptr, char **endptr, register int base)
     if (any < 0)
       continue;
     if (neg) {
-      if (acc < cutoff || acc == cutoff && c > cutlim) {
+      if (acc < cutoff || (acc == cutoff && c > cutlim)) {
 	any = -1;
 	acc = - INT64(0x7fffffffffffffff) - 1;
 	//errno = ERANGE;
@@ -146,7 +146,7 @@ strtoi64 (const char *nptr, char **endptr, register int base)
 	acc -= c;
       }
     } else {
-      if (acc > cutoff || acc == cutoff && c > cutlim) {
+      if (acc > cutoff || (acc == cutoff && c > cutlim)) {
 	any = -1;
 	acc = INT64(0x7fffffffffffffff);
 	//errno = ERANGE;

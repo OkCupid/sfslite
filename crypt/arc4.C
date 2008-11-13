@@ -39,9 +39,9 @@ arc4::_setkey (const u_char *key, size_t keylen)
   for (u_int n = 0, keypos = 0; n < 256; n++, keypos++) {
     if (keypos >= keylen)
       keypos = 0;
-    i = i + 1 & 0xff;
+    i = (i + 1) & 0xff;
     u_char si = s[i];
-    j = j + si + key[keypos] & 0xff;
+	 j = (j + si + key[keypos]) & 0xff;
     s[i] = s[j];
     s[j] = si;
   }

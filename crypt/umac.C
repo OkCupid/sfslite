@@ -198,7 +198,7 @@ umac::dword_t
 umac::nh (const umac::word_t *k, const umac::word_t *m, u_int len)
 {
   dword_t y = len * 8;
-  u_int extra = len & l1_block_size - 1;
+  u_int extra = len & (l1_block_size - 1);
   const word_t *ek = k + (len - extra) / word_size;
   while (k < ek) {
     y += nh_inner (k, m);
@@ -209,7 +209,7 @@ umac::nh (const umac::word_t *k, const umac::word_t *m, u_int len)
     word_t buf[l1_block_size/word_size];
     bzero (buf, sizeof (buf));
     // XXX - assumes copied into oversized/aligned buffer
-    memcpy (buf, m, extra + word_size_mask & ~word_size_mask);
+    memcpy (buf, m, (extra + word_size_mask) & ~word_size_mask);
     y += nh_inner (k, buf);
   }
   return y;

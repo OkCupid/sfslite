@@ -131,11 +131,13 @@ warnobj::warnobj (int f)
 {
   if (flags & timeflag)
     cat (timestring ()).cat (" ");
-  if (!(flags & xflag) && progname)
-    if (progpid)
+  if (!(flags & xflag) && progname) {
+    if (progpid) {
       cat (progname).cat ("[").cat (progpid).cat ("]: ");
-    else
+    } else {
       cat (progname).cat (": ");
+	}
+  }
   if (flags & panicflag)
     cat ("PANIC: ");
   else if (flags & fatalflag)
