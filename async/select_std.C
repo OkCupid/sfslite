@@ -19,6 +19,9 @@ namespace sfs_core {
       _n_repeats (0)
   {
     init_fdsets ();
+    for (size_t i = 0; i < fdsn; i++) {
+      _src_locs[i] = New src_loc_t[maxfd];
+    }
   }
 
   //-----------------------------------------------------------------------
@@ -40,6 +43,7 @@ namespace sfs_core {
     for (int i = 0; i < fdsn; i++) {
       xfree (_fdsp[i]);
       xfree (_fdspt[i]);
+      delete [] _src_locs[i];
     }
   }
 
@@ -65,13 +69,15 @@ namespace sfs_core {
     assert (fd < maxfd);
     _fdcbs[op][fd] = cb;
     if (cb) {
+      _src_locs[op][fd].set (f, l);
       sfs_add_new_cb ();
       if (fd >= _nselfd)
 	_nselfd = fd + 1;
       FD_SET (fd, _fdsp[op]);
-    }
-    else
+    } else {
+      _src_locs[op][fd].clear ();
       FD_CLR (fd, _fdsp[op]);
+    }
   }
 
   //-----------------------------------------------------------------------
@@ -148,9 +154,11 @@ namespace sfs_core {
 	      _n_repeats ++;
 	      if (_n_repeats > 0 && _n_repeats % 1000 == 0) {
 		strbuf b;
+		str l = _src_locs[i][fd].to_str ();
 		b << "XXX repeatedly (" << _n_repeats 
 		  << ") ready FD indidicates possible bug: "
-		  << "fd=" << fd << "; op=" << i << "\n";
+		  << "fd=" << fd << "; op=" << i << "; "
+		  << "cb=" << l << "\n";
 		str s = b;
 		fprintf (stderr, "%s", s.cstr ());
 	      }
@@ -172,6 +180,40 @@ namespace sfs_core {
 	}
   }
   
+  //-----------------------------------------------------------------------
+
+  void
+  src_loc_t::set (const char *f, int l) 
+  {
+    _file = f;
+    _line = l;
+  }
+
+  //-----------------------------------------------------------------------
+
+  void
+  src_loc_t::clear () 
+  {
+    _file = NULL;
+    _line = 0;
+  }
+
+  //-----------------------------------------------------------------------
+
+  str
+  src_loc_t::to_str () const
+  {
+    str ret;
+    if (!_line) {
+      ret = "<N/A>";
+    } else {
+      strbuf b;
+      b << _file << ":" << _line;
+      ret = b;
+    }
+    return ret;
+  }
+
   //-----------------------------------------------------------------------
   
 };

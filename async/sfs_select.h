@@ -107,6 +107,20 @@ namespace sfs_core {
     cbv::ptr *_fdcbs[fdsn];
   };
 
+  // source code locations
+  class src_loc_t {
+  public:
+    src_loc_t () : _file (NULL), _line (0) {}
+    void set (const char *f, int l);
+    void clear ();
+    str to_str () const;
+    const char *file () const { return _file; }
+    int line () const { return _line; }
+  private:
+    const char *_file;
+    int _line;
+  };
+
   class std_selector_t : public selector_t {
   public:
     std_selector_t ();
@@ -131,6 +145,8 @@ namespace sfs_core {
 
     fd_set *_fdsp[fdsn];
     fd_set *_fdspt[fdsn];
+
+    src_loc_t *_src_locs[fdsn];
 
     int _last_fd, _last_i, _n_repeats;
   };
