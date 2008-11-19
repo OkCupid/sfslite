@@ -266,5 +266,24 @@ private:
   qhash<K,V,H,E> &_qh;
 };
 
+template<class K, class H = hashfn<K>, class E = equals<K> >
+class bhash_const_iterator_t {
+public:
+  bhash_const_iterator_t (const bhash<K,H,E> &h) 
+    : _i (h.first ()), _bh (h) {}
+
+  const K *next () {
+    const K *r = NULL;
+    if (_i) {
+      r = &_i->key;
+      _i = _bh.next (_i);
+    }
+    return r;
+  }
+  
+private:
+  const qhash_slot<K,void> *_i;
+  const bhash<K,H,E> &_bh;
+};
 
 #endif /* !_QHASH_H_ */
