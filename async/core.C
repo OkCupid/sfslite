@@ -460,6 +460,14 @@ lazycb_check ()
   }
 }
 
+/*
+ * MK 11/21/08  -- Every so often, we get in a weird situation, in which
+ * sigpipes[0] is readable, but sigdocheck isn't set, so we're in a tight
+ * CPU loop.  This hack should workaround that problem.  It used to be
+ * that sigpipes[0] was set selread with cbv_null...
+ */
+static void sigcb_set_checkbit() { sigdocheck = 1; }
+
 static void
 ainit ()
 {
@@ -471,7 +479,7 @@ ainit ()
     _make_async (sigpipes[1]);
     close_on_exec (sigpipes[0]);
     close_on_exec (sigpipes[1]);
-    fdcb (sigpipes[0], selread, cbv_null);
+    fdcb (sigpipes[0], selread, wrap (sigcb_set_checkbit));
 
     /* Set SA_RESTART for SIGCHLD, primarily for the benefit of
      * stdio-using code like lex/flex scanners.  These tend to flip out
