@@ -150,7 +150,9 @@ namespace sfs_core {
 	  n--;
 	  if (FD_ISSET (fd, _fdsp[i])) {
 
-	    if (_last_fd == fd && _last_i == i) {
+	    // Comment out this check for now; since the bug has
+	    // been fixed, I don't think we need it any more.
+	    if (0 && _last_fd == fd && _last_i == i) {
 	      _n_repeats ++;
 	      if (_n_repeats > 0 && _n_repeats % 1000 == 0) {
 		strbuf b;
