@@ -1,2 +1,2 @@
 
-SUBDIRS = rtftp
+SUBDIRS = rtftp tinetd
