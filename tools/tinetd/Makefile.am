@@ -1,7 +1,7 @@
 
 sfsbin_PROGRAMS = tinetd
 
-tinetd_SOURCES = tinetd.C
+tinetd_SOURCES = tinetd.C log.C
 
 if USE_SFSMISC
 LIBSVC_ME = $(LIBSVC)
