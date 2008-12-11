@@ -3,6 +3,7 @@
 
 #include "async.h"
 #include "tame.h"
+#include "arpc.h"
 #include "parseopt.h"
 #include "tame_io.h"
 #include "ihash.h"
@@ -87,7 +88,8 @@ typedef u_int32_t port_t;
 
 class cli_t {
 public:
-  cli_t (child_t *ch, int cfd, const str &a, int sfd);
+  cli_t (child_t *ch, int cfd, const sockaddr_in &sin, ptr<axprt_unix> x,
+	 ptr<aclnt> _cli);
   ~cli_t ();
 
   void run (evv_t ev, CLOSURE);
@@ -97,8 +99,9 @@ public:
 private:
   child_t *_server;
   int _cli_fd;
-  str _cli_addr;
-  int _srv_fd;
+  sockaddr_in _cli_addr;
+  ptr<axprt_unix> _srv_x;
+  ptr<aclnt> _srv_cli;
   
   list_entry<cli_t> _lnk;
 };
@@ -119,7 +122,7 @@ public:
   friend class main_t;
 private:
   void newcon_T (CLOSURE);
-  void get_srv_fd (evi_t ev);
+  void wait_for_it (evv_t ev);
   void launch_loop (CLOSURE);
   void launch ();
   void wait_for_crash (evv_t ev, CLOSURE);
@@ -134,8 +137,9 @@ private:
   vec<str> _cmd;
   state_t _state;
   int _lfd;
-  vec<evi_t::ptr> _waiters;
-  int _srv_fd;
+  vec<evv_t::ptr> _waiters;
+  ptr<axprt_unix> _x;
+  ptr<aclnt> _cli;
   pid_t _pid;
   evv_t::ptr _poke_ev;
 

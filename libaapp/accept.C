@@ -6,6 +6,60 @@ namespace sfs {
 
   //-----------------------------------------------------------------------
 
+  namespace x_host_addr {
+
+    void 
+    c2x (const sockaddr_in &in, x_host_addr_t *out)
+    {
+      out->port = in.sin_port;
+      out->ip_addr.set_vers (IP_V4);
+      *out->ip_addr.v4 = in.sin_addr.s_addr;
+    }
+
+    //--------------------------------------------------------------------
+
+    void 
+    x2c (const x_host_addr_t &in, sockaddr_in *out)
+    {
+      out->sin_port = in.port;
+      if (in.ip_addr.vers == IP_V4) {
+	out->sin_addr.s_addr = *in.ip_addr.v4;
+      }
+    }
+
+    //--------------------------------------------------------------------
+
+    str 
+    x2s (const x_host_addr_t &in)
+    {
+      const char *ip;
+      if (in.ip_addr.vers == IP_V4) {
+	struct in_addr ia;
+	ia.s_addr = *in.ip_addr.v4;
+	ip = inet_ntoa (ia);
+      } else {
+	ip = "<n/a>";
+      }
+      port_t p = ntohl (in.port);
+      strbuf b ("%s:%u", ip, p);
+      return b;
+    }
+
+    //--------------------------------------------------------------------
+
+  };
+
+  //-----------------------------------------------------------------------
+
+  static str
+  arg2str (const aapp_newcon_t &arg)
+  {
+    const x_host_addr_t &addr = arg.addr;
+    return x_host_addr::x2s (addr);
+  }
+
+  //-----------------------------------------------------------------------
+
   acceptor_t::acceptor_t (bool v, size_t ps)
     : _verbose (v),
       _packet_sz (ps) {}
@@ -42,6 +96,10 @@ namespace sfs {
   {
     inaddr_from_env ();
   }
+
+  //-----------------------------------------------------------------------
+
+  net_acceptor_t::~net_acceptor_t () {}
 
   //-----------------------------------------------------------------------
 
@@ -162,35 +220,19 @@ namespace sfs {
 
   //-----------------------------------------------------------------------
 
-  static str
-  arg2str (const aapp_newcon_t &arg)
-  {
-    const x_host_addr_t &addr = arg.addr;
-    const char *ip;
-    if (addr.ip_addr.vers == IP_V4) {
-      struct in_addr ia;
-      ia.s_addr = *addr.ip_addr.v4;
-      ip = inet_ntoa (ia);
-    } else {
-      ip = "<n/a>";
-    }
-    port_t p = ntohl (addr.port);
-    strbuf b ("%s:%u", ip, p);
-    return b;
-  }
-
-  //-----------------------------------------------------------------------
-
   aapp_status_t
   slave_acceptor_t::newcon (const aapp_newcon_t *arg)
   {
     int fd = _x->recvfd ();
+    aapp_status_t res;
     if (fd < 0) {
+      res = AAPP_BAD_FD;
       warn ("acceptor got bad fd (%d)\n", fd);
     } else {
       accept_impl (fd, arg2str (*arg));
+      res = AAPP_OK;
     }
-    return AAPP_OK;
+    return res;
   }
 
   //-----------------------------------------------------------------------

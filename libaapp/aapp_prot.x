@@ -20,7 +20,8 @@ struct aapp_newcon_t {
 
 enum aapp_status_t {
      AAPP_OK = 0,
-     AAPP_ERR = 1
+     AAPP_BAD_FD = 1,
+     AAPP_ERR = 2
 };
 
 namespace RPC {

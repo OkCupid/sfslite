@@ -4,6 +4,7 @@
 
 #include "tinetd.h"
 #include "tame_io.h"
+#include "aapp.h"
 
 #define EC_ERR -2
 #define EC_INFO -1
@@ -12,11 +13,13 @@ extern char ** environ;
 
 //=======================================================================
 
-cli_t::cli_t (child_t *s, int cli_fd, const str &cli_addr, int srv_fd)
+cli_t::cli_t (child_t *s, int cli_fd, const sockaddr_in &sin, 
+	      ptr<axprt_unix> x, ptr<aclnt> c)
   : _server (s),
     _cli_fd (cli_fd),
-    _cli_addr (cli_addr),
-    _srv_fd (srv_fd)
+    _cli_addr (sin),
+    _srv_x (x),
+    _srv_cli (c)
 {
   s->insert (this);
 }
@@ -38,24 +41,34 @@ tamed void
 cli_t::run (evv_t ev)
 {
   tvars {
-    rendezvous_t<> rv (__FILE__, __LINE__);
-    ptr<tame::std_proxy_t> cli2srv (New refcounted<tame::std_proxy_t> ());
-    ptr<tame::std_proxy_t> srv2cli (New refcounted<tame::std_proxy_t> ());
     str n;
+    aapp_newcon_t arg;
+    aapp_status_t res;
+    clnt_stat err;
+    str a;
   } 
 
   n = _server->srvname ();
+  sfs::x_host_addr::c2x (_cli_addr, &arg.addr);
+  a = sfs::x_host_addr::x2s (arg.addr);
 
-  logger.log (V_LO) << n << ": new connection from " << _cli_addr << "\n";
+  logger.log (V_LO) << n << ": new connection from " << a << "\n";
 
-  cli2srv->go (_cli_fd, _srv_fd, mkevent (rv));
-  srv2cli->go (_srv_fd, _cli_fd, mkevent (rv));
+  _srv_x->sendfd (_cli_fd);
+  
+  twait {
+    RPC::aapp_server_prog_1::aapp_server_newcon 
+      (_srv_cli, arg, &res, mkevent (err));
+  }
+  if (err) {
+    warn << n << ": error in RPC connection for " << a << ": " << err << "\n";
+  } else if (res != AAPP_OK) {
+    warn << n << ": error in handoff for " << a << ": " << int (res) << "\n";
+  } else {
+    logger.log (V_LO) << n << ": end connection from " << a << "\n";
+  }
 
-  twait (rv);
-
-  logger.log (V_LO) << n << ": end connection from " << _cli_addr << "\n";
   ev->trigger ();
-
 }
 
 //=======================================================================
@@ -66,7 +79,6 @@ child_t::child_t (main_t *m, port_t p, const vec<str> &v)
     _cmd (v), 
     _state (NONE), 
     _lfd (-1),
-    _srv_fd (-1),
     _pid (0) {}
 
 //-----------------------------------------------------------------------
@@ -85,7 +97,6 @@ child_t::init ()
 
 //-----------------------------------------------------------------------
 
-
 bool
 child_t::run ()
 {
@@ -103,16 +114,16 @@ child_t::launch_loop ()
   _poke_ev = NULL;
 
   while (true) {
-    _srv_fd = -1;
+    _x = NULL;
     launch ();
-    if (_srv_fd >= 0) {
+    if (_x) {
       while (_waiters.size ()) {
-	evi_t::ptr w = _waiters.pop_front ();
-	w->trigger (_srv_fd);
+	evv_t::ptr w = _waiters.pop_front ();
+	w->trigger ();
       }
       twait { wait_for_crash (mkevent ()); }
     }
-    _srv_fd = -1;
+    _x = NULL;
     twait { delaycb (_main->crash_wait (), 0, mkevent ()); }
   }
 }
@@ -122,32 +133,16 @@ child_t::launch_loop ()
 void
 child_t::launch ()
 {
-  vec<const char *> av;
   const str &path = _cmd[0];
-  bool ok = true;
 
   logger.log (V_REG) << "starting up: " << path << "\n";
-
-  for (const str *s = _cmd.base (), *e = _cmd.lim (); s < e; s++) {
-    av.push_back (s->cstr ());
-  }
-  av.push_back (NULL);
-
-  int fds[2];
-  if (socketpair (AF_UNIX, SOCK_STREAM, 0, fds) < 0) {
-    warn ("socketpair: %m\n");
-    ok = false;
-  } else {
-    close_on_exec (fds[0]);
-    _pid = aspawn (path, av.base (), fds[1], 1, 2, NULL, environ);
-    _srv_fd = fds[0];
-    close (fds[1]);
-    if (_pid < 0) {
-      close (_srv_fd);
-      ok = true;
-    } else {
-      logger.log (V_REG) << "started: " << path << "; pid=" << _pid << "\n";
-    }
+  ptr<axprt_unix> x = axprt_unix_aspawnv (path, _cmd, axprt::defps,
+					  NULL, environ);
+  if (x) {
+    logger.log (V_REG) << "started: " << path << "; pid=" << _pid << "\n";
+    _pid = axprt_unix_spawn_pid;
+    _x = x;
+    _cli = aclnt::alloc (_x, aapp_server_prog_1);
   }
 }
 
@@ -167,10 +162,10 @@ child_t::wait_for_crash (evv_t ev)
 //-----------------------------------------------------------------------
 
 void
-child_t::get_srv_fd (evi_t ev)
+child_t::wait_for_it (evv_t ev)
 {
   if (_poke_ev) { _poke_ev->trigger (); }
-  if (_srv_fd >= 0) { ev->trigger (_srv_fd); }
+  if (_x) { ev->trigger (); }
   else { _waiters.push_back (ev); }
 }
 
@@ -182,7 +177,7 @@ child_t::newcon_T ()
   tvars {
     sockaddr_in sin;
     socklen_t sinlen  (sizeof (sockaddr_in));
-    int clifd, srvfd;
+    int clifd;
     cli_t *cl;
     str addr;
   }
@@ -194,19 +189,15 @@ child_t::newcon_T ()
     warn ("accept error: %m\n");
   } else {
    
-    {
-      strbuf b;
-      b << inet_ntoa (sin.sin_addr) << ":" << htons (sin.sin_port);
-      addr = b;
-    }
-
     twait { tame::fdcb1 (clifd, selread, mkevent ()); }
-    twait { get_srv_fd (mkevent (srvfd)); }
-    if (srvfd >= 0) {
-      cl = New cli_t (this, clifd, addr, srvfd);
+    twait { wait_for_it (mkevent ()); }
+    if (_x) {
+      assert (_cli);
+      cl = New cli_t (this, clifd, sin, _x, _cli);
       twait { cl->run (mkevent ()); }
       delete cl;
     } else {
+      close (clifd);
       logger.log (V_LO) << ": rejecting connect from " << addr 
 			<< " since server launch failed\n";
     }

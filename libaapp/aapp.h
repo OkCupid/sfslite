@@ -93,6 +93,17 @@ namespace sfs {
 
   //-----------------------------------------------------------------------
 
+  namespace x_host_addr {
+   
+    void c2x (const sockaddr_in &in, x_host_addr_t *out);
+    void x2c (const x_host_addr_t &in, sockaddr_in *out);
+    str x2s (const x_host_addr_t &in);
+
+  };
+
+
+  //-----------------------------------------------------------------------
+
 };
 
 #endif /* _LIBAAPP_AAPP_H_ */
