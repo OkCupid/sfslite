@@ -7,6 +7,7 @@
 #include "parseopt.h"
 #include "tame_io.h"
 #include "ihash.h"
+#include <arpa/inet.h>
 
 //=======================================================================
 
@@ -85,18 +86,21 @@ typedef u_int32_t port_t;
 
 class child_t {
 public:
-  child_t (port_t port, const vec<str> &v);
+  child_t (main_t *m, port_t port, const vec<str> &v);
   port_t port () const { return _port; }
+  bool init ();
 
   friend class main_t;
 private:
   typedef enum { NONE = 0, CRASHED = 1, OK = 2 } state_t;
 
+  main_t *_main;
   port_t _port;
   ihash_entry<child_t> _lnk;
 
   vec<str> _cmd;
   state_t _state;
+  int _sfd;
 };
 
 //=======================================================================
@@ -106,13 +110,18 @@ public:
   main_t () {}
   int config (int argc, char *argv[]);
   bool init ();
+  const struct in_addr &addr () const { return _addr; }
 private:
   bool insert (child_t *ch);
   void usage ();
   bool parse_config (const str &s);
   void got_lazy_prox (vec<str> v, str loc, bool *errp);
 
-  ihash<u_int32_t, child_t,  &child_t::_port, &child_t::_lnk> _children;
+  typedef ihash<port_t, child_t, &child_t::_port, &child_t::_lnk> hsh_t;
+  typedef ihash_iterator_t<child_t, hsh_t> hiter_t;
+  
+  hsh_t _children;
+  struct in_addr _addr;
 };
 
 //=======================================================================

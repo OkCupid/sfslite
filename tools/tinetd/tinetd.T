@@ -6,8 +6,22 @@
 
 //=======================================================================
 
-child_t::child_t (port_t p, const vec<str> &v)
-  : _port (p), _cmd (v), _state (NONE) {}
+child_t::child_t (main_t *m, port_t p, const vec<str> &v)
+  : _main (m), _port (p), _cmd (v), _state (NONE), _sfd (-1) {}
+
+//-----------------------------------------------------------------------
+
+bool
+child_t::init ()
+{
+  bool ret = true;
+  _sfd = inetsocket (SOCK_STREAM, _port, _main->addr ().s_addr);
+  if (_sfd > 0) {
+    warn ("could not bind to port %d: %m\n", _port);
+    ret = false;
+  }
+  return ret;
+}
 
 //=======================================================================
 
@@ -19,9 +33,23 @@ main_t::config (int argc, char *argv[])
   level_t level (V_REG);
 
   setprogname (argv[0]);
+  _addr.s_addr = INADDR_ANY;
 
-  while ((ch = getopt (argc, argv, "qvh")) != -1) {
+  while ((ch = getopt (argc, argv, "a:qvh")) != -1) {
     switch (ch) {
+
+    case 'a': 
+      {
+	struct in_addr ia;
+	if (inet_pton (AF_INET, optarg, static_cast<void *> (&ia)) != 1) {
+	  warn << "cannot convert '" << optarg << "' to IP address\n";
+	  rc = -2;
+	} else {
+	  _addr = ia;
+	}
+      }
+      break;
+      
     case 'q':
       level = V_LO;
       break;
@@ -59,6 +87,21 @@ main_t::config (int argc, char *argv[])
 //-----------------------------------------------------------------------
 
 bool
+main_t::init ()
+{
+  hiter_t iter (_children);
+  child_t *ch;
+  bool ret = true;
+  while ((ch = iter.next ())) {
+    if (!ch->init ())
+      ret = false;
+  }
+  return ret;
+}
+
+//-----------------------------------------------------------------------
+
+bool
 main_t::insert (child_t *ch)
 {
   bool ret;
@@ -86,7 +129,7 @@ main_t::got_lazy_prox (vec<str> v, str loc, bool *errp)
     if (!convertint (port_s, &port)) {
       warn << loc << ": cannot convert port to int (" << port_s << ")\n";
     } else {
-      child_t *ch = New child_t (port, v);
+      child_t *ch = New child_t (this, port, v);
       if (!insert (ch)) {
 	warn << loc << ": duplicate child for port " << port << "\n";
       } else {
@@ -113,14 +156,6 @@ void
 main_t::usage ()
 {
   warnx << "usage: " << progname << " [-qvh] <confile>\n";
-}
-
-//-----------------------------------------------------------------------
-
-bool
-main_t::init ()
-{
-  return true;
 }
 
 //-----------------------------------------------------------------------

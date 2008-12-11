@@ -363,5 +363,24 @@ public:
   }
 };
 
+template<class V, class H>
+class ihash_iterator_t {
+public:
+  ihash_iterator_t (H &h) : _i (h.first ()), _h (h) {}
+
+  V *next () {
+    V *ret = NULL;
+    if (_i) {
+      ret = _i;
+      _i = _h.next (_i);
+    }
+    return ret;
+  }
+
+private:
+  V *_i;
+  H &_h;
+};
+
 
 #endif /* !_IHASH_H_ */
