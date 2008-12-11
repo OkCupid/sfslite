@@ -121,7 +121,7 @@ private:
   void newcon_T (CLOSURE);
   void get_srv_fd (evi_t ev);
   void launch_loop (CLOSURE);
-  void launch (evv_t ev, CLOSURE);
+  void launch ();
   void wait_for_crash (evv_t ev, CLOSURE);
 
 

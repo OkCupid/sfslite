@@ -8,6 +8,8 @@
 #define EC_ERR -2
 #define EC_INFO -1
 
+extern char ** environ;
+
 //=======================================================================
 
 cli_t::cli_t (child_t *s, int cli_fd, const str &cli_addr, int srv_fd)
@@ -103,16 +105,49 @@ child_t::launch_loop ()
 
   while (true) {
     _srv_fd = -1;
-    twait { launch (mkevent ()); }
-    if (_srv_fd < 0) {
-      twait { delaycb (_main->crash_wait (), 0, mkevent ()); }
-    } else {
+    launch ();
+    if (_srv_fd >= 0) {
       while (_waiters.size ()) {
 	evi_t::ptr w = _waiters.pop_front ();
 	w->trigger (_srv_fd);
       }
       twait { wait_for_crash (mkevent ()); }
-      _srv_fd = -1;
+    }
+    _srv_fd = -1;
+    twait { delaycb (_main->crash_wait (), 0, mkevent ()); }
+  }
+}
+
+//-----------------------------------------------------------------------
+
+void
+child_t::launch ()
+{
+  vec<const char *> av;
+  const str &path = _cmd[0];
+  bool ok = true;
+
+  logger.log (V_REG) << "starting up: " << path << "\n";
+
+  for (const str *s = _cmd.base (), *e = _cmd.lim (); s < e; s++) {
+    av.push_back (s->cstr ());
+  }
+  av.push_back (NULL);
+
+  int fds[2];
+  if (socketpair (AF_UNIX, SOCK_STREAM, 0, fds) < 0) {
+    warn ("socketpair: %m\n");
+    ok = false;
+  } else {
+    close_on_exec (fds[0]);
+    _pid = aspawn (path, av.base (), fds[1], 1, 2, NULL, environ);
+    _srv_fd = fds[0];
+    close (fds[1]);
+    if (_pid < 0) {
+      close (_srv_fd);
+      ok = true;
+    } else {
+      logger.log (V_REG) << "started: " << path << "; pid=" << _pid << "\n";
     }
   }
 }
@@ -120,17 +155,13 @@ child_t::launch_loop ()
 //-----------------------------------------------------------------------
 
 tamed void
-child_t::launch (evv_t ev)
-{
-
-}
-
-//-----------------------------------------------------------------------
-
-tamed void
 child_t::wait_for_crash (evv_t ev)
 {
-
+  tvars {
+    int rc;
+  }
+  twait { chldcb (_pid, mkevent (rc)); }
+  logger.log (V_REG) << _cmd[0] << " died with exit code=" << rc << "\n";
 }
 
 
@@ -197,6 +228,7 @@ main_t::config (int argc, char *argv[])
 
   _addr.s_addr = INADDR_ANY;
   _daemonize = false;
+  _crash_wait = 10;
 
   while ((ch = getopt (argc, argv, "da:l:qvhw:")) != -1) {
     switch (ch) {
