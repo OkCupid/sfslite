@@ -44,9 +44,30 @@ main_t::config (int argc, char *argv[])
     rc = -2;
   }
 
-  _conf_file = argv[0];
+  if (!parse_config (argv[0])) {
+    rc = -2;
+  }
 
   return rc;
+}
+
+//-----------------------------------------------------------------------
+
+void
+main_t::got_lazy_prox (vec<str> v, str loc, bool *errp)
+{
+
+
+}
+
+//-----------------------------------------------------------------------
+
+bool
+main_t::parse_config (const str &f)
+{
+  conftab ct;
+  ct.add ("LazyProx", wrap (this, &main_t::got_lazy_prox));
+  return ct.run (f);
 }
 
 //-----------------------------------------------------------------------

@@ -104,8 +104,10 @@ public:
   bool init ();
 private:
   void usage ();
+  bool parse_config (const str &s);
+  void got_lazy_prox (vec<str> v, str loc, bool *errp);
+
   ihash<u_int32_t, child_t,  &child_t::_port, &child_t::_lnk> _children;
-  str _conf_file;
 };
 
 //=======================================================================
