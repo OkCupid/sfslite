@@ -257,7 +257,7 @@ done
 dnl
 dnl Everything can come AFTER the standard libraries
 dnl
-for lib in libsafeptr arpc sfsmisc libtame; do
+for lib in libsafeptr arpc sfsmisc libtame libaapp; do
     CPPFLAGS="$CPPFLAGS -I"'$(top_srcdir)'"/$lib"
 done
 
@@ -285,6 +285,8 @@ AC_SUBST(LIBSFSRODB)
 LIBSFSRODB='$(top_builddir)/sfsrodb/libsfsrodb.la'
 AC_SUBST(LIBSFSMISC)
 LIBSFSMISC='$(top_builddir)/sfsmisc/libsfsmisc.la'
+AC_SUBST(LIBAAPP)
+LIBTAME='$(top_builddir)/libaapp/libaapp.la'
 AC_SUBST(LIBTAME)
 LIBTAME='$(top_builddir)/libtame/libtame.la'
 LDADD='$(LIBTAME) $(LIBSVC) $(LIBSFSMISC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBSAFEPTR) $(LIBASYNC) $(LIBGMP)'
@@ -467,12 +469,14 @@ SFS_MISC
 SFS_TESTS
 SFS_LIBSFS
 SFS_TOOLS
+SFS_LIBAAPP
 SFS_CALLBACK
 SFS_ALL
 
 AC_OUTPUT(Makefile async/Makefile libsafeptr/Makefile rpcc/Makefile 
         arpc/Makefile crypt/Makefile sfsmisc/Makefile contrib/Makefile 
-        tame/Makefile svc/Makefile libtame/Makefile arpcgen/Makefile 
+        tame/Makefile svc/Makefile libtame/Makefile libaapp/Makefile
+	arpcgen/Makefile 
         libsfs/Makefile tests/Makefile tutorial/Makefile
 	tools/Makefile tools/rtftp/Makefile tools/tinetd/Makefile)
 

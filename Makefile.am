@@ -30,6 +30,12 @@ else
 TESTS = 
 endif
 
+if USE_LIBAAPP
+AAPP = libaapp
+else
+AAPP = 
+endif
+
 if USE_TOOLS
 TOOLS = tools
 else
@@ -49,6 +55,7 @@ SUBDIRS = \
 	contrib \
 	tame \
 	libtame \
+	$(AAPP) \
 	$(TESTS) \
 	$(TUTORIAL) \
 	$(TOOLS)

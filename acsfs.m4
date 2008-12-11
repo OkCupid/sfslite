@@ -1679,7 +1679,7 @@ if test -f ${with_sfs}/Makefile -a -f ${with_sfs}/autoconf.h; then
     esac
 
     CPPFLAGS="$CPPFLAGS -I${with_sfs}"
-    for lib in libtame async arpc crypt sfsmisc; do
+    for lib in libaapp libtame async arpc crypt sfsmisc; do
 	CPPFLAGS="$CPPFLAGS -I${sfssrcdir}/$lib"
     done
     CPPFLAGS="$CPPFLAGS -I${with_sfs}/svc"
@@ -1689,6 +1689,7 @@ if test -f ${with_sfs}/Makefile -a -f ${with_sfs}/autoconf.h; then
     LIBSFSCRYPT=${with_sfs}/crypt/libsfscrypt.la
     LIBSFSMISC=${with_sfs}/sfsmisc/libsfsmisc.la
     LIBSVC=${with_sfs}/svc/libsvc.la
+    LIBAAPP=${with_sfs}/libaapp/libaapp.la
     LIBTAME=${with_sfs}/libtame/libtame.la
     LIBSFS=${with_sfs}/libsfs/libsfs.a
     MALLOCK=${with_sfs}/sfsmisc/mallock.o
@@ -1712,6 +1713,7 @@ elif test -f ${with_sfs}/include/${sfsprfx}/autoconf.h \
     LIBSFSCRYPT=${sfslibdir}/libsfscrypt.la
     LIBSFSMISC=${sfslibdir}/libsfsmisc.la
     LIBTAME=${sfslibdir}/libtame.la
+    LIBAAPP=${sfslibdir}/libaapp.la
     LIBSVC=${sfslibdir}/libsvc.la
     LIBSFS=${sfslibdir}/libsfs.a
     MALLOCK=${sfslibdir}/mallock.o
@@ -2100,8 +2102,22 @@ dnl
 AC_DEFUN([SFS_TOOLS],
 [AC_ARG_ENABLE(tools,
 --enable-tools     compile fun/optional tools)
-test "${enable_tools+set}" = "set" && with_tools="yes"
+if test "${enable_tools+set}" = "set"
+then
+	with_tools="yes" 
+	with_libaapp="yes"
+fi
 AM_CONDITIONAL(USE_TOOLS, test "$with_tools" = "yes")
+])
+
+dnl
+dnl
+dnl Compile libaapp
+AC_DEFUN([SFS_LIBAAPP],
+[AC_ARG_ENABLE(libaapp,
+--enable-libaapp     compile optional application library)
+test "${enable_libaapps+set}" = "set" && with_libaapp="yes"
+AM_CONDITIONAL(USE_LIBAAPP, test "$with_libaapp" = "yes")
 ])
 
 dnl

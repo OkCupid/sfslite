@@ -38,7 +38,6 @@ tamed void
 cli_t::run (evv_t ev)
 {
   tvars {
-    int srvfd;
     rendezvous_t<> rv (__FILE__, __LINE__);
     ptr<tame::std_proxy_t> cli2srv (New refcounted<tame::std_proxy_t> ());
     ptr<tame::std_proxy_t> srv2cli (New refcounted<tame::std_proxy_t> ());
