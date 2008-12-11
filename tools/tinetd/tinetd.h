@@ -89,6 +89,8 @@ public:
   child_t (main_t *m, port_t port, const vec<str> &v);
   port_t port () const { return _port; }
   bool init ();
+  bool run ();
+  void newcon ();
 
   friend class main_t;
 private:
@@ -110,6 +112,7 @@ public:
   main_t () {}
   int config (int argc, char *argv[]);
   bool init ();
+  bool run ();
   const struct in_addr &addr () const { return _addr; }
 private:
   bool insert (child_t *ch);
@@ -122,6 +125,7 @@ private:
   
   hsh_t _children;
   struct in_addr _addr;
+  bool _daemonize;
 };
 
 //=======================================================================
