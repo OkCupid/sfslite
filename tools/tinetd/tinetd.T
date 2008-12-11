@@ -6,6 +6,11 @@
 
 //=======================================================================
 
+child_t::child_t (port_t p, const vec<str> &v)
+  : _port (p), _cmd (v), _state (NONE) {}
+
+//=======================================================================
+
 int 
 main_t::config (int argc, char *argv[])
 {
@@ -53,11 +58,43 @@ main_t::config (int argc, char *argv[])
 
 //-----------------------------------------------------------------------
 
+bool
+main_t::insert (child_t *ch)
+{
+  bool ret;
+  if (_children[ch->port ()]) {
+    ret = false;
+  } else {
+    _children.insert (ch);
+  }
+  return ret;
+}
+
+//-----------------------------------------------------------------------
+
 void
 main_t::got_lazy_prox (vec<str> v, str loc, bool *errp)
 {
+  str cmd  = v.pop_front ();
+  bool err = true;
 
-
+  if (v.size () < 3) {
+    warn << loc << ": usage: " << cmd << " <port> <cmd>\n";
+  } else {
+    str port_s = v.pop_front ();
+    port_t port;
+    if (!convertint (port_s, &port)) {
+      warn << loc << ": cannot convert port to int (" << port_s << ")\n";
+    } else {
+      child_t *ch = New child_t (port, v);
+      if (!insert (ch)) {
+	warn << loc << ": duplicate child for port " << port << "\n";
+      } else {
+	err = false;
+      }
+    }
+  }
+  if (err) *errp = true;
 }
 
 //-----------------------------------------------------------------------

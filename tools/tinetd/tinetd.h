@@ -79,20 +79,24 @@ class main_t;
 
 //=======================================================================
 
+typedef u_int32_t port_t;
+
+//=======================================================================
+
 class child_t {
 public:
-  child_t (const str &path, u_int32_t port);
+  child_t (port_t port, const vec<str> &v);
+  port_t port () const { return _port; }
 
   friend class main_t;
 private:
   typedef enum { NONE = 0, CRASHED = 1, OK = 2 } state_t;
 
-  const str _path;
-  state_t _state;
-
-  u_int32_t _port;
+  port_t _port;
   ihash_entry<child_t> _lnk;
 
+  vec<str> _cmd;
+  state_t _state;
 };
 
 //=======================================================================
@@ -103,6 +107,7 @@ public:
   int config (int argc, char *argv[]);
   bool init ();
 private:
+  bool insert (child_t *ch);
   void usage ();
   bool parse_config (const str &s);
   void got_lazy_prox (vec<str> v, str loc, bool *errp);
