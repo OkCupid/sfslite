@@ -1769,6 +1769,7 @@ AC_SUBST(LIBARPC)
 AC_SUBST(LIBSFSCRYPT)
 AC_SUBST(LIBSFSMISC)
 AC_SUBST(LIBTAME)
+AC_SUBST(LIBAAPP)
 AC_SUBST(LIBSVC)
 AC_SUBST(LIBSFS)
 AC_SUBST(RPCC)
@@ -1780,7 +1781,7 @@ AC_SUBST(NOPAGING)
 SFS_GMP
 SFS_DMALLOC
 
-LDEPS='$(LIBTAME) $(LIBSFSMISC) $(LIBSVC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBSAFEPTR) $(LIBASYNC)'
+LDEPS='$(LIBAAPP) $(LIBTAME) $(LIBSFSMISC) $(LIBSVC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBSAFEPTR) $(LIBASYNC)'
 LDADD="$LDEPS "'$(LIBGMP) $(LIBPY)'
 AC_SUBST(LDEPS)
 AC_SUBST(LDADD)
@@ -2108,16 +2109,6 @@ then
 	with_libaapp="yes"
 fi
 AM_CONDITIONAL(USE_TOOLS, test "$with_tools" = "yes")
-])
-
-dnl
-dnl
-dnl Compile libaapp
-AC_DEFUN([SFS_LIBAAPP],
-[AC_ARG_ENABLE(libaapp,
---enable-libaapp     compile optional application library)
-test "${enable_libaapps+set}" = "set" && with_libaapp="yes"
-AM_CONDITIONAL(USE_LIBAAPP, test "$with_libaapp" = "yes")
 ])
 
 dnl
