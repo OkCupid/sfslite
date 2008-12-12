@@ -394,7 +394,11 @@ dump_tmpl_proc_1 (const str &arg, const str &res, const str &fn,
     aout << "return ";
   if (call) aout << "c->call";
   else      aout << "(*c)"; 
-  aout << " (" << rpc << ", ";
+  aout << " (";
+
+  if (!call) aout << " rpc_bundle_t (";
+
+  aout << rpc << ", ";
 
   if (arg) aout << dec2 << "arg";
   else     aout << "NULL";
@@ -402,6 +406,8 @@ dump_tmpl_proc_1 (const str &arg, const str &res, const str &fn,
 
   if (res) aout << "res";
   else     aout << "NULL";
+
+  if (!call) aout << ")";
 
   aout << ", cb); ";
   aout << "}\n\n";
@@ -422,12 +428,12 @@ dump_tmpl_proc_3 (const str &arg, const str &res, const str &fn,
          const str &spc, const str &rpc)
 {
   dump_tmpl_proc_2 (arg, res, fn, spc, rpc, "C", "C", NULL, true);
+
   dump_tmpl_proc_2 (arg, res, fn, spc, rpc, 
-                    "typename callback<void,u_int32_t,"
-		    "const void*,void*,E>::ref", 
+		    "typename callback<void,rpc_bundle_t,E>::ref", 
 		    NULL, NULL, false);
   dump_tmpl_proc_2 (arg, res, fn, spc, rpc, 
-                    "typename callback<R,u_int32_t,const void*,void*,E>::ref", 
+		    "typename callback<R,rpc_bundle_t,E>::ref", 
 		    "R", "R", false);
 }
 

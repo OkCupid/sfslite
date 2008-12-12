@@ -468,4 +468,22 @@ buf2xdr (T &t, const void *buf, size_t len)
   return rpc_traverse (xp, t);
 }
 
+class rpc_bundle_t {
+public:
+
+  rpc_bundle_t (u_int32_t p, const void *a, void *r)
+    : m_proc (p), m_arg (a), m_res (r) {}
+
+  u_int32_t proc () const { return m_proc; }
+  const void *arg () const { return m_arg; }
+  void *res () { return m_res; }
+  const void *res () const { return m_res; }
+
+private:
+  u_int32_t m_proc;
+  const void *m_arg;
+  void *m_res;
+  
+};
+
 #endif /* !_ARPC_XDRMISC_H_ */
