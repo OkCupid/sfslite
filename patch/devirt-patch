@@ -1,0 +1,135 @@
+Index: libtame/mkevent.pl
+===================================================================
+--- libtame/mkevent.pl	(revision 3830)
++++ libtame/mkevent.pl	(working copy)
+@@ -155,9 +155,9 @@
+     my ($t) = @_;
+     my ($tlist, $tlist2);
+ 
+-    print ("template<", arglist ("class A", ["class T%", $t]), ">\n");
++    print ("template<", arglist (["class T%", $t]), ">\n");
+     $tlist = "<" . arglist (["T%", $t]) . ">";
+-    $tlist2 = "<" . arglist ("A", ["T%", $t]) . ">";
++    $tlist2 = "<" . arglist (["T%", $t]) . ">";
+ 
+ 
+     # print the classname
+@@ -168,7 +168,7 @@
+ 
+     # print the constructor
+     print ("  ${CNI} (",
+-	   arglist ("const A &action",
++	   arglist ("tame_action *action",
+ 		    "const _tame_slot_set$tlist &rs",
+ 		    "const char *loc"),
+ 	   ")\n",
+@@ -176,16 +176,16 @@
+ 	   "      _action (action) {}\n\n");
+ 
+     # print the destructor
+-    print ("  ~${CNI} () { if (!this->_cleared) clear_action (); }\n\n");
++    print ("  ~${CNI} () { if (!this->_cleared) clear_action (); delete _action;}\n\n");
+ 
+     # print the action functions
+     print ("  bool perform_action (${EVCB} *e, const char *loc, bool reuse)\n",
+-	   "  { return _action.perform (e, loc, reuse); }\n");
+-    print ("  void clear_action () { _action.clear (this); }\n\n");
++	   "  { return _action->perform (e, loc, reuse); }\n");
++    print ("  void clear_action () { _action->clear (this); }\n\n");
+ 
+     # print the data
+     print ("private:\n",
+-	   "  A _action;\n");
++	   "  tame_action *_action;\n");
+ 
+     # close the class
+     print "};\n\n";
+Index: libtame/tame_rendezvous.h
+===================================================================
+--- libtame/tame_rendezvous.h	(revision 3830)
++++ libtame/tame_rendezvous.h	(working copy)
+@@ -71,7 +71,7 @@
+  *   V={type of wait value set}
+  */
+ template<class R, class V>
+-class rendezvous_action {
++class rendezvous_action  : public tame_action {
+ public:
+   rendezvous_action (R *rv,
+ 		     ptr<closure_t> c,
+@@ -266,7 +266,7 @@
+ 	       const my_value_set_t &vs,
+ 	       const _tame_slot_set<T1,T2,T3> &rs)
+   {
+-    ptr<_event_impl<my_action_t,T1,T2,T3> > ret;
++    ptr<_event_impl<T1,T2,T3> > ret;
+     if (!this->flag ()->is_alive () || _is_cancelling) {
+       strbuf b;
+       b.fmt ("Attempted to add an event to a rendezvous (allocated %s) "
+@@ -274,8 +274,8 @@
+       str s = b;
+       tame_error (eloc, s.cstr ());
+     } else {
+-      ret = New refcounted<_event_impl<my_action_t,T1,T2,T3> > 
+-	(my_action_t (this, cls, vs), rs, eloc);
++      ret = New refcounted<_event_impl<T1,T2,T3> > 
++	(New my_action_t (this, cls, vs), rs, eloc);
+       _n_events ++;
+       _events.insert_head (ret);
+     }
+Index: libtame/tame_closure.h
+===================================================================
+--- libtame/tame_closure.h	(revision 3830)
++++ libtame/tame_closure.h	(working copy)
+@@ -105,7 +105,7 @@
+ typedef ptr<closure_t> closure_ptr_t;
+ 
+ template<class C>
+-class closure_action {
++class closure_action  : public tame_action {
+ public:
+   closure_action (ptr<C> c) : _closure (c) {}
+ 
+@@ -178,9 +178,9 @@
+ 		      const char *loc,
+ 		      const _tame_slot_set<T1,T2,T3> &rs)
+ {
+-  ptr<_event_impl<closure_action<C>,T1,T2,T3> > ret =
+-    New refcounted<_event_impl<closure_action<C>,T1,T2,T3> > 
+-    (closure_action<C> (c), rs, loc);
++  ptr<_event_impl<T1,T2,T3> > ret =
++    New refcounted<_event_impl<T1,T2,T3> > 
++    (New closure_action<C> (c), rs, loc);
+ 
+   c->block_inc_count ();
+   g_stats->mkevent_impl_rv_alloc (loc);
+Index: libtame/tame_event.h
+===================================================================
+--- libtame/tame_event.h	(revision 3830)
++++ libtame/tame_event.h	(working copy)
+@@ -100,6 +100,15 @@
+ 
+ };
+ 
++class tame_action {
++public:
++  tame_action () {}
++  virtual ~tame_action () {}
++  virtual bool perform (_event_cancel_base *event, 
++			const char *loc, bool _reuse) = 0;
++  virtual void clear (_event_cancel_base *e) = 0;
++};
++
+ typedef ptr<_event_cancel_base> _event_hold_t;
+ 
+ typedef list<_event_cancel_base, &_event_cancel_base::_lnk> 
+@@ -107,8 +116,7 @@
+ 
+ void report_leaks (event_cancel_list_t *lst);
+ 
+-template<class A, class T1=void, class T2=void, class T3=void, class T4=void> 
+-class _event_impl;
++template<class T1=void, class T2=void, class T3=void, class T4=void> class _event_impl;
+ 
+ template<class T1=void, class T2=void, class T3=void>
+ class event {
