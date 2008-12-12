@@ -4,6 +4,8 @@ sfslib_LTLIBRARIES = libaapp.la
 libaapp_la_SOURCES = aapp_prot.C accept.C
 sfsinclude_HEADERS = aapp_prot.h aapp.h
 
+aapp_prot.o: aapp_prot.h
+aapp_prot.lo: aapp_prot.h
 accept.o: aapp_prot.h
 accept.lo: aapp_prot.h
 
