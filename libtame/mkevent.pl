@@ -147,17 +147,52 @@ sub do_event_class ($)
 }
 
 #
+# make a do_event_impl for both detemplatized and templatized
+#
+sub do_event_impl_classes ($)
+{
+    my ($t) = @_;
+
+    print ("#ifdef TAME_DETEMPLATIZE\n");
+    do_event_impl_class ($t, 1);
+    print ("\n#else /* !TAME_DEMPLATIZE */\n");
+    do_event_impl_class ($t, 0);
+    print ("#endif /* TAME_DEMPLATIZE */\n\n\n");
+}
+
+#
 # make a class of type event, the inherits from libasync's callback,
 # for each number of trigger values.
 #
-sub do_event_impl_class ($)
+sub do_event_impl_class ($$)
 {
-    my ($t) = @_;
+    my ($t, $virt_ok) = @_;
     my ($tlist, $tlist2);
 
-    print ("template<", arglist ("class A", ["class T%", $t]), ">\n");
+    if ($virt_ok) {
+	print ("template<", arglist (["class T%", $t]), ">\n");
+    } else {
+	print ("template<", arglist ("class A", ["class T%", $t]), ">\n");
+    }
     $tlist = "<" . arglist (["T%", $t]) . ">";
-    $tlist2 = "<" . arglist ("A", ["T%", $t]) . ">";
+    if ($virt_ok) {
+	$tlist2 = "<" . arglist (["T%", $t]) . ">";
+    } else {
+	$tlist2 = "<" . arglist ("A", ["T%", $t]) . ">";
+    }
+
+    # print the constructor
+    my ($typconst, $cthis, $del, $typ);
+    if ($virt_ok) {
+	$typconst = $typ = "tame_action *";
+	$cthis= "_action->";
+	$del = "  delete _action;";
+    } else {
+	$cthis= "_action.";
+	$typconst = "const A &";
+	$typ = "A ";
+	$del = "";
+    }
 
 
     # print the classname
@@ -166,9 +201,8 @@ sub do_event_impl_class ($)
 	   "{\n",
 	   "public:\n");
 
-    # print the constructor
     print ("  ${CNI} (",
-	   arglist ("const A &action",
+	   arglist ("${typconst}action",
 		    "const _tame_slot_set$tlist &rs",
 		    "const char *loc"),
 	   ")\n",
@@ -176,19 +210,20 @@ sub do_event_impl_class ($)
 	   "      _action (action) {}\n\n");
 
     # print the destructor
-    print ("  ~${CNI} () { if (!this->_cleared) clear_action (); }\n\n");
+    my $del = "";
+    print ("  ~${CNI} () { if (!this->_cleared) clear_action (); ${del}}\n\n");
+
 
     # print the action functions
     print ("  bool perform_action (${EVCB} *e, const char *loc, bool reuse)\n",
-	   "  { return _action.perform (e, loc, reuse); }\n");
-    print ("  void clear_action () { _action.clear (this); }\n\n");
+	   "  { return ${cthis}perform (e, loc, reuse); }\n");
+    print ("  void clear_action () { ${cthis}clear (this); }\n\n");
 
-    # print the data
-    print ("private:\n",
-	   "  A _action;\n");
+    print ("private:\n");
+    print ("  ${typ}_action;\n");
 
     # close the class
-    print "};\n\n";
+    print "};\n";
 }
 #
 # Return:
@@ -368,7 +403,7 @@ EOF
 
 for (my $t = 0; $t <= $N_tv; $t++) {
     do_event_class ($t);
-    do_event_impl_class ($t);
+    do_event_impl_classes ($t);
     do_mkevent_block ($t);
     for (my $w = 0; $w <= $N_wv; $w++) {
 	do_generic ($t, $w);

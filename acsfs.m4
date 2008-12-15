@@ -1304,6 +1304,17 @@ dnl    fi
     unset OPENSSL_DIR
 fi])
 
+dnl
+dnl Optimize build efficiency over run efficient
+dnl
+AC_DEFUN([SFS_FAST_BUILD],
+[AC_ARG_ENABLE(fast-build,
+--enable-fast-build       Make builds faster instead of runtime)
+if test "${enable_fast_build+set}" = "set"
+then
+	AC_DEFINE(TAME_DETEMPLATIZE, 1, Define if to avoid templates in tame)
+fi
+])
 
 dnl
 dnl Use dmalloc if requested

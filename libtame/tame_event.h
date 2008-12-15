@@ -100,6 +100,17 @@ protected:
 
 };
 
+#ifdef TAME_DETEMPLATIZE 
+class tame_action {
+public:
+  tame_action () {}
+  virtual ~tame_action () {}
+  virtual bool perform (_event_cancel_base *event, 
+			const char *loc, bool _reuse) = 0;
+  virtual void clear (_event_cancel_base *e) = 0;
+};
+#endif /* TAME_DETEMPLATIZE */
+
 typedef ptr<_event_cancel_base> _event_hold_t;
 
 typedef list<_event_cancel_base, &_event_cancel_base::_lnk> 
@@ -107,7 +118,11 @@ event_cancel_list_t;
 
 void report_leaks (event_cancel_list_t *lst);
 
-template<class A, class T1=void, class T2=void, class T3=void, class T4=void> 
+template<
+#ifndef TAME_DETEMPLATIZE
+  class A,
+#endif /* TAME_DETEMPLATIZE */
+  class T1=void, class T2=void, class T3=void, class T4=void> 
 class _event_impl;
 
 template<class T1=void, class T2=void, class T3=void>

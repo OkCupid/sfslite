@@ -105,7 +105,11 @@ public:
 typedef ptr<closure_t> closure_ptr_t;
 
 template<class C>
-class closure_action {
+class closure_action 
+#ifdef TAME_DETEMPLATIZE
+  : public tame_action 
+#endif 
+{
 public:
   closure_action (ptr<C> c) : _closure (c) {}
 
@@ -178,9 +182,15 @@ _mkevent_implicit_rv (const ptr<C> &c,
 		      const char *loc,
 		      const _tame_slot_set<T1,T2,T3> &rs)
 {
+#ifdef TAME_DETEMPLATIZE
+  ptr<_event_impl<T1,T2,T3> > ret =
+    New refcounted<_event_impl<T1,T2,T3> > 
+    (New closure_action<C> (c), rs, loc);
+#else /* !TAME_DETEMPLATIZE */
   ptr<_event_impl<closure_action<C>,T1,T2,T3> > ret =
     New refcounted<_event_impl<closure_action<C>,T1,T2,T3> > 
     (closure_action<C> (c), rs, loc);
+#endif /* TAME_DETEMPLATIZE */
 
   c->block_inc_count ();
   g_stats->mkevent_impl_rv_alloc (loc);

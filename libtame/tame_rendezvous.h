@@ -71,7 +71,11 @@ typedef enum { JOIN_NONE = 0,
  *   V={type of wait value set}
  */
 template<class R, class V>
-class rendezvous_action {
+class rendezvous_action 
+#ifdef TAME_DETEMPLATIZE
+  : public tame_action 
+#endif /* TAME_DETEMPLATIZE */
+{
 public:
   rendezvous_action (R *rv,
 		     ptr<closure_t> c,
@@ -266,7 +270,17 @@ public:
 	       const my_value_set_t &vs,
 	       const _tame_slot_set<T1,T2,T3> &rs)
   {
-    ptr<_event_impl<my_action_t,T1,T2,T3> > ret;
+
+#ifdef TAME_DETEMPLATIZE
+#define EV_IMPL_TYP _event_impl<T1,T2,T3> 
+#define NEW_ACTION New
+#else /* TAME_DETEMPLATIZE */
+#define EV_IMPL_TYP _event_impl<my_action_t,T1,T2,T3>
+#define NEW_ACTION 
+#endif /* TAME_DETEMPLATIZE */
+
+    ptr<EV_IMPL_TYP> ret;
+
     if (!this->flag ()->is_alive () || _is_cancelling) {
       strbuf b;
       b.fmt ("Attempted to add an event to a rendezvous (allocated %s) "
@@ -274,12 +288,15 @@ public:
       str s = b;
       tame_error (eloc, s.cstr ());
     } else {
-      ret = New refcounted<_event_impl<my_action_t,T1,T2,T3> > 
-	(my_action_t (this, cls, vs), rs, eloc);
+      ret = New refcounted<EV_IMPL_TYP>
+	(NEW_ACTION my_action_t (this, cls, vs), rs, eloc);
       _n_events ++;
       _events.insert_head (ret);
     }
     return ret;
+
+#undef NEW_ACTION
+#undef EV_IMPL_TYP
   }
   
   void _ti_join (const my_value_set_t &v, _event_cancel_base *e, bool clear)

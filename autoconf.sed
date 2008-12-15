@@ -67,7 +67,7 @@ $a\
 / HAVE_EPOLL/b pdefine
 / HAVE_KQUEUE/b pdefine
 / PATH_LOGGER/b pdefine
-
+/ TAME_DETEMPLATIZE/b pdefine
 :skip
 d
 n
