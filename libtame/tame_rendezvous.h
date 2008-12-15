@@ -35,23 +35,20 @@
 
 extern nil_t g_nil;
 
-template<class T1=nil_t, class T2=nil_t, class T3=nil_t, class T4=nil_t>
+template<class T1=nil_t, class T2=nil_t, class T3=nil_t>
 struct value_set_t {
 
-  typedef value_set_t<T1,T2,T3,T4> my_type_t;
+  typedef value_set_t<T1,T2,T3> my_type_t;
 
   value_set_t () {}
   value_set_t (const T1 &v1) : v1 (v1) {}
   value_set_t (const T1 &v1, const T2 &v2) : v1 (v1), v2 (v2) {}
   value_set_t (const T1 &v1, const T2 &v2, const T3 &v3) 
     : v1 (v1), v2 (v2), v3 (v3) {}
-  value_set_t (const T1 &v1, const T2 &v2, const T3 &v3, const T4 &v4) 
-    : v1 (v1), v2 (v2), v3 (v3), v4 (v4) {}
 
   T1 v1;
   T2 v2;
   T3 v3;
-  T4 v4;
 };
 
 typedef enum { JOIN_NONE = 0,
@@ -162,11 +159,11 @@ private:
   const char *_loc;
 };
 
-template<class W1=nil_t, class W2=nil_t, class W3=nil_t, class W4=nil_t>
+template<class W1=nil_t, class W2=nil_t, class W3=nil_t>
 class rendezvous_t : public rendezvous_base_t {
 
-  typedef rendezvous_t<W1,W2,W3,W4> my_type_t;
-  typedef value_set_t<W1,W2,W3,W3> my_value_set_t;
+  typedef rendezvous_t<W1,W2,W3> my_type_t;
+  typedef value_set_t<W1,W2,W3> my_value_set_t;
   friend class rendezvous_action<my_type_t, my_value_set_t>;
   typedef rendezvous_action<my_type_t, my_value_set_t> my_action_t;
 
@@ -216,10 +213,10 @@ public:
   //-----------------------------------------------------------------------
   // Threaded interface
 
-  void wait (W1 &r1 = g_nil, W2 &r2 = g_nil, W3 &r3 = g_nil, W4 &r4 = g_nil)
+  void wait (W1 &r1 = g_nil, W2 &r2 = g_nil, W3 &r3 = g_nil)
   { 
     bool rls = thread_lock_acquire ();
-    while (!_ti_next_trigger (r1, r2, r3, r4)) 
+    while (!_ti_next_trigger (r1, r2, r3))
       threadwait (); 
     thread_lock_release (rls);
   }
@@ -333,8 +330,7 @@ public:
 
   }
 
-  bool _ti_next_trigger (W1 &r1 = g_nil, W2 &r2 = g_nil, 
-			 W3 &r3 = g_nil, W4 &r4 = g_nil)
+  bool _ti_next_trigger (W1 &r1 = g_nil, W2 &r2 = g_nil, W3 &r3 = g_nil)
   {
     bool ret = true;
 
@@ -342,12 +338,11 @@ public:
     bool rls = thread_lock_acquire ();
 #endif
 
-    value_set_t<W1,W2,W3,W4> *v;
+    value_set_t<W1,W2,W3> *v;
     if (pending (&v)) {
       r1 = v->v1;
       r2 = v->v2;
       r3 = v->v3;
-      r4 = v->v4;
       consume ();
     } else
       ret = false;

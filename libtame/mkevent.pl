@@ -7,7 +7,7 @@ use strict;
 ##
 
 my $N_tv = 3;
-my $N_wv = 3;
+my $N_wv = 2;
 my $MKEV = "_mkevent";
 my $MKEVCOPY = "_mkeventcopy";
 my $CN = "_event";
