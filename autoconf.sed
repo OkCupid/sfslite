@@ -68,6 +68,7 @@ $a\
 / HAVE_KQUEUE/b pdefine
 / PATH_LOGGER/b pdefine
 / TAME_DETEMPLATIZE/b pdefine
+/ SFS_CALLBACK_A3/b pdefine
 :skip
 d
 n
