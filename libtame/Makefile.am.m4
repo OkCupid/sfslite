@@ -80,7 +80,6 @@ libtame_la_SOURCES = \
 	thread.C \
 	trigger.C \
 	event.C \
-	event_green.C \
 	tame_out 
 
 dnl
@@ -100,7 +99,6 @@ sfsinclude_HEADERS = \
 	tame_thread.h \
 	tame_typedefs.h \
 	tame_slotset.h \
-	tame_event_green.h \
 	tame.h \
 	tame_pipeline.h \
 	tame_lock.h \

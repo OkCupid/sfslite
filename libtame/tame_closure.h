@@ -206,4 +206,11 @@ extern ptr<closure_t> __cls_g;
 extern ptr<closure_t> null_closure;
 #define CLOSURE              ptr<closure_t> __frame = NULL
 
+template<class C>
+typename event<>::ref
+_mkevent (const closure_wrapper<C> &c, const char *loc)
+{
+  return _mkevent_implicit_rv (c.closure (), loc, _tame_slot_set<> ());
+}
+
 #endif /* _LIBTAME_CLOSURE_H_ */
