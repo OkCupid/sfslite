@@ -27,15 +27,14 @@
 
 #include "tame_event.h"
 #include "tame_closure.h"
+#include "sfs_bundle.h"
 
 #ifdef HAVE_TAME_PTH
 # include <pth.h>
 
 #endif /* HAVE_TAME_PTH */
 
-extern nil_t g_nil;
-
-template<class T1=nil_t, class T2=nil_t, class T3=nil_t>
+template<class T1=sfs::nil_t, class T2=sfs::nil_t, class T3=sfs::nil_t>
 struct value_set_t {
 
   typedef value_set_t<T1,T2,T3> my_type_t;
@@ -159,7 +158,7 @@ private:
   const char *_loc;
 };
 
-template<class W1=nil_t, class W2=nil_t, class W3=nil_t>
+template<class W1=sfs::nil_t, class W2=sfs::nil_t, class W3=sfs::nil_t>
 class rendezvous_t : public rendezvous_base_t {
 
   typedef rendezvous_t<W1,W2,W3> my_type_t;
@@ -213,7 +212,7 @@ public:
   //-----------------------------------------------------------------------
   // Threaded interface
 
-  void wait (W1 &r1 = g_nil, W2 &r2 = g_nil, W3 &r3 = g_nil)
+  void wait (W1 &r1 = sfs::g_nil, W2 &r2 = sfs::g_nil, W3 &r3 = sfs::g_nil)
   { 
     bool rls = thread_lock_acquire ();
     while (!_ti_next_trigger (r1, r2, r3))
@@ -330,7 +329,9 @@ public:
 
   }
 
-  bool _ti_next_trigger (W1 &r1 = g_nil, W2 &r2 = g_nil, W3 &r3 = g_nil)
+  bool _ti_next_trigger (W1 &r1 = sfs::g_nil, 
+			 W2 &r2 = sfs::g_nil, 
+			 W3 &r3 = sfs::g_nil)
   {
     bool ret = true;
 

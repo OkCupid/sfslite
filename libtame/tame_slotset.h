@@ -55,6 +55,4 @@ struct _tame_slot_set<void, void, void, void> {
 };
 
 
-struct nil_t {};
-
 #endif /* _LIBTAME_TAME_SLOTSET_H_ */

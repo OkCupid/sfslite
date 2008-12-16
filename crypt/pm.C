@@ -156,8 +156,12 @@ pm_server::evaluate_intersection (vec<cpayload> *res,
     return;
 
   vec<cpayload> unshuffled;
-  inputs.traverse (wrap (this, &pm_server::evaluate_polynomial, 
-			 &unshuffled, ccoeffs, pk, &encone));
+  inputs.traverse (wrap (this, &pm_server::evaluate_polynomial2, 
+			 sfs::bundle_t<vec<cpayload> *, 
+			 const vec<crypt_ctext> *,
+			 const homoenc_pub *,
+			 const crypt_ctext *> 
+			 (&unshuffled, ccoeffs, pk, &encone)));
 
   // B.2
   // XXX Do a GOOD random shuffle here...

@@ -23,13 +23,18 @@
 
 #include "async.h"
 
+static void pipe2str2 (sfs::bundle_t<int, cbs, int *, strbuf *> b)
+{ pipe2str (b.obj1 (), b.obj2 (), b.obj3 (), b.obj4 ()); }
+
 void
 pipe2str (int fd, cbs cb, int *fdp, strbuf *sb)
 {
   if (!sb) {
     sb = New strbuf ();
     make_async (fd);
-    fdcb (fd, selread, wrap (pipe2str, fd, cb, fdp, sb));
+    fdcb (fd, selread, 
+	  wrap (pipe2str2, sfs::bundle_t<int,cbs,int *, strbuf *> 
+		(fd, cb, fdp, sb)));
   }
 
   int n;

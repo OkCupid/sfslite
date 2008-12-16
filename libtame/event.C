@@ -5,8 +5,7 @@
 #include "tame_closure.h"
 #include "tame_event_ag.h"
 #include "async.h"
-
-nil_t g_nil;
+#include "sfs_bundle.h"
 
 void 
 _event_cancel_base::cancel ()

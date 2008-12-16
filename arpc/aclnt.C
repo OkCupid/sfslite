@@ -336,6 +336,15 @@ printreply (aclnt_cb cb, str name, void *res,
   (*cb) (err);
 }
 
+static void
+printreply2 (sfs::bundle_t<aclnt_cb, str, void *> b,
+	     void (*print_res) (const void *, const strbuf *, int,
+				const char *, const char *),
+	     clnt_stat err)
+{
+  printreply (b.obj1 (), b.obj2 (), b.obj3 (), print_res, err);
+}
+
 bool
 aclnt::init_call (xdrsuio &x,
 	          u_int32_t procno, const void *in, void *out,
@@ -389,7 +398,8 @@ aclnt::init_call (xdrsuio &x,
     if (aclnttrace >= 5 && rtp && rtp->xdr_arg == inproc && rtp->print_arg)
       rtp->print_arg (in, NULL, aclnttrace - 4, "ARGS", "");
     if (aclnttrace >= 3 && cb != aclnt_cb_null)
-      cb = wrap (printreply, cb, name, out,
+      cb = wrap (printreply2, 
+		 sfs::bundle_t<aclnt_cb, str, void *> (cb, name, out),
 		 (rtp && rtp->xdr_res == outproc ? rtp->print_res : NULL));
   }
 

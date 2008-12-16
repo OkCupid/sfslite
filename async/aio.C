@@ -464,7 +464,9 @@ aiod::pathop (aiod_op op, str p1, str p2, cbb cb, size_t minsize)
 
   ptr<aiobuf> buf = bufalloc (aiod_pathop::totsize (bufsize));
   if (!buf) {
-    bufwait (wrap (this, &aiod::pathop, op, p1, p2, cb, minsize));
+    bufwait (wrap (this, &aiod::pathop2, 
+		   sfs::bundle_t<aiod_op,str,str,cbb> (op, p1, p2, cb), 
+		   minsize));
     return;
   }
 
@@ -489,7 +491,9 @@ aiod::open (str path, int flags, int mode,
   if ((rqbuf = bufalloc (sizeof (aiod_fhop))))
     fhbuf = bufalloc (sizeof (aiod_file) + path.len ());
   if (!rqbuf || !fhbuf) {
-    bufwait (wrap (this, &aiod::open, path, flags, mode, cb));
+    bufwait (wrap (this, &aiod::open2, 
+		   sfs::bundle_t<str,int,int> (path, flags, mode), 
+		   cb));
     return;
   }
 
@@ -643,16 +647,22 @@ aiofh::rw (aiod_op op, off_t pos, ptr<aiobuf> iobuf,
 #else
     switch (op) {
     case AIOD_READDIR:
-      iod->bufwait (wrap (mkref (this), &aiofh::sreaddir, pos,
-			  iobuf, iostart, iosize, cb));
+      iod->bufwait (wrap (mkref (this), &aiofh::sreaddir2, 
+			  sfs::bundle_t<off_t, ptr<aiobuf>, u_int, u_int>
+			  (pos, iobuf, iostart, iosize), 
+			  cb));
       return;
     case AIOD_READ:
-      iod->bufwait (wrap (mkref (this), &aiofh::sread, pos,
-			  iobuf, iostart, iosize, cb));
+      iod->bufwait (wrap (mkref (this), &aiofh::sread2, 
+			  sfs::bundle_t<off_t, ptr<aiobuf>, u_int, u_int>
+			  (pos, iobuf, iostart, iosize), 
+			  cb));
       return;
     case AIOD_WRITE:
-      iod->bufwait (wrap (mkref (this), &aiofh::swrite, pos,
-			  iobuf, iostart, iosize, cb));
+      iod->bufwait (wrap (mkref (this), &aiofh::swrite2, 
+			  sfs::bundle_t<off_t, ptr<aiobuf>, u_int, u_int> 
+			  (pos, iobuf, iostart, iosize), 
+			  cb));
       return; 
     default:
       panic ("aiofh::rw: unknown operation %d\n", op);

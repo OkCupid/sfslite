@@ -29,6 +29,7 @@
 #include "bbuddy.h"
 #include "ihash.h"
 #include "aiod_prot.h"
+#include "sfs_bundle.h"
 
 struct aiod_req;
 
@@ -163,10 +164,13 @@ class aiod {
   static void cbstat_cb (cbstat cb, ptr<aiobuf> buf);
   static void pathret_cb (cbsi cb, ptr<aiobuf> buf);
   static void open_cb (ref<aiofh> fh, cbopen cb, ptr<aiobuf> buf);
-  
+
   void pathop (aiod_op op, str p1, str p2, cbb cb, size_t bufsize = 0);
+  void pathop2 (sfs::bundle_t<aiod_op,str,str,cbb> b, size_t bufsize)
+  { pathop (b.obj1(), b.obj2(), b.obj3(), b.obj4(), bufsize); }
+
   void statop (aiod_op op, const str &path, const cbstat &cb)
-    { pathop (op, path, NULL, wrap (cbstat_cb, cb), sizeof (struct stat)); }
+  { pathop (op, path, NULL, wrap (cbstat_cb, cb), sizeof (struct stat)); }
 
   ~aiod ();
   void addref () { refcnt++; }
@@ -185,7 +189,7 @@ public:
   void bufwait (cbv cb) { bbwaitq.push_back (cb); }
 
   void unlink (str path, cbi cb)
-    { pathop (AIOD_UNLINK, path, NULL, wrap (cbi_cb, cb)); }
+  { pathop (AIOD_UNLINK, path, NULL, wrap (cbi_cb, cb)); }
   void link (str from, str to, cbi cb)
     { pathop (AIOD_LINK, from, to, wrap (cbi_cb, cb)); }
   void symlink (str from, str to, cbi cb)
@@ -202,6 +206,10 @@ public:
   void lstat (str path, cbstat cb) { statop (AIOD_LSTAT, path, cb); }
 
   void open (str path, int flags, int mode, cbopen cb);
+
+  void open2 (sfs::bundle_t<str, int, int> b, cbopen cb)
+  { open (b.obj1 (), b.obj2 (), b.obj3 (), cb); }
+
   void opendir (str path, cbopen cb);
 };
 
@@ -273,14 +281,32 @@ public:
     { rw (AIOD_READ, pos, buf, 0, buf->size (), cb); }
   void readdir (ptr<aiobuf> buf, cbrw cb)
     { rw (AIOD_READDIR, 0, buf, 0, buf->size (), cb); }
+
   void sread (off_t pos, ptr<aiobuf> buf, u_int iostart, u_int iosize, cbrw cb)
     { rw (AIOD_READ, pos, buf, iostart, iosize, cb); }
-  void sreaddir (off_t pos, ptr<aiobuf> buf, u_int iostart, u_int iosize, cbrw cb)
+
+  void sread2 (sfs::bundle_t<off_t, ptr<aiobuf>, u_int, u_int> b, cbrw cb)
+  { sread (b.obj1 (), b.obj2(), b.obj3(), b.obj4(), cb); }
+
+
+  void sreaddir (off_t pos, ptr<aiobuf> buf, u_int iostart, 
+		 u_int iosize, cbrw cb)
     { rw (AIOD_READDIR, pos, buf, iostart, iosize, cb); }
+
+  void sreaddir2 (sfs::bundle_t<off_t, ptr<aiobuf>, u_int, u_int> b,
+		  cbrw cb)
+  { sreaddir (b.obj1 (), b.obj2 (), b.obj3 (), b.obj4(), cb); }
+
   void write (off_t pos, ptr<aiobuf> buf, cbrw cb)
     { rw (AIOD_WRITE, pos, buf, 0, buf->size (), cb); }
+
   void swrite (off_t pos, ptr<aiobuf> buf, u_int iostart, u_int iosize,
 	       cbrw cb) { rw (AIOD_WRITE, pos, buf, iostart, iosize, cb); }
+
+  void swrite2 (sfs::bundle_t<off_t, ptr<aiobuf>, u_int, u_int> b, cbrw cb) 
+  { swrite (b.obj1 (), b.obj2 (), b.obj3 (), b.obj4 (), cb); }
+  
+
   void fstat (aiod::cbstat cb)
     { simpleop (AIOD_FSTAT, wrap (mkref (this), &aiofh::cbstat_cb, cb), 
 		off_t (0)); }

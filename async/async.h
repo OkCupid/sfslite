@@ -28,6 +28,7 @@
 #include "amisc.h"
 #include "init.h"
 #include "litetime.h"
+#include "sfs_bundle.h"
 
 /* core.C */
 struct timecb_t;
@@ -88,6 +89,7 @@ void ident (int fd, callback<void, str, int>::ref);
 
 /* pipe2str.C */
 void pipe2str (int fd, cbs cb, int *fdp = NULL, strbuf *sb = NULL);
+
 void chldrun (cbi chld, cbs cb);
 
 /* ifchg.C */

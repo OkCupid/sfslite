@@ -60,6 +60,15 @@ class pm_server {
   qhash<str, ppayload> inputs;
   
  private:
+  void evaluate_polynomial2 (sfs::bundle_t<vec<cpayload> *, 
+			     const vec<crypt_ctext> *,
+			     const homoenc_pub *,
+			     const crypt_ctext *> b,
+    const str &x, ppayload *payload)
+  { evaluate_polynomial (b.obj1 (), b.obj2 (), b.obj3 (), 
+			 b.obj4 (), x, payload); }
+  
+
   void evaluate_polynomial (vec<cpayload> *res, 
 			    const vec<crypt_ctext> *ccoeffs, 
 			    const homoenc_pub *pk,

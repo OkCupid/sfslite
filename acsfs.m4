@@ -1313,6 +1313,7 @@ AC_DEFUN([SFS_FAST_BUILD],
 if test "${enable_fast_build+set}" = "set"
 then
 	AC_DEFINE(TAME_DETEMPLATIZE, 1, Define if to avoid templates in tame)
+	AC_DEFINE(SFS_CALLBACK_A3, 1, Set A=3 implicitly in callback.h)
 fi
 ])
 

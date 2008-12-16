@@ -492,14 +492,21 @@ sub pfile () {
     for ($b = 0; $b <= $NB; $b++) {
 	pcallback ($b);
 	for ($a = 0; $a <= $NA; $a++) {
+	    if ($a > 3) {
+		print "#ifndef SFS_CALLBACK_A3\n";
+	    }
 	    pcallback_b_a ($b, $a); 
 	    pwrap_b_a ($b, $a);
 	    pcallback_c_b_a ($b, $a, ''); 
 	    pcallback_c_b_a ($b, $a, 'const'); 
 	    pwrap_c_b_a ($b, $a, '');
 	    pwrap_c_b_a ($b, $a, 'const');
-    }
+	    if ($a > 3) {
+		print "#endif // SFS_CALLBACK_A3\n\n";
+	    }
+	    
 	}
+    }
     prefops;
 }
 
@@ -1246,6 +1253,7 @@ wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3) const
 {
   return wNew (refcounted<callback_c_0_3_const<ref<const C>, const C, R, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
+#ifndef SFS_CALLBACK_A3
 
 template<class R, class A1, class A2, class A3, class A4>
 class callback_0_4
@@ -1397,6 +1405,9 @@ wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, A4) c
 {
   return wNew (refcounted<callback_c_0_4_const<ref<const C>, const C, R, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
+#endif // SFS_CALLBACK_A3
+
+#ifndef SFS_CALLBACK_A3
 
 template<class R, class A1, class A2, class A3, class A4, class A5>
 class callback_0_5
@@ -1553,6 +1564,8 @@ wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, A4, A
 {
   return wNew (refcounted<callback_c_0_5_const<ref<const C>, const C, R, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
+#endif // SFS_CALLBACK_A3
+
 
 template<class R, class B1>
 class callback<R, B1> {
@@ -2126,6 +2139,7 @@ wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, B1) c
 {
   return wNew (refcounted<callback_c_1_3_const<ref<const C>, const C, R, B1, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
+#ifndef SFS_CALLBACK_A3
 
 template<class R, class B1, class A1, class A2, class A3, class A4>
 class callback_1_4
@@ -2277,6 +2291,9 @@ wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, A4, B
 {
   return wNew (refcounted<callback_c_1_4_const<ref<const C>, const C, R, B1, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
+#endif // SFS_CALLBACK_A3
+
+#ifndef SFS_CALLBACK_A3
 
 template<class R, class B1, class A1, class A2, class A3, class A4, class A5>
 class callback_1_5
@@ -2433,6 +2450,8 @@ wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, A4, A
 {
   return wNew (refcounted<callback_c_1_5_const<ref<const C>, const C, R, B1, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
+#endif // SFS_CALLBACK_A3
+
 
 template<class R, class B1, class B2>
 class callback<R, B1, B2> {
@@ -3006,6 +3025,7 @@ wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, B1, B
 {
   return wNew (refcounted<callback_c_2_3_const<ref<const C>, const C, R, B1, B2, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
+#ifndef SFS_CALLBACK_A3
 
 template<class R, class B1, class B2, class A1, class A2, class A3, class A4>
 class callback_2_4
@@ -3157,6 +3177,9 @@ wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, A4, B
 {
   return wNew (refcounted<callback_c_2_4_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
+#endif // SFS_CALLBACK_A3
+
+#ifndef SFS_CALLBACK_A3
 
 template<class R, class B1, class B2, class A1, class A2, class A3, class A4, class A5>
 class callback_2_5
@@ -3313,6 +3336,8 @@ wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, A4, A
 {
   return wNew (refcounted<callback_c_2_5_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
+#endif // SFS_CALLBACK_A3
+
 
 template<class R, class B1, class B2, class B3>
 class callback {
@@ -3886,6 +3911,7 @@ wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, B1, B
 {
   return wNew (refcounted<callback_c_3_3_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
+#ifndef SFS_CALLBACK_A3
 
 template<class R, class B1, class B2, class B3, class A1, class A2, class A3, class A4>
 class callback_3_4
@@ -4037,6 +4063,9 @@ wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, A4, B
 {
   return wNew (refcounted<callback_c_3_4_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
+#endif // SFS_CALLBACK_A3
+
+#ifndef SFS_CALLBACK_A3
 
 template<class R, class B1, class B2, class B3, class A1, class A2, class A3, class A4, class A5>
 class callback_3_5
@@ -4193,6 +4222,8 @@ wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, A4, A
 {
   return wNew (refcounted<callback_c_3_5_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
+#endif // SFS_CALLBACK_A3
+
 
 template<class R, class B1, class B2, class B3>
 class refops<callback<R, B1, B2, B3> > {
