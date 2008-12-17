@@ -312,7 +312,7 @@ main_t::run ()
 bool
 main_t::insert (child_t *ch)
 {
-  bool ret;
+  bool ret = true;
   if (_children[ch->port ()]) {
     ret = false;
   } else {
