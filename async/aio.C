@@ -346,6 +346,28 @@ aiod::cbi_cb (cbi cb, ptr<aiobuf> buf)
 }
 
 void
+aiod::cbstatvfs_cb (cbstatvfs cb, ptr<aiobuf> buf)
+{
+  if (!buf)
+    (*cb) (NULL, EIO);
+  else {
+    aiod_pathop *rq = buf2pathop (buf);
+    /* Be slightly careful about "bad" aiod's clobbering shared
+     * memory.  For instance, the callback may rely on its struct stat
+     * argument not being NULL if the error is 0.  So we avoid code
+     * like:
+     *     if (rq->err)
+     *       (*cb) (NULL, rq->err);
+     */
+    if (int err = rq->err)
+      (*cb) (NULL, err);
+    else
+      (*cb) (rq->statvfsbuf (), 0);
+  }
+
+}
+
+void
 aiod::cbstat_cb (cbstat cb, ptr<aiobuf> buf)
 {
   if (!buf)
@@ -447,6 +469,30 @@ aiod::bufalloc_cb2 (size_t inc, ptr<aiobuf> buf)
   }
 }
 
+void
+aiod::mkdir (str d, int mode, cbi cb)
+{
+  if (closed) {
+    (*cb) (NULL);
+    return;
+  }
+  size_t bufsize = d.len () + 1;
+
+  ptr<aiobuf> buf = bufalloc (aiod_pathop::totsize (bufsize));
+  if (!buf) {
+    bufwait (wrap (this, &aiod::mkdir, d, mode, cb));
+    return;
+  }
+
+  aiod_mkdirop *rq = buf2mkdirop (buf);
+  rq->op = AIOD_MKDIR;
+  rq->err = 0;
+  rq->bufsize = bufsize;
+  rq->setpath (d);
+  rq->mode = mode;
+  sendmsg (buf, wrap (cbi_cb, cb));
+}
+
 
 void
 aiod::pathop (aiod_op op, str p1, str p2, cbb cb, size_t minsize)
@@ -513,8 +559,7 @@ aiod::open (str path, int flags, int mode,
 }
 
 void
-aiod::opendir (str path,
-	       callback<void, ptr<aiofh>, int>::ref cb)
+aiod::opendir (str path, callback<void, ptr<aiofh>, int>::ref cb)
 {
   if (closed) {
     (*cb) (NULL, NULL);

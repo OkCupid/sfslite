@@ -68,6 +68,7 @@ class aiod {
   typedef callback<void, ptr<aiobuf> >::ref cbb;
   typedef callback<void, str, int>::ref cbsi;
   typedef callback<void, struct stat *, int>::ref cbstat;
+  typedef callback<void, struct statvfs *, int>::ref cbstatvfs;
   typedef callback<void, ptr<aiofh>, int>::ref cbopen;
 
   enum { maxwrite = (PIPE_BUF / sizeof (off_t)) * sizeof (off_t) };
@@ -159,9 +160,12 @@ class aiod {
     { return reinterpret_cast<aiod_file *> (buf->base ()); }
   static aiod_nop *buf2nop (aiobuf *buf)
     { return reinterpret_cast<aiod_nop *> (buf->base ()); }
+  static aiod_mkdirop *buf2mkdirop (aiobuf *buf)
+    {  return reinterpret_cast<aiod_mkdirop *> (buf->base ()); }
 
   static void cbi_cb (cbi cb, ptr<aiobuf> buf);
   static void cbstat_cb (cbstat cb, ptr<aiobuf> buf);
+  static void cbstatvfs_cb (cbstatvfs cb, ptr<aiobuf> buf);
   static void pathret_cb (cbsi cb, ptr<aiobuf> buf);
   static void open_cb (ref<aiofh> fh, cbopen cb, ptr<aiobuf> buf);
 
@@ -171,6 +175,9 @@ class aiod {
 
   void statop (aiod_op op, const str &path, const cbstat &cb)
   { pathop (op, path, NULL, wrap (cbstat_cb, cb), sizeof (struct stat)); }
+  void statvfsop (aiod_op op, const str &path, const cbstatvfs &cb)
+    { pathop (op, path, NULL, wrap (cbstatvfs_cb, cb), 
+	      sizeof (struct statvfs)); }
 
   ~aiod ();
   void addref () { refcnt++; }
@@ -196,6 +203,10 @@ public:
     { pathop (AIOD_SYMLINK, from, to, wrap (cbi_cb, cb)); }
   void rename (str from, str to, cbi cb)
     { pathop (AIOD_RENAME, from, to, wrap (cbi_cb, cb)); }
+  void statvfs (str file, cbstatvfs cb)
+    { statvfsop (AIOD_STATVFS, file, cb); }
+
+  void mkdir (str dir, int mode, cbi cb);
 
   void readlink (str path, cbsi cb)
     { pathop (AIOD_READLINK, path, NULL, wrap (pathret_cb, cb), PATH_MAX); }

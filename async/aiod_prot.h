@@ -26,6 +26,7 @@
 #define _AIOD_AIOD_PROT_H_ 1
 
 #include "sysconf.h"
+#include <sys/statvfs.h>
 
 typedef size_t aiomsg_t;
 
@@ -58,22 +59,26 @@ enum aiod_op {
   AIOD_STAT = 6,
   AIOD_LSTAT = 7,
   AIOD_GETCWD = 8,
+  AIOD_STATVFS = 9,
 
   /* Requests take an aiod_fhop */
-  AIOD_OPEN = 9,
-  AIOD_CLOSE = 10,
-  AIOD_FSYNC = 11,
-  AIOD_FTRUNC = 12,
-  AIOD_READ = 13,
-  AIOD_WRITE = 14,
+  AIOD_OPEN = 10,
+  AIOD_CLOSE = 11,
+  AIOD_FSYNC = 12,
+  AIOD_FTRUNC = 13,
+  AIOD_READ = 14,
+  AIOD_WRITE = 15,
 
   /* fstat is special */
-  AIOD_FSTAT = 15,
+  AIOD_FSTAT = 16,
 
   /*Requests take an aiod_fhop */
-  AIOD_OPENDIR = 16,
-  AIOD_READDIR = 17,
-  AIOD_CLOSEDIR = 18,
+  AIOD_OPENDIR = 17,
+  AIOD_READDIR = 18,
+  AIOD_CLOSEDIR = 19,
+
+  /* requests take a mkdirop */
+  AIOD_MKDIR = 20
 };
 
 /* Common header for all requests */
@@ -106,6 +111,14 @@ struct aiod_pathop {
 #endif /* CHECK_BOUNDS */
     return reinterpret_cast<struct stat *> (pathbuf);
   }
+
+  struct statvfs *statvfsbuf () {
+#ifdef XXX_CHECK_BOUNDS		// Can't trust aiod's not to clobber bufsize
+    assert (sizeof (struct statvfs) <= bufsize);
+#endif /* CHECK_BOUNDS */
+    return reinterpret_cast<struct statvfs *> (pathbuf);
+  }
+
   void setpath (const char *p1, const char *p2 = "") {
     size_t len1 = strlen (p1);
 #ifdef XXX_CHECK_BOUNDS
@@ -117,10 +130,33 @@ struct aiod_pathop {
   static size_t totsize (size_t bufsize);
 };
 
+struct aiod_mkdirop {
+  aiod_op op;
+  int err;
+  size_t bufsize;
+  int mode;
+  union {
+    off_t __alignment_hack;
+    char pathbuf[1];
+  };
+
+  char *path () { return pathbuf; }
+  void setpath (const char *p1) {
+    strcpy (pathbuf, p1);
+  }
+  static size_t totsize (size_t bufsize);
+};
+
 inline size_t
 aiod_pathop::totsize (size_t bufsize)
 {
   return offsetof (aiod_pathop, pathbuf) + bufsize;
+}
+
+inline size_t
+aiod_mkdirop::totsize (size_t bufsize)
+{
+  return offsetof (aiod_mkdirop, pathbuf) + bufsize;
 }
 
 /* Argument for most operations that take a file handle */

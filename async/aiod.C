@@ -349,10 +349,28 @@ class aiosrv {
   void fhop (aiomsg_t);
   void fstat (aiomsg_t);
   void dhop (aiomsg_t);
+  void mkdir (aiomsg_t);
 public:
   aiosrv (int f, ref<shmbuf> b) : fd (f), buf (b) { make_sync (fd); }
   void getmsg (aiomsg_t msg);
 };
+
+void
+aiosrv::mkdir (aiomsg_t msg)
+{
+  errno = 0;
+  aiod_mkdirop *rq = buf->Xtmpl getptr<aiod_mkdirop> (msg);
+  switch (rq->op) {
+  case AIOD_MKDIR:
+    rc_ignore (::mkdir (rq->path (), rq->mode));
+    break;
+  default:
+    panic ("aiosrv::mkdir: bad op %d\n", rq->op);
+    break;
+  }
+  if (errno)
+    rq->err = errno;
+}
 
 void
 aiosrv::pathop (aiomsg_t msg)
@@ -393,6 +411,9 @@ aiosrv::pathop (aiomsg_t msg)
     break;
   case AIOD_LSTAT:
     lstat (rq->path1 (), rq->statbuf ());
+    break;
+  case AIOD_STATVFS:
+    statvfs (rq->path1 (), rq->statvfsbuf ());
     break;
   default:
     panic ("aiosrv::pathop: bad op %d\n", rq->op);
@@ -585,6 +606,8 @@ aiosrv::getmsg (aiomsg_t msg)
     fstat (msg);
   else if (op >= AIOD_OPENDIR && op <= AIOD_CLOSEDIR)
     dhop (msg);
+  else if (op == AIOD_MKDIR) 
+    mkdir (msg);
   else
     fatal ("bad opcode %d from client\n", op);
 
