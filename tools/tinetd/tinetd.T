@@ -5,11 +5,16 @@
 #include "tinetd.h"
 #include "tame_io.h"
 #include "aapp.h"
+#include "alog2.h"
 
 #define EC_ERR -2
 #define EC_INFO -1
 
 extern char ** environ;
+
+//=======================================================================
+
+logger2_t logger;
 
 //=======================================================================
 
@@ -211,7 +216,7 @@ main_t::config (int argc, char *argv[])
 {
   int rc = 0;
   int ch;
-  level_t level (V_REG);
+  log2_level_t level (V_REG);
   
 
   setprogname (argv[0]);
