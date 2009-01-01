@@ -216,7 +216,7 @@ main_t::config (int argc, char *argv[])
 {
   int rc = 0;
   int ch;
-  log2_level_t level (V_REG);
+  logger2_t::level_t level (V_REG);
   
 
   setprogname (argv[0]);

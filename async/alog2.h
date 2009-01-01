@@ -15,6 +15,8 @@ typedef enum { V_LO = 0, V_REG = 1, V_HI = 2} log2_level_t;
 class logger2_t {
 public:
 
+  typedef log2_level_t level_t;
+
   //----------------------
 
   class obj_t {
