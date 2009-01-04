@@ -82,6 +82,8 @@ libtame_la_SOURCES = \
 	event.C \
 	tame_out 
 
+libtame_la_LDFLAGS = $(LIBTOOL_VERSION_INFO)
+
 dnl
 dnl All those headers before tame.h are tame internal headers; all after
 dnl are tame libraries that are useful but not required.

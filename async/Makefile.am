@@ -24,6 +24,8 @@ str2file.C straux.C suio++.C suio_vuprintf.C tcpconnect.C litetime.C \
 select.C select_std.C select_epoll.C select_kqueue.C dynenum.C \
 vec.C bundle.C alog2.C
 
+libasync_la_LDFLAGS = $(LIBTOOL_VERSION_INFO)
+
 aiod_SOURCES = aiod.C
 aiod_LDADD = $(LIBASYNC) $(LIBPY) $(LDADD_THR)
 aiod_DEPENDENCIES = $(LIBASYNC)

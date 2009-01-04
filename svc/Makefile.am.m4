@@ -86,6 +86,8 @@ $(DEP_FILES): rpcmk_headers
 EXTRA_DIST = Makefile.am.m4 .cvsignore
 libsvc_la_SOURCES = rpcmk_sources $(UVFS_CFILES)
 
+libsvc_la_LDFLAGS = $(LIBTOOL_VERSION_INFO)
+
 sfsinclude_HEADERS = rpcmk_xfiles nfs3_ext.x rpcmk_headers $(UVFS_HFILES)
 
 if REPO

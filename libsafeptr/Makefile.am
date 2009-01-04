@@ -7,6 +7,8 @@ libsafeptr_la_SOURCES = \
 	freemap.C \
 	gc_str.C
 
+libsafeptr_la_LDFLAGS = $(LIBTOOL_VERSION_INFO)
+
 sfsinclude_HEADERS = \
 	safeptr.h \
 	sp_wkref.h \

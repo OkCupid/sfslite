@@ -2395,4 +2395,10 @@ if test "$sfs_cv_kqueue" = yes; then
 	AC_DEFINE(HAVE_KQUEUE, 1,
 	     Define if this machine has FreeBSD kqueue support)
 fi])
-
+dnl
+dnl SFS_INIT_LDVERSION
+dnl
+AC_DEFUN([SFS_INIT_LDVERSION],
+[LIBTOOL_VERSION_INFO="-version-info $1"
+AC_SUBST(LIBTOOL_VERSION_INFO)
+])

@@ -18,6 +18,8 @@ else
 libsfsmisc_la_SOURCES =	sfsconst_stub.C
 endif
 
+libsfsmisc_la_LDFLAGS = $(LIBTOOL_VERSION_INFO)
+
 sfsinclude_HEADERS = \
 afsnode.h agentconn.h agentmisc.h getfh3.h nfs3_nonnul.h	\
 nfsserv.h nfstrans.h rex.h sfsclient.h sfsconnect.h sfskeymisc.h\

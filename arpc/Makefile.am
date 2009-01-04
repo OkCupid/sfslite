@@ -8,6 +8,8 @@ authunixint.c pmap_prot.C \
 acallrpc.C aclnt.C asrv.C authopaque.C authuint.C axprt_dgram.C axprt_pipe.C axprt_stream.C axprt_unix.C clone.C xdr_suio.C xdrmisc.C xhinfo.C \
 rpc_stats.C rpc_lookup.C
 
+libarpc_la_LDFLAGS = $(LIBTOOL_VERSION_INFO)
+
 sfsinclude_HEADERS = pmap_prot.x \
 aclnt.h arpc.h asrv.h axprt.h pmap_prot.h rpctypes.h xdr_suio.h xdrmisc.h \
 xhinfo.h rpc_stats.h

@@ -15,6 +15,8 @@ rndseed.C rsa.C seqno.C serial.C sha1.C sha1oracle.C srp.C tiger.C     \
 tiger_sboxes.C wmstr.C xdr_mpz_t.C schnorr.C ocb.C umac.C rabinpoly.C  \
 rabin_fprint.C
 
+libsfscrypt_la_LDFLAGS = $(LIBTOOL_VERSION_INFO)
+
 sfsinclude_HEADERS = crypt_prot.x \
 aes.h arc4.h axprt_crypt.h bench.h bigint.h blowfish.h crypt.h         \
 crypthash.h crypt_prot.h dsa.h elgamal.h esign.h fips186.h hashcash.h  \
