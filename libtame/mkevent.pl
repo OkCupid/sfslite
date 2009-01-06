@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 use strict;
 
 ##
@@ -210,7 +210,6 @@ sub do_event_impl_class ($$)
 	   "      _action (action) {}\n\n");
 
     # print the destructor
-    my $del = "";
     print ("  ~${CNI} () { if (!this->_cleared) clear_action (); ${del}}\n\n");
 
 
