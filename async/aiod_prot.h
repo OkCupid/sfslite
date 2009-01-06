@@ -156,7 +156,8 @@ aiod_pathop::totsize (size_t bufsize)
 inline size_t
 aiod_mkdirop::totsize (size_t bufsize)
 {
-  return offsetof (aiod_mkdirop, pathbuf) + bufsize;
+  return max<size_t> (offsetof (aiod_mkdirop, pathbuf) + bufsize, 
+		      sizeof (aiod_mkdirop));
 }
 
 /* Argument for most operations that take a file handle */

@@ -368,8 +368,11 @@ aiosrv::mkdir (aiomsg_t msg)
     panic ("aiosrv::mkdir: bad op %d\n", rq->op);
     break;
   }
-  if (errno)
+  if (errno) {
+    str s = rq->path ();
+    warn ("mkdir(%s,%d) failed: %m\n", s.cstr (), rq->mode);
     rq->err = errno;
+  }
 }
 
 void

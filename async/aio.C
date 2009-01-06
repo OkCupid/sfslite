@@ -478,13 +478,14 @@ aiod::mkdir (str d, int mode, cbi cb)
   }
   size_t bufsize = d.len () + 1;
 
-  ptr<aiobuf> buf = bufalloc (aiod_pathop::totsize (bufsize));
+  ptr<aiobuf> buf = bufalloc (aiod_mkdirop::totsize (bufsize));
   if (!buf) {
     bufwait (wrap (this, &aiod::mkdir, d, mode, cb));
     return;
   }
 
   aiod_mkdirop *rq = buf2mkdirop (buf);
+  bzero (rq, sizeof (*rq));
   rq->op = AIOD_MKDIR;
   rq->err = 0;
   rq->bufsize = bufsize;
