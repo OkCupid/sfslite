@@ -370,7 +370,7 @@ aiosrv::mkdir (aiomsg_t msg)
   }
   if (errno) {
     str s = rq->path ();
-    warn ("mkdir(%s,%d) failed: %m\n", s.cstr (), rq->mode);
+    // warn ("mkdir(%s,%d) failed: %m\n", s.cstr (), rq->mode);
     rq->err = errno;
   }
 }
