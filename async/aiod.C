@@ -415,8 +415,25 @@ aiosrv::pathop (aiomsg_t msg)
   case AIOD_LSTAT:
     lstat (rq->path1 (), rq->statbuf ());
     break;
-  case AIOD_STATVFS:
-    statvfs (rq->path1 (), rq->statvfsbuf ());
+  case AIOD_STATVFS: 
+    {
+      str s = rq->path1 ();
+      int rc;
+      
+      /*
+	struct stat b;
+      rc = stat (s.cstr (), &b);
+      if (rc != 0) {
+	warn ("cannot stat('%s'): %m\n", s.cstr ());
+      } else {
+	warn ("well hell, stat worked!\n");
+      }
+      */
+      rc = statvfs (s, rq->statvfsbuf ());
+      if (rc != 0) {
+	warn ("statvfs('%s') failed: %m\n", s.cstr ());
+      }
+    }
     break;
   default:
     panic ("aiosrv::pathop: bad op %d\n", rq->op);
@@ -601,7 +618,7 @@ aiosrv::getmsg (aiomsg_t msg)
 
   if (op == AIOD_NOP)
     nop (msg);
-  else if (op >= AIOD_UNLINK && op <= AIOD_LSTAT)
+  else if (op >= AIOD_UNLINK && op <= AIOD_STATVFS)
     pathop (msg);
   else if (op >= AIOD_OPEN && op <= AIOD_WRITE)
     fhop (msg);
