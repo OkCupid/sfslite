@@ -418,20 +418,11 @@ aiosrv::pathop (aiomsg_t msg)
   case AIOD_STATVFS: 
     {
       str s = rq->path1 ();
-      int rc;
-      
-      /*
-	struct stat b;
-      rc = stat (s.cstr (), &b);
-      if (rc != 0) {
-	warn ("cannot stat('%s'): %m\n", s.cstr ());
-      } else {
-	warn ("well hell, stat worked!\n");
-      }
-      */
-      rc = statvfs (s, rq->statvfsbuf ());
+      int rc = statvfs (s, rq->statvfsbuf ());
       if (rc != 0) {
 	warn ("statvfs('%s') failed: %m\n", s.cstr ());
+      } else {
+	errno = 0; /* statvfs sets errno even if no error .. */
       }
     }
     break;
