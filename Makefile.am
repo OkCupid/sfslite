@@ -1,6 +1,9 @@
 ## Process this file with automake to produce Makefile.in
 ## $Id$
 
+
+ACLOCAL_AMFLAGS = -I m4
+
 #
 # sfslite change
 #

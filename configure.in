@@ -8,6 +8,11 @@ AM_INIT_AUTOMAKE(sfslite,1.2.6pre1)
 AM_CONFIG_HEADER(config.h)
 
 dnl
+dnl Autoconf now recommending this...
+dnl
+AC_CONFIG_MACRO_DIR([m4])
+
+dnl
 dnl Pass the given argument to libtool -version-info, thereby
 dnl versioning the .so's that we're going to spit out.  Start
 dnl with version 1.0.0, since 0.0.0 is already in use.  Must
