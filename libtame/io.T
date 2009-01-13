@@ -58,33 +58,6 @@ waitread (int fd, evv_t cb)
   fdcb1(fd, selread, cb);
 }
 
-
-tamed void
-iofd_t::on (evv_t cb)
-{
-  tvars {
-    outcome_t oc (OUTCOME_SUCC);
-  }
-  _on = true;
-  twait { fdcb (_fd, _op, connector::cnc (mkevent (), cb, &oc)); }
-  _on = false;
-  if (oc != OUTCOME_CANCELLED) {
-    cb->trigger ();
-  }
-  if (!_on) {
-    off (false);
-  }
-}
-
-void
-iofd_t::off (bool check)
-{
-  if (_on || !check) {
-    fdcb (_fd, _op, NULL);
-    _on = false;
-  }
-}
-
 typedef enum { READ, WRITE, ENDPROG, POKE } ev_t;
 
 void
@@ -310,6 +283,72 @@ accept (int sockfd, struct sockaddr *addr, socklen_t *addrlen, evi_t ev)
     lh->release ();
     cb->trigger ();
   }
+
+  //-----------------------------------------------------------------------
+  
+  iofd_t::iofd_t (ptr<rcfd_t> fd, selop op)
+    : _fd (fd), 
+      _op (op), 
+      _on (false) {}
+
+  //-----------------------------------------------------------------------
+
+  ptr<iofd_t>
+  iofd_t::alloc (ptr<rcfd_t> fd, selop op)
+  {
+    return New refcounted<iofd_t> (fd, op);
+  }
+  
+  //-----------------------------------------------------------------------
+
+  iofd_t::~iofd_t ()
+  {
+    off ();
+  }
+
+  //-----------------------------------------------------------------------
+  
+  tamed void
+  iofd_t::on (evv_t cb)
+  {
+    tvars {
+      outcome_t oc (OUTCOME_SUCC);
+      holdvar ptr<tame::iofd_t> hold (mkref (_self));
+    }
+    _on = true;
+    twait { fdcb (fd (), _op, connector::cnc (mkevent (), cb, &oc)); }
+    _on = false;
+    
+    if (oc != OUTCOME_CANCELLED) {
+      cb->trigger ();
+    }
+    
+    if (!_on) {
+      off (false);
+    }
+  }
+
+  //-----------------------------------------------------------------------
+
+  void
+  iofd_t::off (bool check)
+  {
+    if (_on || !check) {
+      fdcb (fd (), _op, NULL);
+      _on = false;
+    }
+  }
+
+  //-----------------------------------------------------------------------
+
+  rcfd_t::~rcfd_t ()
+  {
+    close (_fd);
+  }
+
+  //-----------------------------------------------------------------------
+
+  ptr<rcfd_t> rcfd_t::alloc (int fd) { return New refcounted<rcfd_t> (fd); }
 
   //-----------------------------------------------------------------------
 

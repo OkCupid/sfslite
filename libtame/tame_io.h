@@ -42,19 +42,36 @@ namespace tame {
   
   void fdcb1(int fd, selop which, evv_t cb, CLOSURE);
   void sigcb1 (int sig, evv_t cb, CLOSURE);
-  
-  class iofd_t {
+
+  //-----------------------------------------------------------------------
+
+  class rcfd_t : public virtual refcount {
   public:
-    iofd_t (int fd, selop op) : _fd (fd), _op (op), _on (false) {}
-    ~iofd_t () { off (); }
-    void on (evv_t cb, CLOSURE);
-    void off (bool check = true);
+    rcfd_t (int f) : _fd (f) {}
+    ~rcfd_t ();
     int fd () const { return _fd; }
+    static ptr<rcfd_t> alloc (int fd);
   private:
     const int _fd;
+  };
+  
+  //-----------------------------------------------------------------------
+
+  class iofd_t : public virtual refcount {
+  public:
+    iofd_t (ptr<rcfd_t> fd, selop op) ;
+    ~iofd_t ();
+    void on (evv_t cb, CLOSURE);
+    void off (bool check = true);
+    int fd () const { return _fd->fd (); }
+    static ptr<iofd_t> alloc (ptr<rcfd_t> fd, selop op);
+  private:
+    const ptr<rcfd_t> _fd;
     const selop _op;
     bool _on;
   }; 
+
+  //-----------------------------------------------------------------------
   
   class iofd_sticky_t {
   public:
