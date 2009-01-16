@@ -104,7 +104,7 @@ static void
 timeout (int)
 {
   char msg[] = "lost a timecb\n";
-  write (2, msg, sizeof (msg) - 1);
+  rc_ignore (write (2, msg, sizeof (msg) - 1));
   abort ();
 }
 

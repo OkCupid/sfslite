@@ -35,13 +35,14 @@ main (int argc, char **argv)
     r = random_bigint (rnd.getword () % 2048);
     s1 = r * r;
     mpz_square (&s2, &r);
-    if (s1 != s2)
+    if (s1 != s2) {
+      int sz = mpz_sizeinbase (&s1, 16);
       panic << "r = " << r << "\n"
 	    << "     " << s1 << "\n  != " << s2 << "\n"
 	    << "    ["
-	    << strbuf ("%*s", mpz_sizeinbase (&s1, 16),
-		       bigint (abs (s1 - s2)).cstr ())
+	    << strbuf ("%*s", sz, bigint (abs (s1 - s2)).cstr ())
 	    << "]\n";
+    }
   }
 
   return 0;

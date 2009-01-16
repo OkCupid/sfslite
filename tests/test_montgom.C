@@ -47,13 +47,13 @@ main (int argc, char **argv)
       b.mpz_mreduce (&s2, &r);
       if (s1 != s2) {
 	res |= 1;
+	int sz = mpz_sizeinbase (&s1, 16);
 	panic << "mreduce failed\n"
 	      << " m = " << m << "\n"
 	      << " r = " << r << "\n"
 	      << "     " << s1 << "\n  != " << s2 << "\n"
 	      << "    ["
-	      << strbuf ("%*s", mpz_sizeinbase (&s1, 16),
-			 bigint (abs (s1 - s2)).cstr ())
+	      << strbuf ("%*s", sz, bigint (abs (s1 - s2)).cstr ())
 	      << "]\n";
       }
     }
@@ -67,13 +67,13 @@ main (int argc, char **argv)
     b.mpz_mmul (&s2, &r, &r2);
     if (s1 != s2) {
       res |= 2;
+      int sz = mpz_sizeinbase (&s1, 16);
       panic << "mmul failed\n"
 	    << " m = " << m << "\n"
 	    << " r = " << r << "\n"
 	    << "     " << s1 << "\n  != " << s2 << "\n"
 	    << "    ["
-	    << strbuf ("%*s", mpz_sizeinbase (&s1, 16),
-		       bigint (abs (s1 - s2)).cstr ())
+	    << strbuf ("%*s", sz, bigint (abs (s1 - s2)).cstr ())
 	    << "]\n";
     }
 
@@ -81,13 +81,13 @@ main (int argc, char **argv)
     b.mpz_powm (&s2, &r, &r2);
     if (s1 != s2) {
       res |= 4;
+      int sz = mpz_sizeinbase (&s1, 16);
       panic << "powm failed\n"
 	    << " m = " << m << "\n"
 	    << " r = " << r << "\n"
 	    << "     " << s1 << "\n  != " << s2 << "\n"
 	    << "    ["
-	    << strbuf ("%*s", mpz_sizeinbase (&s1, 16),
-		       bigint (abs (s1 - s2)).cstr ())
+	    << strbuf ("%*s", sz, bigint (abs (s1 - s2)).cstr ())
 	    << "]\n";
     }
 

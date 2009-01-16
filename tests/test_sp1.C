@@ -67,7 +67,7 @@ test2(void) {
 
   vec<sp::gc::ptr<foo_t> > v;
   for (int j = 0; j < 10; j++) {
-    for (size_t i = 0; i < 100; i++) {
+    for (size_t i = 0; i < 50; i++) {
       x = sp::gc::alloc<foo_t> (i, 0);
       assert (x);
       v.push_back (x);
@@ -83,13 +83,13 @@ test2(void) {
     v[i*5] = NULL;
   }
 
-  for (size_t i = 0; i < 20; i++) {
+  for (size_t i = 0; i < 10; i++) {
     x = sp::gc::alloc<foo_t> (i,300);
     assert (x);
     v[i*5] = x;
   }
 
-  for (size_t i = 0; i < 100; i++) {
+  for (size_t i = 0; i < 50; i++) {
     size_t x = v[i]->baz ();
     if (i % 5 == 0) {
       assert (x == 300 + i/5);

@@ -25,6 +25,10 @@
 #include "arc4.h"
 #include "bbuddy.h"
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
+
 bbuddy bb (0x100000, 0x800, 0x10000);
 
 int
@@ -45,7 +49,7 @@ main (int argc, char **argv)
     size_t l = ((as.getbyte () << 8 | as.getbyte ()) % 0x800);
     off_t o = bb.alloc (l);
     if (o < 0)
-      panic ("could not allocate 0x%qx bytes with 0x%qx free\n",
+      panic ("could not allocate 0x%" PRIx64 " bytes with 0x%" PRIx64 "free\n",
 	     (u_int64_t) l, (u_int64_t) bb.space ());
     ov.push_back (o);
     lv.push_back (l);

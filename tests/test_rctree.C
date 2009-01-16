@@ -33,10 +33,8 @@ tree_test (void)
 }
 
 int
-main (int argc, char *argv)
+main (int argc, char *argv[])
 {
   tree_test ();
-  
-
 
 }
