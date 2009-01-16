@@ -1,6 +1,7 @@
 
 sfsbin_PROGRAMS = rtftpc rtftpd
 
+noinst_HEADERS = rtftp.h
 rtftpc_SOURCES = rtftp_prot.C cli.C util.C
 rtftpd_SOURCES = rtftp_prot.C srv.C util.C
 
@@ -28,6 +29,11 @@ util.lo: rtftp_prot.h
 rtftp_prot.C: rtftp_prot.h
 rtftp_prot.lo: rtftp_prot.h rtftp_prot.C
 rtftp_prot.o: rtftp_prot.h rtftp_prot.C
+cli.o: rtftp_prot.h
+srv.o: rtftp_prot.h
+cli.lo: rtftp_prot.h
+srv.lo: rtftp_prot.h
+
 
 rtftp_prot.h: $(srcdir)/rtftp_prot.x
 	@rm -f $@

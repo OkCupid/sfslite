@@ -1,6 +1,7 @@
 
 sfsbin_PROGRAMS = tinetd
 
+noinst_HEADERS = tinetd.h
 tinetd_SOURCES = tinetd.C 
 
 if USE_SFSMISC

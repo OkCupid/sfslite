@@ -29,7 +29,7 @@ aapp_prot.C: $(srcdir)/aapp_prot.x
 rpcclean:
 	rm -f aapp_prot.C aapp_prot.h
 
-EXTRA_DIST: aapp_prot.x
+EXTRA_DIST = aapp_prot.x 
 CLEANFILES = core *.core *~ *.rpo aapp_prot.h aapp_prot.C
 MAINTAINERCLEANFILES = Makefile.in
 
