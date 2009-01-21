@@ -637,6 +637,12 @@ fullread (int fd, void *buf, size_t len)
   char *bp = static_cast<char *> (buf);
   while (len > 0) {
     ssize_t n = read (fd, bp, len);
+
+    if (n < 0 && errno == EINTR) {
+      warn ("mk guess; fullread EINTR; continuing...\n");
+      continue;
+    }
+
     if (n <= 0)
       return n;
     bp += n;
@@ -667,7 +673,7 @@ sigio_handler (int sig)
     ssize_t n = fullread (rwfd, &msg, sizeof (msg));
     if (n != sizeof (msg)) {
       if (n < 0)
-	fatal ("read: %m\n");
+	fatal ("read (sigio handler): %m\n");
       exit (0);
     }
     srv->getmsg (msg);
@@ -708,7 +714,7 @@ msg_loop ()
     }
     if (n != sizeof (msg)) {
       if (n < 0)
-	fatal ("read: %m\n");
+	fatal ("read (msg_loop): %m\n");
       if (n > 0)
 	fatal ("short read from rfd\n");
       exit (0);
