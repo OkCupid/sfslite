@@ -458,3 +458,21 @@ __suio_flatten (const struct suio *uio, const char *file, int line)
   uio->copyout (buf);
   return buf;
 }
+
+//-----------------------------------------------------------------------
+
+//
+// Borrow data from from, and paste it at the end of this..
+//
+void
+suio::borrow_data (const suio *from)
+{
+  for (const iovec *v = from->iovs.base (), *e = from->iovs.lim (); v < e; v++)
+    if (v->iov_base >= from->defbuf
+	&& v->iov_base < from->defbuf + sizeof (from->defbuf))
+      copy (v->iov_base, v->iov_len);
+    else
+      pushiov (v->iov_base, v->iov_len);
+}
+
+//-----------------------------------------------------------------------

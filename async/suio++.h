@@ -104,6 +104,7 @@ public:
   void print (const void *, size_t);
   void take (suio *src);
   void rembytes (size_t n);
+  void borrow_data (const suio *from);
 
   void iovcb (cb_t cb) {
     if (uiobytes)

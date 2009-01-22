@@ -316,6 +316,8 @@ public:
   const iovec *iov () const { return uio->iov (); }
   size_t iovcnt () const { return uio->iovcnt (); }
   suio *tosuio () const { return uio; }
+
+  const strbuf &borrow_data (const strbuf &in);
 };
 
 inline

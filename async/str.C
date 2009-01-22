@@ -120,3 +120,14 @@ cstrp (const str *s)
 {
   return *s;
 }
+
+//-----------------------------------------------------------------------
+
+const strbuf &
+strbuf::borrow_data (const strbuf &in)
+{
+  uio->borrow_data (in.tosuio ());
+  return (*this);
+}
+
+//-----------------------------------------------------------------------
