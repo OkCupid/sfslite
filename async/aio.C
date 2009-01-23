@@ -92,7 +92,7 @@ aiod::writeq::sendmsg (aiomsg_t msg)
 }
 
 bool
-aiod::daemon::launch (str path, int shmfd, int commonfd)
+aiod::daemon::launch (str path, int shmfd, int commonfd, bool skip_sigs)
 {
   assert (pid == -1);		// Otherwise, already launched!
 
@@ -106,11 +106,16 @@ aiod::daemon::launch (str path, int shmfd, int commonfd)
   str rfdarg (strbuf ("%d", commonfd));
   str rwfdarg (strbuf ("%d", fds[1]));
 
-  char *av[5] = { const_cast<char *> (path.cstr ()),
-		  const_cast<char *> (shmfdarg.cstr ()),
-		  const_cast<char *> (rfdarg.cstr ()),
-		  const_cast<char *> (rwfdarg.cstr ()),
-		  NULL };
+  char *av[6];
+  char **avp = av;
+
+  *avp++ = const_cast<char *> (path.cstr ());
+  if (skip_sigs) 
+    *avp++ = const_cast<char *> ("-s");
+  *avp++ = const_cast<char *> (shmfdarg.cstr ());
+  *avp++ = const_cast<char *> (rfdarg.cstr ());
+  *avp++ = const_cast<char *> (rwfdarg.cstr ());
+  *avp++ = NULL;
 
   pid = spawn (path, av);
   close (fds[1]);
@@ -203,7 +208,7 @@ aiod::aiod (u_int nproc, ssize_t shmsize, size_t mb, bool sp,
     if (sb.st_dev != sb2.st_dev || sb.st_ino != sb2.st_ino)
       fatal ("aiod: somone tampered with %s\n", tmpfile.cstr ());
 
-    bool res = dv[i].launch (aiod_path, fd, rfd);
+    bool res = dv[i].launch (aiod_path, fd, rfd, ndaemons == 1);
     close (fd);
     if (!res) {
       fail ();

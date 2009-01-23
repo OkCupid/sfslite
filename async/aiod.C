@@ -681,15 +681,65 @@ sigio_handler (int sig)
   errno = saved_errno;
 }
 
+//-----------------------------------------------------------------------
+
+static bool
+read_fd (int fd, fd_set *set, aiomsg_t *msg)
+{
+  bool ret = false;
+  if (FD_ISSET (fd, set)) {
+    size_t msz = sizeof (*msg);
+    size_t n = fullread (fd, msg, msz);
+    if (n == msz) {
+      ret = true;
+    } else if (n < 0) {
+      warn ("error in reading from fd=%d: %m\n", fd);
+    } else if (n == 0) {
+      exit (0);
+    }
+  }
+  return ret;
+}
+
+//-----------------------------------------------------------------------
+
+static void
+msg_loop_simple ()
+{
+  fd_set fds;
+  memset (&fds, 0, sizeof (fds));
+
+  int nfds = max<int> (rfd, rwfd) + 1;
+
+  aiomsg_t msg;
+
+  for (;;) {
+
+    FD_SET(rfd, &fds);
+    FD_SET(rwfd, &fds);
+
+    int n = select (nfds, &fds, NULL, NULL, NULL);
+    if (n < 0) {
+      warn ("select error: %m\n");
+    } else {
+      if (read_fd (rfd, &fds, &msg)) { srv->getmsg (msg); }
+      if (read_fd (rwfd, &fds, &msg)) { srv->getmsg (msg); }
+    }
+  }
+}
+
+//-----------------------------------------------------------------------
+
 static void
 msg_loop ()
 {
   sigio_handler (SIGIO);	// Ensure we didn't miss any SIGIO's
   sigprocmask (SIG_UNBLOCK, &sigio_mask, NULL);
-
+  
   for (;;) {
-    sigio_received = 0;
 
+    sigio_received = 0;
+    
     while (flock (shmfd, LOCK_EX) == -1) {
       if (errno != EINTR) {
 	sigprocmask (SIG_BLOCK, &sigio_mask, NULL);
@@ -701,17 +751,19 @@ msg_loop ()
       flock (shmfd, LOCK_UN);
       continue;
     }
-
+  
     aiomsg_t msg;
     ssize_t n = read (rfd, &msg, sizeof (msg));
     int saved_errno = errno;
+    
     sigprocmask (SIG_BLOCK, &sigio_mask, NULL);
     flock (shmfd, LOCK_UN);
-
+    
     if (n == -1 && saved_errno == EINTR && sigio_received) {
       sigprocmask (SIG_UNBLOCK, &sigio_mask, NULL);
       continue;
     }
+    
     if (n != sizeof (msg)) {
       if (n < 0)
 	fatal ("read (msg_loop) n=%zd size(msg)=%zd sigio=%d: %m\n", 
@@ -720,8 +772,9 @@ msg_loop ()
 	fatal ("short read from rfd\n");
       exit (0);
     }
-
+    
     srv->getmsg (msg);
+    
     sigprocmask (SIG_UNBLOCK, &sigio_mask, NULL);
   }
 }
@@ -743,11 +796,28 @@ nop (int sig)
 int
 main (int argc, char **argv)
 {
+  int ch;
   setprogname (argv[0]);
-  if (argc != 4
-      || !convertint (argv[1], &shmfd)
-      || !convertint (argv[2], &rfd)
-      || !convertint (argv[3], &rwfd))
+  bool skip_sigs = false;
+
+  while ((ch = getopt (argc, argv, "s")) != -1) {
+    switch (ch) {
+    case 's':
+      skip_sigs = true;
+      break;
+    default:
+      usage ();
+      break;
+    }
+  }
+
+  argc -= optind;
+  argv += optind;
+
+  if (argc != 3 
+      || !convertint (argv[0], &shmfd)
+      || !convertint (argv[1], &rfd)
+      || !convertint (argv[2], &rwfd))
     usage ();
 
 #ifdef MAINTAINER
@@ -776,29 +846,34 @@ main (int argc, char **argv)
 
   srv = New aiosrv (rwfd, b);
 
-  (void) sigemptyset (&sigio_mask);
-  sigaddset (&sigio_mask, SIGIO);
-  sigprocmask (SIG_BLOCK, &sigio_mask, NULL);
+  if (!skip_sigs) {
+    (void) sigemptyset (&sigio_mask);
+    sigaddset (&sigio_mask, SIGIO);
+    sigprocmask (SIG_BLOCK, &sigio_mask, NULL);
+    
+    struct sigaction sa;
+    bzero (&sa, sizeof (sa));
+    sa.sa_handler = sigio_handler;
+    if (sigaction (SIGIO, &sa, NULL) < 0)
+      fatal ("sigaction: %m\n");
 
-  struct sigaction sa;
-  bzero (&sa, sizeof (sa));
-  sa.sa_handler = sigio_handler;
-  if (sigaction (SIGIO, &sa, NULL) < 0)
-    fatal ("sigaction: %m\n");
-
-  /* Since the client code might not necessarily tolerate the death of
-   * an aiod process, put ourselves in a new process group.  That way
-   * if the parent process catches terminal signals like SIGINT, the
-   * aiods will not die.  This allows the parent still to issue aio
-   * requests while handling the signal.  Additionally, if sigio_set
-   * uses SIOCSPGRP, starting a new process group avoids hitting other
-   * processes with our SIGIO signals. */
-  setpgid (0, 0);
-
-  if (sigio_set (rwfd) < 0)
-    fatal ("could not enable SIGIO\n");
-
-  msg_loop ();
+    /* Since the client code might not necessarily tolerate the death of
+     * an aiod process, put ourselves in a new process group.  That way
+     * if the parent process catches terminal signals like SIGINT, the
+     * aiods will not die.  This allows the parent still to issue aio
+     * requests while handling the signal.  Additionally, if sigio_set
+     * uses SIOCSPGRP, starting a new process group avoids hitting other
+     * processes with our SIGIO signals. */
+    setpgid (0, 0);
+    
+    if (sigio_set (rwfd) < 0)
+      fatal ("could not enable SIGIO\n");
+    
+    msg_loop ();
+    
+  } else {
+    msg_loop_simple ();
+  }
 
   return 1;
 }

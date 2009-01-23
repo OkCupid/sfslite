@@ -98,7 +98,7 @@ class aiod {
     writeq wq;
 
     daemon () : pid (-1), fd (-1) {}
-    bool launch (str path, int shmfd, int commonfd);
+    bool launch (str path, int shmfd, int commonfd, bool skip_sigs);
   };
 
   struct request {
