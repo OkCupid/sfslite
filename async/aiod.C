@@ -714,7 +714,8 @@ msg_loop ()
     }
     if (n != sizeof (msg)) {
       if (n < 0)
-	fatal ("read (msg_loop): %m\n");
+	fatal ("read (msg_loop) n=%zd size(msg)=%zd sigio=%d: %m\n", 
+	       n, sizeof (msg), sigio_received);
       if (n > 0)
 	fatal ("short read from rfd\n");
       exit (0);
