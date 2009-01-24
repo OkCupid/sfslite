@@ -2007,6 +2007,12 @@ case $with_mode in
 		with_dmalloc=no
 		SFS_PYTHON
 		;;
+	
+	"hiperf" )
+		 sfstag=$with_mode
+		 DEBUG='-g -O3'
+		 CXXDEBUG='-g -O3'
+		 ;;
 
 	"python")
 		sfstag=$with_mode
