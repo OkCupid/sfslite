@@ -64,11 +64,23 @@ static cxx_xdr_ops xsops = {
   xdrsuio_inline,
   xdrsuio_destroy,
 };
-static const XDR xsproto = {
+
+static XDR xsproto = {
   XDR_ENCODE,
-  TYPE_PUN_CAST (xdr_ops_t, &xsops),
+  NULL,
   NULL, NULL, NULL, 0
 };
+
+static const XDR &
+get_xsproto ()
+{
+  if (!xsproto.x_ops) {
+    void *tmp = &xsops;
+    xsproto.x_ops = reinterpret_cast<xdr_ops_t *> (tmp);
+  }
+  assert (xsproto.x_ops);
+  return xsproto;
+}
 
 static cxx_xdr_ops xsops_scrub = {
   NULL,
@@ -80,17 +92,30 @@ static cxx_xdr_ops xsops_scrub = {
   xdrsuio_inline,
   xdrsuio_scrub_destroy,
 };
-static const XDR xsproto_scrub = {
+
+static XDR xsproto_scrub = {
   XDR_ENCODE,
-  TYPE_PUN_CAST (xdr_ops_t,  &xsops_scrub),
+  NULL,
   NULL, NULL, NULL, 0
 };
+
+
+static const XDR &
+get_xsproto_scrub ()
+{
+  if (!xsproto_scrub.x_ops) {
+    void *tmp = &xsops_scrub;
+    xsproto_scrub.x_ops = reinterpret_cast<xdr_ops_t *> (tmp);
+  }
+  assert (xsproto_scrub.x_ops);
+  return xsproto_scrub;
+}
 
 void
 xdrsuio_create (XDR *xdrs, enum xdr_op op)
 {
   assert (op == XDR_ENCODE);
-  *xdrs = xsproto;
+  *xdrs = get_xsproto ();
   xsuio (xdrs) = New suio;
 }
 
@@ -104,7 +129,7 @@ void
 xdrsuio_scrub_create (XDR *xdrs, enum xdr_op op)
 {
   assert (op == XDR_ENCODE);
-  *xdrs = xsproto_scrub;
+  *xdrs = get_xsproto_scrub ();
   xsuio (xdrs) = implicit_cast<suio *> (New scrubbed_suio);
 }
 
