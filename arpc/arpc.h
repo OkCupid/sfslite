@@ -137,12 +137,8 @@ void pmap_map (int fd, const rpc_program &rp,
 // Cast pointer p to be of type Y*, in a way that doesn't
 // trigger GCC 4.1's mysterious 'type-punned pointer' warning.
 #if __GNUC__ >= 4
-template<class Y, class X>
-inline Y *gcc41_cast (X *x)
-{
-  return reinterpret_cast<Y *> (reinterpret_cast<void *> (x));
-}
-# define TYPE_PUN_CAST(Y,p) (gcc41_cast<Y, typeof(*(p))> (p))
+# define TYPE_PUN_CAST(Y,p) \
+  reinterpret_cast<Y *> (reinterpret_cast<void *> (p))
 #else  /* __GNUC__ < 4 */
 # define TYPE_PUN_CAST(Y,p) (reinterpret_cast<Y *> (p))
 #endif /* __GNUC__ < 4 */
