@@ -43,7 +43,7 @@ logger2_t::log (log2_level_t l) { return obj_t (silent (l), false); }
 
 //-----------------------------------------------------------------------
 
-logger2_t::obj_t
+logger2_t::obj_t 
 logger2_t::logx (log2_level_t l) { return obj_t (silent (l), true); }
 
 //-----------------------------------------------------------------------

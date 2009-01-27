@@ -21,8 +21,8 @@ public:
 
   class obj_t {
   public:
-    obj_t (bool silent, bool x) : _silent (silent), _xflag (x), _buf (NULL) {}
-    ~obj_t () { if (_buf) delete _buf; }
+    obj_t (bool silent, bool x) : _silent (silent), _xflag (x) {}
+    ~obj_t () {}
 
     //----------------------------
 
@@ -31,17 +31,21 @@ public:
     {
       if (!_silent) {
 	if (!_buf) {
-	  _buf = New warnobj (_xflag ? warnobj::xflag : 0);
+	  _buf = New refcounted<warnobj> (_xflag ? warnobj::xflag : 0);
 	}
 	(*_buf) << x;
       }
       return (*this);
     }
 
+
+    //---------------------------------------
+
   private:
+
     const bool _silent;
     const bool _xflag;
-    warnobj *_buf;
+    ptr<warnobj> _buf;
   };
 
   //----------------------
