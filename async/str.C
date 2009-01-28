@@ -124,7 +124,7 @@ cstrp (const str *s)
 //-----------------------------------------------------------------------
 
 const strbuf &
-strbuf::borrow_data (const strbuf &in)
+strbuf::take (strbuf &in)
 {
   uio->take (in.tosuio ());
   return (*this);

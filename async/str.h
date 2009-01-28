@@ -317,7 +317,7 @@ public:
   size_t iovcnt () const { return uio->iovcnt (); }
   suio *tosuio () const { return uio; }
 
-  const strbuf &borrow_data (const strbuf &in);
+  const strbuf &take (strbuf &in);
 };
 
 inline
