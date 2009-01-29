@@ -207,7 +207,7 @@ parseconfig (const char *dir, const char *file)
 	continue;
       }
 
-      gid_t g;
+      gid_t g = 0;
       if (ngid) {
 	if (!convertint (ngid, &g)) {
 	  if (struct group *gr = getgrnam (ngid))
