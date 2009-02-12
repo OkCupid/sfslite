@@ -1,0 +1,634 @@
+Index: acsfs.m4
+===================================================================
+--- acsfs.m4	(revision 4007)
++++ acsfs.m4	(working copy)
+@@ -1305,7 +1305,7 @@
+ fi])
+ 
+ dnl
+-dnl Optimize build efficiency over run efficient
++dnl Optimize build efficiency over run efficiency
+ dnl
+ AC_DEFUN([SFS_FAST_BUILD],
+ [AC_ARG_ENABLE(fast-build,
+@@ -1318,6 +1318,20 @@
+ ])
+ 
+ dnl
++dnl A simple runtime memleak checker, that can be turned on and off
++dnl as needed.
++dnl
++AC_DEFUN([SFS_SIMPLE_LEAK_CHECKER],
++[
++AC_ARG_ENABLE(simple-leak-checker,
++--enable-simple-leak-checker       use a builtin simple leak checker)
++if test "${enable_simple_leak_checker+set}" = "set"
++then
++	AC_DEFINE(SIMPLE_LEAK_CHECKER, 1, Define to turn on a leak checker)
++fi
++])
++
++dnl
+ dnl Use dmalloc if requested
+ dnl
+ AC_DEFUN([SFS_DMALLOC],
+Index: configure.in
+===================================================================
+--- configure.in	(revision 4015)
++++ configure.in	(working copy)
+@@ -4,7 +4,7 @@
+ dnl
+ 
+ AC_INIT(acinclude.m4)
+-AM_INIT_AUTOMAKE(sfslite,1.2.7pre1)
++AM_INIT_AUTOMAKE(sfslite,1.2.7pre2)
+ AM_CONFIG_HEADER(config.h)
+ 
+ dnl
+@@ -18,7 +18,7 @@
+ dnl with version 1.0.0, since 0.0.0 is already in use.  Must
+ dnl manually update everytim we change the ABI.
+ dnl
+-SFS_INIT_LDVERSION(2)
++SFS_INIT_LDVERSION(3)
+ 
+ dnl
+ dnl begin SFSLITE change
+@@ -231,6 +231,7 @@
+ 
+ dnl SFS specific checks
+ SFS_DMALLOC
++SFS_SIMPLE_LEAK_CHECKER
+ SFS_FAST_BUILD
+ SFS_CHECK_XDR
+ SFS_CHECK_WIDE_SELECT
+Index: autoconf.sed
+===================================================================
+--- autoconf.sed	(revision 3941)
++++ autoconf.sed	(working copy)
+@@ -69,6 +69,7 @@
+ / PATH_LOGGER/b pdefine
+ / TAME_DETEMPLATIZE/b pdefine
+ / SFS_CALLBACK_A3/b pdefine
++/ SIMPLE_LEAK_CHECKER/b pdefine
+ :skip
+ d
+ n
+Index: async/async.h
+===================================================================
+--- async/async.h	(revision 3997)
++++ async/async.h	(working copy)
+@@ -102,7 +102,7 @@
+ #define SFSLITE_VERSION_MAJOR 1
+ #define SFSLITE_VERSION_MINOR 2
+ #define SFSLITE_VERSION_PATCHLEVEL 7
+-#define SFSLITE_VERSION_PRE 1
++#define SFSLITE_VERSION_PRE 2
+ //
+ // VERSION_PRE < 100 means pre1, pre2, etc. releases
+ // VERSION_PRE = 100 means the real release
+Index: async/sysconf.h
+===================================================================
+--- async/sysconf.h	(revision 3997)
++++ async/sysconf.h	(working copy)
+@@ -544,22 +544,45 @@
+ const char *stktrace (const char *file);
+ extern int stktrace_record;
+ #define txmalloc(size) _xmalloc_leap (stktrace (__FILE__), __LINE__, size)
+-
++  
++  
++  
+ #else /* !DMALLOC */
+ 
++# ifdef SIMPLE_LEAK_CHECKER 
++
++void simple_leak_checker_free (void *p);
++void *simple_leak_checker_malloc (const char *fl, int line, size_t sz);
++#define xmalloc(size) simple_leak_checker_malloc (__FILE__, __LINE__, size)
++#define txmalloc(size) simple_leak_checker_malloc (__FILE__, __LINE__, size)
++void simple_leak_checker_enable ();
++void simple_leak_checker_disable ();
++void simple_leak_checker_report ();
++void simple_leak_checker_reset ();
++
++# else /* !SIMPLE_LEAK_CHECKER */
++
+ void *xmalloc (size_t);
++#define txmalloc(size) xmalloc(size)
++
++#endif /* SIMPLE_LEAK_CHECKER */
++
+ void *xrealloc (void *, size_t);
+ #ifdef PYMALLOC
+ # include <Python.h>
+ # define xfree PyMem_Free
+-#else /* !PYMALLOC (i.e., the default condition) */
+-# define xfree free
++#else
++# ifdef SIMPLE_LEAK_CHECKER
++#  define xfree simple_leak_checker_free
++# else /* !PYMALLOC (i.e., the default condition) */
++#  define xfree free
++# endif /* SIMPLE_LEAK_CHECKER */
+ #endif /* PYMALLOC */
+ char *xstrdup (const char *s);
+-#define txmalloc(size) xmalloc (size)
+ 
+ #endif /* !DMALLOC */
+ 
++
+ #ifndef HAVE_STRCASECMP
+ #ifdef DMALLOC
+ /* These funcitons are only implemented on systems that actually have
+Index: async/malloc.C
+===================================================================
+--- async/malloc.C	(revision 3997)
++++ async/malloc.C	(working copy)
+@@ -106,6 +106,7 @@
+ 
+ #else /* !DMALLOC */
+ 
++#ifndef SIMPLE_LEAK_CHECKER 
+ void *
+ xmalloc (size_t size)
+ {
+@@ -118,6 +119,7 @@
+     default_xmalloc_handler (size);
+   return p;
+ }
++#endif /* SIMPLE_LEAK_CHECKER */
+ 
+ void *
+ xrealloc (void *o, size_t size)
+@@ -172,6 +174,8 @@
+ 
+ #ifndef DMALLOC
+ 
++# ifndef SIMPLE_LEAK_CHECKER
++
+ void
+ operator delete (void *ptr) delete_throw
+ {
+@@ -204,6 +208,8 @@
+   xfree (ptr);
+ }
+ 
++# endif /* SIMPLE_LEAK_CHECKER */
++
+ #else /* DMALLOC */
+ 
+ #include <ihash.h>
+Index: async/leakcheck.C
+===================================================================
+--- async/leakcheck.C	(revision 0)
++++ async/leakcheck.C	(revision 0)
+@@ -0,0 +1,381 @@
++
++#include "sysconf.h"
++
++#if !defined(DMALLOC) and defined(SIMPLE_LEAK_CHECKER)
++
++#include "async.h"
++#include "ihash.h"
++
++//-----------------------------------------------------------------------
++
++static bool slc_enabled;
++simple_leak_checker_t simple_leak_checker;
++
++//-----------------------------------------------------------------------
++
++class malloc_id_t {
++public:
++  malloc_id_t (const char *f, int l) : _file (f), _line (l) {}
++  hash_t to_hash () const;
++  bool operator== (const malloc_id_t &m) const { return eq (m); }
++  operator hash_t() const { return to_hash (); }
++  bool eq (const malloc_id_t &m) const;
++
++  const char *_file;
++  int _line;
++};
++
++//-----------------------------------------------------------------------
++
++class malloc_site_t {
++public:
++  malloc_site_t (const malloc_id_t &id)
++    : _id (id), _total (0), _n (0) {}
++
++  void allocate (size_t s);
++  void deallocate (size_t s);
++  void report () const;
++
++  malloc_id_t _id;
++  ihash_entry<malloc_site_t> _lnk;
++
++  size_t _total;
++  size_t _n;
++};
++
++//-----------------------------------------------------------------------
++
++class malloc_atom_t {
++public:
++  malloc_atom_t (void *p, size_t z, malloc_site_t *s)
++    : _ptr (p), _size (z), _site (s) {}
++  
++  void deallocate () { _site->deallocate (_size); }
++
++  void *_ptr;
++  const size_t _size;
++  malloc_site_t *_site;
++
++  ihash_entry<malloc_atom_t> _lnk;
++};
++
++//-----------------------------------------------------------------------
++
++template<> 
++struct equals<void *>
++{
++  equals () {}
++  bool operator() (const void *a, const void *b) const { return a == b; }
++};
++
++template<> 
++struct hashfn<void *>
++{
++  hashfn () {}
++  hash_t operator() (const void *v)  const 
++  { return reinterpret_cast<intptr_t> (v); }
++};
++
++//-----------------------------------------------------------------------
++
++class malloc_tracker_t {
++public:
++  malloc_tracker_t () {}
++
++  void allocate (void *p, size_t s, const char *f, int l);
++  void deallocate (void *p);
++  void report ();
++  void clear ();
++
++  typedef ihash<malloc_id_t, malloc_site_t, 
++		&malloc_site_t::_id, &malloc_site_t::_lnk> sites_t;
++  sites_t _sites;
++
++  ihash<void *, malloc_atom_t,
++	&malloc_atom_t::_ptr, &malloc_atom_t::_lnk> _atoms;
++};
++
++static malloc_tracker_t tracker;
++
++//-----------------------------------------------------------------------
++
++void
++malloc_tracker_t::allocate (void *p, size_t s, const char *f, int l)
++{
++  malloc_id_t id (f, l);
++  malloc_atom_t *atom;
++
++  if ((atom = _atoms[p])) {
++    panic ("Pointer was allocated twice!! %p\n", p);
++  }
++
++  malloc_site_t *site = _sites[id];
++  if (!site) {
++    site = new malloc_site_t (id);
++    _sites.insert (site);
++  }
++
++  atom = new malloc_atom_t (p, s, site);
++  _atoms.insert (atom);
++  site->allocate (s);
++}
++
++//-----------------------------------------------------------------------
++
++void
++malloc_site_t::deallocate (size_t s)
++{
++  if (_n > 0) {  _n--; }
++
++  if (s < _total) { 
++    _total -= s; 
++  } else {
++    warn ("Size underrun (total=%zu,size=%zu) for %s:%d\n", 
++	  _total, s, _id._file, _id._line);
++  }
++}
++
++//-----------------------------------------------------------------------
++
++void
++malloc_site_t::allocate (size_t s)
++{
++  _n ++;
++  _total += s;
++}
++
++//-----------------------------------------------------------------------
++
++void
++malloc_tracker_t::deallocate (void *p)
++{
++  malloc_atom_t *a = _atoms[p];
++  if (a) {
++    _atoms.remove (a);
++    a->deallocate ();
++    delete a;
++  }
++}
++
++//-----------------------------------------------------------------------
++
++
++hash_t 
++malloc_id_t::to_hash () const
++{
++  intptr_t i = reinterpret_cast<intptr_t> (_file);
++  hash_t h1 = i;
++  if (h1 < (1 << 16)) {
++    h1 = h1 | (h1 << 16);
++  }
++  hash_t h2 = _line;
++  h2 = h2 | (h2 << 12) | (h2 << 12);
++  return h1 ^ h2;
++}
++
++//-----------------------------------------------------------------------
++
++bool
++malloc_id_t::eq (const malloc_id_t &m) const
++{
++  return (_file == m._file && _line == m._line);
++}
++
++//-----------------------------------------------------------------------
++
++static int
++scmp (const void *va, const void *vb)
++{
++  const malloc_site_t *a = reinterpret_cast<const malloc_site_t *> (va);
++  const malloc_site_t *b = reinterpret_cast<const malloc_site_t *> (vb);
++  return (b->_total - a->_total);
++}
++
++//-----------------------------------------------------------------------
++
++void
++malloc_tracker_t::report () 
++{
++  typedef const malloc_site_t *p_t;
++  size_t l = _sites.size ();
++  const malloc_site_t **v = new p_t[l];
++  ihash_iterator_t<malloc_site_t, sites_t> it (_sites);
++  size_t i = 0;
++
++  const malloc_site_t *p;
++  while ((p = it.next ())) { v[i++] = p; }
++  assert (i == l);
++
++  
++
++  qsort (v, l, sizeof (malloc_site_t *), scmp);
++  for (const malloc_site_t **p = v; p < v + l; p++) {
++    (*p)->report ();
++  }
++  delete [] v;
++}
++
++//-----------------------------------------------------------------------
++
++void
++malloc_tracker_t::clear ()
++{
++  _atoms.deleteall ();
++  _sites.deleteall ();
++}
++
++//-----------------------------------------------------------------------
++
++void
++malloc_site_t::report () const
++{
++  warn << "(SLC) " << _total << " " << _n << " " 
++       << _id._file << ":" << _id._line << "\n";
++}
++
++//-----------------------------------------------------------------------
++
++void
++simple_leak_checker_enable ()
++{
++  slc_enabled = true;
++}
++
++//-----------------------------------------------------------------------
++
++void
++simple_leak_checker_disable ()
++{
++  simple_leak_checker_reset ();
++  slc_enabled = false;
++}
++
++//-----------------------------------------------------------------------
++
++void 
++simple_leak_checker_reset ()
++{
++  tracker.clear ();
++}
++
++//-----------------------------------------------------------------------
++
++void
++simple_leak_checker_report ()
++{
++  tracker.report ();
++}
++
++//-----------------------------------------------------------------------
++
++//=======================================================================
++//=======================================================================
++//=======================================================================
++//=======================================================================
++
++static void
++default_xmalloc_handler (int size)
++{
++  const char msg[] = "malloc failed\n";
++  v_write (errfd, msg, sizeof (msg) - 1);
++  myabort ();
++}
++
++//-----------------------------------------------------------------------
++
++void *
++_internal_new (size_t s, const char *f, int l)
++{
++  if (!s) s = 1;
++  void *p = malloc (s);
++  if (slc_enabled) {
++    tracker.allocate (p, s, f, l);
++  }
++  if (!p) default_xmalloc_handler (s);
++  return p;
++}
++
++//-----------------------------------------------------------------------
++
++void
++_internal_free (void *p)
++{
++  if (slc_enabled) {
++    tracker.deallocate (p);
++  }
++  free (p);
++}
++
++//-----------------------------------------------------------------------
++
++void *
++operator new (size_t s, simple_leak_checker_t, const char *f, int l)
++{
++  return _internal_new (s, f, l);
++}
++
++//-----------------------------------------------------------------------
++
++void *operator 
++new[] (size_t s, simple_leak_checker_t, const char *f, int l)
++{
++  return _internal_new (s, f, l);
++}
++
++//-----------------------------------------------------------------------
++
++void *operator 
++new (size_t s, nothrow_t, const char *f, int l) throw ()
++{
++  return _internal_new (s, f, l);
++}
++
++//-----------------------------------------------------------------------
++
++void *operator 
++new[] (size_t s, nothrow_t, const char *f, int l) throw ()
++{
++  return _internal_new (s, f, l);
++}
++
++//-----------------------------------------------------------------------
++
++void 
++simple_leak_checker_free (void *p)
++{
++  _internal_free (p);
++}
++
++//-----------------------------------------------------------------------
++
++void *
++simple_leak_checker_malloc (const char *fl, int line, size_t sz)
++{
++  return _internal_new (sz, fl, line);
++}
++
++//-----------------------------------------------------------------------
++
++#ifndef delete_throw
++# define delete_throw throw()
++#endif /* !delete_throw */
++
++//-----------------------------------------------------------------------
++
++void
++operator delete (void *ptr) delete_throw
++{
++  _internal_free (ptr);
++}
++
++//-----------------------------------------------------------------------
++
++void
++operator delete[] (void *ptr) delete_throw
++{
++  _internal_free (ptr);
++}
++
++//-----------------------------------------------------------------------
++
++#endif /* !DMALLOC && SIMPLE_LEAK_CHECKER */
+Index: async/dftables.c
+===================================================================
+--- async/dftables.c	(revision 3997)
++++ async/dftables.c	(working copy)
+@@ -49,6 +49,11 @@
+ #define DFTABLES          /* maketables.c notices this */
+ #include "maketables.c"
+ 
++#ifdef SIMPLE_LEAK_CHECKER
++void simple_leak_checker_free (void *p) { free (p); }
++void *simple_leak_checker_malloc (const char *fl, int line, size_t sz) 
++{ return malloc (sz); } 
++#endif
+ 
+ int main(int argc, char **argv)
+ {
+Index: async/opnew.h
+===================================================================
+--- async/opnew.h	(revision 3997)
++++ async/opnew.h	(working copy)
+@@ -59,10 +59,27 @@
+ void nodelete_addptr (const void *obj, const char *fl, int *fp);
+ void nodelete_remptr (const void *obj, const char *fl, int *fp);
+ #endif /* GCC2 */
+-#else /* !DMALLOC */
++
++#else
++# ifdef SIMPLE_LEAK_CHECKER
++
++using std::nothrow_t;
++struct simple_leak_checker_t {};
++extern struct simple_leak_checker_t simple_leak_checker;
++void *operator new (size_t, simple_leak_checker_t, const char *, int);
++void *operator new[] (size_t, simple_leak_checker_t, const char *, int);
++void *operator new (size_t, nothrow_t, const char *, int) throw ();
++void *operator new[] (size_t, nothrow_t, const char *, int) throw ();
++#define ntNew new (nothrow, __FILE__, __LINE__)
++#define New new (simple_leak_checker, __FILE__, __LINE__)
++#define opnew(size) operator new (size, simple_leak_checker, __FILE__, __LINE__)
++
++# else /* !DMALLOC && !SIMPLE_LEAK_CHECKER */
++
+ #define ntNew new (nothrow)
+ #define New new
+ #define opnew(size) operator new(size)
++# endif /* !SIMPLE_LEAK_CHECKER */
+ #endif /* !DMALLOC */
+ 
+ #define vNew (void) New
+@@ -83,3 +100,4 @@
+ }
+ 
+ #endif /* !_NEW_H_INCLUDED_ */
++
+Index: async/Makefile.am
+===================================================================
+--- async/Makefile.am	(revision 3997)
++++ async/Makefile.am	(working copy)
+@@ -22,7 +22,7 @@
+ parseopt.C pipe2str.C refcnt.C rxx.C sigio.C socket.C spawn.C str.C	\
+ str2file.C straux.C suio++.C suio_vuprintf.C tcpconnect.C litetime.C \
+ select.C select_std.C select_epoll.C select_kqueue.C dynenum.C \
+-vec.C bundle.C alog2.C
++vec.C bundle.C alog2.C leakcheck.C
+ 
+ libasync_la_LDFLAGS = $(LIBTOOL_VERSION_INFO)
+ 
