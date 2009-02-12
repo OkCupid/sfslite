@@ -49,6 +49,11 @@ order to be consistent. */
 #define DFTABLES          /* maketables.c notices this */
 #include "maketables.c"
 
+#ifdef SIMPLE_LEAK_CHECKER
+void simple_leak_checker_free (void *p) { free (p); }
+void *simple_leak_checker_malloc (const char *fl, int line, size_t sz) 
+{ return malloc (sz); } 
+#endif
 
 int main(int argc, char **argv)
 {

@@ -1305,7 +1305,7 @@ dnl    fi
 fi])
 
 dnl
-dnl Optimize build efficiency over run efficient
+dnl Optimize build efficiency over run efficiency
 dnl
 AC_DEFUN([SFS_FAST_BUILD],
 [AC_ARG_ENABLE(fast-build,
@@ -1314,6 +1314,20 @@ if test "${enable_fast_build+set}" = "set"
 then
 	AC_DEFINE(TAME_DETEMPLATIZE, 1, Define if to avoid templates in tame)
 	AC_DEFINE(SFS_CALLBACK_A3, 1, Set A=3 implicitly in callback.h)
+fi
+])
+
+dnl
+dnl A simple runtime memleak checker, that can be turned on and off
+dnl as needed.
+dnl
+AC_DEFUN([SFS_SIMPLE_LEAK_CHECKER],
+[
+AC_ARG_ENABLE(simple-leak-checker,
+--enable-simple-leak-checker       use a builtin simple leak checker)
+if test "${enable_simple_leak_checker+set}" = "set"
+then
+	AC_DEFINE(SIMPLE_LEAK_CHECKER, 1, Define to turn on a leak checker)
 fi
 ])
 

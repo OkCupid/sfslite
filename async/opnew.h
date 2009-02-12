@@ -59,10 +59,27 @@ struct nodelete_ignore {
 void nodelete_addptr (const void *obj, const char *fl, int *fp);
 void nodelete_remptr (const void *obj, const char *fl, int *fp);
 #endif /* GCC2 */
-#else /* !DMALLOC */
+
+#else
+# ifdef SIMPLE_LEAK_CHECKER
+
+using std::nothrow_t;
+struct simple_leak_checker_t {};
+extern struct simple_leak_checker_t simple_leak_checker;
+void *operator new (size_t, simple_leak_checker_t, const char *, int);
+void *operator new[] (size_t, simple_leak_checker_t, const char *, int);
+void *operator new (size_t, nothrow_t, const char *, int) throw ();
+void *operator new[] (size_t, nothrow_t, const char *, int) throw ();
+#define ntNew new (nothrow, __FILE__, __LINE__)
+#define New new (simple_leak_checker, __FILE__, __LINE__)
+#define opnew(size) operator new (size, simple_leak_checker, __FILE__, __LINE__)
+
+# else /* !DMALLOC && !SIMPLE_LEAK_CHECKER */
+
 #define ntNew new (nothrow)
 #define New new
 #define opnew(size) operator new(size)
+# endif /* !SIMPLE_LEAK_CHECKER */
 #endif /* !DMALLOC */
 
 #define vNew (void) New
@@ -83,3 +100,4 @@ destroy_return (T *&tp)
 }
 
 #endif /* !_NEW_H_INCLUDED_ */
+

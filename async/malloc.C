@@ -106,6 +106,7 @@ operator new[] (size_t size, nothrow_t, const char *file, int line) throw ()
 
 #else /* !DMALLOC */
 
+#ifndef SIMPLE_LEAK_CHECKER 
 void *
 xmalloc (size_t size)
 {
@@ -118,6 +119,7 @@ xmalloc (size_t size)
     default_xmalloc_handler (size);
   return p;
 }
+#endif /* SIMPLE_LEAK_CHECKER */
 
 void *
 xrealloc (void *o, size_t size)
@@ -172,6 +174,8 @@ operator new (size_t size, nothrow_t) throw ()
 
 #ifndef DMALLOC
 
+# ifndef SIMPLE_LEAK_CHECKER
+
 void
 operator delete (void *ptr) delete_throw
 {
@@ -203,6 +207,8 @@ operator delete[] (void *ptr) delete_throw
 {
   xfree (ptr);
 }
+
+# endif /* SIMPLE_LEAK_CHECKER */
 
 #else /* DMALLOC */
 

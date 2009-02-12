@@ -544,21 +544,44 @@ xfree (void *ptr)
 const char *stktrace (const char *file);
 extern int stktrace_record;
 #define txmalloc(size) _xmalloc_leap (stktrace (__FILE__), __LINE__, size)
-
+  
+  
+  
 #else /* !DMALLOC */
 
+# ifdef SIMPLE_LEAK_CHECKER 
+
+void simple_leak_checker_free (void *p);
+void *simple_leak_checker_malloc (const char *fl, int line, size_t sz);
+#define xmalloc(size) simple_leak_checker_malloc (__FILE__, __LINE__, size)
+#define txmalloc(size) simple_leak_checker_malloc (__FILE__, __LINE__, size)
+void simple_leak_checker_enable ();
+void simple_leak_checker_disable ();
+void simple_leak_checker_report ();
+void simple_leak_checker_reset ();
+
+# else /* !SIMPLE_LEAK_CHECKER */
+
 void *xmalloc (size_t);
+#define txmalloc(size) xmalloc(size)
+
+#endif /* SIMPLE_LEAK_CHECKER */
+
 void *xrealloc (void *, size_t);
 #ifdef PYMALLOC
 # include <Python.h>
 # define xfree PyMem_Free
-#else /* !PYMALLOC (i.e., the default condition) */
-# define xfree free
+#else
+# ifdef SIMPLE_LEAK_CHECKER
+#  define xfree simple_leak_checker_free
+# else /* !PYMALLOC (i.e., the default condition) */
+#  define xfree free
+# endif /* SIMPLE_LEAK_CHECKER */
 #endif /* PYMALLOC */
 char *xstrdup (const char *s);
-#define txmalloc(size) xmalloc (size)
 
 #endif /* !DMALLOC */
+
 
 #ifndef HAVE_STRCASECMP
 #ifdef DMALLOC

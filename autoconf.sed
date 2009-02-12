@@ -69,6 +69,7 @@ $a\
 / PATH_LOGGER/b pdefine
 / TAME_DETEMPLATIZE/b pdefine
 / SFS_CALLBACK_A3/b pdefine
+/ SIMPLE_LEAK_CHECKER/b pdefine
 :skip
 d
 n
