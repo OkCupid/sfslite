@@ -227,7 +227,7 @@ suio::clear ()
     scratch_buf = defbuf;
     scratch_lim = defbuf + sizeof (defbuf);
   }
-  scratch_pos = defbuf;
+  scratch_pos = scratch_buf;
   iovs.clear ();
   uiocbs.clear ();
 }
@@ -315,12 +315,13 @@ suio::take (suio *uio)
   uio->nrembytes += uio->uiobytes;
   uio->nremiov += uio->iovs.size ();
   uio->uiobytes = 0;
-  for (iovec *v = uio->iovs.base (), *e = uio->iovs.lim (); v < e; v++)
-    if (v->iov_base >= uio->defbuf
-	&& v->iov_base < uio->defbuf + sizeof (uio->defbuf))
+  for (iovec *v = uio->iovs.base (), *e = uio->iovs.lim (); v < e; v++) {
+    if (v->iov_base >= uio->scratch_buf && v->iov_base < uio->scratch_lim) {
       copy (v->iov_base, v->iov_len);
-    else
+    } else {
       pushiov (v->iov_base, v->iov_len);
+    }
+  }
   uio->iovs.clear ();
 
   for (uiocb *c = uio->uiocbs.base (), *e = uio->uiocbs.lim (); c < e; c++)
