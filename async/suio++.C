@@ -327,8 +327,20 @@ suio::take (suio *uio)
     uiocbs.push_back (uiocb (c->nbytes + bdiff, c->cb));
   uio->uiocbs.clear ();
 
+
+  // MK 2/13/09 -- This reset path leaks memory if the scratch buffer
+  // has been grown via txmalloc.  I'm commenting it out and replacing
+  // it with something that seems much simpler.  Note, I still think
+  // this isn't ideal, since it will involve an extra malloc/free
+  // whereas passing the pointer from one suio to the other might
+  // work.
+
+  /* Was:
   uio->scratch_buf = uio->scratch_pos = uio->defbuf;
   uio->scratch_lim = uio->defbuf + sizeof (uio->defbuf);
+  */
+  /* Is: */
+  uio->scratch_pos = uio->scratch_buf;
 }
 
 void
