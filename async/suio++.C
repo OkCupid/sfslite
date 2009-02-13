@@ -232,13 +232,19 @@ suio::clear ()
   uiocbs.clear ();
 }
 
+void
+suio::condemn_scratch ()
+{
+  if (scratch_buf != defbuf)
+    iovcb (wrap (deallocator, scratch_buf, scratch_lim - scratch_buf));
+}
+
 char *
 suio::morescratch (size_t size)
 {
   size = ((size + MALLOCRESV + (blocksize - 1))
 	  & ~(blocksize - 1)) - MALLOCRESV;
-  if (scratch_buf != defbuf)
-    iovcb (wrap (deallocator, scratch_buf, scratch_lim - scratch_buf));
+  condemn_scratch ();
   scratch_buf = scratch_pos = static_cast<char *> (allocator (size));
   scratch_lim = scratch_buf + size;
   return scratch_buf;
@@ -311,6 +317,13 @@ void
 suio::take (suio *uio)
 {
   int64_t bdiff = nrembytes + uiobytes - uio->nrembytes;
+
+  // MK 2/13/2009: Here's the fix we wanted.  The uiocbs stuff does
+  // do the right thing when one suio takes another's payload, but
+  // there was an off-by-one error with the scratch buffer that's
+  // currently in use by uio.  We have to make sure that it gets
+  // cleaned up too!
+  uio->condemn_scratch ();
 
   uio->nrembytes += uio->uiobytes;
   uio->nremiov += uio->iovs.size ();
@@ -428,8 +441,7 @@ suio::input (int fd, size_t len)
   if (n > 0 && (size_t) n > space) {
     pushiov (iov[0].iov_base, iov[0].iov_len);
     assert (scratch_pos == scratch_lim);
-    if (scratch_buf != defbuf)
-      iovcb (wrap (deallocator, scratch_buf, scratch_lim - scratch_buf));
+    condemn_scratch ();
     scratch_pos = scratch_buf = buf;
     scratch_lim = buf + size;
     pushiov (scratch_pos, n - space);

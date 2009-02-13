@@ -89,6 +89,7 @@ protected:
   void pushiov (const void *base, size_t len);
   void slowcopy (const void *, size_t);
   void slowfill (char c, size_t n);
+  void condemn_scratch ();
 
 public:
   suio ();
