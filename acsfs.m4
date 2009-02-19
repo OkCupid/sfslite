@@ -1786,6 +1786,9 @@ if test "$enable_static" = yes -a -z "${NOPAGING+set}"; then
     esac
 fi
 
+SFS_LIB_MK=${sfslibdir}/libs.mk
+AC_SUBST(SFS_LIB_MK)
+
 AC_SUBST(sfslibdir)
 AC_SUBST(sfsincludedir)
 
@@ -1808,7 +1811,7 @@ SFS_GMP
 SFS_DMALLOC
 
 LDEPS='$(LIBAAPP) $(LIBTAME) $(LIBSFSMISC) $(LIBSVC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBSAFEPTR) $(LIBASYNC)'
-LDADD="$LDEPS "'$(LIBGMP) $(LIBPY)'
+LDADD="$LDEPS "'$(LIBGMP) $(LIBPY) $(LDADD_STD_ALL)'
 AC_SUBST(LDEPS)
 AC_SUBST(LDADD)
 ])

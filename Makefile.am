@@ -121,6 +121,7 @@ install-exec-local:
 
 install-data-hook:
 	$(INSTALL_DATA) async/env.mk $(DESTDIR)$(sfslibdir)
+	$(INSTALL_DATA) async/libs.mk $(DESTDIR)$(sfslibdir)
 	@echo "********************** Upgrading SFS **************************"
 	@echo If you previously installed older versions of SFS, you may want
 	@echo to remove their directories and files:

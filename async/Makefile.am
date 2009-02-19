@@ -51,7 +51,7 @@ mmcd_DEPENDENCIES =
 # end sfslite changes
 #
 
-noinst_HEADERS = internal.h env.mk
+noinst_HEADERS = internal.h env.mk libs.mk
 
 dftables_SOURCES = dftables.c
 dftables_LDADD =
@@ -88,13 +88,19 @@ env.mk: Makefile
 	echo "LIBS = $(LIBS)" >> env.mk~
 	echo "LIBGMP = $(LIBGMP)" >> env.mk~
 	echo "LDFLAGS = $(LDFLAGS)" >> env.mk~
-	echo "LDADD_THR = $(LDADD_THR)" >> env.mk~
 	mv -f env.mk~ env.mk
 
+libs.mk: Makefile
+	@rm -f $@~
+	echo "# Makefile fragment generated " `date` > $@~
+	echo "LDADD_THR = $(LDADD_THR)" >> $@~
+	echo "LDADD_STD_ALL = $(LDADD_STD_ALL)" >> $@~
+	mv -f $@~ $@
 
-EXTRA_DIST = .cvsignore env.mk
-CLEANFILES = core *.core *~ *.rpo dftables chartables.c stamp-async-repo env.mk
-MAINTAINERCLEANFILES = Makefile.in env.mk
+EXTRA_DIST = .cvsignore env.mk libs.mk
+CLEANFILES = core *.core *~ *.rpo dftables chartables.c \
+	stamp-async-repo env.mk libs.mk
+MAINTAINERCLEANFILES = Makefile.in env.mk libs.mk
 
 .PHONY: cbh
 cbh:
