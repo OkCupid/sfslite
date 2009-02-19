@@ -549,7 +549,6 @@ sfs_profiler_obj_t::crawl_stack (const ucontext_t &ctx, trace_obj_t *to)
 {
   
 #ifdef UCONTEXT_RBP
-  my_intptr_t top[1];
   const my_intptr_t *framep;
   framep = reinterpret_cast<const my_intptr_t *> (ctx.UCONTEXT_RBP);
   int lim = 1024;
@@ -557,7 +556,6 @@ sfs_profiler_obj_t::crawl_stack (const ucontext_t &ctx, trace_obj_t *to)
   call_site_t *last_good = NULL;
 
   while (!(reinterpret_cast<my_intptr_t> (framep) & 7) &&
-	 framep > top &&
 	 framep[0] && 
 	 lim--) {
 
