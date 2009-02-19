@@ -555,7 +555,8 @@ sfs_profiler_obj_t::crawl_stack (const ucontext_t &ctx, trace_obj_t *to)
   call_site_t *curr = NULL, *prev = NULL;
   call_site_t *last_good = NULL;
 
-  while (!(reinterpret_cast<my_intptr_t> (framep) & 7) &&
+  while (framep && 
+	 !(reinterpret_cast<my_intptr_t> (framep) & 7) &&
 	 framep[0] && 
 	 lim--) {
 
