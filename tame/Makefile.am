@@ -1,13 +1,13 @@
 ## Process this file with automake to produce Makefile.in
 # $Id$
 
-LDADD = $(LIBASYNC) 
+LDADD = $(LIBASYNC) $(LDADD_STD_ALL)
 
 sfsbin_PROGRAMS = tame
 
 noinst_HEADERS = tame.h parse.h
 
-tame_SOURCES = tame.C parse.yy scan.ll processor.C const.C output.C
+tame_SOURCES = tame.C parse.yy scan.ll processor.C const.C output.C 
 tame_LDADD = $(LDADD) $(LDADD_THR)
 tame_DEPENDENCIES = $(LIBASYNC)
 

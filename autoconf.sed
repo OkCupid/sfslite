@@ -70,6 +70,9 @@ $a\
 / TAME_DETEMPLATIZE/b pdefine
 / SFS_CALLBACK_A3/b pdefine
 / SIMPLE_LEAK_CHECKER/b pdefine
+/ SIMPLE_PROFILER/b pdefine
+/ UCONTEXT_RBP/b pdefine
+/ SFS_COMPILE_SHARED/b pdefine
 :skip
 d
 n

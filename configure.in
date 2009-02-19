@@ -4,7 +4,7 @@ dnl Process this file with autoconf to produce a configure script.
 dnl
 
 AC_INIT(acinclude.m4)
-AM_INIT_AUTOMAKE(sfslite,1.2.7pre3)
+AM_INIT_AUTOMAKE(sfslite,1.2.7pre4)
 AM_CONFIG_HEADER(config.h)
 
 dnl
@@ -18,7 +18,7 @@ dnl versioning the .so's that we're going to spit out.  Start
 dnl with version 1.0.0, since 0.0.0 is already in use.  Must
 dnl manually update everytim we change the ABI.
 dnl
-SFS_INIT_LDVERSION(4)
+SFS_INIT_LDVERSION(5)
 
 dnl
 dnl begin SFSLITE change
@@ -60,6 +60,7 @@ dnl AC_PROG_MAKE_SET
 AC_PATH_PROGS(M4, gm4 gnum4 m4, '$(top_srcdir)/missing')
 test "$RPCC" || RPCC='$(top_builddir)/rpcc/rpcc'
 test "$TAME" || TAME='$(top_builddir)/tame/tame'
+SFS_UCONTEXT_RBP
 
 dnl Check for X Windows
 AC_PATH_XTRA
@@ -232,6 +233,7 @@ SFS_CHECK_STAT_FIELD(st_mtim)
 dnl SFS specific checks
 SFS_DMALLOC
 SFS_SIMPLE_LEAK_CHECKER
+SFS_SIMPLE_PROFILER
 SFS_FAST_BUILD
 SFS_CHECK_XDR
 SFS_CHECK_WIDE_SELECT
@@ -305,7 +307,10 @@ AC_SUBST(LIBAAPP)
 LIBAAPP='$(top_builddir)/libaapp/libaapp.la'
 AC_SUBST(LIBTAME)
 LIBTAME='$(top_builddir)/libtame/libtame.la'
-LDADD='$(LIBTAME) $(LIBSVC) $(LIBSFSMISC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBSAFEPTR) $(LIBASYNC) $(LIBGMP)'
+
+AC_SUBST(LDADD_STD_ALL)
+
+LDADD='$(LIBTAME) $(LIBSVC) $(LIBSFSMISC) $(LIBSFSCRYPT) $(LIBARPC) $(LIBSAFEPTR) $(LIBASYNC) $(LIBGMP) $(LDADD_STD_ALL)'
 LDADD="$LDADD "'$(LIBPY) $(LDADD_THR)'
 
 if test "$enable_shared" = yes; then

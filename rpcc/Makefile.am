@@ -1,7 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 # $Id$
 
-LDADD = $(LIBASYNC) $(LIBPY)
+LDADD = $(LIBASYNC) $(LIBPY) $(LDADD_STD_ALL)
 
 sfsbin_PROGRAMS = rpcc
 

@@ -2052,8 +2052,15 @@ esac
 if test "${sfstag+set}" = "set" ; then
 	sfstagdir="/$sfstag"
 fi	
+
 AC_SUBST(sfstagdir)
 AC_SUBST(sfstag)
+
+if test "${enable_shared}" = "yes"; then
+	AC_DEFINE(SFS_COMPILE_SHARED, 1,
+	     Define if SFS libs are compiled with shared libs)
+fi
+
 ])
 
 dnl
@@ -2421,4 +2428,65 @@ dnl
 AC_DEFUN([SFS_INIT_LDVERSION],
 [LIBTOOL_VERSION_INFO="-version-info $1"
 AC_SUBST(LIBTOOL_VERSION_INFO)
+])
+dnl
+dnl Figure out if struct tm has a tm_gmoff field or not.
+dnl From what I can tell, FreeBSD does, glibc doesn't.
+dnl
+AC_DEFUN([SFS_UCONTEXT_RBP],
+[AC_CACHE_CHECK(for rbp structure in ucontext_t, sfs_cv_ucontext_rbp,
+[
+
+for r in rbp ebp; do 
+    if test ! ${sfs_cv_ucontext_rbp+set} ; then
+       AC_TRY_COMPILE([#include <ucontext.h>
+], [ ucontext_t ut; ut.uc_mcontext.mc_$r = 0; ], 
+   sfs_cv_ucontext_rbp="uc_mcontext.mc_$r")
+   fi
+done
+
+for r in REG_RBP REG_EBP ; do
+    if test ! ${sfs_cv_ucontext_rbp+set} ; then
+       AC_TRY_COMPILE([
+#define _GNU_SOURCE 1
+#include <ucontext.h>
+      ], [ ucontext_t ut; ut.uc_mcontext.gregs[$r] = 0; ],
+     sfs_cv_ucontext_rbp=[["uc_mcontext.gregs[$r]"]] )
+    fi
+done
+])
+if test ${sfs_cv_ucontext_rbp+set} ; then
+   AC_DEFINE_UNQUOTED(UCONTEXT_RBP, $sfs_cv_ucontext_rbp, where in the ucontext object to find %rbp)
+fi
+])
+
+dnl
+dnl A simple runtime memleak checker, that can be turned on and off
+dnl as needed.
+dnl
+AC_DEFUN([SFS_SIMPLE_PROFILER],
+[
+AC_ARG_ENABLE(simple-profiler,
+--enable-simple-profiler	use a builtin simple profiler)
+if test "${enable_simple_profiler+set}" = "set"
+then
+
+    AC_CACHE_CHECK(for -ldl, sfs_cv_libdl,
+    [ 
+      libs_save=$LIBS
+      ldl_link="-ldl"
+      LIBS="$ldl_link"
+      AC_TRY_LINK([#include <dlfcn.h>
+                  ], [ dlclose (0); ],
+                  sfs_cv_libdl=$ldl_link)
+      LIBS=$libs_save
+      if test "${sfs_cv_libdl+set}" = "set" ; then
+	  LDADD_STD_ALL="$sfs_cv_libdl $LDADD_STD_ALL"
+      else			     
+          sfs_cv_libdl=no
+      fi
+    ])
+
+    AC_DEFINE(SIMPLE_PROFILER, 1, Define to turn on a simple profiler)
+fi
 ])
