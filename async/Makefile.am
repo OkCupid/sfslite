@@ -79,16 +79,16 @@ stktrace.lo: $(srcdir)/stktrace.c $(srcdir)/sysconf.h
 # include Makefile flags and options for pysfs1 
 #
 pyenv.mk: Makefile
-	@rm -f env.mk~
-	echo "# Makefile fragment generated " `date` > env.mk~
-	echo "CC = $(CC)" >> env.mk~
-	echo "CXX = $(CXX)" >> env.mk~
-	echo "CFLAGS = $(CFLAGS)" >> env.mk~
-	echo "CXXFLAGS = $(CXXFLAGS)" >> env.mk~
-	echo "LIBS = $(LIBS)" >> env.mk~
-	echo "LIBGMP = $(LIBGMP)" >> env.mk~
-	echo "LDFLAGS = $(LDFLAGS)" >> env.mk~
-	mv -f env.mk~ $@
+	@rm -f $@~
+	echo "# Makefile fragment generated " `date` > $@~
+	echo "CC = $(CC)" >> $@~
+	echo "CXX = $(CXX)" >> $@~
+	echo "CFLAGS = $(CFLAGS)" >> $@~ 
+	echo "CXXFLAGS = $(CXXFLAGS)" >> $@~
+	echo "LIBS = $(LIBS)" >> $@~
+	echo "LIBGMP = $(LIBGMP)" >> $@~
+	echo "LDFLAGS = $(LDFLAGS)" >> $@~
+	mv -f $@~ $@
 
 #
 # for OKWS and other libraries built from this SFS library,
