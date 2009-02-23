@@ -34,9 +34,7 @@
 #include "sfs_select.h"
 #include <stdio.h>
 
-#ifdef SIMPLE_PROFILER
-# include "sfs_profiler.h"
-#endif /* SIMPLE_PROFILER */
+#include "sfs_profiler.h"
 
 bool amain_panic;
 
