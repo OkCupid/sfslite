@@ -23,6 +23,11 @@
 
 //-----------------------------------------------------------------------
 
+enum { COLS_PER_LINE = 8 };
+
+//-----------------------------------------------------------------------
+
+
 typedef u_long my_intptr_t;
 
 //-----------------------------------------------------------------------
@@ -58,6 +63,12 @@ extern "C" {
 };
 
 #endif
+
+//-----------------------------------------------------------------------
+
+typedef enum { REPORT_NONE = 0,
+	       REPORT_SITE = 1,
+	       REPORT_EDGE = 2 } report_type_t;
 
 //-----------------------------------------------------------------------
 
@@ -407,10 +418,11 @@ bool
 sfs_profiler_obj_t::valid_rbp_strict (const my_intptr_t *rbp,
 				      const my_intptr_t *sig) const
 {
-  return (valid_rbp (rbp) && 
-	  _main_rbp &&
+  // Important to check valid_rbp last!!
+  return (_main_rbp &&
 	  rbp <= _main_rbp &&
-	  rbp >= sig);
+	  rbp >= sig &&
+	  valid_rbp (rbp));
 }
 
 //-----------------------------------------------------------------------
@@ -681,12 +693,53 @@ call_table_t::report_files ()
 
 //-----------------------------------------------------------------------
 
+static void
+col_format_pre (size_t n, size_t line_size, const char *prfx)
+{
+  if ((n % line_size) == 0) {
+    warn << PRFX2 << " " << prfx << ": ";
+  } else {
+    warnx << "; ";
+  }
+}
+
+//-----------------------------------------------------------------------
+
+static void
+col_format_post (size_t n, size_t line_size)
+{
+  if ((n + 1) % line_size == 0) {
+    warnx << "\n";
+  }
+}
+
+//-----------------------------------------------------------------------
+
+static void
+col_format_final (size_t n, size_t line_size)
+{
+  if (n > 0 && (n % line_size != 0)) {
+    warnx << "\n";
+  }
+}
+
+//-----------------------------------------------------------------------
+
 void 
 call_table_t::report_sites ()
 {
   ihash_iterator_t<call_site_t, site_tab_t> it (_sites);
   const call_site_t *p;
-  while ((p = it.next ())) { p->report (); }
+  size_t col = 0;
+  size_t cols = COLS_PER_LINE;
+
+  while ((p = it.next ())) { 
+    col_format_pre (col, cols, "s");
+    p->report ();
+    col_format_post (col, cols);
+    col++;
+  }
+  col_format_final (col, cols);
 }
 
 //-----------------------------------------------------------------------
@@ -694,8 +747,8 @@ call_table_t::report_sites ()
 void
 edge_t::report () const
 {
-  warn ("%s edge: %" PRId32 " %" PRId32 " %d\n",
-	PRFX2, _key.caller (), _key.callee (), _hits);
+  warnx ("%" PRId32 " %" PRId32 " %d",
+	 _key.caller (), _key.callee (), _hits);
 }
 
 //-----------------------------------------------------------------------
@@ -713,7 +766,16 @@ edge_table_t::report ()
 {
   ihash_iterator_t<edge_t, tab_t> it (_tab);
   const edge_t *p;
-  while ((p = it.next ())) { p->report (); }
+  size_t col = 0;
+  size_t cols = COLS_PER_LINE;
+
+  while ((p = it.next ())) { 
+    col_format_pre (col, cols, "e");
+    p->report ();
+    col_format_post (col, cols);
+    col++;
+  }
+  col_format_final (col, cols);
 }
 
 //-----------------------------------------------------------------------
@@ -721,8 +783,8 @@ edge_table_t::report ()
 void
 call_site_t::report () const
 {
-  warn ("%s site: %" PRId32 " %" PRId32 " 0x%lx\n",  
-	PRFX2, _id, _key.file ()->id (), _key.offset ());
+  warnx ("%" PRId32 " %" PRId32 " 0x%lx",  
+	_id, _key.file ()->id (), _key.offset ());
 }
 
 //-----------------------------------------------------------------------

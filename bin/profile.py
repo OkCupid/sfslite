@@ -240,7 +240,6 @@ def isExe (p):
                           close_fds = True)
     desc = p.stdout.readline ().strip ()
     ret = bool (re.search ("\\bexecutable\\b", desc))
-    print "%s %d %s" % (file, int (ret), desc)
     return ret
 
 ##=======================================================================
@@ -274,6 +273,16 @@ class File:
 
 ##=======================================================================
 
+def split_to_ints (l):
+    v = l.split ()
+    try:
+        v = [ my_int (x) for x in v]
+    except ValueError:
+        v = None
+    return v
+
+##=======================================================================
+
 class Graph:
     """A graph of an (SSP) run."""
 
@@ -284,6 +293,10 @@ class Graph:
         self._serial = serial
 
         self.initFromStrings (lines)
+
+    ##----------------------------------------
+
+    line_rxx = re.compile ("^(e(dge)?|f(ile)?|s(ite)?):\s+(.*)$")
 
     ##----------------------------------------
 
@@ -298,22 +311,39 @@ class Graph:
         self._end = lines[-1].prefix ()
 
         for l in lines:
-            v = l.meat ().split ()
+            m = self.line_rxx.match (l.meat ())
+            if not m:
+                continue
 
-            if v[0] == "file:" and len(v) == 5:
+            typ = m.group (1)
+            dat = m.group (5)
 
-                (id, name, offset, main) = \
-                    (int (v[1]), v[2], my_int(v[3]), bool (int (v[4]) ) )
+            # Deal with "file:" and/or "f:"
+            # note, only one per line
+            if typ[0] == "f":
+                v = dat.strip ().split ()
+                if len(v) == 4:
+                    (id, nm, off, mn) =  \
+                        (int (v[0]), v[1], my_int(v[2]), bool (int(v[3])) )
+                    files[id] = File (name = nm, offset = off, main = mn)
 
-                files[id] = File (name = name, offset = offset, main = main)
+            # deal with "site" or "s:", with many triples per line,
+            # separate by ";" 
+            elif typ[0] == "s":
+                
+                for trip in dat.split (";"):
+                    v = split_to_ints (trip.strip ())
+                    if len (v) == 3:
+                        sites[v[0]] = v[1:]
 
-            elif v[0] == "site:" and len(v) == 4:
-
-                sites[int(v[1])] = tuple ([ my_int (s) for s in v[2:] ])
-
-            elif v[0] == "edge:" and len(v) == 4:
-
-                edges.append (tuple([my_int (s) for s in v[1:] ]) )
+            # deal with "edge" or "e:", with many triples per line,
+            # separate by ";" 
+            elif typ[0] == "e":
+                
+                for trip in dat.split (";"):
+                    v = split_to_ints (trip.strip ())
+                    if len (v) == 3:
+                        edges.append (tuple(v))
 
         self._sites = {}
         self._sites_by_file = {}
