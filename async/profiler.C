@@ -1,5 +1,8 @@
 
 #include "sysconf.h"
+#include "sfs_profiler.h"
+
+//-----------------------------------------------------------------------
 
 #ifdef SIMPLE_PROFILER
 
@@ -8,7 +11,6 @@
 #endif
 #include <ucontext.h>
 
-#include "sfs_profiler.h"
 #include <dlfcn.h>
 #include "ihash.h"
 #include <setjmp.h>

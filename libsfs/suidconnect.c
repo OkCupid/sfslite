@@ -21,6 +21,8 @@
  *
  */
 
+#define IN_LIBSFS 1
+
 #include "sfs-internal.h"
 #include "sfsagent.h"
 

@@ -32,6 +32,7 @@
 # define xdrlong_t long
 # define HAVE_CMSGHDR 1
 #else /* NO_SYSCONF */
+# define IN_LIBSFS 1
 # include "sysconf.h"
 #endif
 

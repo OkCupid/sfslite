@@ -549,7 +549,7 @@ extern int stktrace_record;
   
 #else /* !DMALLOC */
 
-# ifdef SIMPLE_LEAK_CHECKER 
+# if defined(SIMPLE_LEAK_CHECKER) && !defined(IN_LIBSFS)
 
 void simple_leak_checker_free (void *p);
 void *simple_leak_checker_malloc (const char *fl, int line, size_t sz);
@@ -572,7 +572,7 @@ void *xrealloc (void *, size_t);
 # include <Python.h>
 # define xfree PyMem_Free
 #else
-# ifdef SIMPLE_LEAK_CHECKER
+# if defined(SIMPLE_LEAK_CHECKER) && !defined(IN_LIBSFS)
 #  define xfree simple_leak_checker_free
 # else /* !PYMALLOC (i.e., the default condition) */
 #  define xfree free

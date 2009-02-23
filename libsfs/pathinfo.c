@@ -21,6 +21,7 @@
  *
  */
 
+#define IN_LIBSFS 1
 #include "sysconf.h"
 #include "rwfd.h"
 
