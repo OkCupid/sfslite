@@ -4,7 +4,7 @@ dnl Process this file with autoconf to produce a configure script.
 dnl
 
 AC_INIT(acinclude.m4)
-AM_INIT_AUTOMAKE(sfslite,1.2.7pre4)
+AM_INIT_AUTOMAKE(sfslite,1.2.7pre5)
 AM_CONFIG_HEADER(config.h)
 
 dnl
@@ -18,7 +18,7 @@ dnl versioning the .so's that we're going to spit out.  Start
 dnl with version 1.0.0, since 0.0.0 is already in use.  Must
 dnl manually update everytim we change the ABI.
 dnl
-SFS_INIT_LDVERSION(5)
+SFS_INIT_LDVERSION(6)
 
 dnl
 dnl begin SFSLITE change
@@ -61,6 +61,7 @@ AC_PATH_PROGS(M4, gm4 gnum4 m4, '$(top_srcdir)/missing')
 test "$RPCC" || RPCC='$(top_builddir)/rpcc/rpcc'
 test "$TAME" || TAME='$(top_builddir)/tame/tame'
 SFS_UCONTEXT_RBP
+SFS_RBP_ASM_REG
 
 dnl Check for X Windows
 AC_PATH_XTRA
@@ -250,6 +251,7 @@ SFS_GMP
 SFS_OPENSSL
 SFS_CHECK_SETUSERCONTEXT
 
+
 AC_CACHE_CHECK(for arla xfs, sfs_cv_have_dev_xfs,
     if test -c /dev/xfs0; then
 	sfs_cv_have_dev_xfs=yes
@@ -391,7 +393,6 @@ CPPFLAGS="$CPPFLAGS -DEXECDIR="'\"$(sfsexecdir)\"'
 dnl
 dnl END sfslite changes
 dnl
-
 
 SFS_CFLAGS
 

@@ -41,17 +41,18 @@ const u_int exp2primes[33] = {
 #define hteof(p) ((_ihash_entry *) ((char *) (p) + eos))
 
 void
-_ihash_grow (_ihash_table *htp, const size_t eos)
+_ihash_grow (_ihash_table *htp, const size_t eos, size_t nbuckets)
 {
-  u_int nbuckets;
   void **ntab;
   void *p, *np;
   size_t i;
 
-  nbuckets = exp2primes[log2c(htp->buckets)+1];
-  if (nbuckets < 3)
-    nbuckets = 3;
-
+  if (nbuckets == 0 || nbuckets < htp->buckets) {
+    nbuckets = exp2primes[log2c(htp->buckets)+1];
+    if (nbuckets < 3)
+      nbuckets = 3;
+  }
+  
   ntab = New (void * [nbuckets]);
   bzero (ntab, nbuckets * sizeof (*ntab));
 
@@ -68,7 +69,7 @@ _ihash_grow (_ihash_table *htp, const size_t eos)
       ntab[ni] = p;
     }
 
-  delete[] htp->tab;
+  delete [] htp->tab;
   htp->tab = ntab;
   htp->buckets = nbuckets;
 }

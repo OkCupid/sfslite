@@ -25,6 +25,7 @@
 #include "list.h"
 #include "backoff.h"
 #include "xdr_suio.h"
+#include "sfs_profiler.h"
 
 #ifdef MAINTAINER
 int aclnttrace (getenv ("ACLNT_TRACE")
@@ -503,7 +504,7 @@ public:
     : callbase (c, genxid (c->xi), d), cb (cb) {
     assert (len >= 4);
     assert (c->xprt ()->reliable);
-    memcpy (&oldxid, msg, 4);
+    sfs::memcpy_p (&oldxid, msg, 4);
     iovec iov[2] = {
       { iovbase_t (&xid), 4 },
       { iovbase_t (msg + 4), len - 4 },
@@ -512,7 +513,7 @@ public:
   }
 
   clnt_stat decodemsg (const char *msg, size_t len) {
-    memcpy (const_cast<char *> (msg), &oldxid, 4);
+    sfs::memcpy_p (const_cast<char *> (msg), &oldxid, 4);
     (*cb) (RPC_SUCCESS, msg, len);
     cb = NULL;
     return RPC_SUCCESS;
@@ -582,7 +583,7 @@ aclnt::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
   }
 
   u_int32_t xid;
-  memcpy (&xid, msg, sizeof (xid));
+  sfs::memcpy_p (&xid, msg, sizeof (xid));
   callbase *rp = xi->xidtab[xid];
   if (!rp || !rp->checksrc (src)) {
     trace (2, "dropping %s x=%x\n",
@@ -612,7 +613,7 @@ aclnt::alloc (ref<axprt> x, const rpc_program &pr, const sockaddr *d,
   ref<aclnt> c = New refcounted<aclnt> (xi, pr);
   if (!x->connected && d) {
     c->dest = (sockaddr *) xmalloc (x->socksize);
-    memcpy (c->dest, d, x->socksize);
+    sfs::memcpy_p (c->dest, d, x->socksize);
   }
   else
     c->dest = NULL;

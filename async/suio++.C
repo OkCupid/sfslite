@@ -22,6 +22,7 @@
  */
 
 #include "suio++.h"
+#include "sfs_profiler.h"
 
 #ifdef DMALLOC
 
@@ -148,18 +149,18 @@ size_t
 iovmgr::copyout (char *buf, size_t len)
 {
   if (len < implicit_cast<size_t> (cur.iov_len)) {
-    memcpy (buf, cur.iov_base, len);
+    sfs::memcpy_p (buf, cur.iov_base, len);
     cur.iov_base = (char *) cur.iov_base + len;
     cur.iov_len -= len;
     return len;
   }
-  memcpy (buf, cur.iov_base, cur.iov_len);
+  sfs::memcpy_p (buf, cur.iov_base, cur.iov_len);
   char *cp = buf + cur.iov_len;
   char *eom = buf + len;
 
   while (iov < lim
 	 && implicit_cast<size_t> (iov->iov_len) <= (size_t) (eom - cp)) {
-    memcpy (cp, iov->iov_base, iov->iov_len);
+    sfs::memcpy_p (cp, iov->iov_base, iov->iov_len);
     cp += iov++->iov_len;
   }
 
@@ -169,7 +170,7 @@ iovmgr::copyout (char *buf, size_t len)
   }
   else if (cp < eom) {
     size_t n = eom - cp;
-    memcpy (cp, iov->iov_base, n);
+    sfs::memcpy_p (cp, iov->iov_base, n);
     cp += n;
     cur.iov_base = (char *) iov->iov_base + n;
     cur.iov_len = iov->iov_len - n;
@@ -276,18 +277,18 @@ suio::slowcopy (const void *_buf, size_t len)
   const char *buf = static_cast<const char *> (_buf);
   size_t n = scratch_lim - scratch_pos;
   if (len <= n) {
-    memcpy (scratch_pos, buf, len);
+    sfs::memcpy_p (scratch_pos, buf, len);
     pushiov (scratch_pos, len);
   }
   else {
     if (n >= smallbufsize || scratch_pos == lastiovend) {
-      memcpy (scratch_pos, buf, n);
+      sfs::memcpy_p (scratch_pos, buf, n);
       pushiov (scratch_pos, n);
       buf += n;
       len -= n;
     }
     morescratch (len);
-    memcpy (scratch_pos, buf, len);
+    sfs::memcpy_p (scratch_pos, buf, len);
     pushiov (scratch_pos, len);
   }
 }
@@ -402,12 +403,12 @@ suio::copyout (void *_buf, size_t len) const
   char *cp = buf;
   for (const iovec *v = iov (), *e = iovlim (); v < e; v++) {
     if (len >= implicit_cast<size_t> (v->iov_len)) {
-      memcpy (cp, v->iov_base, v->iov_len);
+      sfs::memcpy_p (cp, v->iov_base, v->iov_len);
       cp += v->iov_len;
       len -= v->iov_len;
     }
     else {
-      memcpy (cp, v->iov_base, len);
+      sfs::memcpy_p (cp, v->iov_base, len);
       return cp - buf + len;
     }
   }

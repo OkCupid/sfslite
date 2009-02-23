@@ -10,6 +10,7 @@ import getopt
 
 ADDR2LINE = "addr2line"
 DOT = "dot"
+FILE = "file"
 
 ##=======================================================================
 
@@ -221,6 +222,29 @@ def edge_sort_fn (a, b):
 
 ##=======================================================================
 
+def resolveFile (f):
+    try:
+        f = os.readlink (f)
+    except OSError:
+        pass
+    return f
+
+##=======================================================================
+
+def isExe (p):
+    file = resolveFile (p)
+    cmd = [ FILE, p ]
+    p = subprocess.Popen (cmd, 
+                          stdin = subprocess.PIPE,
+                          stdout = subprocess.PIPE,
+                          close_fds = True)
+    desc = p.stdout.readline ().strip ()
+    ret = bool (re.search ("\\bexecutable\\b", desc))
+    print "%s %d %s" % (file, int (ret), desc)
+    return ret
+
+##=======================================================================
+        
 class File:
     """Representation of an .so library or a 'main' object files.
     Keeps track of the file name, the base offset assigned by the dynamic
@@ -232,7 +256,9 @@ class File:
     def __init__ (self, name, offset, main):
         self._name = name
         self._offset = offset
-        self._main = main
+        self._main = isExe (name)
+
+        
 
     ##----------------------------------------
 
@@ -419,6 +445,7 @@ class Graph:
         self.outputText (props)
         self.outputDot (props)
         self.outputPs ()
+        self.outputPng ()
 
     ##----------------------------------------
 
@@ -473,6 +500,13 @@ class Graph:
     def outputPs (self):
         fn = "%s.ps" % self.fileStem ()
         cmd = [ DOT , "-Tps", "-o", fn, self._dotfile ]
+        rc = subprocess.call (cmd)
+
+    ##----------------------------------------
+
+    def outputPng (self):
+        fn = "%s.png" % self.fileStem ()
+        cmd = [ DOT , "-Tpng", "-o", fn, self._dotfile ]
         rc = subprocess.call (cmd)
 
     ##----------------------------------------

@@ -1493,8 +1493,8 @@ dnl
 AC_DEFUN([SFS_CFLAGS],
 [unset CFLAGS
 unset CXXFLAGS
-CFLAGS='$(DEBUG) $(WFLAGS) $(ECFLAGS)'
-CXXFLAGS='$(CXXDEBUG) $(CXXWFLAGS) $(ECXXFLAGS)'])
+CFLAGS='$(DEBUG) $(WFLAGS) $(ECFLAGS) $(CFLAGS_PROFILE)'
+CXXFLAGS='$(CXXDEBUG) $(CXXWFLAGS) $(ECXXFLAGS) $(CFLAGS_PROFILE)'])
 dnl
 dnl Check for xdr_u_intNN_t, etc
 dnl
@@ -1786,7 +1786,7 @@ if test "$enable_static" = yes -a -z "${NOPAGING+set}"; then
     esac
 fi
 
-SFS_LIB_MK=${sfslibdir}/libs.mk
+SFS_LIB_MK=${sfslibdir}/env.mk
 AC_SUBST(SFS_LIB_MK)
 
 AC_SUBST(sfslibdir)
@@ -2462,6 +2462,26 @@ if test ${sfs_cv_ucontext_rbp+set} ; then
    AC_DEFINE_UNQUOTED(UCONTEXT_RBP, $sfs_cv_ucontext_rbp, where in the ucontext object to find %rbp)
 fi
 ])
+dnl
+dnl Read RBP out of a register
+dnl
+AC_DEFUN([SFS_RBP_ASM_REG],
+[AC_CACHE_CHECK(for reading %rbp from assembly, sfs_cv_read_rbp,
+[
+for r in "movl %%ebp" "movq %%rbp" ; do
+    if ! test ${sfs_cv_read_rbp+set} ; then
+       AC_TRY_COMPILE([], [
+          void *v;
+          __asm volatile ("$r, %0" : "=g" (v) :);
+	  return (v == 0);
+       ], sfs_cv_read_rbp="$r")
+    fi
+done
+])
+if test ${sfs_cv_read_rbp+set} ; then
+   AC_DEFINE_UNQUOTED(RBP_ASM_REG, "$sfs_cv_read_rbp", the frame pointer on this architecture)
+fi
+])
 
 dnl
 dnl A simple runtime memleak checker, that can be turned on and off
@@ -2489,7 +2509,9 @@ then
           sfs_cv_libdl=no
       fi
     ])
+    CFLAGS_PROFILE="-fno-omit-frame-pointer"
 
+    AC_SUBST(CFLAGS_PROFILE)
     AC_DEFINE(SIMPLE_PROFILER, 1, Define to turn on a simple profiler)
 fi
 ])

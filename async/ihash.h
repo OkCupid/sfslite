@@ -49,7 +49,7 @@ template<class T> class ihash_entry;
 template<class T, ihash_entry<T> T::*field> class ihash_core;
 
 struct _ihash_table;
-extern void _ihash_grow (_ihash_table *, const size_t);
+extern void _ihash_grow (_ihash_table *, const size_t, const size_t);
 
 struct _ihash_entry {
   void *next;
@@ -86,7 +86,7 @@ protected:
   void init () {
     t.buckets = t.entries = 0;
     t.tab = NULL;
-    _ihash_grow (&t, (size_t) &(((T *) 0)->*field));
+    _grow ();
   }
   ihash_core () { init (); }
 
@@ -112,15 +112,16 @@ protected:
 #endif /* IHASH_DEBUG */
   }
 
-  void insert_val (T *elm, hash_t hval) {
+  bool insert_val (T *elm, hash_t hval) {
 #if IHASH_DEBUG
     if (ihash_do_debug () && present (elm))
       panic ("ihash_core(%s)::insert_val: element already in hash table\n",
 	     typeid (ihash_core).name ());
 #endif /* IHASH_DEBUG */
     _check ();
-    if (++t.entries >= t.buckets)
-      _ihash_grow (&t, (size_t) (_ihash_entry *) &(((T *) 0)->*field));
+    if (++t.entries >= t.buckets) {
+      _grow ();
+    }
     (elm->*field).val = hval;
 
     size_t bn = hval % t.buckets;
@@ -131,6 +132,7 @@ protected:
     (elm->*field).pprev = &t.tab[bn];
     t.tab[bn] = elm;
     _check ();
+    return true;
   }
 
   T *lookup_val (hash_t hval) const {
@@ -149,6 +151,11 @@ protected:
     return elm;
   }
 
+  void _grow (size_t sz = 0)
+  {
+    _ihash_grow (&t, (size_t) (_ihash_entry *) &(((T *) 0)->*field), sz);
+  }
+
 public:
   void clear () { delete[] t.tab; init (); }
   ~ihash_core () { delete[] t.tab; }
@@ -162,6 +169,12 @@ public:
   }
   size_t size () const { return t.entries; }
   bool constructed () const { return t.buckets > 0; }
+
+  bool has_room () const { return t.entries < t.buckets; }
+  ssize_t room () const { return t.buckets - t.entries; }
+
+  void reserve (size_t sz) { _grow (sz); }
+  void grow () { _grow (); }
 
   void remove (T *elm) {
 #if IHASH_DEBUG
@@ -235,7 +248,7 @@ public:
   ihash () : eq (E ()), hash (H ()) {}
   ihash (const E &e, const H &h) : eq (e), hash (h) {}
 
-  void insert (V *elm) { insert_val (elm, hash (elm->*key)); }
+  bool insert (V *elm) { return insert_val (elm, hash (elm->*key)); }
 
 #if 0
   template<class T> V *operator[] (const T &k) const {

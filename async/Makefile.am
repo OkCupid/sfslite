@@ -51,7 +51,7 @@ mmcd_DEPENDENCIES =
 # end sfslite changes
 #
 
-noinst_HEADERS = internal.h env.mk libs.mk
+noinst_HEADERS = internal.h pyenv.mk env.mk
 
 dftables_SOURCES = dftables.c
 dftables_LDADD =
@@ -78,7 +78,7 @@ stktrace.lo: $(srcdir)/stktrace.c $(srcdir)/sysconf.h
 #
 # include Makefile flags and options for pysfs1 
 #
-env.mk: Makefile
+pyenv.mk: Makefile
 	@rm -f env.mk~
 	echo "# Makefile fragment generated " `date` > env.mk~
 	echo "CC = $(CC)" >> env.mk~
@@ -88,19 +88,24 @@ env.mk: Makefile
 	echo "LIBS = $(LIBS)" >> env.mk~
 	echo "LIBGMP = $(LIBGMP)" >> env.mk~
 	echo "LDFLAGS = $(LDFLAGS)" >> env.mk~
-	mv -f env.mk~ env.mk
+	mv -f env.mk~ $@
 
-libs.mk: Makefile
+#
+# for OKWS and other libraries built from this SFS library,
+# need to know build options for profiling / etc.
+#
+env.mk: Makefile
 	@rm -f $@~
 	echo "# Makefile fragment generated " `date` > $@~
 	echo "LDADD_THR = $(LDADD_THR)" >> $@~
-	echo "LDADD_STD_ALL = $(LDADD_STD_ALL)" >> $@~
+	echo "LDADD_STD_ALL = $(LDADD_STD_ALL)" >> $@~	
+	echo "CFLAGS_PROFILE = $(CFLAGS_PROFILE)" >> $@~
 	mv -f $@~ $@
 
-EXTRA_DIST = .cvsignore env.mk libs.mk
+EXTRA_DIST = .cvsignore pyenv.mk env.mk
 CLEANFILES = core *.core *~ *.rpo dftables chartables.c \
-	stamp-async-repo env.mk libs.mk
-MAINTAINERCLEANFILES = Makefile.in env.mk libs.mk
+	stamp-async-repo env.mk env2.mk
+MAINTAINERCLEANFILES = Makefile.in pyenv.mk env.mk
 
 .PHONY: cbh
 cbh:

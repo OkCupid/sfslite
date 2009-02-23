@@ -27,6 +27,7 @@
 #define _ARPC_XDRMISC_H_ 1
 
 #include "sysconf.h"
+#include "sfs_profiler.h"
 
 extern "C" {
 #define xdrproc_t sun_xdrproc_t
@@ -236,7 +237,7 @@ rpc_traverse (XDR *xdrs, rpc_bytes<max> &obj)
       if (!dp)
 	return false;
       obj.setsize (size);
-      memcpy (obj.base (), dp, size);
+      sfs::memcpy_p (obj.base (), dp, size);
       return true;
     }
   default:

@@ -5,6 +5,7 @@
 
 #include "async.h"
 #include "ihash.h"
+#include "sfs_profiler.h"
 
 //-----------------------------------------------------------------------
 
@@ -314,7 +315,9 @@ void *
 _internal_new (size_t s, const char *f, int l)
 {
   if (!s) s = 1;
+  sfs_profiler::enter_vomit_lib ();
   void *p = malloc (s);
+  sfs_profiler::exit_vomit_lib ();
   if (slc_enabled) {
     tracker.allocate (p, s, f, l);
   }
@@ -330,7 +333,9 @@ _internal_free (void *p)
   if (slc_enabled) {
     tracker.deallocate (p);
   }
+  sfs_profiler::enter_vomit_lib ();
   free (p);
+  sfs_profiler::exit_vomit_lib ();
 }
 
 //-----------------------------------------------------------------------

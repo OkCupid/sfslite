@@ -9,6 +9,8 @@
 # include <Python.h>
 #endif /* PYMALLOC */
 
+#include "sfs_profiler.h"
+
 #ifdef DMALLOC
 bool dmalloc_init::initialized;
 void
@@ -179,7 +181,9 @@ operator new (size_t size, nothrow_t) throw ()
 void
 operator delete (void *ptr) delete_throw
 {
+  sfs_profiler::enter_vomit_lib ();
   xfree (ptr);
+  sfs_profiler::exit_vomit_lib ();
 }
 
 void *
@@ -187,7 +191,10 @@ operator new[] (size_t size) throw (bad_alloc)
 {
   if (!size)
     size = 1;
-  return txmalloc (size);
+  sfs_profiler::enter_vomit_lib ();
+  void *v = txmalloc (size);
+  sfs_profiler::exit_vomit_lib ();
+  return v;
 }
 
 void *
@@ -195,17 +202,22 @@ operator new[] (size_t size, nothrow_t) throw ()
 {
   if (!size)
     size = 1;
+  sfs_profiler::enter_vomit_lib ();
 #if PYMALLOC
-  return PyMem_Malloc (size);
+  void *v = PyMem_Malloc (size);
 #else /* !PYMALLOC */
-  return malloc (size);
+  void *v = malloc (size);
 #endif
+  sfs_profiler::exit_vomit_lib ();
+  return v;
 }
 
 void
 operator delete[] (void *ptr) delete_throw
 {
+  sfs_profiler::enter_vomit_lib ();
   xfree (ptr);
+  sfs_profiler::exit_vomit_lib ();
 }
 
 # endif /* SIMPLE_LEAK_CHECKER */
@@ -290,10 +302,12 @@ void
 operator delete (void *ptr) delete_throw
 {
   nodelete_check (ptr);
+  sfs_profiler::enter_vomit_lib ();
   if (stktrace_record > 0)
     dmalloc_free (__backtrace (__FILE__, 2), __LINE__, ptr, DMALLOC_FUNC_FREE);
   else
     xfree (ptr);
+  sfs_profiler::exit_vomit_lib ();
 }
 
 void *
@@ -304,13 +318,16 @@ operator new[] (size_t size) throw (bad_alloc)
 #endif /* CHECK_ARRAY_DELETE */
   if (!size)
     size = 1;
+  sfs_profiler::enter_vomit_lib ();
 #if CHECK_ARRAY_DELETE
   char *ret = static_cast <char *> (txmalloc (size));
   memcpy (ret, array_marker, new_array_shift);
-  return ret + new_array_shift;
+  void *v = ret + new_array_shift;
 #else /* !CHECK_ARRAY_DELETE */
-  return txmalloc (size);
+  void *v = txmalloc (size);
 #endif /* !CHECK_ARRAY_DELETE */
+  sfs_profiler::exit_vomit_lib ();
+  return v;
 }
 
 void *
@@ -321,18 +338,22 @@ operator new[] (size_t size, nothrow_t) throw ()
 #endif /* CHECK_ARRAY_DELETE */
   if (!size)
     size = 1;
+  sfs_profiler::enter_vomit_lib ();
 #if CHECK_ARRAY_DELETE
   char *ret = static_cast <char *> (txmalloc (size));
   memcpy (ret, array_marker, new_array_shift);
-  return ret + new_array_shift;
+  ret += new_array_shift;
 #else /* !CHECK_ARRAY_DELETE */
-  return txmalloc (size);
+  ret = txmalloc (size);
 #endif /* !CHECK_ARRAY_DELETE */
+  sfs_profiler::exit_vomit_lib ();
+  return ret;
 }
 
 void
 operator delete[] (void *_ptr) delete_throw
 {
+  sfs_profiler::enter_vomit_lib ();
 #if CHECK_ARRAY_DELETE
   char *ptr = static_cast<char *> (_ptr) - new_array_shift;
   if (memcmp (ptr, array_marker, new_array_shift)) {
@@ -343,6 +364,7 @@ operator delete[] (void *_ptr) delete_throw
 #else /* !CHECK_ARRAY_DELETE */
   xfree (_ptr);
 #endif /* !CHECK_ARRAY_DELETE */
+  sfs_profiler::exit_vomit_lib ();
 }
 
 #endif /* DMALLOC */

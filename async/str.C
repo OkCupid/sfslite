@@ -22,6 +22,7 @@
  */
 
 #include "str.h"
+#include "sfs_profiler.h"
 
 void (*const strobj_opdel) (void *) (operator delete);
 
@@ -81,7 +82,7 @@ str::iov2strobj (const iovec *iov, int cnt)
   b->len = l;
   char *p = b->dat ();
   for (const iovec *end = iov + cnt; iov < end; iov++) {
-    memcpy (p, iov->iov_base, iov->iov_len);
+    sfs::memcpy_p (p, iov->iov_base, iov->iov_len);
     p += iov->iov_len;
   }
   *p = '\0';

@@ -22,6 +22,7 @@
  */
 
 #include "arpc.h"
+#include "sfs_profiler.h"
 
 inline void
 axprt_pipe::wrsync ()
@@ -195,7 +196,7 @@ axprt_pipe::sendv (const iovec *iov, int cnt, const sockaddr *)
     iovec *niov = New iovec[cnt+1];
     niov[0].iov_base = (iovbase_t) &len;
     niov[0].iov_len = 4;
-    memcpy (niov + 1, iov, cnt * sizeof (iovec));
+    sfs::memcpy_p (niov + 1, iov, cnt * sizeof (iovec));
 
     ssize_t skip = writev (fdwrite, niov, cnt + 1);
     if (skip < 0 && errno != EAGAIN) {
@@ -251,7 +252,7 @@ axprt_pipe::ungetpkt (const void *pkt, size_t len)
 
   pktlen = len + 4;
   putint (pktbuf, 0x80000000|len);
-  memcpy (pktbuf + 4, pkt, len);
+  sfs::memcpy_p (pktbuf + 4, pkt, len);
   if (cb)
     callgetpkt ();
 }

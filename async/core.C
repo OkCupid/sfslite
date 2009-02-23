@@ -34,6 +34,10 @@
 #include "sfs_select.h"
 #include <stdio.h>
 
+#ifdef SIMPLE_PROFILER
+# include "sfs_profiler.h"
+#endif /* SIMPLE_PROFILER */
+
 bool amain_panic;
 
 /* Global variables used for configuring the core select behavior */
@@ -502,6 +506,9 @@ _acheck ()
   
   sfs_leave_sel_loop ();
 
+  // If the profiler is running, give it more memory if it needs it.
+  sfs_profiler::recharge ();
+
   START_ACHECK_TIMER();
   // warn << "in acheck...\n";
   if (amain_panic)
@@ -511,6 +518,7 @@ _acheck ()
   sigcb_check ();
 
   timecb_check ();
+
   STOP_ACHECK_TIMER ();
 }
 

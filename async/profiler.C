@@ -11,13 +11,53 @@
 #include "sfs_profiler.h"
 #include <dlfcn.h>
 #include "ihash.h"
+#include <setjmp.h>
 
 #define __STDC_FORMAT_MACROS 1
 #include <inttypes.h>
 
 //-----------------------------------------------------------------------
 
+#define ENTER_PROFILER()  bool __r = _running; _running = true
+#define EXIT_PROFILER() _running = __r;
+
+//-----------------------------------------------------------------------
+
 typedef u_long my_intptr_t;
+
+//-----------------------------------------------------------------------
+
+#ifdef HAVE_LIBUNWIND
+
+typedef struct {
+  void **result;
+  int max_depth;
+  int skip_count;
+  int count;
+} trace_arg_t;
+
+typedef enum {
+  _URC_NO_REASON = 0,
+  _URC_FOREIGN_EXCEPTION_CAUGHT = 1,
+  _URC_FATAL_PHASE2_ERROR = 2,
+  _URC_FATAL_PHASE1_ERROR = 3,
+  _URC_NORMAL_STOP = 4,
+  _URC_END_OF_STACK = 5,
+  _URC_HANDLER_FOUND = 6,
+  _URC_INSTALL_CONTEXT = 7,
+  _URC_CONTINUE_UNWIND = 8
+} my_unwind_reason_code_t;
+
+struct _Unwind_Context;
+
+extern "C" {
+  
+  void _Unwind_Backtrace (int (*fn) (struct _Unwind_Context *, void *),
+			  trace_arg_t *arg);
+  my_intptr_t _Unwind_GetIP(struct _Unwind_Context *ctx);
+};
+
+#endif
 
 //-----------------------------------------------------------------------
 
@@ -103,10 +143,13 @@ public:
 
   call_site_t *lookup (const char *file, my_intptr_t p, const void *b);
 
-  void reset () { _sites.deleteall (); _files.deleteall (); }
+  void reset () { _sites.clear (); _files.clear (); }
   void report ();
   void report_sites ();
   void report_files ();
+  void recharge ();
+
+  enum { MIN_ROOM = 0x1000, MIN_SIZE = 0x10000 };
 
   typedef ihash<const char *, obj_file_t, 
 		&obj_file_t::_name, &obj_file_t::_lnk> file_tab_t;
@@ -169,8 +212,12 @@ class edge_table_t {
 public:
   edge_table_t () {}
   edge_t *lookup (const call_site_t *caller, const call_site_t *callee);
-  void reset () { _tab.deleteall (); }
+
+  enum { MIN_ROOM = 0x1000, MIN_SIZE = 0x10000 };
+
+  void reset () { _tab.clear (); }
   void report ();
+  void recharge ();
   typedef ihash<edge_key_t, edge_t, &edge_t::_key, &edge_t::_lnk> tab_t;
 private:
   tab_t _tab;
@@ -181,7 +228,7 @@ private:
 class sfs_profiler_obj_t {
 public:
   sfs_profiler_obj_t ();
-  void enable ();
+  bool enable ();
   void disable ();
   void reset ();
   void report ();
@@ -189,21 +236,26 @@ public:
   void set_real_timer (bool b);
 
   void timer_event (int sig, siginfo_t *si, void *uctx);
+  void recharge ();
+  inline void enter_vomit_lib ();
+  void exit_vomit_lib ();
 
   enum { RANGE_SIZE_PCT = 10,
 	 MIN_INTERVAL_US = 100,
 	 DFLT_INTERVAL_US = 1000,
 	 MAX_INTERVAL_US = 750000 };
 
-  class trace_obj_t {
-  public:
-    trace_obj_t () {}
-    vec<str> _trace;
-  };
+  edge_t *alloc_edge (const edge_key_t &k);
+  obj_file_t *alloc_file (const char *file, const void *base);
+  call_site_t *alloc_site (const call_site_key_t &k);
+
+  enum { MIN_SCRATCH_SIZE = 0x10000,
+	 DEF_SCRATCH_SIZE = 0x100000 };
 
 private:
   void mark_edge (call_site_t *b, call_site_t *t);
   call_site_t * lookup_pc (my_intptr_t pc);
+  void init ();
 
   static time_t fix_interval (long in);
   void schedule_next_event ();
@@ -211,9 +263,12 @@ private:
   void disable_handler (int which);
   void enable_handler (int which);
   void disable_timer (int which);
-  void crawl_stack (const ucontext_t &ut, trace_obj_t *to);
-  void init_symbol_lookup ();
-  
+  void crawl_stack (const ucontext_t &ut);
+  void buffer_recharge ();
+  bool valid_rbp (const my_intptr_t *i) const;
+  bool valid_rbp_strict (const my_intptr_t *i, const my_intptr_t *s) const;
+  const my_intptr_t *stack_step (const my_intptr_t *i) const;
+
   time_t _interval_us;
   bool _enabled;
   bool _real;
@@ -225,7 +280,13 @@ private:
   bool _init;
   bool _is_static;
   void *_main_base;
+  const my_intptr_t *_vomit_rbp;
   bool _running;
+
+  vec<char *> _bufs;
+  char *_buf, *_bp, *_endp;
+
+  const my_intptr_t *_main_rbp;
 };
 
 #define PRFX1 "SFS Profiler: "
@@ -235,14 +296,47 @@ static sfs_profiler_obj_t g_profile_obj;
 
 //-----------------------------------------------------------------------
 
+template<class T> static void
+ihash_recharge (T &tab, size_t min_size, size_t min_room) 
+{
+  if (tab.size () == 0) {
+    tab.reserve (min_size);
+  } else if (tab.room () < ssize_t (min_room)) {
+    tab.grow ();
+  }
+}
+
+//-----------------------------------------------------------------------
+
+void
+call_table_t::recharge ()
+{
+  ihash_recharge (_files, MIN_SIZE, MIN_ROOM);
+  ihash_recharge (_sites, MIN_SIZE, MIN_ROOM);
+}
+
+//-----------------------------------------------------------------------
+
+void
+edge_table_t::recharge ()
+{
+  ihash_recharge (_tab, MIN_SIZE, MIN_ROOM);
+}
+
+//-----------------------------------------------------------------------
+
 edge_t *
 edge_table_t::lookup (const call_site_t *ee, const call_site_t *er)
 {
   edge_key_t k (ee, er);
   edge_t *ret =  _tab[k];
   if (!ret) {
-    ret = New edge_t (k);
-    _tab.insert (ret);
+    if (_tab.has_room ()) {
+      ret = g_profile_obj.alloc_edge (k);
+      if (ret) {
+	_tab.insert (ret);
+      }
+    }
   }
   return ret;
 }
@@ -253,15 +347,26 @@ call_site_t *
 call_table_t::lookup (const char *file, my_intptr_t p, const void *base)
 {
   obj_file_t *f = _files[file];
+  call_site_t *s = NULL;
   if (!f) {
-    f = New obj_file_t (file, base);
-    _files.insert (f);
+    if (_files.has_room ()) {
+      f = g_profile_obj.alloc_file (file, base);
+      if (f) {
+	_files.insert (f);
+      }
+    }
   }
-  call_site_key_t k (f, p);
-  call_site_t *s = _sites[k];
-  if (!s) {
-    s = New call_site_t (k);
-    _sites.insert (s);
+  if (f) {
+    call_site_key_t k (f, p);
+    s = _sites[k];
+    if (!s) {
+      if (_sites.has_room ()) {
+	s = g_profile_obj.alloc_site (k);
+	if (s) {
+	  _sites.insert (s);
+	}
+      }
+    }
   }
   return s;
 }
@@ -276,10 +381,147 @@ sfs_profiler_obj_t::sfs_profiler_obj_t ()
     _init (false),
     _is_static (false),
     _main_base (NULL),
-    _running (false)
+    _vomit_rbp (NULL),
+    _running (false),
+    _buf (NULL),
+    _bp (NULL),
+    _endp (NULL),
+    _main_rbp (NULL)
 {
   srandom (time (NULL));
 }
+
+//-----------------------------------------------------------------------
+
+bool
+sfs_profiler_obj_t::valid_rbp (const my_intptr_t *rbp) const
+{
+  return (rbp &&
+	  !(reinterpret_cast<my_intptr_t> (rbp) & 7) &&
+	  rbp[0]);
+}
+
+//-----------------------------------------------------------------------
+
+bool
+sfs_profiler_obj_t::valid_rbp_strict (const my_intptr_t *rbp,
+				      const my_intptr_t *sig) const
+{
+  return (valid_rbp (rbp) && 
+	  _main_rbp &&
+	  rbp <= _main_rbp &&
+	  rbp >= sig);
+}
+
+//-----------------------------------------------------------------------
+
+const my_intptr_t *
+sfs_profiler_obj_t::stack_step (const my_intptr_t *r) const
+{
+  return reinterpret_cast<const my_intptr_t *> (*r);
+}
+
+//-----------------------------------------------------------------------
+
+#ifdef RBP_ASM_REG
+
+# define READ_RBP(x)						\
+  __asm volatile ( RBP_ASM_REG ", %0" : "=g" (x) :)
+
+#else
+# ifdef UCONTEXT_RBP
+
+# define READ_RBP(x)							\
+  do {									\
+   ucontext_t uc;							\
+   getcontext (&uc);							\
+    x = reinterpret_cast<const my_intptr_t *> (uc.UCONTEXT_RBP);	\
+ } while (0)
+
+# else
+# define READ_RBP(x)				\
+  x = NULL
+
+# endif
+#endif
+
+//-----------------------------------------------------------------------
+
+void
+sfs_profiler_obj_t::enter_vomit_lib ()
+{
+  READ_RBP(_vomit_rbp);
+
+  // Go one step down
+  if (valid_rbp (_vomit_rbp)) {
+    _vomit_rbp = stack_step (_vomit_rbp);
+  }
+}
+
+//-----------------------------------------------------------------------
+
+void
+sfs_profiler_obj_t::exit_vomit_lib ()
+{
+  _vomit_rbp = NULL;
+}
+
+//-----------------------------------------------------------------------
+
+void
+sfs_profiler_obj_t::init ()
+{
+#ifdef UCONTEXT_RBP
+  ENTER_PROFILER ();
+  if (_init)
+    return;
+  
+  const my_intptr_t *last_good = NULL, *framep = NULL;
+
+  READ_RBP(framep);
+  while (valid_rbp (framep)) {
+    last_good = framep;
+    framep = stack_step (framep);
+  }
+  
+  if (!(_main_rbp = framep)) {
+    warn ("Cannot initialize profiler: cannot find main stack!\n");
+  }
+
+  _init = true;
+  EXIT_PROFILER ();
+#endif
+}
+
+//-----------------------------------------------------------------------
+
+void
+sfs_profiler_obj_t::buffer_recharge ()
+{
+  if (!_buf || (_endp - _bp) < MIN_SCRATCH_SIZE) {
+    if (_buf) {
+      _bufs.push_back (_buf);
+    }
+    _bp = _buf = New char[DEF_SCRATCH_SIZE];
+    _endp = _bp + DEF_SCRATCH_SIZE;
+  }
+}
+
+//-----------------------------------------------------------------------
+
+void
+sfs_profiler_obj_t::recharge ()
+{
+  if (_enabled) {
+    ENTER_PROFILER();
+    init ();
+    buffer_recharge ();
+    _sites.recharge ();
+    _edges.recharge ();
+    EXIT_PROFILER();
+  }
+}
+
 
 //-----------------------------------------------------------------------
 
@@ -378,14 +620,19 @@ sfs_profiler_obj_t::disable_timer (int which)
 
 //-----------------------------------------------------------------------
 
-void
+bool
 sfs_profiler_obj_t::enable ()
 {
+  ENTER_PROFILER();
   warn << PRFX1 << "enabled\n";
   if (!_enabled) {
-    schedule_next_event ();
     _enabled = true;
   }
+  init ();
+  recharge ();
+  schedule_next_event ();
+  EXIT_PROFILER();
+  return true;
 }
 
 //-----------------------------------------------------------------------
@@ -402,15 +649,15 @@ sfs_profiler_obj_t::disable ()
 void
 sfs_profiler_obj_t::report ()
 {
-  _running = true;
+  ENTER_PROFILER();
   warn << PRFX2 << " ++++ start report ++++\n";
   _sites.report ();
   _edges.report ();
   warn << PRFX2 << " ---- end report ----\n";
-  _running = false;
   if (_enabled) {
     schedule_next_event ();
   }
+  EXIT_PROFILER();
 }
 
 //-----------------------------------------------------------------------
@@ -484,8 +731,15 @@ void
 sfs_profiler_obj_t::reset ()
 {
   warn << PRFX1 << "reset\n";
+
   _edges.reset ();
   _sites.reset ();
+
+  if (_buf) {
+    delete [] _buf;
+    _buf = _bp = _endp = NULL;
+  }
+  while (_bufs.size ()) { delete [] _bufs.pop_back (); }
 }
 
 //-----------------------------------------------------------------------
@@ -508,22 +762,10 @@ sfs_profiler_obj_t::mark_edge (call_site_t *caller, call_site_t *callee)
 
 //-----------------------------------------------------------------------
 
-void
-sfs_profiler_obj_t::init_symbol_lookup ()
-{
-  if (!_init) {
-    _init = true;
-  }
-}
-
-//-----------------------------------------------------------------------
-
 call_site_t *
 sfs_profiler_obj_t::lookup_pc (my_intptr_t pc)
 {
   call_site_t *ret = NULL;
-
-  init_symbol_lookup ();
 
 #if SFS_COMPILE_SHARED
   void *v = reinterpret_cast<void *> (pc);
@@ -544,21 +786,63 @@ sfs_profiler_obj_t::lookup_pc (my_intptr_t pc)
 
 //-----------------------------------------------------------------------
 
-void
-sfs_profiler_obj_t::crawl_stack (const ucontext_t &ctx, trace_obj_t *to)
+#ifdef HAVE_LIBUNWIND
+static int
+get_one_frame (struct _Unwind_Context *uc, void *opq)
 {
-  
-#ifdef UCONTEXT_RBP
-  const my_intptr_t *framep;
-  framep = reinterpret_cast<const my_intptr_t *> (ctx.UCONTEXT_RBP);
-  int lim = 1024;
+ trace_arg_t *targ = (trace_arg_t *) opq;
+
+  if (targ->skip_count > 0) {
+    targ->skip_count--;
+  } else {
+    targ->result[targ->count++] = (void *) _Unwind_GetIP(uc);
+  }
+
+  if (targ->count == targ->max_depth)
+    return _URC_END_OF_STACK;
+  return 0;
+}
+#endif /* HAVE_LIBUNWIND */
+
+//-----------------------------------------------------------------------
+
+void
+sfs_profiler_obj_t::crawl_stack (const ucontext_t &ctx)
+{
   call_site_t *curr = NULL, *prev = NULL;
   call_site_t *last_good = NULL;
 
-  while (framep && 
-	 !(reinterpret_cast<my_intptr_t> (framep) & 7) &&
-	 framep[0] && 
-	 lim--) {
+#define DEPTH 256
+#ifdef HAVE_LIBUNWIND
+  void *result[DEPTH];
+  trace_arg_t targ;
+  targ.result = result;
+  targ.max_depth = DEPTH;
+  targ.skip_count = 3;
+  targ.count = 0;
+  
+  _Unwind_Backtrace (get_one_frame, &targ);
+  
+  for (int i = 0; i < targ.count; i++) {
+    my_intptr_t pc = reinterpret_cast<my_intptr_t> (result[0]);
+    curr = lookup_pc (pc);
+    if (curr) last_good = curr;
+    if (curr && prev) { mark_edge (curr, prev); }
+    prev = curr;
+  }
+
+#else
+# ifdef UCONTEXT_RBP
+  const my_intptr_t *framep, *sigstack;
+
+  if (!(framep = _vomit_rbp)) {
+    framep = reinterpret_cast<const my_intptr_t *> (ctx.UCONTEXT_RBP);
+  }
+  READ_RBP(sigstack);
+
+  int lim = DEPTH;
+
+  while (valid_rbp_strict (framep, sigstack) && lim--) {
 
     my_intptr_t pc = framep[1] - 1;
     curr = lookup_pc (pc);
@@ -566,15 +850,17 @@ sfs_profiler_obj_t::crawl_stack (const ucontext_t &ctx, trace_obj_t *to)
     if (curr && prev) { mark_edge (curr, prev); }
     prev = curr;
 
-    framep = reinterpret_cast<const my_intptr_t *> (*framep);
+    framep = stack_step (framep);
   }
+
+
+# endif /* UCONTEXT_RBP */
+#endif /* HAVE_LIBUNWIND */
 
   if (last_good)  {
     last_good->set_as_main ();
   }
-
-
-#endif /* UCONTEXT_RBP */
+#undef DEPTH
 }
 
 //-----------------------------------------------------------------------
@@ -582,14 +868,11 @@ sfs_profiler_obj_t::crawl_stack (const ucontext_t &ctx, trace_obj_t *to)
 void 
 sfs_profiler_obj_t::timer_event (int sig, siginfo_t *si, void *uctx)
 {
-  if (_running) {
-    return;
-  }
-
-  trace_obj_t to;
-  if (sig == SIGALRM || sig == SIGVTALRM) {
-    const ucontext_t *ut = static_cast<ucontext_t *> (uctx);
-    crawl_stack (*ut, &to);
+  if (!_running) {
+    if (sig == SIGALRM || sig == SIGVTALRM) {
+      const ucontext_t *ut = static_cast<ucontext_t *> (uctx);
+      crawl_stack (*ut);
+    }
   }
   if (_enabled) {
     schedule_next_event ();
@@ -606,12 +889,111 @@ sfs_profiler_obj_t::set_real_timer (bool b)
 
 //-----------------------------------------------------------------------
 
-void sfs_profiler::enable () { g_profile_obj.enable (); }
+call_site_t *
+sfs_profiler_obj_t::alloc_site (const call_site_key_t &k)
+{
+  call_site_t *ret = NULL;
+  size_t sz = sizeof (call_site_t);
+  if (_buf && _bp + sz <= _endp) {
+    void *v = _bp;
+    ret = new (v) call_site_t (k);
+    _bp += sz;
+  }
+  return ret;
+}
+
+//-----------------------------------------------------------------------
+
+obj_file_t *
+sfs_profiler_obj_t::alloc_file (const char *f, const void *o)
+{
+  obj_file_t *ret = NULL;
+  size_t sz = sizeof (obj_file_t);
+  if (_buf && _bp + sz < _endp) {
+    void *v = _bp;
+    ret = new (v) obj_file_t (f, o);
+    _bp += sz;
+  }
+  return ret;
+}
+
+//-----------------------------------------------------------------------
+
+edge_t *
+sfs_profiler_obj_t::alloc_edge (const edge_key_t &k)
+{
+  edge_t *ret = NULL;
+  size_t sz = sizeof (edge_t);
+  if (_buf && _bp + sz < _endp) {
+    void *v = _bp;
+    ret = new (v) edge_t (k);
+    _bp += sz;
+  }
+  return ret;
+}
+
+//-----------------------------------------------------------------------
+
+bool sfs_profiler::enable () { return g_profile_obj.enable (); }
 void sfs_profiler::disable () { g_profile_obj.disable (); }
 void sfs_profiler::reset () { g_profile_obj.reset (); }
 void sfs_profiler::report () { g_profile_obj.report (); }
 void sfs_profiler::set_interval (time_t us) { g_profile_obj.set_interval (us); }
 void sfs_profiler::set_real_timer (bool b) { g_profile_obj.set_real_timer (b); }
+void sfs_profiler::recharge () { g_profile_obj.recharge (); }
+void sfs_profiler::enter_vomit_lib () { g_profile_obj.enter_vomit_lib (); }
+void sfs_profiler::exit_vomit_lib () { g_profile_obj.exit_vomit_lib (); }
+
+//-----------------------------------------------------------------------
+
+namespace sfs {
+
+  //-----------------------------------------------------------------------
+
+  void *
+  memcpy_p (void *dest, const void *src, size_t n)
+  {
+    sfs_profiler::enter_vomit_lib ();
+    void *r = ::memcpy (dest, src, n);
+    sfs_profiler::exit_vomit_lib ();
+    return r;
+  }
+
+  //-----------------------------------------------------------------------
+
+};
+
+
+#else /* SIMPLE_PROFILER */
+
+//-----------------------------------------------------------------------
+
+bool sfs_profiler::enable () { return false; }
+void sfs_profiler::disable () {}
+void sfs_profiler::reset () {}
+void sfs_profiler::report () {}
+void sfs_profiler::set_interval (time_t us) {}
+void sfs_profiler::set_real_timer (bool b) {}
+void sfs_profiler::recharge () {}
+void sfs_profiler::enter_vomit_lib () {}
+void sfs_profiler::exit_vomit_lib () {}
+
+//-----------------------------------------------------------------------
+
+namespace sfs {
+
+  //-----------------------------------------------------------------------
+
+  void *
+  memcpy_p (void *dest, const void *src, size_t n)
+  {
+    void *r = ::memcpy (dest, src, n);
+    return r;
+  }
+
+  //-----------------------------------------------------------------------
+
+};
 
 //-----------------------------------------------------------------------
 
