@@ -535,6 +535,11 @@ amain ()
   if (amain_called)
     panic ("amain called recursively\n");
   amain_called = true;
+
+  // It's cheap to initialize the profiler, just do it here even
+  // if we'll never use it.
+  sfs_profiler::init ();
+
   START_ACHECK_TIMER ();
 
   ainit ();

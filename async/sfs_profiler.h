@@ -23,6 +23,7 @@ public:
   // call these libs: vomit libs
   static void enter_vomit_lib ();
   static void exit_vomit_lib ();
+  static void init ();
 };
 
 //

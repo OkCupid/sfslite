@@ -92,13 +92,7 @@ class str {
 
   strobjptr b;
 
-  static strobj *buf2strobj (const char *buf, size_t len) {
-    strobj *b = strobj::alloc (1 + len);
-    b->len = len;
-    memcpy (b->dat (), buf, len);
-    b->dat ()[len] = '\0';
-    return b;
-  }
+  static strobj *buf2strobj (const char *buf, size_t len);
   strobj *iov2strobj (const iovec *iov, int cnt);
   explicit str (__bss_init) {}
 public:

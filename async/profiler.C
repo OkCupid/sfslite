@@ -252,6 +252,7 @@ public:
   void recharge ();
   inline void enter_vomit_lib ();
   void exit_vomit_lib ();
+  void init ();
 
   enum { RANGE_SIZE_PCT = 10,
 	 MIN_INTERVAL_US = 100,
@@ -268,7 +269,6 @@ public:
 private:
   void mark_edge (call_site_t *b, call_site_t *t);
   call_site_t * lookup_pc (my_intptr_t pc);
-  void init ();
 
   static time_t fix_interval (long in);
   void schedule_next_event ();
@@ -485,7 +485,6 @@ sfs_profiler_obj_t::exit_vomit_lib ()
 void
 sfs_profiler_obj_t::init ()
 {
-#ifdef UCONTEXT_RBP
   ENTER_PROFILER ();
   if (_init)
     return;
@@ -498,13 +497,12 @@ sfs_profiler_obj_t::init ()
     framep = stack_step (framep);
   }
   
-  if (!(_main_rbp = framep)) {
+  if (!(_main_rbp = last_good)) {
     warn ("Cannot initialize profiler: cannot find main stack!\n");
   }
 
   _init = true;
   EXIT_PROFILER ();
-#endif
 }
 
 //-----------------------------------------------------------------------
@@ -642,7 +640,6 @@ sfs_profiler_obj_t::enable ()
   if (!_enabled) {
     _enabled = true;
   }
-  init ();
   recharge ();
   schedule_next_event ();
   EXIT_PROFILER();
@@ -1007,6 +1004,7 @@ void sfs_profiler::set_real_timer (bool b) { g_profile_obj.set_real_timer (b); }
 void sfs_profiler::recharge () { g_profile_obj.recharge (); }
 void sfs_profiler::enter_vomit_lib () { g_profile_obj.enter_vomit_lib (); }
 void sfs_profiler::exit_vomit_lib () { g_profile_obj.exit_vomit_lib (); }
+void sfs_profiler::init () { g_profile_obj.init (); }
 
 //-----------------------------------------------------------------------
 
@@ -1041,6 +1039,7 @@ void sfs_profiler::set_real_timer (bool b) {}
 void sfs_profiler::recharge () {}
 void sfs_profiler::enter_vomit_lib () {}
 void sfs_profiler::exit_vomit_lib () {}
+void sfs_profiler::init () {}
 
 //-----------------------------------------------------------------------
 

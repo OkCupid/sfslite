@@ -26,6 +26,15 @@
 
 void (*const strobj_opdel) (void *) (operator delete);
 
+strobj *
+str::buf2strobj (const char *buf, size_t len) {
+  strobj *b = strobj::alloc (1 + len);
+  b->len = len;
+  sfs::memcpy_p (b->dat (), buf, len);
+  b->dat ()[len] = '\0';
+  return b;
+}
+
 void
 suio_print (suio *uio, const str &s)
 {
