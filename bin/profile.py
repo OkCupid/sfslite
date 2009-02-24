@@ -123,6 +123,17 @@ class Line:
 
 ##=======================================================================
 
+def isDoubled (v):
+    if len (v) % 2 != 0:
+        return False
+    hlen = len (v) / 2
+    for i in range (hlen):
+        if v[i] != v[i+hlen]:
+            return False
+    return True
+
+##=======================================================================
+
 class Site:
     """A callsite, consisting of a (file,intstr-pointer) pair.  Many
     of these can map to a single symbol/function name."""
@@ -139,10 +150,31 @@ class Site:
     ##----------------------------------------
 
     def lookupFunctionName (self, p):
-        p.stdin.write ("0x%x\n" % (self._addr))
-        func = p.stdout.readline ().strip ()
-        loc = p.stdout.readline ().strip ()
-        if loc == "??" or func == "??":
+
+        # Note that addr2line's interface is crap, so this function is
+        # much more complicated than it should be.  The issue is that 
+        # with the -i flag, addr2line will output the callstack for inlined
+        # functions, which is up to N frames. Unfortunately, we have no
+        # idea how many frames we're going to have to read. To work around
+        # it, we'll ask for the answer twice, and stop as soon as we have
+        # a repeated call stack. Will fail miserably for inlined 
+        # recursion, which I am assuming should not happen... Note to
+        # writers of addr2line/binutils: should preface the answer with
+        # the number of lines to read.
+
+        p.stdin.write ("0x%x\n0x%x\n" % (self._addr, self._addr))
+
+        lines = []
+        go = True
+        while go:
+            line = p.stdout.readline ().strip ()
+            lines += [ line ]
+            go = not isDoubled (lines)
+
+        func = lines[-2]
+        loc = lines[-1]
+            
+        if loc == "??:0" or func == "??":
             print "XX cannot find symbol at offset 0x%012x in %s" \
                 % (self._addr, self._file.name ())
         else:
@@ -479,7 +511,7 @@ class Graph:
 
         for f in self._sites_by_file:
 
-            cmd = [ ADDR2LINE, "-C", "-f", "-e", f.jname () ]
+            cmd = [ ADDR2LINE, "-i", "-C", "-f", "-e", f.jname () ]
             p = subprocess.Popen (cmd, 
                                   stdin = subprocess.PIPE,
                                   stdout = subprocess.PIPE,
