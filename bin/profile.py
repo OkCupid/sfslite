@@ -295,18 +295,8 @@ def edge_sort_fn (a, b):
 
 ##=======================================================================
 
-def resolveFile (f):
-    try:
-        f = os.readlink (f)
-    except OSError:
-        pass
-    return f
-
-##=======================================================================
-
 def isExe (p):
-    file = resolveFile (p)
-    cmd = [ FILE, p ]
+    cmd = [ FILE, "-L", p ]
     p = subprocess.Popen (cmd, 
                           stdin = subprocess.PIPE,
                           stdout = subprocess.PIPE,
@@ -788,7 +778,7 @@ class Props:
     ##----------------------------------------
 
     def parse (self, argv):
-        short_opts = "n:eht:j:i"
+        short_opts = "n:e:ht:j:i"
         long_opts = [ "num-nodes=",
                       "num-edges=",
                       "jail=",
