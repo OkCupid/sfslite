@@ -133,13 +133,21 @@ class Site:
         self._file = file
         self._addr = addr
         self._node = None
+        self._loc = None
+        self._funcname = None
 
     ##----------------------------------------
 
     def lookupFunctionName (self, p):
         p.stdin.write ("0x%x\n" % (self._addr))
-        self._funcname = p.stdout.readline ().strip ()
-        self._loc = p.stdout.readline ().strip ()
+        func = p.stdout.readline ().strip ()
+        loc = p.stdout.readline ().strip ()
+        if loc == "??" or func == "??":
+            print "XX cannot find symbol at offset 0x%012x in %s" \
+                % (self._addr, self._file.name ())
+        else:
+            self._funcname = func
+            self._loc = loc
 
     ##----------------------------------------
 
@@ -435,13 +443,17 @@ class Graph:
         """Map mutliple call sites to a signle Node object."""
         id = 0
         for v in self._sites.values ():
+
+            # Note that the lookup might have failed...
             funcname = v.funcname()
-            n = self._nodes.get (funcname)
-            if not n:
-                n = Node (funcname, id)
-                id += 1
-                self._nodes[funcname] = n
-            v.setNode (n)
+
+            if funcname:
+                n = self._nodes.get (funcname)
+                if not n:
+                    n = Node (funcname, id)
+                    id += 1
+                    self._nodes[funcname] = n
+                v.setNode (n)
 
     ##----------------------------------------
 
@@ -453,12 +465,13 @@ class Graph:
             hits = e[2]
             caller = self._sites[e[0]].node ()
             callee = self._sites[e[1]].node ()
-            callee.addCalleeHits (hits)
-            caller.addCallerHits (hits)
-            e = Edge (caller = caller, callee = callee, hits = hits)
-            e2 = self._edges.get (str(e))
-            if e2: e2 += e
-            else: self._edges[str(e)] = e
+            if caller and callee:
+                callee.addCalleeHits (hits)
+                caller.addCallerHits (hits)
+                e = Edge (caller = caller, callee = callee, hits = hits)
+                e2 = self._edges.get (str(e))
+                if e2: e2 += e
+                else: self._edges[str(e)] = e
             
     ##----------------------------------------
 
