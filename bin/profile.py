@@ -33,6 +33,32 @@ def emsg (s, b = None, e = None):
 
 ##=======================================================================
 
+class OutputTypes:
+
+    ##----------------------------------------
+
+    TXT = 1
+    DOT = 2
+    PNG = 3
+    PS = 4
+
+    ##----------------------------------------
+    
+    @classmethod
+    def from_str (self, x):
+        try:
+            return getattr (self, x.upper ())
+        except AttributeError, e:
+            raise ValueError, "bad type %s" % x
+
+    ##----------------------------------------
+
+    @classmethod
+    def All (self):
+        return set ([self.TXT, self.DOT, self.PNG, self.PS] )
+
+##=======================================================================
+
 class Stream:
     """A stream from an error log, with a few additional features for
     ease of parsing."""
@@ -252,12 +278,11 @@ class File:
 
     ##----------------------------------------
 
-    def __init__ (self, name, offset, main):
+    def __init__ (self, name, offset, main, jail):
         self._name = name
         self._offset = offset
         self._main = isExe (name)
-
-        
+        self._jail = jail
 
     ##----------------------------------------
 
@@ -270,6 +295,15 @@ class File:
 
     def name (self):
         return self._name
+
+    ##----------------------------------------
+
+    def jname (self):
+        if self._jail:
+            ret = self._jail + "/" + self._name
+        else:
+            ret = self._name
+        return ret
 
 ##=======================================================================
 
@@ -288,11 +322,11 @@ class Graph:
 
     ##----------------------------------------
 
-    def __init__ (self, lines, serial):
+    def __init__ (self, lines, serial, props):
 
         self._serial = serial
 
-        self.initFromStrings (lines)
+        self.initFromStrings (lines, props)
 
     ##----------------------------------------
 
@@ -300,7 +334,7 @@ class Graph:
 
     ##----------------------------------------
 
-    def initFromStrings (self, lines):
+    def initFromStrings (self, lines, props):
 
         files = {}
         sites = {}
@@ -325,7 +359,8 @@ class Graph:
                 if len(v) == 4:
                     (id, nm, off, mn) =  \
                         (int (v[0]), v[1], my_int(v[2]), bool (int(v[3])) )
-                    files[id] = File (name = nm, offset = off, main = mn)
+                    files[id] = File (name = nm, offset = off, main = mn,
+                                      jail = props.jail ())
 
             # deal with "site" or "s:", with many triples per line,
             # separate by ";" 
@@ -431,7 +466,7 @@ class Graph:
 
         for f in self._sites_by_file:
 
-            cmd = [ ADDR2LINE, "-C", "-f", "-e", f.name () ]
+            cmd = [ ADDR2LINE, "-C", "-f", "-e", f.jname () ]
             p = subprocess.Popen (cmd, 
                                   stdin = subprocess.PIPE,
                                   stdout = subprocess.PIPE,
@@ -471,11 +506,22 @@ class Graph:
     ##----------------------------------------
 
     def output (self, props):
+
+        types = props.outputTypes ()
+
         self.sort ()
-        self.outputText (props)
-        self.outputDot (props)
-        self.outputPs ()
-        self.outputPng ()
+
+        if OutputTypes.TXT in types:
+            self.outputText (props)
+
+        if OutputTypes.DOT in types:
+            self.outputDot (props)
+
+        if OutputTypes.PS in types:
+            self.outputPs ()
+
+        if OutputTypes.PNG in types:
+            self.outputPng ()
 
     ##----------------------------------------
 
@@ -598,7 +644,7 @@ class Parser:
 
     ##----------------------------------------
 
-    def parseGraph (self, serial):
+    def parseGraph (self, serial, props):
         lines = []
         go = True
         while not self.eof () and go:
@@ -614,7 +660,7 @@ class Parser:
                         lines.append (x)
         ret = None
         if len(lines):
-            ret = Graph (lines, serial)
+            ret = Graph (lines, serial, props)
         return ret 
 
     ##----------------------------------------
@@ -624,7 +670,7 @@ class Parser:
         serial = 0
 
         while not self.eof ():
-            graph = self.parseGraph (serial)
+            graph = self.parseGraph (serial, props)
             serial += 1
             if graph:
                 graph.output (props)
@@ -640,6 +686,8 @@ class Props:
         self._num_edges = 500
         self._num_nodes = 50
         self._file = None
+        self._jail = None
+        self._types = OutputTypes.All ()
 
         self.parse (argv)
 
@@ -665,33 +713,67 @@ class Props:
 
     ##----------------------------------------
 
+    def jail (self):
+        return self._jail
+
+    ##----------------------------------------
+
+    def outputTypes (self):
+        return self._types
+
+    ##----------------------------------------
+
     def parse (self, argv):
-        short_opts = "n:eh"
+        short_opts = "n:eht:j:"
         long_opts = [ "num-nodes=",
                       "num-edges=",
+                      "jail=",
+                      "type=",
                       "help" ]
+
+        types = []
         try:
             opts, args = getopt.getopt (sys.argv[1:], short_opts, long_opts)
         except getopt.GetoptError:
             self.usage ()
 
         for o, a in opts:
+
             if o in ("-n", "--num-nodes"):
                 try:
                     self._num_nodes = int (a)
                 except ValueError, e:
                     emsg ("Bad integer argument for -n supplied: %s" % a)
                     raise ProfileError, "bad argument"
+
             elif o in ("-e", "--num-edges"):
                 try:
                     self._num_edges = int (a)
                 except ValueError, e:
                     emsg ("Bad integer argument for -e supplied: %s" % a)
                     raise ProfileError, "bad argument"
+
             elif o in ("-h", "--help"):
                 self.usage (ok = True)
+
+            elif o in ("-j", "--jail"):
+                self._jail = a
+
+            elif o in ("-t", "--type"):
+                try:
+                    t = OutputTypes.from_str (a)
+                except ValueError, e:
+                    emsg ("Bad output type: %s" % a)
+                    raise ProfileError, "bad argument"
+                types.append (t)
+                if t == OutputTypes.PS or t == OutputTypes.PNG:
+                    types.append (OutputTypes.DOT)
+
             else:
-                self.usage (err = "unknown argument")
+                self.usage (err = "unknown argument: %s" % o)
+
+        if len(types) > 0:
+            self._types = set (types)
 
         if len(args) == 1:
             fn = args[0]
@@ -719,16 +801,20 @@ class Props:
 
   Options are:
 
-    --n <num>, --num-nodes=<num>
+    -n <num>, --num-nodes=<num>
          Number of nodes to show in the output (default = 50)
-    --e <num>, --num-edges=<num>
+    -e <num>, --num-edges=<num>
          Number of edges to show in the output (default = 500)
+    -j <jail>, --jail=<jail>
+         Specify a jail directory (default = /)
+    -t <type> --type=<type>
+         Output type, one or more of { 'txt', 'dot', 'png', 'eps' }
 """ % self._cmd.split ('/')[-1]
 
         if ok:
             sys.exit (0)
 
-        raise ProfilerError, err
+        raise ProfileError, err
 
     ##----------------------------------------
 
