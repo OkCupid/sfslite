@@ -149,7 +149,9 @@ class Site:
 
     ##----------------------------------------
 
-    def lookupFunctionName (self, p):
+    def lookupFunctionName (self, p, inln):
+
+        lines = []
 
         # Note that addr2line's interface is crap, so this function is
         # much more complicated than it should be.  The issue is that 
@@ -162,15 +164,20 @@ class Site:
         # writers of addr2line/binutils: should preface the answer with
         # the number of lines to read.
 
-        p.stdin.write ("0x%x\n0x%x\n" % (self._addr, self._addr))
+        if inln:
+            p.stdin.write ("0x%x\n0x%x\n" % (self._addr, self._addr))
 
-        lines = []
-        go = True
-        while go:
-            line = p.stdout.readline ().strip ()
-            lines += [ line ]
-            go = not isDoubled (lines)
-
+            go = True
+            while go:
+                line = p.stdout.readline ().strip ()
+                lines += [ line ]
+                go = not isDoubled (lines)
+        else:
+            p.stdin.write ("0x%x\n" % self._addr)
+            for i in range (2):
+                line = p.stdout.readline ().strip ()
+                lines += [ line ]
+                
         func = lines[-2]
         loc = lines[-1]
             
@@ -321,8 +328,8 @@ class File:
     def __init__ (self, name, offset, main, jail):
         self._name = name
         self._offset = offset
-        self._main = isExe (name)
         self._jail = jail
+        self._main = isExe (self.jname ())
 
     ##----------------------------------------
 
@@ -425,7 +432,7 @@ class Graph:
         self._nodes = {}
 
         self.initSites (sites, files)
-        self.lookupFunctionNames ()
+        self.lookupFunctionNames (props)
         self.initNodes ();
         self.initEdges (edges)
 
@@ -507,11 +514,17 @@ class Graph:
             
     ##----------------------------------------
 
-    def lookupFunctionNames (self):
+    def lookupFunctionNames (self, props):
+
+        inln = props.inlining ()
 
         for f in self._sites_by_file:
 
-            cmd = [ ADDR2LINE, "-i", "-C", "-f", "-e", f.jname () ]
+            cmd = [ ADDR2LINE ]
+            if inln:
+                cmd +=  [ "-i" ]
+            cmd += [ "-C", "-f", "-e", f.jname () ]
+
             p = subprocess.Popen (cmd, 
                                   stdin = subprocess.PIPE,
                                   stdout = subprocess.PIPE,
@@ -520,7 +533,7 @@ class Graph:
             v = self._sites_by_file[f]
 
             for site in v:
-                site.lookupFunctionName (p)
+                site.lookupFunctionName (p, inln)
 
     ##----------------------------------------
 
@@ -733,6 +746,7 @@ class Props:
         self._file = None
         self._jail = None
         self._types = OutputTypes.All ()
+        self._inlining = False
 
         self.parse (argv)
 
@@ -740,6 +754,11 @@ class Props:
 
     def numNodes (self):
         return self._num_nodes
+
+    ##----------------------------------------
+
+    def inlining (self):
+        return self._inlining
 
     ##----------------------------------------
 
@@ -769,12 +788,13 @@ class Props:
     ##----------------------------------------
 
     def parse (self, argv):
-        short_opts = "n:eht:j:"
+        short_opts = "n:eht:j:i"
         long_opts = [ "num-nodes=",
                       "num-edges=",
                       "jail=",
                       "type=",
-                      "help" ]
+                      "help",
+                      "inlining" ]
 
         types = []
         try:
@@ -783,6 +803,9 @@ class Props:
             self.usage ()
 
         for o, a in opts:
+
+            if o in ("-i", "--inlining"):
+                self._inlining = True
 
             if o in ("-n", "--num-nodes"):
                 try:
@@ -846,6 +869,8 @@ class Props:
 
   Options are:
 
+    -i, --inlining
+         Try to de-inline (if addr2line supports -i)
     -n <num>, --num-nodes=<num>
          Number of nodes to show in the output (default = 50)
     -e <num>, --num-edges=<num>
