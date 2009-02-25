@@ -501,18 +501,24 @@ framep2pc (const my_intptr_t *framep)
 
 //-----------------------------------------------------------------------
 
+// Should be called from main or amain
 void
 sfs_profiler_obj_t::init ()
 {
   ENTER_PROFILER ();
   if (!_init) {
   
-    const my_intptr_t *framep = goto_frame (1);
+    const my_intptr_t *framep;
+    READ_RBP(framep);
     
     if (!(_main_rbp = framep)) {
       warn ("Cannot initialize profiler: cannot find main stack!\n");
+    } else  {
+      warn ("%s: initialized (base=%p)\n", PRFX1, _main_rbp);
     }
     _init = true;
+
+    recharge ();
   }
   EXIT_PROFILER ();
 }
@@ -537,8 +543,7 @@ void
 sfs_profiler_obj_t::recharge ()
 {
   ENTER_PROFILER();
-  if (_enabled) {
-    init ();
+  if (_enabled && _init) {
     buffer_recharge ();
     _sites.recharge ();
     _edges.recharge ();
@@ -942,7 +947,7 @@ sfs_profiler_obj_t::crawl_stack (const ucontext_t &ctx)
 void 
 sfs_profiler_obj_t::timer_event (int sig, siginfo_t *si, void *uctx)
 {
-  if (!_running) {
+  if (!_running && _init) {
     if (sig == SIGALRM || sig == SIGVTALRM) {
       const ucontext_t *ut = static_cast<ucontext_t *> (uctx);
       crawl_stack (*ut);
