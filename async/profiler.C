@@ -251,11 +251,11 @@ public:
   void recharge ();
   inline void enter_vomit_lib ();
   void exit_vomit_lib ();
-  void init ();
+  inline void init ();
 
   enum { RANGE_SIZE_PCT   = 10,
 	 MIN_INTERVAL_US  = 100,
-	 DFLT_INTERVAL_US = 10000,
+	 DFLT_INTERVAL_US = 1000,
 	 MAX_INTERVAL_US  = 750000 };
 
   edge_t *alloc_edge (const edge_key_t &k);
@@ -280,7 +280,6 @@ private:
   bool valid_rbp (const my_intptr_t *i) const;
   bool valid_rbp_strict (const my_intptr_t *i, const my_intptr_t *s) const;
   const my_intptr_t *stack_step (const my_intptr_t *i) const;
-  const my_intptr_t *goto_frame (size_t s) const;
 
   time_t _interval_us;
   bool _enabled;
@@ -461,26 +460,21 @@ sfs_profiler_obj_t::stack_step (const my_intptr_t *r) const
 
 //-----------------------------------------------------------------------
 
-const my_intptr_t *
-sfs_profiler_obj_t::goto_frame (size_t steps) const
-{
-  const my_intptr_t *ret = NULL;
-  READ_RBP(ret);
-
-  // Go one step down
-  for (size_t i = 0; valid_rbp (ret) && i < steps; i++) {
-    ret = stack_step (ret);
-  }
-
-  return ret;
-}
+#define GOTO_FRAME(ret,steps)					\
+  do {								\
+    READ_RBP(ret);						\
+    for (size_t i = 0; valid_rbp (ret) && i < steps; i++) {	\
+      ret = stack_step (ret);					\
+    }								\
+  } while (0)
 
 //-----------------------------------------------------------------------
 
 void
 sfs_profiler_obj_t::enter_vomit_lib ()
 {
-  _vomit_rbp = goto_frame (1);
+  _vomit_rbp = NULL;
+  GOTO_FRAME(_vomit_rbp, 1);
 }
 
 //-----------------------------------------------------------------------
@@ -509,12 +503,12 @@ sfs_profiler_obj_t::init ()
   if (!_init) {
   
     const my_intptr_t *framep;
-    READ_RBP(framep);
+    GOTO_FRAME(framep, 1);
     
     if (!(_main_rbp = framep)) {
       warn ("Cannot initialize profiler: cannot find main stack!\n");
     } else  {
-      warn ("%s: initialized (base=%p)\n", PRFX1, _main_rbp);
+      warn ("%sinitialized (base=%p)\n", PRFX1, _main_rbp);
     }
     _init = true;
 
@@ -921,7 +915,6 @@ sfs_profiler_obj_t::crawl_stack (const ucontext_t &ctx)
   int lim = DEPTH;
 
   while (valid_rbp_strict (framep, sigstack) && lim--) {
-
     
     my_intptr_t pc = framep2pc (framep);
     curr = lookup_pc (pc);
@@ -931,7 +924,6 @@ sfs_profiler_obj_t::crawl_stack (const ucontext_t &ctx)
 
     framep = stack_step (framep);
   }
-
 
 # endif /* UCONTEXT_RBP */
 #endif /* HAVE_LIBUNWIND */
