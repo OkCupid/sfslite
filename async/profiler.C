@@ -29,7 +29,6 @@ enum { COLS_PER_LINE = 8 };
 
 //-----------------------------------------------------------------------
 
-
 typedef u_long my_intptr_t;
 
 //-----------------------------------------------------------------------
@@ -486,22 +485,21 @@ void
 sfs_profiler_obj_t::init ()
 {
   ENTER_PROFILER ();
-  if (_init)
-    return;
+  if (!_init) {
   
-  const my_intptr_t *last_good = NULL, *framep = NULL;
-
-  READ_RBP(framep);
-  while (valid_rbp (framep)) {
-    last_good = framep;
-    framep = stack_step (framep);
+    const my_intptr_t *last_good = NULL, *framep = NULL;
+    
+    READ_RBP(framep);
+    while (valid_rbp (framep)) {
+      last_good = framep;
+      framep = stack_step (framep);
+    }
+    
+    if (!(_main_rbp = last_good)) {
+      warn ("Cannot initialize profiler: cannot find main stack!\n");
+    }
+    _init = true;
   }
-  
-  if (!(_main_rbp = last_good)) {
-    warn ("Cannot initialize profiler: cannot find main stack!\n");
-  }
-
-  _init = true;
   EXIT_PROFILER ();
 }
 
@@ -524,14 +522,14 @@ sfs_profiler_obj_t::buffer_recharge ()
 void
 sfs_profiler_obj_t::recharge ()
 {
+  ENTER_PROFILER();
   if (_enabled) {
-    ENTER_PROFILER();
     init ();
     buffer_recharge ();
     _sites.recharge ();
     _edges.recharge ();
-    EXIT_PROFILER();
   }
+  EXIT_PROFILER();
 }
 
 
