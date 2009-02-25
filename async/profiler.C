@@ -507,8 +507,6 @@ sfs_profiler_obj_t::init ()
     
     if (!(_main_rbp = framep)) {
       warn ("Cannot initialize profiler: cannot find main stack!\n");
-    } else  {
-      warn ("%sinitialized (base=%p)\n", PRFX1, _main_rbp);
     }
     _init = true;
 
@@ -920,6 +918,7 @@ sfs_profiler_obj_t::crawl_stack (const ucontext_t &ctx)
     curr = lookup_pc (pc);
     if (curr) last_good = curr;
     if (curr && prev) { mark_edge (curr, prev); }
+    else if (curr) { mark_edge (curr, curr); }
     prev = curr;
 
     framep = stack_step (framep);
