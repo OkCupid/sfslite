@@ -253,10 +253,10 @@ public:
   void exit_vomit_lib ();
   void init ();
 
-  enum { RANGE_SIZE_PCT = 10,
-	 MIN_INTERVAL_US = 100,
-	 DFLT_INTERVAL_US = 1000,
-	 MAX_INTERVAL_US = 750000 };
+  enum { RANGE_SIZE_PCT   = 10,
+	 MIN_INTERVAL_US  = 100,
+	 DFLT_INTERVAL_US = 10000,
+	 MAX_INTERVAL_US  = 750000 };
 
   edge_t *alloc_edge (const edge_key_t &k);
   obj_file_t *alloc_file (const char *file, const void *base);
@@ -280,6 +280,7 @@ private:
   bool valid_rbp (const my_intptr_t *i) const;
   bool valid_rbp_strict (const my_intptr_t *i, const my_intptr_t *s) const;
   const my_intptr_t *stack_step (const my_intptr_t *i) const;
+  const my_intptr_t *goto_frame (size_t s) const;
 
   time_t _interval_us;
   bool _enabled;
@@ -460,15 +461,26 @@ sfs_profiler_obj_t::stack_step (const my_intptr_t *r) const
 
 //-----------------------------------------------------------------------
 
+const my_intptr_t *
+sfs_profiler_obj_t::goto_frame (size_t steps) const
+{
+  const my_intptr_t *ret = NULL;
+  READ_RBP(ret);
+
+  // Go one step down
+  for (size_t i = 0; valid_rbp (ret) && i < steps; i++) {
+    ret = stack_step (ret);
+  }
+
+  return ret;
+}
+
+//-----------------------------------------------------------------------
+
 void
 sfs_profiler_obj_t::enter_vomit_lib ()
 {
-  READ_RBP(_vomit_rbp);
-
-  // Go one step down
-  if (valid_rbp (_vomit_rbp)) {
-    _vomit_rbp = stack_step (_vomit_rbp);
-  }
+  _vomit_rbp = goto_frame (1);
 }
 
 //-----------------------------------------------------------------------
@@ -481,21 +493,23 @@ sfs_profiler_obj_t::exit_vomit_lib ()
 
 //-----------------------------------------------------------------------
 
+static my_intptr_t 
+framep2pc (const my_intptr_t *framep)
+{
+  return framep[1] - 1;
+}
+
+//-----------------------------------------------------------------------
+
 void
 sfs_profiler_obj_t::init ()
 {
   ENTER_PROFILER ();
   if (!_init) {
   
-    const my_intptr_t *last_good = NULL, *framep = NULL;
+    const my_intptr_t *framep = goto_frame (1);
     
-    READ_RBP(framep);
-    while (valid_rbp (framep)) {
-      last_good = framep;
-      framep = stack_step (framep);
-    }
-    
-    if (!(_main_rbp = last_good)) {
+    if (!(_main_rbp = framep)) {
       warn ("Cannot initialize profiler: cannot find main stack!\n");
     }
     _init = true;
@@ -861,7 +875,7 @@ get_one_frame (struct _Unwind_Context *uc, void *opq)
     return _URC_END_OF_STACK;
   return 0;
 }
-#endif /* HAVE_LIBUNWIND */
+#endif /* HAVE_LIBUNWIND */ 
 
 //-----------------------------------------------------------------------
 
@@ -903,7 +917,8 @@ sfs_profiler_obj_t::crawl_stack (const ucontext_t &ctx)
 
   while (valid_rbp_strict (framep, sigstack) && lim--) {
 
-    my_intptr_t pc = framep[1] - 1;
+    
+    my_intptr_t pc = framep2pc (framep);
     curr = lookup_pc (pc);
     if (curr) last_good = curr;
     if (curr && prev) { mark_edge (curr, prev); }
