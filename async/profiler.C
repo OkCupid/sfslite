@@ -255,7 +255,7 @@ public:
 
   enum { RANGE_SIZE_PCT   = 10,
 	 MIN_INTERVAL_US  = 100,
-	 DFLT_INTERVAL_US = 1000,
+	 DFLT_INTERVAL_US = 5000,
 	 MAX_INTERVAL_US  = 750000 };
 
   edge_t *alloc_edge (const edge_key_t &k);
@@ -876,6 +876,9 @@ get_one_frame (struct _Unwind_Context *uc, void *opq)
 
 //-----------------------------------------------------------------------
 
+
+//-----------------------------------------------------------------------
+
 void
 sfs_profiler_obj_t::crawl_stack (const ucontext_t &ctx)
 {
@@ -913,7 +916,7 @@ sfs_profiler_obj_t::crawl_stack (const ucontext_t &ctx)
   int lim = DEPTH;
 
   while (valid_rbp_strict (framep, sigstack) && lim--) {
-    
+
     my_intptr_t pc = framep2pc (framep);
     curr = lookup_pc (pc);
     if (curr) last_good = curr;
