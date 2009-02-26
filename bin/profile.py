@@ -360,18 +360,17 @@ def split_to_ints (l):
 
 ##=======================================================================
 
-LINE_LEN = 30
-
-csym_split_rxx = re.compile ("^(.{,%d}[<,:])(.*)$" % LINE_LEN)
-
 def csym_split (s):
+    LINE_LEN = 30
+    rxx = re.compile ("^(.*?([<,]|::))(.*)$")
     out = []
     go = True
     while go and len (s) > LINE_LEN:
-        m = csym_split_rxx.match (s)
+        prfx = s[0:LINE_LEN]
+        m = rxx.match (s[LINE_LEN:])
         if m:
-            s = m.group (2)
-            out += [ m.group (1) ]
+            out += [ prfx + m.group (1) ]
+            s = m.group (3)
         else:
             go = False
     out += [ s ]
@@ -486,8 +485,10 @@ class Graph:
 
     ##----------------------------------------
 
-    def penWidth (self, i):
-        x = max (1, float (i) * 8 / float (self._total_samples))
+    def penWidth (self, i, d):
+        if d is None:
+            d = self._total_samples
+        x = max (1, float (i) * 8 / float (d)
         return x
 
     ##----------------------------------------
@@ -629,11 +630,11 @@ class Graph:
                 (csym_split (n.name ()), self.pct (h), self.pct (hs))
 
             params = [ ( 'label' , label ),
-                       ( 'fillcolor', self.color (hs, mhs)), 
-                       ( 'penwidth', self.penWidth (h)),
+                       ( 'fillcolor', self.color (hs)),
+                       ( 'penwidth', self.penWidth (hs, mhs)),
                        ( 'shape', 'ellipse' ),
                        ( 'style', 'filled' ),
-                       ( 'fontsize', "16") ]
+                       ( 'fontsize', str (props.fontSize ())) ]
 
             s += "[" + ', '.join (['%s="%s"' % p for p in params ]) + "];"
 
@@ -778,6 +779,7 @@ class Props:
         self._jail = None
         self._types = OutputTypes.All ()
         self._inlining = False
+        self._font_size = 20
 
         self.parse (argv)
 
@@ -785,6 +787,11 @@ class Props:
 
     def numNodes (self):
         return self._num_nodes
+
+    ##----------------------------------------
+
+    def fontSize (self):
+        return self._font_size
 
     ##----------------------------------------
 
@@ -819,13 +826,14 @@ class Props:
     ##----------------------------------------
 
     def parse (self, argv):
-        short_opts = "n:e:ht:j:i"
+        short_opts = "n:e:ht:j:is:"
         long_opts = [ "num-nodes=",
                       "num-edges=",
                       "jail=",
                       "type=",
                       "help",
-                      "inlining" ]
+                      "inlining",
+                      "font-size=" ]
 
         types = []
         try:
@@ -834,6 +842,13 @@ class Props:
             self.usage ()
 
         for o, a in opts:
+
+            if o in ("-s", "--font-size"):
+                try:
+                    self._font_size = int (a)
+                except ValueError, e:
+                    emsg ("Bad integer argument for -s supplied: %s" % a)
+                    raise ProfileError, "bad argument"
 
             if o in ("-i", "--inlining"):
                 self._inlining = True
