@@ -378,6 +378,12 @@ def csym_split (s):
 
 ##=======================================================================
 
+def toDotParams (lst):
+    ret = "[" + ', '.join (['%s="%s"' % p for p in lst ]) + "]"
+    return ret
+
+##=======================================================================
+
 class Graph:
     """A graph of an (SSP) run."""
 
@@ -592,22 +598,18 @@ class Graph:
 
         self.sort ()
 
-        if OutputTypes.TXT in types:
-            self.outputText (props)
+        tab = [ ( OutputTypes.TXT, self.outputText),
+                ( OutputTypes.DOT, self.outputDot),
+                ( OutputTypes.PS,  self.outputPs),
+                ( OutputTypes.PNG, self.outputPng) ]
 
-        if OutputTypes.DOT in types:
-            self.outputDot (props)
-
-        if OutputTypes.PS in types:
-            self.outputPs ()
-
-        if OutputTypes.PNG in types:
-            self.outputPng ()
+        for p in tab: 
+            if p[0] in types: p[1](props)
 
     ##----------------------------------------
 
     def outputDot (self, props):
-        fn = "%s.dot" % self.fileStem ()
+        fn = "%s.dot" % self.fileStem (props)
         self._dotfile = fn
         f = open (fn, "w")
 
@@ -624,8 +626,6 @@ class Graph:
             hs = n.hitsSelf ()
             h = n.hits ()
 
-            s = '\t "%d" ' % (n.id ()) 
-
             label = "%s\\n%s\\n%s" % \
                 (csym_split (n.name ()), self.pct (h), self.pct (hs))
 
@@ -636,7 +636,7 @@ class Graph:
                        ( 'style', 'filled' ),
                        ( 'fontsize', str (props.fontSize ())) ]
 
-            s += "[" + ', '.join (['%s="%s"' % p for p in params ]) + "];"
+            s = '\t "%d" %s;' % (n.id (), toDotParams (params))
 
             print >>f, s
 
@@ -648,13 +648,17 @@ class Graph:
             ee = e.callee ().id ()
 
             if er in node_set and ee in node_set:
-                s = """\t "%d" -> "%d" [ label="%s" ] ;""" % \
-                    (er, ee, self.pct (e.hits ()))
+
+                params = [ ('label', self.pct (e.hits ())), 
+                           ('fontsize', str (props.fontSize ())) ]
+
+                s = '\t "%d" -> "%d" %s ;' %  (er, ee, toDotParams (params))
+
                 print >>f, s
                 n += 1
 
-            if n > props.numEdges ():
-                break
+                if n > props.numEdges ():
+                    break
 
         print >>f, """\tlabel = "\\n%s";""" % \
             '\\n'.join (self.headerText (props))
@@ -663,22 +667,22 @@ class Graph:
 
     ##----------------------------------------
 
-    def outputPs (self):
-        fn = "%s.ps" % self.fileStem ()
+    def outputPs (self, props):
+        fn = "%s.ps" % self.fileStem (props)
         cmd = [ DOT , "-Tps", "-o", fn, self._dotfile ]
         rc = subprocess.call (cmd)
 
     ##----------------------------------------
 
-    def outputPng (self):
-        fn = "%s.png" % self.fileStem ()
+    def outputPng (self, props):
+        fn = "%s.png" % self.fileStem (props)
         cmd = [ DOT , "-Tpng", "-o", fn, self._dotfile ]
         rc = subprocess.call (cmd)
 
     ##----------------------------------------
 
-    def fileStem (self):
-        return "ssp-%d" % self._serial
+    def fileStem (self, props):
+        return "%s-%d" % (props.stem (), self._serial)
 
     ##----------------------------------------
 
@@ -692,7 +696,7 @@ class Graph:
     ##----------------------------------------
 
     def outputText (self, props):
-        fn = "%s.txt" % self.fileStem ()
+        fn = "%s.txt" % self.fileStem (props)
         f = open (fn, "w")
 
         print >>f, '\n'.join (self.headerText (props))
@@ -780,6 +784,7 @@ class Props:
         self._types = OutputTypes.All ()
         self._inlining = False
         self._font_size = 20
+        self._stem = "ssp"
 
         self.parse (argv)
 
@@ -787,6 +792,11 @@ class Props:
 
     def numNodes (self):
         return self._num_nodes
+
+    ##----------------------------------------
+    
+    def stem (self):
+        return self._stem
 
     ##----------------------------------------
 
@@ -826,14 +836,15 @@ class Props:
     ##----------------------------------------
 
     def parse (self, argv):
-        short_opts = "n:e:ht:j:is:"
+        short_opts = "n:e:ht:j:if:s:"
         long_opts = [ "num-nodes=",
                       "num-edges=",
                       "jail=",
                       "type=",
                       "help",
                       "inlining",
-                      "font-size=" ]
+                      "font-size=",
+                      "stem=" ]
 
         types = []
         try:
@@ -843,17 +854,20 @@ class Props:
 
         for o, a in opts:
 
-            if o in ("-s", "--font-size"):
+            if o in ("-s", "--stem"):
+                self._stem = a
+
+            elif o in ("-f", "--font-size"):
                 try:
                     self._font_size = int (a)
                 except ValueError, e:
                     emsg ("Bad integer argument for -s supplied: %s" % a)
                     raise ProfileError, "bad argument"
 
-            if o in ("-i", "--inlining"):
+            elif o in ("-i", "--inlining"):
                 self._inlining = True
 
-            if o in ("-n", "--num-nodes"):
+            elif o in ("-n", "--num-nodes"):
                 try:
                     self._num_nodes = int (a)
                 except ValueError, e:
@@ -914,7 +928,10 @@ class Props:
   or from a file if given.
 
   Options are:
-
+    -s <str>, --stem=<str>
+         The stem to use ('ssp' by default)
+    -f <int>, --font-size=<int>
+         Font size of all text in the graph
     -i, --inlining
          Try to de-inline (if addr2line supports -i)
     -n <num>, --num-nodes=<num>
