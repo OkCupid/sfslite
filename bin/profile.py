@@ -215,6 +215,7 @@ class Node:
         self._caller_hits = 0
         self._callee_hits = 0
         self._id = id
+        self._callees = {}
 
     ##----------------------------------------
 
@@ -222,6 +223,11 @@ class Node:
     def addCalleeHits (self, h): self._callee_hits += h
     def addCallerHits (self, h): self._caller_hits += h
     def id (self): return self._id
+
+    ##----------------------------------------
+
+    def hitsSelf (self):
+        return max (0, self._callee_hits - self._caller_hits)
 
     ##----------------------------------------
 
@@ -354,13 +360,31 @@ def split_to_ints (l):
 
 ##=======================================================================
 
+LINE_LEN = 30
+
+csym_split_rxx = re.compile ("^(.{,%d}[<,:])(.*)$" % LINE_LEN)
+
+def csym_split (s):
+    out = []
+    go = True
+    while go and len (s) > LINE_LEN:
+        m = csym_split_rxx.match (s)
+        if m:
+            s = m.group (2)
+            out += [ m.group (1) ]
+        else:
+            go = False
+    out += [ s ]
+    return '\\n '.join (out)
+
+##=======================================================================
+
 class Graph:
     """A graph of an (SSP) run."""
 
     ##----------------------------------------
 
     def __init__ (self, lines, serial, props):
-
         self._serial = serial
 
         self.initFromStrings (lines, props)
@@ -462,8 +486,16 @@ class Graph:
 
     ##----------------------------------------
 
-    def color (self, i):
-        r = 255 - i * 150 / self._total_samples
+    def penWidth (self, i):
+        x = max (1, float (i) * 8 / float (self._total_samples))
+        return x
+
+    ##----------------------------------------
+
+    def color (self, i, d = None):
+        if d is None:
+            d = self._total_samples
+        r = 255 - i * 200 / d
         return "#ff%2x%2x" % (r,r)
 
     ##----------------------------------------
@@ -583,16 +615,25 @@ class Graph:
 
         print >>f, "digraph ssp_profile_%d {" % self._serial
 
+        mhs = 0
         for n in nodes:
+            mhs = max (mhs, n.hitsSelf ())
+
+        for n in nodes:
+            hs = n.hitsSelf ()
+            h = n.hits ()
+
             s = '\t "%d" ' % (n.id ()) 
 
-            label = "%s\\n%s" % (n.name (), self.pct (n.hits ()))
+            label = "%s\\n%s\\n%s" % \
+                (csym_split (n.name ()), self.pct (h), self.pct (hs))
+
             params = [ ( 'label' , label ),
-                       ( 'fillcolor', self.color (n.hits ()) ),
+                       ( 'fillcolor', self.color (hs, mhs)), 
+                       ( 'penwidth', self.penWidth (h)),
                        ( 'shape', 'ellipse' ),
                        ( 'style', 'filled' ),
-                       ( 'fontsize', "%2.4f" %
-                         self.nodeSize (n.hits ()) ) ]
+                       ( 'fontsize', "16") ]
 
             s += "[" + ', '.join (['%s="%s"' % p for p in params ]) + "];"
 
