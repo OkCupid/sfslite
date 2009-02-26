@@ -488,7 +488,7 @@ class Graph:
     def penWidth (self, i, d):
         if d is None:
             d = self._total_samples
-        x = max (1, float (i) * 8 / float (d)
+        x = max (1, float (i) * 8 / float (d))
         return x
 
     ##----------------------------------------
