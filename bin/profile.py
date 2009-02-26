@@ -361,7 +361,7 @@ def split_to_ints (l):
 ##=======================================================================
 
 def csym_split (s):
-    LINE_LEN = 30
+    LINE_LEN = 60
     rxx = re.compile ("^(.*?([<,]|::))(.*)$")
     out = []
     go = True
@@ -630,7 +630,7 @@ class Graph:
                 (csym_split (n.name ()), self.pct (h), self.pct (hs))
 
             params = [ ( 'label' , label ),
-                       ( 'fillcolor', self.color (hs)),
+                       ( 'fillcolor', self.color (h)),
                        ( 'penwidth', self.penWidth (hs, mhs)),
                        ( 'shape', 'ellipse' ),
                        ( 'style', 'filled' ),
