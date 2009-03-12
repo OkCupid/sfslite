@@ -2072,15 +2072,15 @@ dnl
 dnl  check MMAP options 
 dnl
 AC_DEFUN([SFS_MMAP],
-[AC_CACHE_CHECK(for MAP_NOSYNC option, sfs_map_nosync_opt,
+[AC_CACHE_CHECK(for MAP_NOSYNC option, ac_cv_sfs_map_nosync_opt,
 [AC_TRY_COMPILE([
 #include <sys/types.h>
 #include <sys/mman.h>
 ], [
 int i = MAP_NOSYNC;
-], sfs_map_nosync_opt=yes, sfs_map_nosync_opt=no)
+], ac_cv_sfs_map_nosync_opt=yes, ac_cv_sfs_map_nosync_opt=no)
 ])
-if test "$sfs_map_nosync_opt" = yes; then
+if test "$ac_cv_sfs_map_nosync_opt" = yes; then
 	AC_DEFINE(HAVE_MAP_NOSYNC, 1,
 	     Define if the MAP_NOSYNC option for mmap is available)
 fi
