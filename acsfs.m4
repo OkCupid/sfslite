@@ -2110,13 +2110,17 @@ then
    diff $TMP1 $TMP2 > /dev/null 2>&1
    if test $? -eq 0 
    then
-	INSTALL=$INSTALL_C
-	AC_SUBST(INSTALL)
+	ac_cv_path_install_c=$INSTALL_C
+   else
+	ac_cv_path_install_c=no
    fi
    rm -f $TMP1 $TMP2 > /dev/null 2>&1
 fi
-ac_cv_path_install_c=$INSTALL
 ])
+if test "$ac_cv_path_install_c" != "no"  ; then
+	INSTALL=$ac_cv_path_install_c
+	AC_SUBST(INSTALL)
+fi
 ])
 
 dnl
