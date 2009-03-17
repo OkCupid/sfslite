@@ -2116,7 +2116,7 @@ then
    fi
    rm -f $TMP1 $TMP2 > /dev/null 2>&1
 else
-   a_cv_path_install_c=no
+   ac_cv_path_install_c=no
 fi
 ])
 if test "$ac_cv_path_install_c" != "no"  ; then
