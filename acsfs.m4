@@ -2115,8 +2115,10 @@ then
 	ac_cv_path_install_c=no
    fi
    rm -f $TMP1 $TMP2 > /dev/null 2>&1
+else
+   a_cv_path_install_c=no
 fi
-], ac_cv_path_install_c=yes, ac_cv_path_install_c=no)
+])
 if test "$ac_cv_path_install_c" != "no"  ; then
 	INSTALL=$ac_cv_path_install_c
 	AC_SUBST(INSTALL)
