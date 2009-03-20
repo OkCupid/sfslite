@@ -240,7 +240,7 @@ class Node:
     ##----------------------------------------
 
     def dump (self, f):
-        print >>f, " %s %s" % (self._name, self.hits ())
+        print >>f, " %s %s %s" % (self._name, self.hits (), self.hitsSelf ())
         
 
 ##=======================================================================
