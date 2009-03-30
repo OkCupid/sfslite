@@ -7,74 +7,128 @@
 
 namespace tame {
 
-pipeliner_t::pipeliner_t (size_t w) : 
- _wsz (w), _rv (__FILE__, __LINE__), _cancelled (false)
-{ assert (_wsz > 0); }
+  //-----------------------------------------------------------------------
+
+  pipeliner_t::pipeliner_t (size_t w) : 
+    _wsz (w), _rv (__FILE__, __LINE__), _cancelled (false)
+  { assert (_wsz > 0); }
   
-tamed void
-pipeliner_t::wait_n (size_t n, evv_t done)
-{
-  while (_rv.n_triggers_left () > n) {
-    twait (_rv);
+  //-----------------------------------------------------------------------
+
+  tamed void
+  pipeliner_t::wait_n (size_t n, evv_t done)
+  {
+    while (_rv.n_triggers_left () > n) {
+      twait (_rv);
+    }
+    done->trigger ();
   }
-  done->trigger ();
-}
+  
+  //-----------------------------------------------------------------------
 
-tamed void
-pipeliner_t::launch (size_t i, evv_t done)
-{
-  twait { wait_n (_wsz - 1, mkevent () ); }
-  pipeline_op (i, mkevent (_rv) );
-  done->trigger ();
-}
-
-tamed void
-pipeliner_t::run (evv_t done)
-{
-  tvars {
-    size_t i;
+  tamed void
+  pipeliner_t::launch (size_t i, evv_t done)
+  {
+    twait { wait_n (_wsz - 1, mkevent () ); }
+    pipeline_op (i, mkevent (_rv) );
+    done->trigger ();
   }
-  for (i = 0; keep_going (i) && !_cancelled; i++) {
-    twait { launch (i, mkevent () ); }
+  
+  //-----------------------------------------------------------------------
+
+  tamed void
+  pipeliner_t::run (evv_t done)
+  {
+    tvars {
+      size_t i;
+    }
+    for (i = 0; keep_going (i) && !_cancelled; i++) {
+      twait { launch (i, mkevent () ); }
+    }
+    twait { wait_n (0, mkevent () ); }
+    done->trigger ();
   }
-  twait { wait_n (0, mkevent () ); }
-  done->trigger ();
-}
+  
+  //-----------------------------------------------------------------------
 
-class pipeliner_cb_t : public pipeliner_t {
-public:
-  pipeliner_cb_t (size_t w, size_t n, pipeline_op_t o)
-    : pipeliner_t (w), _n_calls (n), _op (o) {}
+  class pipeliner_cb_t : public pipeliner_t {
+  public:
+    pipeliner_cb_t (size_t w, size_t n, pipeline_op_t o)
+      : pipeliner_t (w), _n_calls (n), _op (o) {}
+    
+  protected:
+    void pipeline_op (size_t i, evv_t cb, CLOSURE);
+    bool keep_going (size_t i) const { return i < _n_calls; }
+    
+  private:
+    size_t _n_calls;
+    pipeline_op_t _op;
+    
+  };
+  
+  //-----------------------------------------------------------------------
 
-protected:
-  void pipeline_op (size_t i, evv_t cb, CLOSURE);
-  bool keep_going (size_t i) const { return i < _n_calls; }
-
-private:
-  size_t _n_calls;
-  pipeline_op_t _op;
-
-};
-
-tamed void
-pipeliner_cb_t::pipeline_op (size_t i, evv_t cb)
-{
-  tvars {
-    bool ok;
+  tamed void
+  pipeliner_cb_t::pipeline_op (size_t i, evv_t cb)
+  {
+    tvars {
+      bool ok;
+    }
+    twait { (*_op) (i, mkevent (ok), NULL); }
+    if (!ok) cancel ();
+    cb->trigger ();
   }
-  twait { (*_op) (i, mkevent (ok), NULL); }
-  if (!ok) cancel ();
-  cb->trigger ();
-}
+  
+  //-----------------------------------------------------------------------
 
-tamed void
-do_pipeline (size_t w, size_t n, pipeline_op_t op, evv_t done)
-{
-  tvars {
-    pipeliner_cb_t ppl (w, n, op);
+  tamed void
+  do_pipeline (size_t w, size_t n, pipeline_op_t op, evv_t done)
+  {
+    tvars {
+      pipeliner_cb_t ppl (w, n, op);
+    }
+    twait { ppl.run (mkevent ()); }
+    done->trigger ();
   }
-  twait { ppl.run (mkevent ()); }
-  done->trigger ();
-}
+  
+  //-----------------------------------------------------------------------
 
+  tamed void
+  pipeliner2_t::wait (evv_t ev, size_t ws)
+  {
+    while (_n_sent - _n_recv >= ws) {
+      twait (_rv);
+      _n_recv ++;
+    }
+    ev->trigger ();
+  }
+  
+  //-----------------------------------------------------------------------
+
+  void
+  pipeliner2_t::wait (evv_t ev)
+  {
+    wait (ev, _wsz);
+  }
+  
+  //-----------------------------------------------------------------------
+
+  void
+  pipeliner2_t::flush (evv_t ev)
+  {
+    wait (ev, 1);
+  }
+
+  //-----------------------------------------------------------------------
+  
+  pipeliner2_t::pipeliner2_t (size_t w, const char *f, int l)
+    : _wsz (w),
+      _n_sent (0),
+      _n_recv (0),
+      _rv (f, l) 
+  {
+    assert (_wsz > 0);
+  }
+  
+  //-----------------------------------------------------------------------
 };
