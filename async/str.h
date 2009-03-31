@@ -311,6 +311,9 @@ public:
   size_t iovcnt () const { return uio->iovcnt (); }
   suio *tosuio () const { return uio; }
 
+  void clear () { tosuio ()->clear (); }
+  size_t len () const { return tosuio ()->resid (); }
+
   const strbuf &take (strbuf &in);
 };
 
