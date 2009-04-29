@@ -162,7 +162,14 @@ proxy_t::go (int infd, int outfd, evv_t ev)
   _poke_ev = mkevent (rv, POKE);
   _poke_ev->set_reuse (true);
 
-  while (!err && (!(is_eof() || cancelled) || is_writable ())) {
+  // MK 4/29/09:  Previously, we kept trying to write even
+  // if the proxy was cancelled (to flush the buffer).  However,
+  // that got us into trouble since we were still waiting for
+  // file descriptors that were going to get closed. I think
+  // the safe thing to do is just to abandon ship on cancellation.
+  // We might revisit in the future and require that proxy takes
+  // an rcfd_t; that's a surefire solution to the issue.
+  while (!err && !cancelled && (!is_eof() || is_writable ())) {
     
     if (is_readable () && !is_eof ()) read.on ();
     else read.off ();
