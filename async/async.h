@@ -39,7 +39,7 @@ void acheck ();
 void chldcb (pid_t, cbi::ptr);
 cbv::ptr sigcb (int, cbv::ptr, int = 0);
 void _fdcb (int, selop, cbv::ptr, const char *file = NULL, int l = -1);
-timecb_t *timecb (const timespec &ts, cbv cb);
+timecb_t *timecb (timespec ts, cbv cb);
 timecb_t *delaycb (time_t sec, u_int32_t nsec, cbv cb);
 void timecb_remove (timecb_t *);
 lazycb_t *lazycb (time_t min_interval, cbv cb);
@@ -102,7 +102,7 @@ void ifchgcb_remove (ifchgcb_t *chg);
 #define SFSLITE_VERSION_MAJOR 1
 #define SFSLITE_VERSION_MINOR 2
 #define SFSLITE_VERSION_PATCHLEVEL 7
-#define SFSLITE_VERSION_PRE 7
+#define SFSLITE_VERSION_PRE 8
 //
 // VERSION_PRE < 100 means pre1, pre2, etc. releases
 // VERSION_PRE = 100 means the real release
@@ -119,6 +119,6 @@ void ifchgcb_remove (ifchgcb_t *chg);
                    SFSLITE_VERSION_PATCHLEVEL, \
                    SFSLITE_VERSION_PRE))
 
-#define SFSLITE_PATCHLEVEL_STR "1.2.7pre7"
+#define SFSLITE_PATCHLEVEL_STR "1.2.7pre8"
 
 #endif /* !_ASYNC_ASYNC_H_ */

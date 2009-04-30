@@ -235,10 +235,23 @@ chldcb_check ()
   }
 }
 
+static void 
+fixup_timespec (timespec &ts)
+{
+#define BIL 1000000000
+  if (ts.tv_nsec >= BIL) {
+    int secs = ts.tv_nsec / BIL;
+    ts.tv_nsec %= BIL;
+    ts.tv_sec += secs;
+  }
+#undef BIL
+}
+
 timecb_t *
-timecb (const timespec &ts, cbv cb)
+timecb (timespec ts, cbv cb)
 {
   sfs_add_new_cb ();
+  fixup_timespec (ts);
   timecb_t *to = New timecb_t (ts, cb);
   timecbs.insert (to);
   return to;
@@ -253,14 +266,9 @@ delaycb (time_t sec, u_int32_t nsec, cbv cb)
     ts.tv_nsec = 0;
   } else {
     sfs_get_tsnow (&ts, true);
-
     ts.tv_sec += sec;
     ts.tv_nsec += nsec;
-    if (ts.tv_nsec >= 1000000000) {
-      ts.tv_nsec -= 1000000000;
-      ts.tv_sec++;
-    }
-
+    fixup_timespec (ts);
   }
   return timecb (ts, cb);
 }
