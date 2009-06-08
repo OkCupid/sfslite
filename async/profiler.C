@@ -473,8 +473,10 @@ sfs_profiler_obj_t::stack_step (const my_intptr_t *r) const
 void
 sfs_profiler_obj_t::enter_vomit_lib ()
 {
-  _vomit_rbp = NULL;
-  GOTO_FRAME(_vomit_rbp, 1);
+  if (_enabled) {
+    _vomit_rbp = NULL;
+    GOTO_FRAME(_vomit_rbp, 1);
+  }
 }
 
 //-----------------------------------------------------------------------
@@ -482,7 +484,9 @@ sfs_profiler_obj_t::enter_vomit_lib ()
 void
 sfs_profiler_obj_t::exit_vomit_lib ()
 {
-  _vomit_rbp = NULL;
+  if (_enabled) {
+    _vomit_rbp = NULL;
+  }
 }
 
 //-----------------------------------------------------------------------
