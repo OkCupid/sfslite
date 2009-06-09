@@ -231,7 +231,6 @@ swap (rpc_vec<T, max> &a, rpc_vec<T, max> &b)
   a.swap (b);
 }
 
-extern const str rpc_emptystr;
 template<size_t max = RPC_INFINITY> struct rpc_str : str
 {
   enum { maxsize = max };
@@ -243,7 +242,7 @@ private:
   }
 
 public:
-  rpc_str () : str (rpc_emptystr) {}
+  rpc_str () : str ("") {}
   rpc_str (const rpc_str &s) : str (s) {}
   rpc_str (const str &s) : str (s) { check (); }
   rpc_str (const char *p) : str (p) { assert (len () <= maxsize); }
@@ -535,7 +534,7 @@ rpc_traverse (rpc_wipe_t &, rpc_bytes<n> &obj)
 template<size_t n> inline bool
 rpc_traverse (rpc_clear_t &, rpc_str<n> &obj)
 {
-  obj = rpc_emptystr;
+  obj = "";
   return true;
 }
 template<class T> inline bool
