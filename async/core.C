@@ -46,11 +46,12 @@ namespace sfs_core {
   static bool g_busywait;
   static bool g_zombie_collect;
   static selector_t *selector;
+  static select_policy_t g_initial_select_policy = SELECT_STD;
+  static bool g_select_init;
 
   void set_busywait (bool b) { g_busywait = b; }
   void set_zombie_collect (bool b) { g_zombie_collect = b; }
 };
-
 
 /*
  * returns: 0 if no change, -1 if changed to an unavailable policy,
@@ -59,9 +60,10 @@ namespace sfs_core {
 int
 sfs_core::set_select_policy (select_policy_t p)
 {
-
   int ret = 1;
-  if (p == selector->typ ()) {
+  if (!g_select_init) {
+    g_initial_select_policy = p;
+  } else if (selector && p == selector->typ ()) {
     ret = 0;
   } else {
     selector_t *ns = NULL;
@@ -83,13 +85,18 @@ sfs_core::set_select_policy (select_policy_t p)
       break;
     }
     if (ns) {
-      delete selector;
+      if (selector) 
+	delete selector;
       selector = ns;
       ret = 1;
     } else {
       ret = -1;
     }
   }
+  if (!selector) {
+    panic << "Given select method cannot be used!\n";
+  }
+
   return ret;
 }
 
@@ -593,7 +600,8 @@ async_init::start ()
   }
 
   sfs_core::selector_t::init ();
-  sfs_core::selector = New sfs_core::std_selector_t ();
+  sfs_core::g_select_init = true;
+  sfs_core::set_select_policy (sfs_core::g_initial_select_policy);
 
   lazylist = New list<lazycb_t, &lazycb_t::link>;
 

@@ -92,7 +92,11 @@ namespace sfs_core {
   selector_t::selector_t (selector_t *old)
   {
     for (int i = 0; i < fdsn; i++) {
-      _fdcbs[i] = old->fdcbs () [i];
+      if (old) {
+	_fdcbs[i] = old->fdcbs () [i];
+      } else {
+	_fdcbs[i] = New cbv::ptr[maxfd];
+      }
     }
   }
 
