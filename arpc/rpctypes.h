@@ -448,6 +448,18 @@ rpc_traverse (T &t, u_int64_t &obj)
 }
 
 template<class T> inline bool
+rpc_traverse (T &t, double &obj)
+{
+  int64_t d = 100000000;
+  double tmp = obj * d;
+  int64_t n = int64_t (tmp);
+  if (!rpc_traverse (t, d) || !rpc_traverse (t, n))
+    return false; 
+  obj = (double)n / (double)d;
+  return true;
+}
+
+template<class T> inline bool
 rpc_traverse (T &t, int32_t &obj)
 {
   return rpc_traverse (t, reinterpret_cast<u_int32_t &> (obj));
@@ -754,6 +766,26 @@ rpc_isstruct (const made_by_user_conversion &)
 }
 inline bool
 rpc_isstruct (u_int64_t)
+{
+  return false;
+}
+inline bool
+rpc_isstruct (int64_t)
+{
+  return false;
+}
+inline bool
+rpc_isstruct (double)
+{
+  return false;
+}
+inline bool
+rpc_isstruct (u_int32_t)
+{
+  return false;
+}
+inline bool
+rpc_isstruct (int32_t)
 {
   return false;
 }

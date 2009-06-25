@@ -463,4 +463,12 @@ substr (const str &s, size_t pos, size_t len = (size_t) -1)
   return str (s.cstr () + pos, len);
 }
 
+inline const strbuf& 
+strbuf_cat(const strbuf& b, const double& d)
+{
+  char x[128];
+  snprintf (x, 128, "%f", d);
+  return strbuf_cat (b, x);
+}
+
 #endif /* !_ASYNC_STR_H_ */
