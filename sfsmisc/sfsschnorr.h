@@ -14,6 +14,7 @@
 #include "arpc.h"
 #include "schnorr.h"
 #include "sfscrypt.h"
+#include "sfs_bundle.h"
 
 #define MAX_SCHNORR_SESSIONS 20
 
@@ -36,8 +37,8 @@ protected:
   vec<sign_block_t *> squeue;      /* sign queue */
 
   void complete_sign (ptr<ephem_key_pair> clnt_rnd, 
-		      ptr<sfsauth2_sign_arg> clnt_arg, 
-		      ptr<sfsauth2_sign_res> srv_res,
+		      sfs::bundle_t<ptr<sfsauth2_sign_arg>,
+		      ptr<sfsauth2_sign_res> > bundle,
 		      cbsign use_it, clnt_stat stat);
 
   void scb (int *rc, clnt_stat stat);

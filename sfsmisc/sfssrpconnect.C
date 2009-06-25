@@ -106,9 +106,15 @@ sfssrp_authorizer::authmore_2 (const sfsagent_authmore_arg *argp,
 }
 
 static void
-sfs_connect_srp_2 (ref<sfssrp_authorizer> a, str *userp, str *pwdp,
-		   bool *serverokp, sfs_connect_cb cb, ptr<sfscon> sc, str err)
+sfs_connect_srp_2 (sfs::bundle_t<ref<sfssrp_authorizer>, str *, str *> bundle, 
+		   bool *serverokp, 
+		   sfs_connect_cb cb, ptr<sfscon> sc, str err)
 {
+  
+  ref<sfssrp_authorizer> a = bundle.obj1 ();
+  str *userp = bundle.obj2 ();
+  str *pwdp = bundle.obj3 ();
+
   if (!err && (!a->srpc->host_ok && !serverokp))
     err = "mutual authentication of server failed";
   if (err) {
@@ -150,7 +156,9 @@ sfs_connect_srp (str u, srp_client *srpp, sfs_connect_cb cb,
   a->srpc = srpp;
 
   sfs_connect_t *cs
-    = New sfs_connect_t (wrap (sfs_connect_srp_2, a, userp, pwdp,
+    = New sfs_connect_t (wrap (sfs_connect_srp_2, 
+			       sfs::bundle_t<ref<sfssrp_authorizer>,
+			       str *, str *> (a, userp, pwdp),
 			       serverokp, cb));
   cs->sname () = host;
   cs->service () = SFS_AUTHSERV;

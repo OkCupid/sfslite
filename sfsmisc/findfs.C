@@ -25,6 +25,7 @@
 #include "getfh3.h"
 #include "rxx.h"
 #include "parseopt.h"
+#include "sfs_bundle.h"
 
 const u_int64_t nodev (static_cast<u_int64_t> (-1));
 #define NFSDB ".nfsdb"
@@ -65,11 +66,19 @@ a2bytes (rpc_bytes<max> &b, str a)
   return true;
 }
 
+typedef sfs::bundle_t<str, str, ref<aclnt>,
+		      callback<void, ptr<aclnt>, const nfs_fh3 *>::ref >
+my_bundle2_t;
+
 static void
-getsfsnfs_2 (str sspath, str path, ref<aclnt> c,
-	     callback<void, ptr<aclnt>, const nfs_fh3 *>::ref cb,
+getsfsnfs_2 (my_bundle2_t bundle, 
 	     const nfs_fh3 *fhp, const fattr3exp *, str err)
 {
+  str sspath = bundle.obj1 ();
+  str path = bundle.obj2 ();
+  ref<aclnt> c = bundle.obj3 ();
+  callback<void, ptr<aclnt>, const nfs_fh3 *>::ref cb = bundle.obj4 ();
+  
   if (err) {
     warn << sspath << "/" << path << ": " << err << "\n";
     (*cb) (NULL, NULL);
@@ -78,11 +87,19 @@ getsfsnfs_2 (str sspath, str path, ref<aclnt> c,
     (*cb) (c, fhp);
 }
 
+typedef sfs::bundle_t<u_int64_t, str , const authunix_parms *, 
+		      callback<void, ptr<aclnt>, const nfs_fh3 *>::ref >
+my_bundle1_t;
+
+
 static void
-getsfsnfs_1 (u_int64_t dev, str path, const authunix_parms *aup,
-	     callback<void, ptr<aclnt>, const nfs_fh3 *>::ref cb,
-	     str nfsdb)
+getsfsnfs_1 (my_bundle1_t bundle, str nfsdb)
 {
+  u_int64_t dev = bundle.obj1 ();
+  str path = bundle.obj2 ();
+  const authunix_parms *aup = bundle.obj3 ();
+  callback<void,ptr<aclnt>, const nfs_fh3 *>::ref cb = bundle.obj4 ();
+
   sockaddr_in sin;
   nfs_fh3 fh;
   u_int64_t d2;
@@ -104,7 +121,8 @@ getsfsnfs_1 (u_int64_t dev, str path, const authunix_parms *aup,
       sin.sin_port = htons (sin.sin_port);
       sin.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
       ref<aclnt> c = aclnt::alloc (udpxprt(), nfs_program_3, (sockaddr *) &sin);
-      lookupfh3 (c, fh, path, wrap (getsfsnfs_2, nfsdbrx[2], path, c, cb),
+      lookupfh3 (c, fh, path, wrap (getsfsnfs_2, 
+				    my_bundle2_t(nfsdbrx[2], path, c, cb)),
 		 aup);
       return;
     }
@@ -115,7 +133,7 @@ static void
 getsfsnfs (u_int64_t dev, str path, const authunix_parms *aup,
 	   callback<void, ptr<aclnt>, const nfs_fh3 *>::ref cb)
 {
-  nfsdbfetch (wrap (getsfsnfs_1, dev, path, aup, cb));
+  nfsdbfetch (wrap (getsfsnfs_1, my_bundle1_t (dev, path, aup, cb)));
 }
 
 static void

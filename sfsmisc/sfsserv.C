@@ -24,6 +24,7 @@
 #include "sfsserv.h"
 #include "sfsauth_prot.h"
 #include <grp.h>
+#include "sfs_bundle.h"
 
 ptr<aclnt>
 getauthclnt ()
@@ -238,10 +239,15 @@ sfsserv::sfs_encrypt (svccb *sbp, int pvers)
   // cd.clear ();
 }
 
+typedef sfs::bundle_t<ref<bool>, sfsserv *, svccb *> my_bundle_t;
+
 static void
-sfs_login_cb (ref<bool> destroyed, sfsserv *srv, svccb *sbp,
-	      sfsauth_loginres *_resp, clnt_stat stat)
+sfs_login_cb (my_bundle_t bundle, sfsauth_loginres *_resp, clnt_stat stat)
 {
+  ref<bool> destroyed = bundle.obj1 ();
+  sfsserv *srv = bundle.obj2 (); 
+  svccb *sbp = bundle.obj3(); 
+
   auto_ptr<sfsauth_loginres> resp (_resp);
   if (stat || *destroyed) {
     if (stat)
@@ -276,9 +282,12 @@ sfs_login_cb (ref<bool> destroyed, sfsserv *srv, svccb *sbp,
   sbp->reply (&res);
 }
 static void
-sfs_login2_cb (ref<bool> destroyed, sfsserv *srv, svccb *sbp,
-	       ref<sfsauth2_loginres> resp, clnt_stat stat)
+sfs_login2_cb (my_bundle_t bundle, ref<sfsauth2_loginres> resp, clnt_stat stat)
 {
+  ref<bool> destroyed = bundle.obj1 ();
+  sfsserv *srv = bundle.obj2 ();
+  svccb *sbp = bundle.obj3 ();
+
   if (stat || *destroyed) {
     if (stat)
       warn << "credential type not supported (v2)\n";
@@ -330,7 +339,9 @@ sfsserv::sfs_login (svccb *sbp)
     sfsauth_loginres *resp = New sfsauth_loginres;
     authc->call (SFSAUTHPROC_LOGIN,
 		 sbp->Xtmpl getarg<sfs_loginarg> (), resp,
-		 wrap (sfs_login_cb, destroyed, this, sbp, resp));
+		 wrap (sfs_login_cb, 
+		       my_bundle_t (destroyed, this, sbp), 
+		       resp));
     return;
   }
   ref<sfsauth2_loginres> resp = New refcounted<sfsauth2_loginres> ();
@@ -340,7 +351,9 @@ sfsserv::sfs_login (svccb *sbp)
   arg.source = strbuf () << client_name << "!"
 			 << (progname ? progname : str ("???"));
   authc->call (SFSAUTH2_LOGIN, &arg, resp,
-	       wrap (sfs_login2_cb, destroyed, this, sbp, resp));
+	       wrap (sfs_login2_cb, 
+		     my_bundle_t (destroyed, this, sbp), 
+		     resp));
 }
 
 void

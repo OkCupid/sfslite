@@ -609,10 +609,13 @@ sfs_2schnorr_priv::export_keyhalf (const sfsauth_keyhalf &k, strbuf &b)
 
 void 
 schnorr_client::complete_sign (ptr<ephem_key_pair> clnt_rnd, 
-			       ptr<sfsauth2_sign_arg> clnt_arg,
-			       ptr<sfsauth2_sign_res> srv_res,
+			       sfs::bundle_t<ptr<sfsauth2_sign_arg>,
+			       ptr<sfsauth2_sign_res> > bundle,
 			       cbsign cb, clnt_stat stat)
 {
+  ptr<sfsauth2_sign_arg> clnt_arg = bundle.obj1 ();
+  ptr<sfsauth2_sign_res> srv_res = bundle.obj2 ();
+
   --nsessions;
   for (int i = nsessions; squeue.size () && i < MAX_SCHNORR_SESSIONS; i++) {
     if (sign_block_t *s = squeue.pop_front ()) {
@@ -679,7 +682,10 @@ schnorr_client::sign (const sfsauth2_sigreq &req,
   arg->pubkeyhash = pkh;
   sign_client->call (SFSAUTH2_SIGN, arg, res, 
 		     wrap (this, &schnorr_client::complete_sign, 
-			   ekp, arg, res, cb), auth);
+			   ekp, 
+			   sfs::bundle_t<ptr<sfsauth2_sign_arg>, 
+			   ptr<sfsauth2_sign_res> > (arg, res),
+			   cb), auth);
   ekp = sign_share->make_ephem_key_pair ();
 }
 
