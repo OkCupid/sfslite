@@ -24,6 +24,7 @@
 #include "async.h"
 
 str syslog_priority ("daemon.notice");
+str syslog_tag ("");
 
 static int
 start_log_to_file (const str &line, const str &logfile, int flags, mode_t m)
