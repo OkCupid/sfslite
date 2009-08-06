@@ -96,7 +96,7 @@ start_logger ()
 #ifdef PATH_LOGGER
   const char *av[] = { PATH_LOGGER, "-p",
 		       syslog_priority.cstr (),
-		       "-t", "", NULL};
+		       "-t", syslog_tag.cstr (), NULL};
   int fds[2];
 
   close (0);
