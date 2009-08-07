@@ -103,6 +103,17 @@ public:
     return *this;
   }
 
+  matchresult search_cstr (const char *p, size_t len, int opt = 0)
+  { _exec (p, len, opt); return *this; }
+
+  matchresult match_cstr (const char *p, size_t len, int opt = 0) {
+    if (_exec (p, len, opt | PCRE_ANCHORED)) {
+      if (nsubpat > 0 && implicit_cast<size_t> (ovector[1]) != len) 
+	nsubpat = 0;
+    }
+    return *this;
+  }
+
   bool success () const { return nsubpat > 0; }
   int errcode () const { return _errcode; }
 
