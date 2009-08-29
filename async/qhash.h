@@ -234,6 +234,7 @@ class qhash_const_iterator_t {
 public:
   qhash_const_iterator_t (const qhash<K,V,H,E> &q) 
     : _i (q.first ()), _qh (q) {}
+  void reset () { _i = _qh.first (); }
   const K *next (V *val = NULL) {
     const K *r = NULL;
     if (_i) {
@@ -252,6 +253,7 @@ template<class K, class V, class H = hashfn<K>, class E = equals<K> >
 class qhash_iterator_t {
 public:
   qhash_iterator_t (qhash<K,V,H,E> &q) : _i (q.first ()), _qh (q) {}
+  void reset () { _i = _qh.first (); }
   const K *next (V *val = NULL) {
     const K *r = NULL;
     if (_i) {
@@ -272,6 +274,7 @@ public:
   bhash_const_iterator_t (const bhash<K,H,E> &h) 
     : _i (h.first ()), _bh (h) {}
 
+  void reset () { _i = _bh.first (); }
   const K *next () {
     const K *r = NULL;
     if (_i) {
@@ -285,5 +288,7 @@ private:
   const qhash_slot<K,void> *_i;
   const bhash<K,H,E> &_bh;
 };
+
+#define HAVE_QHASH_ITERATOR_RESET 1
 
 #endif /* !_QHASH_H_ */
