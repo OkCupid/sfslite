@@ -86,6 +86,7 @@ tame_standalone(nlock)
 tame_standalone(ex14)
 tame_standalone(pc)
 tame_standalone(ex15)
+tame_standalone(ex16)
 
 tame_standalone(buggy1)
 tame_standalone(buggy2)

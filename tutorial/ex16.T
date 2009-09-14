@@ -1,0 +1,54 @@
+// -*-c++-*-
+/* $Id: ex12.T 2548 2007-03-05 02:02:48Z max $ */
+
+#include "tame.h"
+#include "parseopt.h"
+
+tamed static void
+c (evv_t ev)
+{
+  tvars {
+    int i (2);
+  }
+  warn << "+c\n";
+  twait { delaycb (1, 0, mkevent ()); }
+  warn << "-c\n";
+  ev->trigger ();
+}
+
+tamed static void
+b (evv_t ev)
+{
+  tvars {
+    int i (1);
+  }
+  warn << "+b\n";
+  twait { c (mkevent ()); }
+  warn << "-b\n";
+  ev->trigger ();
+}
+
+tamed static void
+a (evv_t ev)
+{
+  tvars {
+    int i (0);
+  }
+  warn << "+a\n";
+  twait { b (mkevent ()); }
+  warn << "-a\n";
+  ev->trigger ();
+}
+
+tamed static void
+main2 ()
+{
+  twait { a( mkevent ()); }
+  exit (0);
+}
+
+int main(int argc, char *argv[])
+{
+  main2 ();
+  amain ();
+}

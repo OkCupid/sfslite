@@ -61,6 +61,7 @@ sub do_tfork ($$) {
 	   "  __tfork (" . arglist ("loc",
 				    "_mkevent (" . arglist ( "c",
 							     "loc",
+							     "NULL",
 							     "rv",
 							     ["w%", $w]
 							     ) . ")",

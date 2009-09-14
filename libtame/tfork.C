@@ -10,19 +10,19 @@ void __tfork (const char *loc, evv_t e, cbv a)
 void _tfork (thread_implicit_rendezvous_t *rv, const char *loc, cbv a)
 {
   __tfork (loc, 
-	   _mkevent (rv->closure(), loc, 
+	   _mkevent (rv->closure(), loc, NULL,
 		     *static_cast<rendezvous_t<> *> (rv)), 
 	   a);
 }
 
 void _tfork (ptr<closure_t> c, const char *loc, rendezvous_t<> &rv, cbv a)
 {
-  __tfork (loc, _mkevent (c, loc, rv), a);
+  __tfork (loc, _mkevent (c, loc, NULL, rv), a);
 }
 
 
 event<>::ref
-_mkevent (thread_implicit_rendezvous_t *r, const char *loc)
+_mkevent (thread_implicit_rendezvous_t *r, const char *loc, const char *ctn)
 {
-  return _mkevent (r->closure (), loc, *r);
+  return _mkevent (r->closure (), loc, ctn, *r);
 }

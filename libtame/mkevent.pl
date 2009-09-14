@@ -236,43 +236,48 @@ sub mkevent_prefix ($$)
     my ($t, $w) = @_;
     my $tn;
     my $ret = "";
+    my $tmpl = "";
     if ($t > 0 || $w > 0) {
-	$ret .= "template<" .  arglist (["class W%", $w], ["class T%", $t]) .
+	$tmpl = "template<" .  arglist (["class W%", $w], ["class T%", $t]) .
 	    ">\n";
 	$tn = "typename ";
     } else {
 	$tn = "";
     }
     $ret .= "${tn}${WCN}<". arglist (["T%", $t]) . ">::ref";
-    return $ret;
+    return ($tmpl, $ret);
 }
 
 sub do_mkevent_rs ($$) 
 {
     my ($t, $w) = @_;
-    my $prfx = mkevent_prefix ($t, $w);
+    my ($tmpl, $rtyp) = mkevent_prefix ($t, $w);
     
-    print ("$prfx\n",
+    print ("${tmpl}${rtyp}\n",
 	   "${MKEVRS} (" ,
 	   arglist ("ptr<closure_t> c",
 		    "const char *loc",
+		    "const char *ctn",
 		    "const _tame_slot_set<" .arglist (["T%", $t]). "> &rs",
 		    "rendezvous_t<" . arglist (["W%", $w]). "> &rv",
 		    ["const W% &w%", $w]
 		    ),
-	   ")\n"
-	   );
+	   ")"
+	);
 
     if ($t > 0 || $w > 0) {
-	print "{\n";
+	print "\n{\n";
 	my @args = ("c",
 		    "loc",
 		    "value_set_t<" . arglist (["W%", $w]) . "> (".
 		    arglist (["w%", $w]). ")",
 		    "rs");
-	print ("  return rv.${RVMKEV} (" ,
-	       join (",\n                        ", @args),
+	print ("  ${rtyp} ret = \n",
+	       "      rv.${RVMKEV} (" ,
+	       join (",\n         ", @args),
 	       ");\n");
+	print ("  ret->set_gdb_info (ctn, c);\n",
+	       "  return ret;\n");
 	print ("}");
     } else {
 	print ";";
@@ -284,23 +289,24 @@ sub do_mkevent ($$)
 {
     my ($t, $w) = @_;
 
-    my $prfx = mkevent_prefix ($t, $w);
+    my ($tmpl, $rtyp) = mkevent_prefix ($t, $w);
     
-    print ("$prfx\n",
+    print ("${tmpl}${rtyp}\n",
 	   "${MKEV} (" , 
 	   arglist ("ptr<closure_t> c",
 		    "const char *loc",
+		    "const char *ctn",
 		    "rendezvous_t<" . arglist (["W%", $w]) . "> &rv",
 		    ["const W% &w%", $w],
-		    ["T% &t%", $t]
-		    ),
-	   ")\n"
-	   );
+		    ["T% &t%", $t]),
+	   ")",
+	);
     if ($t > 0 || $w > 0) {
-	print "{\n";
+	print "\n{\n";
 	
 	my @args = ("c", 
 		    "loc",
+		    "ctn",
 		    "_tame_slot_set<" . arglist (["T%", $t]) . "> (" .
 		    arglist (["&t%", $t]) . ")",
 		    "rv",
@@ -329,26 +335,27 @@ sub do_mkevent_block ($)
 {
     my ($t) = @_;
 
-    if ($t == 0) {
-	return;
-    }
+    my $tmpl = "template<" . arglist ("class C", ["class T%", $t]) . ">";
+    my $rtyp = "typename ${WCN}<" . arglist (["T%", $t]) . ">::ref";
 
-    print "template<" . arglist ("class C", ["class T%", $t]) . ">\n";
-    print "typename ";
-    print "${WCN}<" . arglist (["T%", $t]) . ">::ref\n";
+    print ("${tmpl}\n${rtyp}\n");
     print ("${MKEV} (" ,
 	   arglist ("const closure_wrapper<C> &c",
 		    "const char *loc",
+		    "const char *ctn",
 		    [ "T% &t%", $t ]),
 	   ")\n");
     print "{\n";
 
-    print ("  return _mkevent_implicit_rv (",
+    print ("  ${rtyp} ret =\n",
+	   "     _mkevent_implicit_rv (",
 	   arglist ("c.closure ()", "loc", 
 		    "_tame_slot_set<" . arglist (["T%", $t]) 
 		    ."> (" . arglist (["&t%", $t]) . ")" ),
 	   ");\n");
-    print "}\n\n";
+    print ("  ret->set_gdb_info (ctn, c.closure ());\n",
+	   "  return ret;\n");
+    print ("}\n\n");
 }
 
 #
@@ -361,24 +368,30 @@ sub do_mkevent_tir ($)
     my ($t) = @_;
     my $tlist = "<" . arglist (["class T%", $t]) . ">";
     print "template${tlist}\n";
+
+    my $rtyp = "";
     if ($t > 0) {
-	print "typename ";
+	$rtyp .= "typename ";
     }
-    print "${WCN}${tlist}::ref\n";
-    print ("${MKEV} (",
+    $rtyp .= "${WCN}${tlist}::ref";
+    print ("${rtyp}\n",
+	   "${MKEV} (",
 	   arglist ("thread_implicit_rendezvous_t *r",
 		    "const char *loc",
+		    "const char *ctn",
 		    [ "T% &t%", $t] ),
 	   ")\n");
     if ($t > 0) {
 	print ("{\n",
-	       "   return _mkevent (",
+	       "   $rtyp ret = _mkevent (",
 	       arglist ("r->closure ()",
 			"loc",
 			"*r",
 			[ "t%", $t ]),
-	       ");\n",
-	       "}");
+	       ");\n");
+	print ("  ret->set_gdb_info (ctn, r->closure ());\n",
+	       "  return ret;\n");
+	print ("}");
     } else {
 	print ";";
     }

@@ -204,13 +204,19 @@ void collect_rendezvous (weakref<rendezvous_base_t> r);
 
 extern ptr<closure_t> __cls_g;
 extern ptr<closure_t> null_closure;
+extern const char *__cls_type;
 #define CLOSURE              ptr<closure_t> __frame = NULL
 
+/*
 template<class C>
 typename event<>::ref
-_mkevent (const closure_wrapper<C> &c, const char *loc)
+_mkevent (const closure_wrapper<C> &c, const char *loc, const char *ctn)
 {
-  return _mkevent_implicit_rv (c.closure (), loc, _tame_slot_set<> ());
+  typename event<>::ref ret = 
+    _mkevent_implicit_rv (c.closure (), loc, _tame_slot_set<> ());
+  ret->set_gdb_info (ctn, c.closure ());
+  return ret;
 }
+*/
 
 #endif /* _LIBTAME_CLOSURE_H_ */

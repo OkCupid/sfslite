@@ -61,6 +61,7 @@ void element_list_t::output (outputter_t *o)
 
 #define CLOSURE_RFCNT         "__cls_r"
 #define CLOSURE_GENERIC       "__cls_g"
+#define CLOSURE_TYPE          "__cls_type"
 #define TAME_PREFIX           "__tame_"
 
 str
@@ -776,7 +777,10 @@ tame_fn_t::output_vars (outputter_t *o, int ln)
     ;
   b.mycat (_closure.type ().mk_ptr ());
   b << " " << CLOSURE_RFCNT << ";\n"
-    << "  if (!" << closure_generic ().name() << ") {\n"
+    << "  " << CLOSURE_TYPE << " = \"" 
+    << _closure.type().type_without_pointer () << "\";\n";
+
+  b << "  if (!" << closure_generic ().name() << ") {\n"
     ;
 
   b << "    if (tame_check_leaks ()) start_rendezvous_collection ();\n"
@@ -796,7 +800,9 @@ tame_fn_t::output_vars (outputter_t *o, int ln)
     << "    if (tame_check_leaks ()) " 
     << CLOSURE_RFCNT << "->collect_rendezvous ();\n"
     << "    " << TAME_CLOSURE_NAME << " = " << CLOSURE_RFCNT << ";\n"
-    << "    " << CLOSURE_GENERIC << " = " << CLOSURE_RFCNT << ";\n";
+    << "    " << CLOSURE_GENERIC << " = " << CLOSURE_RFCNT << ";\n"
+    ;
+  
 
   if (_class) {
     b << "    " << TAME_CLOSURE_NAME

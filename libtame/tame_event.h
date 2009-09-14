@@ -21,8 +21,10 @@ class _event;
 
 class _event_cancel_base : public virtual refcount {
 public:
-  _event_cancel_base (const char *loc) : 
+  _event_cancel_base (const char *loc) :
     _loc (loc), 
+    _closure_type (NULL),
+    _closure_void (NULL),
     _cancelled (false),
     _cleared (false),
     _reuse (false),
@@ -30,15 +32,6 @@ public:
   { g_stats->did_mkevent (); }
 
   ~_event_cancel_base () {}
-
-  void reinit (const char *loc)
-  {
-    _loc = loc;
-    _cancelled = false;
-    _performing = false;
-    _cleared = false;
-    _reuse = false;
-  }
 
   void set_cancel_notifier (ptr<_event<> > e) { _cancel_notifier = e; }
   void cancel ();
@@ -52,6 +45,12 @@ public:
 
   void set_reuse (bool b) { _reuse = b; }
   bool get_reuse () const { return _reuse; }
+
+  void set_gdb_info (const char *tn, const void *cls)
+  {
+    _closure_type = tn;
+    _closure_void = cls;
+  }
 
   bool can_trigger ()
   {
@@ -92,6 +91,8 @@ protected:
   void clear ();
 
   const char *_loc;
+  const char *_closure_type;
+  const void *_closure_void;
   bool _cancelled;
   bool _cleared;
   bool _reuse;
@@ -139,7 +140,7 @@ public:
 # define CALLBACK_ARGS(x)
 #endif
 
-#define mkevent(...) _mkevent (__cls_g, __FL__, ##__VA_ARGS__)
-#define mkevent_rs(...) _mkevent_rs (__cls_g, __FL__, ##__VA_ARGS__)
+#define mkevent(...) _mkevent (__cls_g, __FL__, __cls_type, ##__VA_ARGS__)
+#define mkevent_rs(...) _mkevent_rs (__cls_g, __FL__, __cls_type, ##__VA_ARGS__)
 
 #endif /* _LIBTAME_TAME_EVENT_H_ */

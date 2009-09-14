@@ -14,6 +14,7 @@ int tame_global_int;
 u_int64_t closure_serial_number;
 ptr<closure_t> __cls_g;
 ptr<closure_t> null_closure;
+const char *__cls_type;
 
 int tame_init::count;
 
@@ -33,6 +34,7 @@ tame_init::start ()
   closure_serial_number = 0;
   tame_collect_rv_flag = false;
   __cls_g = NULL;
+  __cls_type = NULL;
   null_closure = NULL;
   g_stats = New tame_stats_t ();
 

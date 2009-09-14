@@ -113,7 +113,7 @@ void __tfork (const char *loc, evv_t e, cbv a);
 template<class C>
 void _tfork (const closure_wrapper<C> &c, const char *loc, cbv a)
 {
-  __tfork (loc, _mkevent (c, loc), a);
+  __tfork (loc, _mkevent (c, loc, NULL), a);
 }
 
 /*
@@ -140,7 +140,7 @@ void _tfork (thread_implicit_rendezvous_t *rv, const char *loc,
 	     R &r, typename callback<R,void>::ref a)
 {
   __tfork (loc, 
-	   _mkevent (rv->closure (), loc,
+	   _mkevent (rv->closure (), loc, NULL,
 		     *static_cast<rendezvous_t<> *> (rv)),
 	   r, a);
 }
@@ -155,7 +155,7 @@ template<class C, class R>
 void _tfork (const closure_wrapper<C> &c, const char *loc, R &r, 
 	     typename callback<R,void>::ref a)
 {
-  __tfork (loc, _mkevent (c, loc), r, a);
+  __tfork (loc, _mkevent (c, loc, NULL), r, a);
 }
 
 #include "tame_tfork_ag.h"
@@ -164,28 +164,30 @@ void _tfork (const closure_wrapper<C> &c, const char *loc, R &r,
 
 
 event<>::ref
-_mkevent (thread_implicit_rendezvous_t *r, const char *loc);
+_mkevent (thread_implicit_rendezvous_t *r, const char *loc, const char *ctn);
 
 template<class T1>
 typename event<T1>::ref
-_mkevent (thread_implicit_rendezvous_t *r, const char *loc, T1 &t1)
+_mkevent (thread_implicit_rendezvous_t *r, const char *loc, const char *ctn,
+	  T1 &t1)
 {
-  return _mkevent (r->closure (), loc, *r, t1);
+  return _mkevent (r->closure (), loc, ctn, *r, t1);
 }
 
 template<class T1, class T2>
 typename event<T1,T2>::ref
-_mkevent (thread_implicit_rendezvous_t *r, const char *loc, T1 &t1, T2 &t2)
+_mkevent (thread_implicit_rendezvous_t *r, const char *loc, const char *ctn,
+	  T1 &t1, T2 &t2)
 {
-  return _mkevent (r->closure (), loc, *r, t1, t2);
+  return _mkevent (r->closure (), loc, ctn, *r, t1, t2);
 }
 
 template<class T1, class T2, class T3>
 typename event<T1,T2,T3>::ref
-_mkevent (thread_implicit_rendezvous_t *r, const char *loc, 
+_mkevent (thread_implicit_rendezvous_t *r, const char *loc, const char *ctn,
 	  T1 &t1, T2 &t2, T3 &t3)
 {
-  return _mkevent (r->closure (), loc, *r, t1, t2, t3);
+  return _mkevent (r->closure (), loc, ctn, *r, t1, t2, t3);
 }
 
 
