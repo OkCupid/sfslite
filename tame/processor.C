@@ -777,7 +777,7 @@ tame_fn_t::output_vars (outputter_t *o, int ln)
     ;
   b.mycat (_closure.type ().mk_ptr ());
   b << " " << CLOSURE_RFCNT << ";\n"
-    << "  " << CLOSURE_TYPE << " = \"" 
+    << "  const char *" << CLOSURE_TYPE << " = \"" 
     << _closure.type().type_without_pointer () << "\";\n";
 
   b << "  if (!" << closure_generic ().name() << ") {\n"
