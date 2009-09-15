@@ -181,6 +181,9 @@ public:
   typedef struct ref<callback<$tmpargs> > ref;
   typedef struct ptr<callback<$tmpargs> > ptr;
 
+  const char *_closure_type;
+  const void *_closure_void;
+
 #if WRAP_DEBUG
   const char *const dest;
   const char *const src;
@@ -191,6 +194,9 @@ $enddebug
   virtual R operator() ($cbdecl) = 0;
   virtual void trigger ($cbdecl) { (void) (*this) ($cbargs); }
   virtual ~callback () {}
+  callback () : _closure_type (NULL), _closure_void (NULL) {}
+  void set_gdb_info (const char *typ, const void *v)
+    { _closure_type = typ; _closure_void = v; }
 };
 
 EOF
@@ -687,6 +693,9 @@ public:
   typedef struct ref<callback<R> > ref;
   typedef struct ptr<callback<R> > ptr;
 
+  const char *_closure_type;
+  const void *_closure_void;
+
 #if WRAP_DEBUG
   const char *const dest;
   const char *const src;
@@ -697,6 +706,9 @@ public:
   virtual R operator() () = 0;
   virtual void trigger () { (void) (*this) (); }
   virtual ~callback () {}
+  callback () : _closure_type (NULL), _closure_void (NULL) {}
+  void set_gdb_info (const char *typ, const void *v)
+    { _closure_type = typ; _closure_void = v; }
 };
 
 
@@ -1573,6 +1585,9 @@ public:
   typedef struct ref<callback<R, B1> > ref;
   typedef struct ptr<callback<R, B1> > ptr;
 
+  const char *_closure_type;
+  const void *_closure_void;
+
 #if WRAP_DEBUG
   const char *const dest;
   const char *const src;
@@ -1583,6 +1598,9 @@ public:
   virtual R operator() (B1 b1) = 0;
   virtual void trigger (B1 b1) { (void) (*this) (b1); }
   virtual ~callback () {}
+  callback () : _closure_type (NULL), _closure_void (NULL) {}
+  void set_gdb_info (const char *typ, const void *v)
+    { _closure_type = typ; _closure_void = v; }
 };
 
 
@@ -2459,6 +2477,9 @@ public:
   typedef struct ref<callback<R, B1, B2> > ref;
   typedef struct ptr<callback<R, B1, B2> > ptr;
 
+  const char *_closure_type;
+  const void *_closure_void;
+
 #if WRAP_DEBUG
   const char *const dest;
   const char *const src;
@@ -2469,6 +2490,9 @@ public:
   virtual R operator() (B1 b1, B2 b2) = 0;
   virtual void trigger (B1 b1, B2 b2) { (void) (*this) (b1, b2); }
   virtual ~callback () {}
+  callback () : _closure_type (NULL), _closure_void (NULL) {}
+  void set_gdb_info (const char *typ, const void *v)
+    { _closure_type = typ; _closure_void = v; }
 };
 
 
@@ -3345,6 +3369,9 @@ public:
   typedef struct ref<callback<R, B1, B2, B3> > ref;
   typedef struct ptr<callback<R, B1, B2, B3> > ptr;
 
+  const char *_closure_type;
+  const void *_closure_void;
+
 #if WRAP_DEBUG
   const char *const dest;
   const char *const src;
@@ -3355,6 +3382,9 @@ public:
   virtual R operator() (B1 b1, B2 b2, B3 b3) = 0;
   virtual void trigger (B1 b1, B2 b2, B3 b3) { (void) (*this) (b1, b2, b3); }
   virtual ~callback () {}
+  callback () : _closure_type (NULL), _closure_void (NULL) {}
+  void set_gdb_info (const char *typ, const void *v)
+    { _closure_type = typ; _closure_void = v; }
 };
 
 

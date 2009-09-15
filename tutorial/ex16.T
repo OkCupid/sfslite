@@ -5,7 +5,7 @@
 #include "parseopt.h"
 
 tamed static void
-c (evv_t ev)
+c (cbv ev)
 {
   tvars {
     int i (2);
@@ -17,7 +17,7 @@ c (evv_t ev)
 }
 
 tamed static void
-b (evv_t ev)
+b (cbv ev)
 {
   tvars {
     int i (1);
@@ -29,7 +29,7 @@ b (evv_t ev)
 }
 
 tamed static void
-a (evv_t ev)
+a (cbv ev)
 {
   tvars {
     int i (0);

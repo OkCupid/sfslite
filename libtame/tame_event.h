@@ -23,8 +23,6 @@ class _event_cancel_base : public virtual refcount {
 public:
   _event_cancel_base (const char *loc) :
     _loc (loc), 
-    _closure_type (NULL),
-    _closure_void (NULL),
     _cancelled (false),
     _cleared (false),
     _reuse (false),
@@ -45,12 +43,6 @@ public:
 
   void set_reuse (bool b) { _reuse = b; }
   bool get_reuse () const { return _reuse; }
-
-  void set_gdb_info (const char *tn, const void *cls)
-  {
-    _closure_type = tn;
-    _closure_void = cls;
-  }
 
   bool can_trigger ()
   {
@@ -91,8 +83,6 @@ protected:
   void clear ();
 
   const char *_loc;
-  const char *_closure_type;
-  const void *_closure_void;
   bool _cancelled;
   bool _cleared;
   bool _reuse;
