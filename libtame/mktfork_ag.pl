@@ -45,7 +45,7 @@ sub arglist (@)
 
 sub do_tfork ($$) {
     my ($r, $w) = @_;
-    print ("template<" . arglist(["class R%", $r], ["class W%", $w]) . "> ",
+    print("template<" . arglist(["class R%", $r], ["class W%", $w]) . "> ",
 	   "void\n",
 	   "${name} (",
 	   arglist ("ptr<closure_t> c",

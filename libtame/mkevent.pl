@@ -67,7 +67,7 @@ sub do_trigger_funcs ($)
     my ($t) = @_;
 
 
-    print ("  void trigger (",
+    print("  void trigger (",
 	   arglist (["const T% &t%", $t]), ")\n",
 	   "  {\n",
 	   "    if (can_trigger ()) {\n",
@@ -76,17 +76,17 @@ sub do_trigger_funcs ($)
 	   );
 
     if ($t) {
-	print ("      _slot_set.assign (", arglist(["t%", $t]), ");\n");
+	print("      _slot_set.assign (", arglist(["t%", $t]), ");\n");
     }
 
-    print ("      if (perform_action (this, this->_loc, _reuse)) {\n",
+    print("      if (perform_action (this, this->_loc, _reuse)) {\n",
 	   "        _cleared = true;\n",
 	   "      }\n",
 	   "      _performing = false;\n",
 	   "    }\n",
 	   "  }\n");
 
-    print ("  void operator() (",
+    print("  void operator() (",
 	   arglist (["T% t%", $t]), ")",
 	   " { trigger (", arglist(["t%", $t]), "); }\n");
 }
@@ -100,7 +100,7 @@ sub do_event_class ($)
     my ($t) = @_;
     my ($tlist, $tlist2);
 
-    print ("template<", arglist (["class T%", $t]), ">\n");
+    print("template<", arglist (["class T%", $t]), ">\n");
     $tlist = "<" . arglist (["T%", $t]) . ">";
 
     my $vlist = "<" . arglist ("void", ["T%", $t]) . ">";
@@ -108,42 +108,42 @@ sub do_event_class ($)
     my $ctss = "const _tame_slot_set$tlist &";
 
     # print the classname
-    print ("class ${CN}", $tlist, " :\n",
+    print("class ${CN}", $tlist, " :\n",
 	   "     public ${BASE},\n",
 	   "     public callback${vlist}\n",
 	   "{\n",
 	   "public:\n");
 
     # print the constructors
-    print ("  ${CN} (const _tame_slot_set$tlist &rs, const char *loc)\n",
+    print("  ${CN} (const _tame_slot_set$tlist &rs, const char *loc)\n",
 	   "   : ${BASE} (loc),\n",
 	   "     callback${vlist} (CALLBACK_ARGS(loc))");
     if ($t) {
-	print (",\n",
+	print(",\n",
 	       "    _slot_set (rs)");
     }
-    print ("\n",
+    print("\n",
 	   "    {}\n\n");
 
     if ($t) {
-	print ("  ${ctss}slot_set() const\n",
+	print("  ${ctss}slot_set() const\n",
 	       "  { return _slot_set; }\n");
-	print ("  void slot_set_reassign (${ctss}ss) { _slot_set = ss; }");
+	print("  void slot_set_reassign (${ctss}ss) { _slot_set = ss; }");
     } else {
-	print ("  _tame_slot_set$tlist slot_set() const\n",
+	print("  _tame_slot_set$tlist slot_set() const\n",
 	       "  { return _tame_slot_set$tlist (); }");
-	print ("  void slot_set_reassign (${ctss}ss) {}");
+	print("  void slot_set_reassign (${ctss}ss) {}");
     }
-    print ("\n\n");
+    print("\n\n");
 
     do_trigger_funcs ($t);
     
     # close the class
     if ($t) {
-	print ("private:\n",
+	print("private:\n",
 	       "  _tame_slot_set$tlist _slot_set;\n");
     }
-    print ("\n};\n\n");
+    print("\n};\n\n");
 }
 
 #
@@ -153,11 +153,11 @@ sub do_event_impl_classes ($)
 {
     my ($t) = @_;
 
-    print ("#ifdef TAME_DETEMPLATIZE\n");
+    print("#ifdef TAME_DETEMPLATIZE\n");
     do_event_impl_class ($t, 1);
-    print ("\n#else /* !TAME_DEMPLATIZE */\n");
+    print("\n#else /* !TAME_DEMPLATIZE */\n");
     do_event_impl_class ($t, 0);
-    print ("#endif /* TAME_DEMPLATIZE */\n\n\n");
+    print("#endif /* TAME_DEMPLATIZE */\n\n\n");
 }
 
 #
@@ -170,9 +170,9 @@ sub do_event_impl_class ($$)
     my ($tlist, $tlist2);
 
     if ($virt_ok) {
-	print ("template<", arglist (["class T%", $t]), ">\n");
+	print("template<", arglist (["class T%", $t]), ">\n");
     } else {
-	print ("template<", arglist ("class A", ["class T%", $t]), ">\n");
+	print("template<", arglist ("class A", ["class T%", $t]), ">\n");
     }
     $tlist = "<" . arglist (["T%", $t]) . ">";
     if ($virt_ok) {
@@ -196,12 +196,12 @@ sub do_event_impl_class ($$)
 
 
     # print the classname
-    print ("class ${CNI}", $tlist2, " :\n",
+    print("class ${CNI}", $tlist2, " :\n",
 	   "     public ${CN}", $tlist , "\n",
 	   "{\n",
 	   "public:\n");
 
-    print ("  ${CNI} (",
+    print("  ${CNI} (",
 	   arglist ("${typconst}action",
 		    "const _tame_slot_set$tlist &rs",
 		    "const char *loc"),
@@ -210,16 +210,16 @@ sub do_event_impl_class ($$)
 	   "      _action (action) {}\n\n");
 
     # print the destructor
-    print ("  ~${CNI} () { if (!this->_cleared) clear_action (); ${del}}\n\n");
+    print("  ~${CNI} () { if (!this->_cleared) clear_action (); ${del}}\n\n");
 
 
     # print the action functions
-    print ("  bool perform_action (${EVCB} *e, const char *loc, bool reuse)\n",
+    print("  bool perform_action (${EVCB} *e, const char *loc, bool reuse)\n",
 	   "  { return ${cthis}perform (e, loc, reuse); }\n");
-    print ("  void clear_action () { ${cthis}clear (this); }\n\n");
+    print("  void clear_action () { ${cthis}clear (this); }\n\n");
 
-    print ("private:\n");
-    print ("  ${typ}_action;\n");
+    print("private:\n");
+    print("  ${typ}_action;\n");
 
     # close the class
     print "};\n";
@@ -253,7 +253,7 @@ sub do_mkevent_rs ($$)
     my ($t, $w) = @_;
     my ($tmpl, $rtyp) = mkevent_prefix ($t, $w);
     
-    print ("${tmpl}${rtyp}\n",
+    print("${tmpl}${rtyp}\n",
 	   "${MKEVRS} (" ,
 	   arglist ("ptr<closure_t> c",
 		    "const char *loc",
@@ -272,13 +272,13 @@ sub do_mkevent_rs ($$)
 		    "value_set_t<" . arglist (["W%", $w]) . "> (".
 		    arglist (["w%", $w]). ")",
 		    "rs");
-	print ("  ${rtyp} ret = \n",
+	print("  ${rtyp} ret = \n",
 	       "      rv.${RVMKEV} (" ,
 	       join (",\n         ", @args),
 	       ");\n");
-	print ("  ret->set_gdb_info (ctn, c);\n",
+	print("  ret->set_gdb_info (ctn, c);\n",
 	       "  return ret;\n");
-	print ("}");
+	print("}");
     } else {
 	print ";";
     }
@@ -291,7 +291,7 @@ sub do_mkevent ($$)
 
     my ($tmpl, $rtyp) = mkevent_prefix ($t, $w);
     
-    print ("${tmpl}${rtyp}\n",
+    print("${tmpl}${rtyp}\n",
 	   "${MKEV} (" , 
 	   arglist ("ptr<closure_t> c",
 		    "const char *loc",
@@ -312,11 +312,11 @@ sub do_mkevent ($$)
 		    "rv",
 		    ["w%", $w]
 		    );
-	print ("  return ${MKEVRS} (" , 
+	print("  return ${MKEVRS} (" , 
 	       join (",\n                      ", 
 		     mklist_multi (@args)),
 	       ");\n");
-	print ("}");
+	print("}");
     } else {
 	print ";";
     }
@@ -338,8 +338,8 @@ sub do_mkevent_block ($)
     my $tmpl = "template<" . arglist ("class C", ["class T%", $t]) . ">";
     my $rtyp = "typename ${WCN}<" . arglist (["T%", $t]) . ">::ref";
 
-    print ("${tmpl}\n${rtyp}\n");
-    print ("${MKEV} (" ,
+    print("${tmpl}\n${rtyp}\n");
+    print("${MKEV} (" ,
 	   arglist ("const closure_wrapper<C> &c",
 		    "const char *loc",
 		    "const char *ctn",
@@ -347,15 +347,15 @@ sub do_mkevent_block ($)
 	   ")\n");
     print "{\n";
 
-    print ("  ${rtyp} ret =\n",
+    print("  ${rtyp} ret =\n",
 	   "     _mkevent_implicit_rv (",
 	   arglist ("c.closure ()", "loc", 
 		    "_tame_slot_set<" . arglist (["T%", $t]) 
 		    ."> (" . arglist (["&t%", $t]) . ")" ),
 	   ");\n");
-    print ("  ret->set_gdb_info (ctn, c.closure ());\n",
+    print("  ret->set_gdb_info (ctn, c.closure ());\n",
 	   "  return ret;\n");
-    print ("}\n\n");
+    print("}\n\n");
 }
 
 #
@@ -374,7 +374,7 @@ sub do_mkevent_tir ($)
 	$rtyp .= "typename ";
     }
     $rtyp .= "${WCN}${tlist}::ref";
-    print ("${rtyp}\n",
+    print("${rtyp}\n",
 	   "${MKEV} (",
 	   arglist ("thread_implicit_rendezvous_t *r",
 		    "const char *loc",
@@ -382,16 +382,16 @@ sub do_mkevent_tir ($)
 		    [ "T% &t%", $t] ),
 	   ")\n");
     if ($t > 0) {
-	print ("{\n",
+	print("{\n",
 	       "   $rtyp ret = _mkevent (",
 	       arglist ("r->closure ()",
 			"loc",
 			"*r",
 			[ "t%", $t ]),
 	       ");\n");
-	print ("  ret->set_gdb_info (ctn, r->closure ());\n",
+	print("  ret->set_gdb_info (ctn, r->closure ());\n",
 	       "  return ret;\n");
-	print ("}");
+	print("}");
     } else {
 	print ";";
     }
