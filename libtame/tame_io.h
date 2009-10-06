@@ -118,6 +118,14 @@ namespace tame {
     virtual bool is_eof () const { return _eof; }
     virtual void set_eof () { _eof = true; }
 
+    // if an ECONNRESET is as good as a clean EOF
+    virtual bool allow_unclean_shutdowns () const { return false; }
+
+    // if the proxy was killed due to a read or a write error
+    // (the other side still needs to shutdown). It's pretty
+    // safe to just treat this like an error.
+    virtual void encountered_error ();
+
     // Can signal errors other than via errno
     virtual bool read_error (str *s) { return false; }
     virtual bool write_error (str *s) { return false; }

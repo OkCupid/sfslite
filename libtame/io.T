@@ -139,6 +139,12 @@ proxy_t::do_debug (const str &msg) const
   }
 }
 
+void
+proxy_t::encountered_error ()
+{
+  set_eof ();
+}
+
 tamed void
 proxy_t::go (int infd, int outfd, evv_t ev)
 {
@@ -151,7 +157,13 @@ proxy_t::go (int infd, int outfd, evv_t ev)
     bool cancelled (false);
     str s;
     holdvar ptr<proxy_t> hold (mkref (_self));
+    str dn ("");
   }
+
+  // if we're outputting an error message, it would be good to
+  // know on which proxy we had a problem. in the case of 
+  // OKWS's SSL proxy, we have 2 in parallel.
+  if (_debug_name) { dn = strbuf (" (%s)", _debug_name.cstr ()); }
 
   // If the parent process gives up on us, then we'll get a callback here
   ev->set_cancel_notifier (mkevent (rv, ENDPROG));
@@ -188,10 +200,14 @@ proxy_t::go (int infd, int outfd, evv_t ev)
 	set_eof ();
       } else if (rc < 0) {
 	if (read_error (&s)) {
-	  warn ("read error: %s\n", s.cstr ());
+	  warn ("read error%s: %s\n", dn.cstr (), s.cstr ());
 	  err = true;
+	} else if (errno == ECONNRESET && 
+		   allow_unclean_shutdowns ()) {
+	  do_debug ("EOF on socket with ECONNRESET (in permissible mode)");
+	  set_eof ();
 	} else if (errno != EAGAIN) {
-	  warn ("read error: %m\n");
+	  warn ("read error%s: %m\n", dn.cstr ());
 	  err = true;
 	}
       }
@@ -200,10 +216,10 @@ proxy_t::go (int infd, int outfd, evv_t ev)
     case WRITE:
       if ((rc = v_write (write.fd())) < 0) {
 	if (write_error (&s)) {
-	  warn ("write error: %s\n", s.cstr ());
+	  warn ("write error%s: %s\n", dn.cstr (), s.cstr ());
 	  err = true;
 	} else if (errno != EAGAIN) {
-	  warn ("write error: %m\n");
+	  warn ("write error%s: %m\n", dn.cstr ());
 	  err = true;
 	}
       }
@@ -217,6 +233,10 @@ proxy_t::go (int infd, int outfd, evv_t ev)
       panic ("unexpected case.\n");
     }
   }
+
+  // Propogate this error to the other side, to potentially report
+  // that there was an error.
+  if (err) { encountered_error (); }
 
   do_debug ("leaving proxy loop");
 
