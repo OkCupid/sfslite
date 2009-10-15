@@ -7,9 +7,6 @@
 tamed static void
 c (cbv ev)
 {
-  tvars {
-    int i (2);
-  }
   warn << "+c\n";
   twait { delaycb (1, 0, mkevent ()); }
   warn << "-c\n";
@@ -19,9 +16,6 @@ c (cbv ev)
 tamed static void
 b (cbv ev)
 {
-  tvars {
-    int i (1);
-  }
   warn << "+b\n";
   twait { c (mkevent ()); }
   warn << "-b\n";
@@ -31,9 +25,6 @@ b (cbv ev)
 tamed static void
 a (cbv ev)
 {
-  tvars {
-    int i (0);
-  }
   warn << "+a\n";
   twait { b (mkevent ()); }
   warn << "-a\n";
