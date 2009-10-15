@@ -6,6 +6,10 @@ struct ex_struct_t {
 	unsigned 	u;
 };
 
+struct vsize_t {
+       opaque buf<>;
+};
+
 namespace RPC {
 program EX_PROG {
 	version EX_VERS {
@@ -23,6 +27,9 @@ program EX_PROG {
 
 		unsigned
 		EX_RANDOM2 (unsigned) = 4;
+
+		vsize_t
+		EX_PERFTEST(vsize_t) = 5;
 	} = 1;
 } = 31313;
 };
