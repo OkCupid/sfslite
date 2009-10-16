@@ -43,7 +43,7 @@ public:
   typedef callback<void, const char *, ssize_t,
     const sockaddr *>::ptr recvcb_t;
 
-  virtual void sendv (const iovec *, int, const sockaddr *) = 0;
+  virtual bool sendv (const iovec *, int, const sockaddr *) = 0;
   virtual void setwcb (cbv cb) { (*cb) (); }
   virtual void setrcb (recvcb_t) = 0;
   virtual bool ateof () { return false; }
@@ -77,7 +77,7 @@ protected:
 public:
   int getreadfd () { return fd; }
   int getwritefd () { return fd; }
-  void sendv (const iovec *, int, const sockaddr *);
+  bool sendv (const iovec *, int, const sockaddr *);
   void setrcb (recvcb_t);
   void poll ();
 
@@ -106,6 +106,7 @@ protected:
 
   struct suio *out;
   bool wcbset;
+  bool _foosp; // fail on oversized packet
   
   u_int64_t raw_bytes_sent;
 
@@ -136,9 +137,11 @@ public:
   void poll ();
 
   bool ateof () { return fdread < 0; }
-  virtual void sendv (const iovec *, int, const sockaddr * = NULL);
+  virtual bool sendv (const iovec *, int, const sockaddr * = NULL);
   void setrcb (recvcb_t);
   void setwcb (cbv);
+  void set_fail_on_oversized_packet (bool b) { _foosp = b; }
+  bool fail_on_oversized_packet () const { return _foosp; }
 
   u_int64_t get_raw_bytes_sent () const { return raw_bytes_sent; }
   int sndbufsize () const { return sndbufsz; }

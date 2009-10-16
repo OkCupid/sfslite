@@ -65,7 +65,7 @@ axprt_dgram::~axprt_dgram ()
   xfree (pktbuf);
 }
 
-void
+bool
 axprt_dgram::sendv (const iovec *iov, int cnt, const sockaddr *sap)
 {
   assert (connected == !sap);
@@ -79,6 +79,7 @@ axprt_dgram::sendv (const iovec *iov, int cnt, const sockaddr *sap)
   mh.msg_iov = const_cast<iovec *> (iov);
   mh.msg_iovlen = cnt;
   sendmsg (fd, &mh, 0);
+  return true;
 }
 
 void

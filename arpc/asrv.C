@@ -374,8 +374,26 @@ asrv::seteof (ref<xhinfo> xi, const sockaddr *src, bool force)
 void
 asrv::sendreply (svccb *sbp, xdrsuio *x, bool)
 {
-  if (!xi->ateof () && x)
-    xi->xh->sendv (x->iov (), x->iovcnt (), sbp->addr);
+  if (!xi->ateof () && x) {
+
+    // This send might fail if the RPC was too big to be sent over
+    // the channel.  In that error case, we get a FALSE.  In success
+    // and other cases, we get a TRUE.
+    if (!xi->xh->sendv (x->iov (), x->iovcnt (), sbp->addr)) {
+
+      warn ("RPC %d:%d:%d failed (due to excess packet largess?)\n",
+	    sbp->prog (), sbp->vers (), sbp->proc ());
+
+      // If the channel is robust to this failure case, then be polite
+      // and tell the client on the other end that we refused to send
+      // him a reply.  It would be nice to have a better error value
+      // but this is what the XDR standard gives us.
+      if (!xi->ateof ()) {
+	asrv_accepterr (xi, sbp->addr, SYSTEM_ERR, &sbp->msg);
+      }
+    }
+  }
+
   /* If x contains a marshaled version of sbp->template getres<...> (),
    * we need to clear the uio first (since deleting sbp will delete
    * the object getres returned). */

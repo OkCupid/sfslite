@@ -52,7 +52,7 @@ protected:
   virtual void recvbreak ();
 
 public:
-  virtual void sendv (const iovec *, int, const sockaddr * = NULL);
+  virtual bool sendv (const iovec *, int, const sockaddr * = NULL);
   void encrypt (const void *sendkey, size_t sendkeylen,
 		const void *recvkey, size_t recvkeylen);
   void encrypt (const str &sendkey, const str &recvkey)

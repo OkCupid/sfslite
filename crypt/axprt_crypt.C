@@ -144,7 +144,7 @@ axprt_crypt::getpkt (char **cpp, char *eom)
   return true;
 }
 
-void
+bool
 axprt_crypt::sendv (const iovec *iov, int cnt, const sockaddr *)
 {
   if (writefd < 0)
@@ -152,7 +152,7 @@ axprt_crypt::sendv (const iovec *iov, int cnt, const sockaddr *)
 
   if (!cryptsend) {
     axprt_stream::sendv (iov, cnt, NULL);
-    return;
+    return true;
   }
 
   bool blocked = out->resid ();
@@ -161,7 +161,7 @@ axprt_crypt::sendv (const iovec *iov, int cnt, const sockaddr *)
   if (len > pktsize) {
     warn ("axprt_stream::sendv: packet too large\n");
     fail ();
-    return;
+    return false;
   }
 
   u_char mk1[sizeof (mackey1)];
@@ -211,6 +211,8 @@ axprt_crypt::sendv (const iovec *iov, int cnt, const sockaddr *)
   fdcb (fd, selwrite, wrap (this, op));
   wcbset = true;
 #endif
+
+  return true;
 }
 
 void

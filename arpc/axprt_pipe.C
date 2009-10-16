@@ -21,6 +21,8 @@
  *
  */
 
+#define __STDC_FORMAT_MACROS 1
+#include <inttypes.h>
 #include "arpc.h"
 #include "sfs_profiler.h"
 
@@ -37,7 +39,7 @@ axprt_pipe::wrsync ()
 axprt_pipe::axprt_pipe (int rfd, int wfd, size_t ps, size_t bs)
   : axprt (true, true), destroyed (false), ingetpkt (false), pktsize (ps),
     bufsize (bs ? bs : pktsize + 4), fdread (rfd), fdwrite (wfd), cb (NULL),
-    pktlen (0), wcbset (false), raw_bytes_sent (0)
+    pktlen (0), wcbset (false), _foosp (false), raw_bytes_sent (0)
 {
   make_async (fdread);
   make_async (fdwrite);
@@ -174,7 +176,7 @@ axprt_pipe::sockcheck ()
   this->_sockcheck(fdwrite);
 }
 
-void
+bool
 axprt_pipe::sendv (const iovec *iov, int cnt, const sockaddr *)
 {
   assert (!destroyed);
@@ -184,9 +186,12 @@ axprt_pipe::sendv (const iovec *iov, int cnt, const sockaddr *)
     panic ("axprt_pipe::sendv: called after an EOF\n");
 
   if (len > pktsize) {
-    warn ("axprt_pipe::sendv: packet too large\n");
-    fail ();
-    return;
+    warn ("axprt_pipe::sendv: packet too large (0x%" PRIx32 " > 0x%zx bytes)\n",
+	  len, pktsize);
+    if (fail_on_oversized_packet ()) {
+      fail ();
+    }
+    return false;
   }
   bytes_sent += len;
   raw_bytes_sent += len + 4;
@@ -201,7 +206,7 @@ axprt_pipe::sendv (const iovec *iov, int cnt, const sockaddr *)
     ssize_t skip = writev (fdwrite, niov, cnt + 1);
     if (skip < 0 && errno != EAGAIN) {
       fail ();
-      return;
+      return false;
     }
     else
       out->copyv (niov, cnt + 1, max<ssize_t> (skip, 0));
@@ -213,6 +218,7 @@ axprt_pipe::sendv (const iovec *iov, int cnt, const sockaddr *)
     out->copyv (iov, cnt, 0);
   }
   output ();
+  return true;
 }
 
 void
