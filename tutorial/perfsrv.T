@@ -53,7 +53,6 @@ state_t::diff (const state_t &then)
 tamed static void report_loop  ()
 {
   tvars { 
-    size_t n_calls_last (0);
     time_t inc (5);
     state_t now, then;
   }
