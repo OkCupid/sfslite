@@ -6,6 +6,7 @@
 #include "arpc.h"
 #include "ex_prot.h"
 #include "tame_rpc.h"
+#include "tame_connectors.h"
 
 #if 0
 static callbase *
@@ -40,7 +41,8 @@ try_rpc (str h, int port, evb_t cb)
     a2 = "go hang a salami i'm a lasagna hog";
     
     twait {
-      RPC::ex_prog_1::ex_random (cli, &r1, mkevent (e1));
+      RPC::ex_prog_1::ex_random (cli, &r1, 
+				 connector::klepto_timeout (mkevent (e1), 15));
       RPC::ex_prog_1::ex_reverse (cli, a2, &r2, mkevent(e2));
 
       // Calling can be more general than just (void)call() methods.

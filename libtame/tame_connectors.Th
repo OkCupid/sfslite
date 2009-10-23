@@ -62,10 +62,29 @@ public:
     return ncb;
   }
 
+  static typename event<T1,T2,T3>::ptr
+  _klepto_timeout (ptr<closure_t> cls, typename event<T1,T2,T3>::ref in,
+		  int to_s, int to_ns = 0,
+		  outcome_t *ocp = NULL)
+  {
+    typename event<T1,T2,T3>::ptr ncb;
+    connector_t<T1,T2,T3> c;
+    c.__kto (&ncb, cls, in, to_s, to_ns, ocp);
+    return ncb;
+  }
+
 private:
   void __cnc (typename event<T1,T2,T3>::ptr *out, 
 	      typename event<T1,T2,T3>::ref in, 
 	      _event_cancel_base *c, 
+	      int to_s, 
+	      int to_ns,
+	      outcome_t *ocp,
+	      CLOSURE);
+
+  void __kto (typename event<T1,T2,T3>::ptr *out, 
+	      ptr<closure_t> c,
+	      typename event<T1,T2,T3>::ref in, 
 	      int to_s, 
 	      int to_ns,
 	      outcome_t *ocp,
@@ -112,6 +131,40 @@ connector_t<T1,T2,T3>::__sig (typename event<T1,T2,T3>::ptr *out,
   if (sigp) *sigp = sig;
 
   in->trigger_no_assign ();
+}
+
+tamed template<class T1, class T2, class T3> void
+
+connector_t<T1,T2,T3>::__kto (typename event<T1,T2,T3>::ptr *out, 
+			      ptr<closure_t> c,
+			      typename event<T1,T2,T3>::ref in, 
+			      int to_s, 
+			      int to_ns,
+			      outcome_t *ocp)
+{
+  tvars {
+    rendezvous_t<outcome_t> rv (__FILE__, __LINE__);
+    outcome_t outc;
+    timecb_t *tcb (NULL);
+  }
+  tcb = delaycb (to_s, to_ns, mkevent (rv, OUTCOME_TIMEDOUT));
+  *out = mkevent_rs (in->slot_set (), rv, OUTCOME_SUCC);
+  twait (rv, outc);
+
+  if (ocp) *ocp = outc;
+  if (outc != OUTCOME_TIMEDOUT) {
+    assert (tcb);
+    timecb_remove (tcb);
+    rv.cancel ();
+    in->trigger_no_assign ();
+  } else {
+    // the timer fired first!
+    assert (outc == OUTCOME_TIMEDOUT);
+    tcb = NULL;  
+    in->trigger_no_assign ();
+    twait (rv, outc);
+    assert (outc == OUTCOME_SUCC);
+  }
 }
 
 
@@ -183,6 +236,15 @@ namespace connector {
 
   template<typename T1, typename T2, typename T3>
   ref<_event<T1,T2,T3> >
+  _klepto_timeout (ptr<closure_t> cl, ref<_event<T1,T2,T3> > in,
+		  int to_s, int to_ns = 0,
+		  outcome_t *ocp = NULL)
+  {
+    return connector_t<T1,T2,T3>::_klepto_timeout (cl, in, to_s, to_ns, ocp);
+  }
+
+  template<typename T1, typename T2, typename T3>
+  ref<_event<T1,T2,T3> >
   sig (ref<_event<T1,T2,T3> > in, vec<int> sigs, int *sigp = NULL,
        _event_cancel_base *cobj = NULL)
   {
@@ -197,5 +259,12 @@ namespace connector {
   }
 
 };
+
+
+//
+// klepto timeout grabs onto the current closure and holds onto it,
+// until the call in question fires, even if the timeout fires first.
+//
+#define klepto_timeout(...) _klepto_timeout(__cls_r, ## __VA_ARGS__ )
 
 #endif /* _LIBTAME_CONNECTORS_H_ */
