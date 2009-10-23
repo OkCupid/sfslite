@@ -25,6 +25,8 @@
 #ifndef _ASYNC_SYSCONF_H_
 #define _ASYNC_SYSCONF_H_ 1
 
+// Set this first, in case we ever include <stdint.h> on linux.
+#define __STDC_LIMIT_MACROS 1
 
 #ifdef __cplusplus
 extern "C" {
@@ -68,6 +70,7 @@ extern "C" {
 #include <stddef.h>
 #include <ctype.h>
 
+#include <stdint.h>
 #include <limits.h>
 #include <unistd.h>
 
