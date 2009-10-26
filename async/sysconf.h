@@ -26,7 +26,9 @@
 #define _ASYNC_SYSCONF_H_ 1
 
 // Set this first, in case we ever include <stdint.h> on linux.
-#define __STDC_LIMIT_MACROS 1
+#ifndef __STDC_LIMIT_MACROS
+# define __STDC_LIMIT_MACROS 1
+#endif
 
 #ifdef __cplusplus
 extern "C" {
