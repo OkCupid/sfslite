@@ -91,14 +91,14 @@ mkdir_p (char *s)
 //
 // return -1 if failure, and 0 if wrote the file out OK.
 //
-int write_file (const str &nm, const str &dat)
+int write_file (const str &nm, const str &dat, bool do_fsync)
 {   
   char *s = strdup (nm.cstr ());
   int rc = 0;
 
   rc = mkdir_p (s);
 
-  if (rc == 0 && !str2file (nm, dat, 0666, false, NULL, true)) {
+  if (rc == 0 && !str2file (nm, dat, 0666, false, NULL, true, do_fsync)) {
     warn ("cannot create file %s: %m\n", nm.cstr ());
     rc = -1;
   } else {

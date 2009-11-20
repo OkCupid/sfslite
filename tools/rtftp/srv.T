@@ -17,8 +17,13 @@
 class srv_t {
 public:
   srv_t () 
-    : _verbose (false), _debug (false), _port (RTFTP_TCP_PORT), _sfd (-1),
-      _chroot (false) {}
+    : _verbose (false), 
+      _debug (false), 
+      _port (RTFTP_TCP_PORT), 
+      _sfd (-1),
+      _chroot (false),
+      _do_fsync (false),
+      _listen_q_len (800) {}
   int config (int argc, char *argv[]);
   void newcli ();
   bool init ();
@@ -36,7 +41,8 @@ private:
   int _port;
   int _sfd;
 
-  bool _chroot;
+  bool _chroot, _do_fsync;
+  int _listen_q_len;
   str _user, _group;
   int _uid, _gid;
 };
@@ -94,13 +100,14 @@ private:
 
 class cli_t {
 public:
-  cli_t (int f, const char *a, bool v)
+  cli_t (int f, const char *a, bool v, bool s)
     : _fd (f), 
       _x (axprt_stream::alloc (f)),
       _srv (asrv::alloc (_x, rtftp_program_1, wrap (this, &cli_t::dispatch))),
       _addr (a),
       _verbose (v),
-      _id (0) {}
+      _id (0),
+      _do_fsync (s) {}
   ~cli_t () { clean_files (); }
   void dispatch (svccb *sbp);
 private:
@@ -118,6 +125,7 @@ private:
   bool _verbose;
   qhash<rtftp_xfer_id_t, ptr<file_t> > _tab;
   rtftp_xfer_id_t _id;
+  bool _do_fsync;
 };
 
 //-----------------------------------------------------------------------
@@ -126,7 +134,8 @@ static void
 usage ()
 {
   warnx << "usage: " << progname 
-	<< " [-r] [-u<usr>] [-g<grp>] [-dv] [-p<prt>] [-l<log>] <dir>\n"
+	<< " [-r] [-u<usr>] [-g<grp>] [-dv] [-p<prt>] [-l<log>] [-q<len>] "
+	<< "<dir>\n"
 	<< "\n"
 	<< "Options:\n"
 	<< "   -d       debug mode (no backgrounding)\n"
@@ -136,6 +145,8 @@ usage ()
 	<< "   -r       chrooted operation\n"
 	<< "   -u<usr>  run-as user\n"
 	<< "   -v       verbose mode (display hits/misses)\n"
+	<< "   -s       do fsync on file writes (off by default)\n"
+	<< "   -q       listen queue length (default=800)\n"
 	<< "\n"
 	<< "Arguments:\n"
 	<< "   <dir>    the cache directory\n"
@@ -152,7 +163,7 @@ cli_t::do_put (const rtftp_file_t *arg)
     st = RTFTP_CORRUPT;
   } else {
     str s = xdr2str (*arg);
-    st = (write_file (arg->name, s) == 0) ? RTFTP_OK :  RTFTP_EFS;
+    st = (write_file (arg->name, s, _do_fsync) == 0) ? RTFTP_OK :  RTFTP_EFS;
   }
   if (_verbose) {
     warn << "PUT: " << arg->name << " -> ";
@@ -609,7 +620,7 @@ srv_t::newcli ()
   if (fd < 0) {
     warn ("accept error: %m\n");
   } else {
-    vNew cli_t (fd, inet_ntoa (sin.sin_addr), _verbose);
+    vNew cli_t (fd, inet_ntoa (sin.sin_addr), _verbose, _do_fsync);
   }
 }
 
@@ -769,7 +780,7 @@ srv_t::run ()
       warn ("running unprivileged in dir=%s\n", _dir.cstr ()); 
     }
   }
-  listen (_sfd, 800);
+  listen (_sfd, _listen_q_len);
   fdcb (_sfd, selread, wrap (this, &srv_t::newcli));
 }
 
@@ -781,10 +792,19 @@ srv_t::config (int argc, char *argv[])
   int ch;
   int rc = 1;
 
-  while ((ch = getopt (argc, argv, "vdru:g:l:")) != -1) {
+  while ((ch = getopt (argc, argv, "vdru:g:l:q:s")) != -1) {
     switch (ch) {
     case 'l':
       syslog_priority = optarg;
+      break;
+    case 's':
+      _do_fsync = true;
+      break;
+    case 'q':
+      if (!convertint (optarg, &_listen_q_len)) {
+	usage ();
+	rc = -1;
+      }
       break;
     case 'r':
       _chroot = true;
@@ -805,8 +825,8 @@ srv_t::config (int argc, char *argv[])
       if (!convertint (optarg, &_port)) {
 	usage ();
 	rc = -1;
-	break;
       }
+      break;
     case 'h':
       rc = 0;
       usage ();

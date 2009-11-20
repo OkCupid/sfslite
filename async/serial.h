@@ -28,7 +28,8 @@
 #include "str.h"
 
 bool str2file (str file, str s, int perm = 0666, bool excl = false,
-	       struct stat *sbp = NULL, bool binary = false);
+	       struct stat *sbp = NULL, bool binary = false,
+	       bool do_fsync = false);
 str file2str (str file);
 
 static inline void
