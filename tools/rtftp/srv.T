@@ -769,7 +769,7 @@ srv_t::run ()
       warn ("running unprivileged in dir=%s\n", _dir.cstr ()); 
     }
   }
-  listen (_sfd, 200);
+  listen (_sfd, 800);
   fdcb (_sfd, selread, wrap (this, &srv_t::newcli));
 }
 
