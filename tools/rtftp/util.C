@@ -85,6 +85,49 @@ mkdir_p (char *s)
 
 //-----------------------------------------------------------------------
 
+static bool
+my_str2file (str fn, str dat, int mode, bool do_fsync)
+{
+  str tmp = strbuf ("%s.%d~", fn.cstr (), rand ());
+  const char *tmpc = tmp.cstr ();
+  int fd = ::open (tmpc, O_WRONLY | O_CREAT, mode);
+  int rc = 0;
+  
+  if (fd < 0) {
+    warn ("failed to open file %s: %m\n", tmpc);
+  } else {
+    size_t bsz = 8196;
+    const char *bp = dat.cstr ();
+    const char *endp = dat.cstr () + dat.len ();
+    
+    while (bp < endp && rc >=0 ) {
+      size_t len = min<size_t> (bsz, endp - bp);
+      rc = write (fd, bp, len);
+      if (rc < 0) {
+	warn ("write failed on file %s: %m\n", tmpc);
+      } else if (rc == 0) {
+	warn ("unexpected 0-length write on file %s\n", tmpc);
+	rc = EINVAL;
+      } else {
+	bp += rc;
+	rc = 0;
+      }
+    }
+    close (fd);
+  }
+  if (do_fsync && !fsync (fd)) {
+    warn ("fsync failed on file %s: %m\n", tmpc);
+  }
+  if (rc != 0) {
+    unlink (tmpc);
+  } else if ((rc = rename (tmpc, fn.cstr ())) != 0)  {
+    warn ("failed to rename %s to %s: %m\n", tmpc, fn.cstr ());
+  }
+  return (rc == 0);
+}
+
+//-----------------------------------------------------------------------
+
 //
 // write out the data 's' to the file given by _file.  Might need to make
 // some parent directories if the filename contains slashes.
@@ -98,7 +141,7 @@ int write_file (const str &nm, const str &dat, bool do_fsync)
 
   rc = mkdir_p (s);
 
-  if (rc == 0 && !str2file (nm, dat, 0666, false, NULL, true, do_fsync)) {
+  if (rc == 0 && !my_str2file (nm, dat, 0666, do_fsync)) {
     warn ("cannot create file %s: %m\n", nm.cstr ());
     rc = -1;
   } else {
