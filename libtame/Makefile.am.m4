@@ -43,6 +43,7 @@ tame_src(lock)
 tame_src(io)
 tame_src(aio)
 tame_src(rpcserver)
+tame_src(connectors)
 tame_hdr(tame_connectors)
 tame_hdr(tame_nlock)
 

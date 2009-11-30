@@ -258,6 +258,8 @@ namespace connector {
     return connector_t<T1,T2,T3>::first (es, sz);
   }
 
+  evb_t tand (evv_t in, bool *b);
+
 };
 
 
