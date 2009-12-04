@@ -10,7 +10,9 @@
 #include <math.h>
 #include "litetime.h"
 
-#define __STDC_FORMAT_MACROS
+#ifndef __STDC_FORMAT_MACROS
+# define __STDC_FORMAT_MACROS
+#endif
 #include <inttypes.h>
 
 typedef enum { SFS_MODE = 0, IMPLICIT_MODE = 1, EXPLICIT_MODE = 2,

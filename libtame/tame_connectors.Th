@@ -259,6 +259,7 @@ namespace connector {
   }
 
   evb_t tand (evv_t in, bool *b);
+  evb_t tor (evv_t in, bool *b);
 
 };
 
