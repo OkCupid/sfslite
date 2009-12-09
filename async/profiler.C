@@ -229,7 +229,7 @@ public:
 
   enum { MIN_ROOM = 0x1000, MIN_SIZE = 0x10000 };
 
-  void reset () { _tab.clear (); }
+  void reset () { _tab.deleteall (); }
   void report ();
   void recharge ();
   typedef ihash<edge_key_t, edge_t, &edge_t::_key, &edge_t::_lnk> tab_t;
@@ -808,6 +808,9 @@ sfs_profiler_obj_t::reset ()
 {
   warn << PRFX1 << "reset\n";
 
+  // Don't allow the profile to run while we're resetting it
+  bool e = _enabled;
+  if (e) { disable (); }
   _edges.reset ();
   _sites.reset ();
 
@@ -816,6 +819,7 @@ sfs_profiler_obj_t::reset ()
     _buf = _bp = _endp = NULL;
   }
   while (_bufs.size ()) { delete [] _bufs.pop_back (); }
+  if (e) { enable (); }
 }
 
 //-----------------------------------------------------------------------
@@ -946,7 +950,7 @@ sfs_profiler_obj_t::crawl_stack (const ucontext_t &ctx)
 void 
 sfs_profiler_obj_t::timer_event (int sig, siginfo_t *si, void *uctx)
 {
-  if (!_running && _init) {
+  if (!_running && _init && _enabled) {
     if (sig == SIGALRM || sig == SIGVTALRM) {
       const ucontext_t *ut = static_cast<ucontext_t *> (uctx);
       crawl_stack (*ut);
