@@ -229,7 +229,7 @@ public:
 
   enum { MIN_ROOM = 0x1000, MIN_SIZE = 0x10000 };
 
-  void reset () { _tab.deleteall (); }
+  void reset () { _tab.clear (); }
   void report ();
   void recharge ();
   typedef ihash<edge_key_t, edge_t, &edge_t::_key, &edge_t::_lnk> tab_t;
