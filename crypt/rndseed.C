@@ -25,6 +25,7 @@
 
 prng rnd;
 sha1oracle rnd_input (64, 0, 8);
+bool sfs_do_random_stir = true;
 
 enum { seedsize = 48 };
 const int mapsize = sysconf (_SC_PAGESIZE);
@@ -57,7 +58,9 @@ random_update ()
 static void
 random_stir ()
 {
-  getsysnoise (&rnd_input, wrap (random_update));
+  if (sfs_do_random_stir) {
+    getsysnoise (&rnd_input, wrap (random_update));
+  }
 }
 
 static void

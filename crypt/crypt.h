@@ -42,6 +42,7 @@ extern prng rnd;
 #undef setbit
 
 extern sha1oracle rnd_input;
+extern bool sfs_do_random_stir;
 void random_start ();		// Start init so later random_init is fast
 void random_update ();
 void random_set_seedfile (str path);
