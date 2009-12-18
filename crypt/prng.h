@@ -117,5 +117,6 @@ void getsysnoise (datasink *, cbv);
 bool getkbdnoise (size_t, datasink *, cbv);
 bool getkbdpwd (str, datasink *, cbs);
 bool getkbdline (str, datasink *, cbs, str def = NULL);
+void get_urandom_noise (datasink *dst, cbv cb);
 
 #endif /* !_PRNG_H_ */

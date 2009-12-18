@@ -41,13 +41,19 @@ extern prng rnd;
 
 #undef setbit
 
+typedef enum { SFS_RANDOM_STIR_NONE = 0,
+	       SFS_RANDOM_STIR_FORK = 1,
+	       SFS_RANDOM_STIR_URANDOM = 2 } sfs_random_stir_t;
+
 extern sha1oracle rnd_input;
-extern bool sfs_do_random_stir;
+extern sfs_random_stir_t sfs_random_stir;
+
 void random_start ();		// Start init so later random_init is fast
 void random_update ();
 void random_set_seedfile (str path);
 void random_init ();		// Call this or next function before using rnd
 void random_init_file (str path);
+void random_stir ();
 
 u_int32_t random_getword ();
 

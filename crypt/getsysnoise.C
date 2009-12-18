@@ -329,3 +329,30 @@ getsysnoise (datasink *dst, cbv cb)
 {
   vNew noise_getter (dst, cb);
 }
+
+void
+get_urandom_noise (datasink *dst, cbv cb)
+{
+  const char *fn = SFS_DEV_RANDOM;
+  static int fd = -1;
+  if (fd < 0 && fn) {
+    fd = open (fn, O_RDONLY);
+    if (fd < 0) {
+      warn ("failed to open random device '%s': %m\n", fn);
+    }
+  }
+  if (fd >= 0) {
+    enum { BUFSZ = 128 };
+    char buf [BUFSZ];
+    ssize_t rc = read (fd, buf, BUFSZ);
+    if (rc < 0) {
+      warn ("failed to read from random device '%s': %m\n", fn);
+      if (errno != EAGAIN) {
+	fd = -1;
+      }
+    } else {
+      dst->update (buf, rc);
+    }
+  }
+  (*cb) ();
+}
