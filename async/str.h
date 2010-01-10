@@ -314,6 +314,10 @@ public:
   void clear () { tosuio ()->clear (); }
   size_t len () const { return tosuio ()->resid (); }
 
+  // copy the bytes from the given buffer into the strbuf,
+  // works for even binary data (unlike cat(foo, true) above).
+  void copy (const char *p, size_t l) { uio->copy (p, l); }
+
   const strbuf &take (strbuf &in);
 };
 

@@ -135,4 +135,100 @@ struct tailq {
   }
 };
 
+/*
+ * this is a standard doubly-linked list.  it works mainly like the
+ * tailq above but it supports, without hacks, moving forward and 
+ * backward through the list via next() and prev().
+ *
+ */
+template<class T>
+struct dllist_entry {
+ T *next;
+ T *prev;
+};
+
+template<class T, dllist_entry<T> T::*field>
+struct dllist {
+  T *_first;
+  T *_last;
+  
+  dllist () { _first = _last = NULL; }
+  
+  void insert_head (T *elm) {
+    if (((elm->*field).next = _first)) {
+      (_first->*field).prev = elm;
+    } else {
+      _last = elm;
+    }
+    (elm->*field).prev = NULL;
+    _first = elm;
+  }
+  
+  T *head () { return _first; }
+  T *tail () { return _last; }
+  
+  void insert_tail (T *elm) {
+    if (((elm->*field).prev = _last)) {
+      (_last->*field).next = elm;
+    } else {
+      _first = elm;
+    }
+    (elm->*field).next = NULL;
+    _last = elm;
+  }
+  
+  T *remove (T *elm) {
+    
+    if ((elm->*field).next) {
+      ((elm->*field).next->*field).prev = (elm->*field).prev;
+    } else {
+      _last = (elm->*field).prev;
+    }
+    
+    if ((elm->*field).prev) {
+      ((elm->*field).prev->*field).next = (elm->*field).next;
+    } else {
+      _first = (elm->*field).next;
+    }
+    
+    (elm->*field).prev = (elm->*field).next = NULL;
+    
+    return elm;
+  }
+  
+  static T *next (T *elm) {
+    T *ret = NULL;
+    if (elm) { ret = (elm->*field).next; }
+    return ret;
+  }
+
+  static T *prev (T *elem) {
+    T *ret = NULL;
+    if (elem) { ret = (elem->*field).prev; }
+    return ret;
+  }
+  
+  // call the given callback once for each item in the list  
+  void traverse (typename callback<void, T *>::ref cb) const {
+    T *p, *np;
+    for (p = _first; p; p = np) {
+      np = (p->*field).next;
+      (*cb) (p);
+    }
+  }
+  
+  // sanity-check the list, dumping core if anything is amiss.
+  void check () {
+    for (T *e = _first; e; e = next (e)) {
+      if (!(e->*field).prev) { assert (e == _first); }
+      else { assert (((e->*field).prev->*field).next == e); }
+      
+      if (!(e->*field).next) { assert (e == _last); }
+      else { assert (((e->*field).next->*field).prev == e); }
+    }
+  }
+  
+};
+
+
 #endif /* !_LIST_H_INCLUDED_ */
