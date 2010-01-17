@@ -94,6 +94,7 @@ tame_rpcclient(ex17)
 tame_standalone(buggy1)
 tame_standalone(buggy2)
 tame_standalone(buggy3)
+tame_standalone(wctrunc)
 
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
 dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl dnl
