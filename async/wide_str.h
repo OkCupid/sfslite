@@ -4,7 +4,7 @@
 #include "str.h"
 #include <wchar.h>
 
-#ifdnef __ASYNC__WIDE_STR_H__
+#ifndef __ASYNC__WIDE_STR_H__
 #define __ASYNC__WIDE_STR_H__ 1
 
 class wide_str_t {
