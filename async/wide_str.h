@@ -4,6 +4,9 @@
 #include "str.h"
 #include <wchar.h>
 
+#ifdnef __ASYNC__WIDE_STR_H__
+#define __ASYNC__WIDE_STR_H__ 1
+
 class wide_str_t {
 public:
   wide_str_t (str utf8_in);
@@ -36,3 +39,5 @@ const strbuf &
 strbuf_cat (const strbuf &b, const wide_str_t &s);
 
 str utf8_substr (const str &s, size_t pos, size_t len = (size_t) -1);
+
+#endif /* __ASYNC__WIDE_STR_H__ */
