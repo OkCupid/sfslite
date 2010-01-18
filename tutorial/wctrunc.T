@@ -40,7 +40,11 @@ main_T (size_t start, size_t len)
 int 
 main (int argc, char *argv[])
 {
-  setlocale (LC_CTYPE, "UTF-8");
+  // On linux use this:
+  if (!wide_str_t::init ("en_US.UTF-8")) {
+    warn << "Cannot initialize locale; quitting!\n";
+    exit (-1);
+  }
   size_t start, len;
   if (argc != 3 || 
       !convertint (argv[1], &start) ||

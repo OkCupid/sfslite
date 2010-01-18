@@ -2,20 +2,15 @@
 #include <locale.h>
 #include "err.h"
 
-void
-wide_str_t::init ()
+bool
+wide_str_t::init (const char *locale)
 {
-  static bool is_init = false;
-  if (!is_init) {
-    is_init = true;
-    setlocale (LC_CTYPE, "UTF-8");
-  }
+  return setlocale (LC_CTYPE, locale);
 }
 
 void
-wide_str_t::init (size_t l)
+wide_str_t::_init (size_t l)
 {
-  init ();
   _buf = New refcounted<vec<wchar_t> > ();
   _buf->setsize (l+1);
   memset (_buf->base (), 0, sizeof (wchar_t) * (l+1));
@@ -26,11 +21,11 @@ wide_str_t::init (size_t l)
 wide_str_t::wide_str_t (str utf8_in)
 {
   if (utf8_in) {
-    init (utf8_in.len ());
+    _init (utf8_in.len ());
     mbstate_t state;
     memset (&state, 0, sizeof (state));
     const char *src = utf8_in.cstr ();
-    setlocale (LC_CTYPE, "UTF-8");
+    setlocale (LC_CTYPE, "en_US.UTF-8");
     ssize_t ret = mbstowcs (_buf->base (), src, _buf->size ());
     if (ret < 0) {
       _err = true;
@@ -52,21 +47,23 @@ wide_str_t::wide_str_t (str utf8_in)
 }
 
 void
-wide_str_t::init (const wchar_t *in, size_t l)
+wide_str_t::_init (const wchar_t *in, size_t l)
 {
-  init (l);
+  _init (l);
   memcpy (_buf->base (), in, _len* sizeof (wchar_t));
 }
 
-wide_str_t::wide_str_t (const wchar_t *in) { init (in, wcslen (in)); }
-wide_str_t::wide_str_t (const wchar_t *in, size_t l) { init (in, l); }
+wide_str_t::wide_str_t (const wchar_t *in) { _init (in, wcslen (in)); }
+wide_str_t::wide_str_t (const wchar_t *in, size_t l) { _init (in, l); }
 
 str
 wide_str_t::to_utf8 () const
 {
   static size_t utf8_char_width = 6;
   str ret;
-  if (_buf) {
+  if (!_buf) { /*noop */ } 
+  else if (_len == 0) { ret = ""; }
+  else {
     mbstate_t state;
     memset (&state, 0, sizeof (state));
     size_t len = _len * utf8_char_width;
@@ -117,7 +114,7 @@ wide_str_t::chop (size_t start, size_t len)
   if (_buf) {
     size_t n = min<size_t> (_len, start);
     _buf->popn_front (n);
-    _len -= start;
+    _len -= n;
     if (len < _len ) {
       (*_buf)[len] = wchar_t ('\0');
       _len = len;

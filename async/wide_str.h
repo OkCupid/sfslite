@@ -21,11 +21,11 @@ public:
   void chop (size_t start, size_t len);
   bool error () const { return _err; }
   void setbuf (ptr<vec<wchar_t> > v, size_t sz);
+  static bool init(const char *locale);
 
 private:
-  void init (size_t len);
-  void init (const wchar_t *wc, size_t len);
-  static void init();
+  void _init (size_t len);
+  void _init (const wchar_t *wc, size_t len);
   ptr<vec<wchar_t> > _buf;
   size_t _len;
   bool _err;
