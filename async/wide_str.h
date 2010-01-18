@@ -18,7 +18,8 @@ public:
   operator bool() const { return _buf; }
   operator str() const { return to_utf8 (); }
 
-  void chop (size_t start, size_t len);
+  void chop (size_t start, size_t len = (size_t) -1);
+  wide_str_t substr (size_t start, size_t len = (size_t) -1) const;
   bool error () const { return _err; }
   void setbuf (ptr<vec<wchar_t> > v, size_t sz);
   static bool init(const char *locale);
@@ -33,3 +34,5 @@ private:
 
 const strbuf &
 strbuf_cat (const strbuf &b, const wide_str_t &s);
+
+str utf8_substr (const str &s, size_t pos, size_t len = (size_t) -1);

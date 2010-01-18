@@ -129,3 +129,19 @@ strbuf_cat (const strbuf &b, const wide_str_t &ws)
   if (s) b << s;
   return b;
 }
+
+wide_str_t
+wide_str_t::substr (size_t start, size_t len) const
+{
+  wide_str_t ret (*this);
+  ret.chop (start, len);
+  return ret;
+}
+
+str
+utf8_substr (const str &s, size_t pos, size_t len)
+{
+  wide_str_t ws (s);
+  ws.chop (pos, len);
+  return ws.to_utf8 ();
+}
