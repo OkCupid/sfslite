@@ -175,12 +175,19 @@ bool is_follow_byte (unsigned char ch)
   return (ch >= 0x80 && ch <= 0xbf);
 }
 
+static void add_repl (char *&op, const str &repl)
+{
+  if (!repl || !repl.len ()) return;
+  for (const char *rp = repl.cstr (); *rp; rp++) { *op++ = *rp; } 
+}
+
 str 
-utf8_fix (const str &in)
+utf8_fix (const str &in, const str &repl)
 {
   if (!in) return in;
 
-  mstr out (in.len () + 1);
+  size_t repl_len = repl ? repl.len () : size_t (0);
+  mstr out (in.len () * max<size_t> (1, repl_len) + 1);
   const char *ip = in.cstr ();
   const char *endp = ip + in.len ();
   char *op = out.cstr ();
@@ -201,6 +208,7 @@ utf8_fix (const str &in)
       if (!is_follow_byte (*ip)) { 
 	cps = NULL; 
 	expected_width = 0;
+	add_repl (op, repl);
 
 	// We do have a follow byte, and we've seen enough bytes,
 	// so we're all set.
@@ -232,6 +240,7 @@ utf8_fix (const str &in)
       } else {
 	// we hit a bad starting byte, or a follow byte, neither of which
 	// should be useful here.
+	add_repl (op, repl);
       }
     }
 

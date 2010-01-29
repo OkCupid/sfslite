@@ -43,6 +43,6 @@ str utf8_substr (const str &s, size_t pos, size_t len = (size_t) -1);
 // for a given input UTF-8 string, strip out any broken code points, yielding a 
 // string that's guaranteed to parse.  Broken points might have been introduced
 // due to naive string truncation...
-str utf8_fix (const str &s);
+str utf8_fix (const str &s, const str &repl = NULL);
 
 #endif /* __ASYNC__WIDE_STR_H__ */

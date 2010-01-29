@@ -26,7 +26,7 @@ main_T ()
   while (go) {
     twait { ain->readline (mkevent (s, err)); }
     if (s) {
-      s = utf8_fix (s);
+      s = utf8_fix (s, "\xef\xbf\xbd");
       aout << s << "\n";
     } else {
       go = false;
