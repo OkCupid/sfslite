@@ -192,7 +192,7 @@ utf8_fix (const str &in, const str &repl)
   const char *endp = ip + in.len ();
   char *op = out.cstr ();
   const char *cps = NULL; // code point start
-  ssize_t expected_width, tmp;
+  ssize_t expected_width = 0, tmp = 0;
 
   for ( ; ip < endp; ip++) {
 
