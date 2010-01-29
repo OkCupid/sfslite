@@ -145,3 +145,98 @@ utf8_substr (const str &s, size_t pos, size_t len)
   ws.chop (pos, len);
   return ws.to_utf8 ();
 }
+
+size_t point_width (unsigned char ch)
+{
+  struct { 
+    unsigned char top;
+    int ret;
+  } prefixes[] = {
+    { 0x7f, 1 },
+    { 0xbf, -1 },
+    { 0xc1, 2 },
+    { 0xdf, 2 },
+    { 0xef, 3 },
+    { 0xf4, 4 },
+    { 0xf7, 4 },
+    { 0xfb, 5 },
+    { 0xfd, 6 },
+    { 0xff, -1 }
+  };
+
+  for (size_t i = 0; i < sizeof (prefixes) / sizeof (prefixes[0]); i++) {
+    if (ch <= prefixes[i].top) return prefixes[i].ret;
+  }
+  return 0;
+}
+
+bool is_follow_byte (unsigned char ch)
+{
+  return (ch >= 0x80 && ch <= 0xbf);
+}
+
+str 
+utf8_fix (const str &in)
+{
+  if (!in) return in;
+
+  mstr out (in.len () + 1);
+  const char *ip = in.cstr ();
+  const char *endp = ip + in.len ();
+  char *op = out.cstr ();
+  size_t width = 0;
+  const char *cps = NULL; // code point start
+  ssize_t expected_width, tmp;
+
+  for ( ; ip < endp; ip++) {
+
+    bool consumed = false;
+
+    // if 'cps' is true, that means we've previously started
+    // a code point
+    if (cps) {
+
+      // We're expecting a follow byte -- if there's none here, it's
+      // an error and we need to throw away our buffered code point.
+      if (!is_follow_byte (*ip)) { 
+	cps = NULL; 
+	expected_width = 0;
+
+	// We do have a follow byte, and we've seen enough bytes,
+	// so we're all set.
+      } else if (ip - cps == expected_width - 1) {
+	while (cps <= ip) {
+	  *op++ = *cps++;
+	}
+	cps = NULL;
+	expected_width = 0;
+	consumed = true;
+      } else {
+	// in the default case, we haven't seen enough data, so keep moving.
+	consumed = true;
+      }
+
+    }
+
+    // Need to handle the non-code-point case AFTER the code-point case,
+    // since in some cases (a busted code-point), we hit both this if
+    // and the one above.
+    if (!cps && !consumed) { 
+      tmp = point_width (*ip);
+      // start a new code point
+      if (tmp > 1) {
+	cps = ip;
+	expected_width = tmp;
+      } else if (tmp == 1) {
+	*op++ = *ip;
+      } else {
+	// we hit a bad starting byte, or a follow byte, neither of which
+	// should be useful here.
+      }
+    }
+
+  }
+
+  out.setlen (op - out.cstr ());
+  return out;
+}
