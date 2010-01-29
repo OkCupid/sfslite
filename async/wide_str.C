@@ -191,7 +191,6 @@ utf8_fix (const str &in, const str &repl)
   const char *ip = in.cstr ();
   const char *endp = ip + in.len ();
   char *op = out.cstr ();
-  size_t width = 0;
   const char *cps = NULL; // code point start
   ssize_t expected_width, tmp;
 
