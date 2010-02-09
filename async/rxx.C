@@ -225,7 +225,9 @@ split (vec<str> *out, rxx pat, str expr, size_t lim, bool emptylast)
   if (out)
     out->clear ();
 
-  for (n = 0; n + 1 < lim; n++) {
+  // check p < e to see that we're not dealing with an empty
+  // string (especially since x? matches "").
+  for (n = 0; p < e && n + 1 < lim; n++) {
     if (!pat._exec (p, e - p, 0)) {
       return 0;
     }
@@ -238,8 +240,9 @@ split (vec<str> *out, rxx pat, str expr, size_t lim, bool emptylast)
 
   if (lim && (p < e || emptylast)) {
     n++;
-    if (out)
+    if (out) {
       out->push_back (str (p, e - p));
+    }
   }
   return n;
 }
