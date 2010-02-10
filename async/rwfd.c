@@ -34,6 +34,7 @@ writevfd (int fd, const struct iovec *iov, int iovcnt, int wfd)
 #ifdef HAVE_CMSGHDR
   struct cmsghdr *cmh;
   char cmhbuf[CMSG_SPACE(sizeof(int))];
+  int *tmp;
 #else /* !HAVE_CMSGHDR */
   int fdp[1];
   *fdp = wfd;
@@ -51,7 +52,8 @@ writevfd (int fd, const struct iovec *iov, int iovcnt, int wfd)
   cmh->cmsg_level = SOL_SOCKET;
   cmh->cmsg_type = SCM_RIGHTS;
   cmh->cmsg_len = CMSG_LEN(sizeof(int));
-  *(int *)CMSG_DATA(cmh) = wfd;
+  tmp = (int *)CMSG_DATA(cmh);
+  *tmp = wfd;
 #else /* !HAVE_CMSGHDR */
   mh.msg_accrights = (char *) fdp;
   mh.msg_accrightslen = sizeof (fdp);
@@ -77,6 +79,7 @@ readvfd (int fd, const struct iovec *iov, int iovcnt, int *rfdp)
 #ifdef HAVE_CMSGHDR
   char cmhbuf[CMSG_SPACE(sizeof(int))];
   struct cmsghdr *cmh;
+  int *tmp;
 #else /* !HAVE_CMSGHDR */
   int fdp[1];
 #endif /* !HAVE_CMSGHDR */
@@ -110,7 +113,8 @@ readvfd (int fd, const struct iovec *iov, int iovcnt, int *rfdp)
 	      errno = EAGAIN;
 	  }
 	  if (cmh->cmsg_type == SCM_RIGHTS) {
-	      *rfdp = (*(int *)CMSG_DATA(cmh));
+	    tmp = (int *)CMSG_DATA(cmh);
+	    *rfdp = *tmp;
 	  }
       }
 #else /* !HAVE_CMSGHDR */

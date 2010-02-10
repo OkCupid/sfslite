@@ -757,10 +757,13 @@ printaddrs (const char *msg, ptr<hostent> h, int dns_errno)
 void
 printhints (addrhint **hpp)
 {
-  for (; *hpp; hpp++)
-    if ((*hpp)->h_addrtype == AF_INET)
+  for (; *hpp; hpp++) {
+    if ((*hpp)->h_addrtype == AF_INET) {
+      in_addr *tmp = (in_addr *)(*hpp)->h_address;
       printf ("    (hint:  %s %s)\n", (*hpp)->h_name,
-	      inet_ntoa (*(in_addr *) (*hpp)->h_address));
+	      inet_ntoa (*tmp));
+    }
+  }
 }
 
 void

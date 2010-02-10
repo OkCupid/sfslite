@@ -212,15 +212,16 @@ tcpsrvconnect_t::nextsrv (bool timeout)
 		   || strcasecmp ((*hint)->h_name, name));
 	 hint++)
       ;
-    if (*hint)
-      cons.push_back (tcpconnect (*(in_addr *) (*hint)->h_address,
-				  srvl->s_srvs[n].port,
+    if (*hint) {
+      in_addr *tmp = (in_addr *)(*hint)->h_address;
+      cons.push_back (tcpconnect (*tmp, srvl->s_srvs[n].port,
 				  wrap (this, &tcpsrvconnect_t::connectcb,
 					n)));
-    else
+    } else {
       cons.push_back (tcpconnect (srvl->s_srvs[n].name, srvl->s_srvs[n].port,
 				  wrap (this, &tcpsrvconnect_t::connectcb, n),
 				  false));
+    }
   }
 
   tmo = delaycb (4, wrap (this, &tcpsrvconnect_t::nextsrv, true));

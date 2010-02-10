@@ -79,7 +79,8 @@ sha1oracle::consume (const u_char *p)
   firstblock = false;
   assert (p == buffer);
   for (size_t i = 0; i < nctx; i++) {
-    *reinterpret_cast<u_int64_t *> (buffer) = htonq (i);
+    u_int64_t *tmp = reinterpret_cast<u_int64_t *> (buffer);
+    *tmp = htonq (i);
     transform (state[i], p);
   }
 }
