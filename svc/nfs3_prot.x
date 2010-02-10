@@ -58,7 +58,8 @@ enum nfsstat3 {
 	NFS3ERR_BADTYPE = 10007,
 	NFS3ERR_JUKEBOX = 10008,
 	NFS3ERR_FPRINTNOTFOUND = 10009,
-	NFS3ERR_ABORTED = 10010
+	NFS3ERR_ABORTED = 10010,
+	NFS3ERR_UNREACHED = 20000
 };
 
 enum ftype3 {
@@ -213,7 +214,7 @@ default:
 
 union wccstat3 switch (nfsstat3 status) {
 #ifndef UNION_ONLY_DEFAULT
-case -1:
+case NFS3ERR_UNREACHED:
 	void;
 #endif /* !UNION_ONLY_DEFAULT */
 default:
@@ -408,7 +409,7 @@ struct rename3wcc {
 
 union rename3res switch (nfsstat3 status) {
 #ifndef UNION_ONLY_DEFAULT
-case -1:
+case NFS3ERR_UNREACHED:
 	void;
 #endif /* !UNION_ONLY_DEFAULT */
 default:
@@ -427,7 +428,7 @@ struct link3wcc {
 
 union link3res switch (nfsstat3 status) {
 #ifndef UNION_ONLY_DEFAULT
-case -1:
+case NFS3ERR_UNREACHED:
 	void;
 #endif /* !UNION_ONLY_DEFAULT */
 default:
