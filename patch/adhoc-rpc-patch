@@ -1,0 +1,136 @@
+Index: arpc/asrv.C
+===================================================================
+--- arpc/asrv.C	(revision 5131)
++++ arpc/asrv.C	(working copy)
+@@ -64,7 +64,8 @@
+ 
+ svccb::svccb ()
+   : arg (NULL), aup (NULL), addr (NULL), addrlen (0),
+-    resdat (NULL), res (NULL), reslen (0)
++    resdat (NULL), res (NULL), reslen (0),
++    xdr_res_adhoc (NULL)
+ {
+   bzero (&msg, sizeof (msg));
+ }
+@@ -166,9 +167,19 @@
+   rm.acpted_rply.ar_verf = _null_auth;
+   rm.acpted_rply.ar_stat = SUCCESS;
+   rm.acpted_rply.ar_results.where = (char *) reply;
+-  rm.acpted_rply.ar_results.proc
+-    = reinterpret_cast<sun_xdrproc_t> (xdr ? xdr : srv->tbl[proc ()].xdr_res);
+ 
++  sfs::xdrproc_t xdr_proc;
++
++  if (xdr_res_adhoc) {
++    xdr_proc = xdr_res_adhoc;
++  } else if (xdr) { 
++    xdr_proc = xdr;
++  } else {
++    xdr_proc = srv->tbl[proc ()].xdr_res;
++  }
++  rm.acpted_rply.ar_results.proc = reinterpret_cast<sun_xdrproc_t> (xdr_proc);
++
++
+   get_rpc_stats ().end_call (this, ts_start);
+ 
+   xdrsuio x (XDR_ENCODE);
+@@ -411,6 +422,14 @@
+     (*cb) (NULL);
+ }
+ 
++static qhash<u_int32_t, ptr<adhoc_rpc_handler_t> > adhoc_handlers;
++
++void 
++asrv::add_adhoc_rpc_handler (u_int32_t vn, ptr<adhoc_rpc_handler_t> rh)
++{
++  adhoc_handlers.insert (vn, rh);
++}
++
+ void
+ asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
+ 		const sockaddr *src)
+@@ -422,14 +441,18 @@
+  
+   xdrmem x (msg, len, XDR_DECODE);
+   auto_ptr<svccb> sbp (New svccb);
++  sbp->xdr_res_adhoc = NULL;
+   rpc_msg *m = &sbp->msg;
++  ptr<adhoc_rpc_handler_t> *adhoc;
+ 
+   if (!xdr_callmsg (x.xdrp (), m)) {
+     trace (1) << "asrv::dispatch: xdr_callmsg failed\n";
+     seteof (xi, src);
+     return;
+   }
+-  if (m->rm_call.cb_rpcvers != RPC_MSG_VERSION) {
++
++  if (m->rm_call.cb_rpcvers != RPC_MSG_VERSION && 
++      !(adhoc = adhoc_handlers[m->rm_call.cb_rpcvers])) {
+     trace (1) << "asrv::dispatch: bad RPC message version\n";
+     asrv_rpc_mismatch (xi, src, m->rm_xid);
+     return;
+@@ -472,7 +495,17 @@
+ 
+   const rpcgen_table *rtp = &s->tbl[sbp->proc ()];
+   sbp->arg = s->tbl[sbp->proc ()].alloc_arg ();
+-  if (!rtp->xdr_arg (x.xdrp (), sbp->arg)) {
++
++  // XAP = "Xdr Arg Proc"
++  sfs::xdrproc_t xap;
++  if (adhoc) {
++    xap = (*adhoc)->get_arg_proc (sbp.get (), s);
++    sbp->set_xdr_res_adhoc ((*adhoc)->get_res_proc (sbp.get (), s));
++  } else {
++    xap = rtp->xdr_arg;
++  }
++
++  if (!(*xap)(x.xdrp (), sbp->arg)) {
+     if (asrvtrace >= 1)
+       warn ("asrv::dispatch: bad message %s:%s x=%x", s->rpcprog->name,
+ 	    rtp->name, xidswap (m->rm_xid))
+Index: arpc/asrv.h
+===================================================================
+--- arpc/asrv.h	(revision 5131)
++++ arpc/asrv.h	(working copy)
+@@ -57,6 +57,8 @@
+ 
+   timespec ts_start;            // keep track of when it started
+ 
++  sfs::xdrproc_t xdr_res_adhoc; // adhoc xdr-res proc
++
+   svccb (const svccb &);	// No copying
+   const svccb &operator= (const svccb &);
+ 
+@@ -86,6 +88,8 @@
+   template<class T> T *getarg () { return static_cast<T *> (arg); }
+   template<class T> const T *getarg () const { return static_cast<T *> (arg); }
+ 
++  void set_xdr_res_adhoc (sfs::xdrproc_t x) { xdr_res_adhoc = x; }
++
+   /* These return a properly initialized structure of the return type
+    * of the RPC call.  The structure is automatically deleted when
+    * with svccb, which may just happen to be handy. */
+@@ -110,7 +114,14 @@
+   void ignore ();
+ };
+ 
++class asrv;
+ 
++class adhoc_rpc_handler_t {
++public:
++  virtual sfs::xdrproc_t get_arg_proc (svccb *sbp, asrv *srv) = 0;
++  virtual sfs::xdrproc_t get_res_proc (svccb *sbp, asrv *srv) = 0;
++};
++
+ class asrv : public virtual refcount {
+   friend class svccb;
+ protected:
+@@ -153,6 +164,8 @@
+   static void dispatch (ref<xhinfo>, const char *, ssize_t, const sockaddr *);
+   static ptr<asrv> alloc (ref<axprt>, const rpc_program &,
+ 			  asrv_cb::ptr = NULL);
++
++  static void add_adhoc_rpc_handler (u_int32_t vn, ptr<adhoc_rpc_handler_t> rh);
+ };
+ 
+ class asrv_replay : public asrv {
