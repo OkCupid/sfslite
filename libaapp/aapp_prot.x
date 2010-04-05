@@ -24,6 +24,8 @@ enum aapp_status_t {
      AAPP_ERR = 2
 };
 
+typedef string logline_t<>;
+
 namespace RPC {
 
 program AAPP_SERVER_PROG {
@@ -38,4 +40,19 @@ program AAPP_SERVER_PROG {
 	} = 1;
 } = 5402;
 
+program LOGGER_PROG {
+	version LOGGER_VERS {
+		void 
+		LOGGER_NULL(void) = 0;
+
+		bool
+		LOGGER_LOG(logline_t) = 1;
+
+		bool
+		LOGGER_TURN(void) = 2;
+	} = 1;
+} = 5403;
+
 };
+
+

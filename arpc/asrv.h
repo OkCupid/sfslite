@@ -57,6 +57,8 @@ class svccb {
 
   timespec ts_start;            // keep track of when it started
 
+  sfs::xdrproc_t xdr_res_adhoc; // adhoc xdr-res proc
+
   svccb (const svccb &);	// No copying
   const svccb &operator= (const svccb &);
 
@@ -86,6 +88,8 @@ public:
   template<class T> T *getarg () { return static_cast<T *> (arg); }
   template<class T> const T *getarg () const { return static_cast<T *> (arg); }
 
+  void set_xdr_res_adhoc (sfs::xdrproc_t x) { xdr_res_adhoc = x; }
+
   /* These return a properly initialized structure of the return type
    * of the RPC call.  The structure is automatically deleted when
    * with svccb, which may just happen to be handy. */
@@ -110,6 +114,13 @@ public:
   void ignore ();
 };
 
+class asrv;
+
+class adhoc_rpc_handler_t {
+public:
+  virtual sfs::xdrproc_t get_arg_proc (svccb *sbp, asrv *srv) = 0;
+  virtual sfs::xdrproc_t get_res_proc (svccb *sbp, asrv *srv) = 0;
+};
 
 class asrv : public virtual refcount {
   friend class svccb;
@@ -153,6 +164,8 @@ public:
   static void dispatch (ref<xhinfo>, const char *, ssize_t, const sockaddr *);
   static ptr<asrv> alloc (ref<axprt>, const rpc_program &,
 			  asrv_cb::ptr = NULL);
+
+  static void add_adhoc_rpc_handler (u_int32_t vn, ptr<adhoc_rpc_handler_t> rh);
 };
 
 class asrv_replay : public asrv {

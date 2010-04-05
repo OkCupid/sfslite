@@ -1,2 +1,2 @@
 
-SUBDIRS = rtftp tinetd
+SUBDIRS = rtftp tinetd logger
