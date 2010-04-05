@@ -1,7 +1,7 @@
 
 sfslib_LTLIBRARIES = libaapp.la
 
-libaapp_la_SOURCES = aapp_prot.C accept.C logger.T
+libaapp_la_SOURCES = aapp_prot.C accept.C logger.C
 sfsinclude_HEADERS = aapp_prot.h aapp.h sfs_logger.h
 
 libaapp_la_LDFLAGS = $(LIBTOOL_VERSION_INFO)

@@ -55,12 +55,16 @@ main_t::config (int argc, char *argv[])
     }
   }
 
-  if (argc != 2) {
+  argc -= optind;
+  argv += optind;
+
+  if (argc != 1) {
     usage ();
     rc = EC_ERR;
   } else {
-    _file = argv[1]; 
+    _file = argv[0]; 
   }
+
   return rc;
 }
 
@@ -199,6 +203,7 @@ main (int argc, char *argv[])
 {
   main_t srv;
   int rc;
+  setprogname (argv[0]);
 
   if ((rc = srv.config (argc, argv)) != 0) return rc;
   if (!srv.init ()) return EC_ERR;

@@ -47,6 +47,7 @@ sfs::logger_t::launch (evb_t ev, bool do_lock)
   }
 
   path = fix_exec_path ("sfs_logger");
+  args.push_back (path);
   args.push_back ("-m");
   args.push_back (strbuf ("0%o", _mode));
   args.push_back (_file);
