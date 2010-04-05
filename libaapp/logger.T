@@ -25,7 +25,6 @@ void
 sfs::logger_t::eofcb (ptr<bool> df)
 {
   if (*df) { return; }
-  ptr<logger_t> hold = mkref (this);
   warn << "logger[" << _pid << "] died\n";
   _cli = NULL;
   _x = NULL;

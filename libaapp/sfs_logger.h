@@ -9,7 +9,7 @@
 
 namespace sfs {
 
-  class logger_t : public virtual refcount {
+  class logger_t {
   public:
     logger_t (str n, int m = 0644, int tries = 5);
     ~logger_t ();

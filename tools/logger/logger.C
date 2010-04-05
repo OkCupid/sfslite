@@ -164,7 +164,10 @@ main_t::run ()
 {
   _x = axprt_unix::alloc (0);
   _srv = asrv::alloc (_x, logger_prog_1, wrap (this, &main_t::dispatch));
-  return true;
+  if (!_srv) {
+    warn << "Check that sfs_logger is launched from an sfslite application\n";
+  }
+  return _srv;
 }
 
 //-----------------------------------------------------------------------
@@ -186,7 +189,7 @@ main_t::open ()
 void
 main_t::usage ()
 {
-  warnx << "usage: " << progname <<  "<logfile>\n";
+  warnx << "usage: " << progname <<  " <logfile>\n";
 }
 
 //-----------------------------------------------------------------------
