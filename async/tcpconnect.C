@@ -24,6 +24,8 @@
 #include "async.h"
 #include "dns.h"
 
+bool tcpconnect_debug = false;
+
 struct tcpconnect_t {
   virtual ~tcpconnect_t () {}
 };
@@ -83,15 +85,23 @@ tcpportconnect_t::name_cb (ptr<hostent> h, int err)
 {
   dnsp = NULL;
   if (!h) {
-    if (dns_tmperr (err))
+    if (dns_tmperr (err)) {
+      if (tcpconnect_debug) { warn << "tcpconnect: retryable error\n"; }
       fail (EAGAIN);
-    else
+    } else {
+      if (tcpconnect_debug) { warn << "tcpconnect: no-entry error\n"; }
       fail (ENOENT);
+    }
     return;
   }
   if (namep)
     *namep = h->h_name;
-  connect_to_in_addr (*(in_addr *) h->h_addr);
+
+  in_addr *a = reinterpret_cast<in_addr *> (h->h_addr);
+  if (tcpconnect_debug) {
+    warn << "tcpconnect: DNS resolution yiedled " << inet_ntoa (*a) << "\n";
+  }
+  connect_to_in_addr (*a);
 }
 
 void
@@ -139,6 +149,10 @@ tcpportconnect_t::connect_cb ()
 tcpconnect_t *
 tcpconnect (in_addr addr, u_int16_t port, cbi cb)
 {
+  if (tcpconnect_debug) {
+    warn << "tcpconnect: connect to " << inet_ntoa (addr) << ":" << port 
+	 << "\n";
+  }
   return New tcpportconnect_t (addr, port, cb);
 }
 
@@ -146,6 +160,9 @@ tcpconnect_t *
 tcpconnect (str hostname, u_int16_t port, cbi cb,
 	    bool dnssearch, str *namep)
 {
+  if (tcpconnect_debug) {
+    warn << "tcpconnect: connect to " << hostname << ":" << port << "\n";
+  }
   return New tcpportconnect_t (hostname, port, cb, dnssearch, namep);
 }
 

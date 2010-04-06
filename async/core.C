@@ -633,6 +633,9 @@ async_init::start ()
       case 'z':
 	sfs_core::set_zombie_collect (true);
 	break;
+      case 't':
+	tcpconnect_debug = true;
+	break;
       default:
 	warn ("unknown SFS_OPTION: '%c'\n", *cp);
 	break;

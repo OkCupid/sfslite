@@ -82,6 +82,7 @@ tcpconnect_t *tcpconnect_srv (str hostname, str service, u_int16_t defport,
 			      ptr<srvlist> *srvlp = NULL, str *np = NULL);
 tcpconnect_t *tcpconnect_srv_retry (ref<srvlist> srvl, cbi cb, str *np = NULL);
 void tcpconnect_cancel (tcpconnect_t *tc);
+extern bool tcpconnect_debug;
 
 /* ident.C */
 void identptr (int fd, callback<void, str, ptr<hostent>, int>::ref);
