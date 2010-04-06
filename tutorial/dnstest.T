@@ -48,6 +48,7 @@ run (str s, int p, evv_t ev)
     warn << "opening connection to " << s << ":" << p << "\n";
     twait { tcpconnect (s, p, mkevent (fd)); }
     if (fd >= 0) {
+      warn << "connection succeeded\n";
       go = true;
       while (go) {
 	twait { tame::waitread (fd, mkevent ()); }
