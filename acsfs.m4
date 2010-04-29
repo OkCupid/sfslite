@@ -962,7 +962,7 @@ if test "$with_gmp" != "no"; then
 	ac_save_CPPFLAGS=$CPPFLAGS
 	ac_save_LIBS=$LIBS
 	cdirs="${with_gmp}/include ${prefix}/include"
-	dirs="$cdirs /usr/local/include /usr/include"
+	dirs="$cdirs /usr/local/include /usr/include /opt/local/include"
 	AC_CACHE_CHECK(for gmp.h, sfs_cv_gmp_h,
 	[for dir in " " $dirs; do
 		case $dir in
@@ -982,7 +982,7 @@ if test "$with_gmp" != "no"; then
 	fi
 	if test "${sfs_cv_gmp_h+set}"; then
 		cdirs="${with_gmp}/lib ${prefix}/lib"
-		dirs="$cdirs /usr/local/lib /usr/lib"
+		dirs="$cdirs /usr/local/lib /usr/lib /opt/local/lib"
 		AC_CACHE_CHECK(for libgmp, sfs_cv_libgmp,
 		[for dir in "" " " $dirs; do
 			case $dir in
