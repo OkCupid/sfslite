@@ -23,6 +23,9 @@
 
 #include "sysconf.h"
 
+int suidprotect = 0;
+int execprotect = 0;
+
 int
 suidsafe (void)
 {

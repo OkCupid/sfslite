@@ -651,14 +651,19 @@ extern void panic (const char *msg, ...)
  *  The function safegetenv() returns the output of getenv unless
  *  suidsafe() is 1, in which case it always returns NULL.
  */
+
+extern
 #ifdef __cplusplus
-extern "C"
+"C"
 #endif /* __cplusplus */
 int suidprotect;		/* Set at compile time in suid programs */
+
+extern
 #ifdef __cplusplus
-extern "C"
+"C"
 #endif /* __cplusplus */
 int execprotect;		/* Set if program will drop privileges */
+
 int suidsafe (void);
 int execsafe (void);
 char *safegetenv (const char *);

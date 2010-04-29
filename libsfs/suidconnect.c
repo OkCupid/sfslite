@@ -26,8 +26,6 @@
 #include "sfs-internal.h"
 #include "sfsagent.h"
 
-int suidprotect = 1;
-
 int opt_quiet;
 
 static int
@@ -86,6 +84,7 @@ getaddr (struct sockaddr_un *sun, const char *prog)
 int
 main (int argc, char **argv)
 {
+  suidprotect = 1;
   struct sockaddr_un sun;
   int fd;
   AUTH *auth;
