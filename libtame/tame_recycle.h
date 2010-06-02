@@ -44,7 +44,7 @@ public:
       _objects.insert_head (obj);
       _n++;
     } else {
-      delete this;
+      delete obj;
     }
   }
 
