@@ -194,6 +194,24 @@ public:
   elm_t &at (size_t i) { return (*this)[i]; }
   const elm_t &at (size_t i) const { return (*this)[i]; }
 
+#define _append(v)						\
+do {								\
+  reserve (v.size ());						\
+  for (const elm_t *s = v.base (), *e = v.lim (); s < e; s++)	\
+    cconstruct (*lastp++, *s);					\
+} while (0)
+
+  template<size_t m> rpc_vec &append (const rpc_vec<T,m> &v)
+  { _append(v); return *this; }
+  template<size_t m> rpc_vec &append (const vec<T,m> &v)
+  { _append(v); return *this; }
+  template<size_t m> rpc_vec &operator+= (const rpc_vec<T,m> &v)
+  { return append(v); }
+  template<size_t m> rpc_vec &operator+= (const vec<T,m> &v)
+  { return append(v); }
+
+#undef append
+
   elm_t &push_back () {
     ensure (1);
     return super::push_back ();

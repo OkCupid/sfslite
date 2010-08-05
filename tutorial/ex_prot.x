@@ -10,6 +10,8 @@ struct vsize_t {
        opaque buf<>;
 };
 
+typedef unsigned my_vec_t<>;
+
 namespace RPC {
 program EX_PROG {
 	version EX_VERS {
