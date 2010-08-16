@@ -1,0 +1,333 @@
+Index: arpc/aclnt.C
+===================================================================
+--- arpc/aclnt.C	(revision 5403)
++++ arpc/aclnt.C	(working copy)
+@@ -363,9 +363,9 @@
+     progno = rp.progno;
+     assert (procno < rp.nproc);
+     if (!inproc)
+-      inproc = rp.tbl[procno].xdr_arg;
++      inproc = rp.tbl[procno].coder_pair.xdr_arg;
+     if (!outproc)
+-      outproc = rp.tbl[procno].xdr_res;
++      outproc = rp.tbl[procno].coder_pair.xdr_res;
+     if (!versno)
+       versno = rp.versno;
+   }
+@@ -396,12 +396,14 @@
+ 		     progno, versno, procno, xid);
+     }
+     trace () << "call " << name << "\n";
+-    if (aclnttrace >= 5 && rtp && rtp->xdr_arg == inproc && rtp->print_arg)
++    if (aclnttrace >= 5 && rtp && 
++	rtp->coder_pair.xdr_arg == inproc && rtp->print_arg)
+       rtp->print_arg (in, NULL, aclnttrace - 4, "ARGS", "");
+     if (aclnttrace >= 3 && cb != aclnt_cb_null)
+       cb = wrap (printreply2, 
+ 		 sfs::bundle_t<aclnt_cb, str, void *> (cb, name, out),
+-		 (rtp && rtp->xdr_res == outproc ? rtp->print_res : NULL));
++		 (rtp && 
++		  rtp->coder_pair.xdr_res == outproc ? rtp->print_res : NULL));
+   }
+ 
+   return true;
+@@ -420,7 +422,7 @@
+ 		  outproc, progno, versno))
+     return NULL;
+   if (!outproc)
+-    outproc = rp.tbl[procno].xdr_res;
++    outproc = rp.tbl[procno].coder_pair.xdr_res;
+   if (!d)
+     d = dest;
+ 
+Index: arpc/aclnt.h
+===================================================================
+--- arpc/aclnt.h	(revision 5403)
++++ arpc/aclnt.h	(working copy)
+@@ -179,9 +179,11 @@
+   virtual bool xi_xh_ateof_fail ();
+ 
+   static void dispatch (ref<xhinfo>, const char *, ssize_t, const sockaddr *);
++
+   static bool marshal_call (xdrsuio &, AUTH *auth, u_int32_t progno,
+ 			    u_int32_t versno, u_int32_t procno,
+ 			    sfs::xdrproc_t inproc, const void *in);
++
+   bool init_call (xdrsuio &x,
+ 		  u_int32_t procno, const void *in, void *out, aclnt_cb &,
+ 		  AUTH *auth = NULL,
+Index: arpc/asrv.C
+===================================================================
+--- arpc/asrv.C	(revision 5403)
++++ arpc/asrv.C	(working copy)
+@@ -73,9 +73,9 @@
+ {
+   xdr_free (reinterpret_cast<sfs::xdrproc_t> (xdr_callmsg), &msg);
+   if (arg)
+-    xdr_delete (srv->tbl[proc ()].xdr_arg, arg);
++    xdr_delete (coder_pair.xdr_arg, arg);
+   if (resdat)
+-    xdr_delete (srv->tbl[proc ()].xdr_res, resdat);
++    xdr_delete (coder_pair.xdr_res, resdat);
+   if (aup)
+     xdr_delete (reinterpret_cast<sfs::xdrproc_t> (xdr_authunix_parms), aup);
+   if (srv)
+@@ -167,7 +167,7 @@
+   rm.acpted_rply.ar_stat = SUCCESS;
+   rm.acpted_rply.ar_results.where = (char *) reply;
+   rm.acpted_rply.ar_results.proc
+-    = reinterpret_cast<sun_xdrproc_t> (xdr ? xdr : srv->tbl[proc ()].xdr_res);
++    = reinterpret_cast<sun_xdrproc_t> (xdr ? xdr : coder_pair.xdr_res);
+ 
+   get_rpc_stats ().end_call (this, ts_start);
+ 
+@@ -418,7 +418,7 @@
+   if (!msg || len < 8 || getint (msg + 4) != CALL) {
+     seteof (xi, src, len < 0);
+     return;
+-  }
++  }  
+  
+   xdrmem x (msg, len, XDR_DECODE);
+   auto_ptr<svccb> sbp (New svccb);
+@@ -429,13 +429,10 @@
+     seteof (xi, src);
+     return;
+   }
+-  if (m->rm_call.cb_rpcvers != RPC_MSG_VERSION) {
+-    trace (1) << "asrv::dispatch: bad RPC message version\n";
+-    asrv_rpc_mismatch (xi, src, m->rm_xid);
+-    return;
+-  }
+ 
++  u_int32_t cb_rpcvers = m->rm_call.cb_rpcvers;
+   asrv *s = xi->stab[progvers (sbp->prog (), sbp->vers ())];
++
+   if (!s || !s->cb) {
+     if (asrvtrace >= 1) {
+       if (s)
+@@ -450,6 +447,17 @@
+     return;
+   }
+ 
++  const rpcgen_coder_pair *cp = 
++    s->rpcprog->lookup_coder_pair (cb_rpcvers, sbp->proc ());
++
++  if (!cp && cb_rpcvers != RPC_MSG_VERSION) {
++    trace (1) << "asrv::dispatch: bad RPC message version\n";
++    asrv_rpc_mismatch (xi, src, m->rm_xid);
++    return;
++  }
++
++  sbp->coder_pair = *cp;
++    
+   if (s->recv_hook)
+     s->recv_hook ();
+ 
+@@ -472,7 +480,7 @@
+ 
+   const rpcgen_table *rtp = &s->tbl[sbp->proc ()];
+   sbp->arg = s->tbl[sbp->proc ()].alloc_arg ();
+-  if (!rtp->xdr_arg (x.xdrp (), sbp->arg)) {
++  if (!sbp->coder_pair.xdr_arg (x.xdrp (), sbp->arg)) {
+     if (asrvtrace >= 1)
+       warn ("asrv::dispatch: bad message %s:%s x=%x", s->rpcprog->name,
+ 	    rtp->name, xidswap (m->rm_xid))
+@@ -543,7 +551,7 @@
+   }
+ 
+   if (sbp->arg) {
+-    xdr_delete (tbl[sbp->proc ()].xdr_arg, sbp->arg);
++    xdr_delete (sbp->coder_pair.xdr_arg, sbp->arg);
+     sbp->arg = NULL;
+   }
+ 
+@@ -553,7 +561,7 @@
+   if (!xi->ateof ())
+     xi->xh->send (sbp->res, sbp->reslen, sbp->addr);
+   if (sbp->resdat) {
+-    xdr_delete (tbl[sbp->proc ()].xdr_res, sbp->resdat);
++    xdr_delete (sbp->coder_pair.xdr_res, sbp->resdat);
+     sbp->resdat = NULL;
+   }
+ 
+Index: arpc/rpc_lookup.C
+===================================================================
+--- arpc/rpc_lookup.C	(revision 5403)
++++ arpc/rpc_lookup.C	(working copy)
+@@ -25,3 +25,19 @@
+   }
+   return false;
+ }
++
++const rpcgen_coder_pair *
++rpc_program::lookup_coder_pair (u_int32_t rpc_vers, u_int32_t procno) const
++{
++  const rpcgen_coder_pair *ret = NULL;
++  if (rpc_vers == RPC_MSG_VERSION) {
++    ret = &tbl[procno].coder_pair;
++  } else {
++    for (const rpcgen_alt_coder_pairs *p = alt_coders; !ret && p->tbl; p++) {
++      if (p->rpc_vers == rpc_vers) {
++	ret = &p->tbl[procno];
++      }
++    }
++  }
++  return ret;
++}
+Index: arpc/rpctypes.h
+===================================================================
+--- arpc/rpctypes.h	(revision 5403)
++++ arpc/rpctypes.h	(working copy)
+@@ -33,29 +33,43 @@
+ #include "err.h"
+ #include "qhash.h"
+ 
++struct rpcgen_coder_pair {
++  sfs::xdrproc_t xdr_arg;
++  sfs::xdrproc_t xdr_res;
++};
++
+ struct rpcgen_table {
+   const char *name;
+ 
+   const std::type_info *type_arg;
+   void *(*alloc_arg) ();
+-  sfs::xdrproc_t xdr_arg;
+   void (*print_arg) (const void *, const strbuf *, int,
+ 		     const char *, const char *);
+ 
+   const std::type_info *type_res;
+   void *(*alloc_res) ();
+-  sfs::xdrproc_t xdr_res;
+   void (*print_res) (const void *, const strbuf *, int,
+ 		     const char *, const char *);
++
++  rpcgen_coder_pair coder_pair;
+ };
+ 
++struct rpcgen_alt_coder_pairs {
++  u_int32_t rpc_vers;
++  const rpcgen_coder_pair *tbl;
++};
++
+ struct rpc_program {
+   u_int32_t progno;
+   u_int32_t versno;
+-  const struct rpcgen_table *tbl;
++  const rpcgen_table *tbl;
+   size_t nproc;
+   const char *name;
++  const rpcgen_alt_coder_pairs *alt_coders;
+   bool lookup (const char *rpc, u_int32_t *out) const;
++
++  const rpcgen_coder_pair *
++  lookup_coder_pair (u_int32_t rpc_vers, u_int32_t procno) const;
+ };
+ 
+ enum { RPC_INFINITY = 0x7fffffff };
+Index: arpc/xdrmisc.h
+===================================================================
+--- arpc/xdrmisc.h	(revision 5403)
++++ arpc/xdrmisc.h	(working copy)
+@@ -349,8 +349,9 @@
+ # define XDRTBL_DECL(proc, arg, res)			\
+ {							\
+   #proc,						\
+-  &typeid (arg), arg##_alloc, xdr_##arg, print_##arg,	\
+-  &typeid (res), res##_alloc, xdr_##res, print_##res	\
++    &typeid (arg), arg##_alloc, print_##arg,		\
++    &typeid (res), res##_alloc, print_##res,		\
++    { xdr_##arg, xdr_##res }				\
+ },
+ 
+ #else /* !MAINTAINER */
+Index: arpc/asrv.h
+===================================================================
+--- arpc/asrv.h	(revision 5403)
++++ arpc/asrv.h	(working copy)
+@@ -30,7 +30,7 @@
+   progvers (u_int32_t p, u_int32_t v) : prog (p), vers (v) {}
+   operator hash_t() const { return prog | hash_rotate (vers, 20); }
+   bool operator== (const progvers &a) const
+-    { return prog == a.prog && vers == a.vers; }
++  { return prog == a.prog && vers == a.vers; }
+ };
+ 
+ class svccb {
+@@ -57,6 +57,8 @@
+ 
+   timespec ts_start;            // keep track of when it started
+ 
++  rpcgen_coder_pair coder_pair; // coders for the arg and res
++
+   svccb (const svccb &);	// No copying
+   const svccb &operator= (const svccb &);
+ 
+@@ -151,8 +153,7 @@
+   void set_recv_hook (cbv::ptr cb) { recv_hook = cb; }
+ 
+   static void dispatch (ref<xhinfo>, const char *, ssize_t, const sockaddr *);
+-  static ptr<asrv> alloc (ref<axprt>, const rpc_program &,
+-			  asrv_cb::ptr = NULL);
++  static ptr<asrv> alloc (ref<axprt>, const rpc_program &, asrv_cb::ptr = NULL);
+ };
+ 
+ class asrv_replay : public asrv {
+Index: arpc/acallrpc.C
+===================================================================
+--- arpc/acallrpc.C	(revision 5403)
++++ arpc/acallrpc.C	(working copy)
+@@ -156,7 +156,7 @@
+     callbuf = NULL;
+     xdrsuio x (XDR_ENCODE);
+     if (aclnt::marshal_call (x, auth, prog, vers,
+-			      proc, inxdr, inmem)) {
++			     proc, inxdr, inmem)) {
+       calllen = x.uio ()->resid ();
+       callbuf = suio_flatten (x.uio ());
+     }
+@@ -240,7 +240,8 @@
+   // XXX - the const part of the cast to sockaddr * is not quite right
+   assert (proc < rp.nproc);
+   udpclnt()->call (proc, in, out, cb, auth,
+-                   rp.tbl[proc].xdr_arg, rp.tbl[proc].xdr_res,
++                   rp.tbl[proc].coder_pair.xdr_arg, 
++		   rp.tbl[proc].coder_pair.xdr_res,
+                    rp.progno, rp.versno,
+                    (sockaddr *) (sinp));
+ }
+Index: arpc/arpc.h
+===================================================================
+--- arpc/arpc.h	(revision 5403)
++++ arpc/arpc.h	(working copy)
+@@ -114,7 +114,8 @@
+ {
+   assert (proc < rp.nproc);
+   __acallrpc (host, port, rp.progno, rp.versno, proc,
+-	      rp.tbl[proc].xdr_arg, in, rp.tbl[proc].xdr_res, out,
++	      rp.tbl[proc].coder_pair.xdr_arg, in, 
++	      rp.tbl[proc].coder_pair.xdr_res, out,
+ 	      cb, auth);
+ }
+ inline void
+@@ -124,7 +125,8 @@
+ {
+   assert (proc < rp.nproc);
+   __acallrpc (host, port, rp.progno, rp.versno, proc,
+-	      rp.tbl[proc].xdr_arg, in, rp.tbl[proc].xdr_res, out,
++	      rp.tbl[proc].coder_pair.xdr_arg, in, 
++	      rp.tbl[proc].coder_pair.xdr_res, out,
+ 	      cb, auth);
+ }
+ void acallrpc (const sockaddr_in *sinp, const rpc_program &rp,
+Index: tools/logger/Makefile.in
+===================================================================
+--- tools/logger/Makefile.in	(revision 5368)
++++ tools/logger/Makefile.in	(working copy)
+@@ -1,4 +1,4 @@
+-# Makefile.in generated by automake 1.11 from Makefile.am.
++# Makefile.in generated by automake 1.11.1 from Makefile.am.
+ # @configure_input@
+ 
+ # Copyright (C) 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
