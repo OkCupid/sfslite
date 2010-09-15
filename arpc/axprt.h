@@ -109,6 +109,7 @@ protected:
   bool _foosp; // fail on oversized packet
   
   u_int64_t raw_bytes_sent;
+  time_t _last_suio_clear;
 
   void wrsync ();
   void sendbreak (cbv::ptr);

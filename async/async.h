@@ -29,6 +29,7 @@
 #include "init.h"
 #include "litetime.h"
 #include "sfs_bundle.h"
+#include "sfs_const.h"
 
 /* core.C */
 struct timecb_t;
@@ -103,7 +104,7 @@ void ifchgcb_remove (ifchgcb_t *chg);
 #define SFSLITE_VERSION_MAJOR 1
 #define SFSLITE_VERSION_MINOR 2
 #define SFSLITE_VERSION_PATCHLEVEL 8
-#define SFSLITE_VERSION_PRE 105
+#define SFSLITE_VERSION_PRE 106
 
 //
 // VERSION_PRE < 100 means pre1, pre2, etc. releases
@@ -121,6 +122,6 @@ void ifchgcb_remove (ifchgcb_t *chg);
                    SFSLITE_VERSION_PATCHLEVEL, \
                    SFSLITE_VERSION_PRE))
 
-#define SFSLITE_PATCHLEVEL_STR "1.2.8.5"
+#define SFSLITE_PATCHLEVEL_STR "1.2.8.6"
 
 #endif /* !_ASYNC_ASYNC_H_ */

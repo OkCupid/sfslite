@@ -22,7 +22,7 @@ ihash.C itree.C lockfile.C malloc.C msb.C myaddrs.C myname.C		\
 parseopt.C pipe2str.C refcnt.C rxx.C sigio.C socket.C spawn.C str.C	\
 str2file.C straux.C suio++.C suio_vuprintf.C tcpconnect.C litetime.C \
 select.C select_std.C select_epoll.C select_kqueue.C dynenum.C \
-vec.C bundle.C alog2.C leakcheck.C profiler.C wide_str.C
+vec.C bundle.C alog2.C leakcheck.C profiler.C wide_str.C const.C
 
 libasync_la_LDFLAGS = $(LIBTOOL_VERSION_INFO)
 
@@ -37,7 +37,8 @@ fdlim.h ihash.h init.h itree.h keyfunc.h list.h msb.h opnew.h		\
 parseopt.h pcre.h qhash.h refcnt.h rxx.h serial.h stllike.h str.h	\
 suio++.h sysconf.h union.h vatmpl.h vec.h rwfd.h litetime.h       	\
 corebench.h callback.h qtailq.h sfs_select.h rclist.h dynenum.h         \
-rctailq.h rctree.h sfs_bundle.h alog2.h sfs_profiler.h wide_str.h
+rctailq.h rctree.h sfs_bundle.h alog2.h sfs_profiler.h wide_str.h 	\
+sfs_const.h
 
 #
 # begin sfslite changes
