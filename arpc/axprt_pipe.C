@@ -246,13 +246,14 @@ axprt_pipe::output ()
     fdcb (fdwrite, selwrite, NULL);
   }
 
-  time_t now = sfs_get_timenow ();
-
-  if (!out->resid () && 
-      sfs_const::axprt_suio_clear_interval &&
-      now - _last_suio_clear > sfs_const::axprt_suio_clear_interval) {
+  if (!out->resid () && sfs_const::axprt_suio_clear_interval) {
+    //
+    // Give back memory eagerly 
+    //
+    // XXX this is somewhat of a hack, but i don't want to rename
+    // symbols just yet --- I want to see if this does the trick....
+    //
     out->clear ();
-    _last_suio_clear = now;
   }
 }
 
