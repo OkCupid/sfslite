@@ -691,23 +691,23 @@ legendre (const bigint &a, const bigint &b)
 
 #ifdef _ARPC_XDRMISC_H_
 inline bool
-rpc_traverse (XDR *xdrs, bigint &obj)
+rpc_traverse (XDR *xdrs, bigint &obj, RPC_FIELD)
 {
   return xdr_mpz_t (xdrs, &obj);
 }
 inline bool
-rpc_traverse (const stompcast_t, bigint &obj)
+rpc_traverse (const stompcast_t, bigint &obj, RPC_FIELD)
 {
   return true;
 }
 inline bool
-rpc_traverse (rpc_clear_t &, bigint &obj)
+rpc_traverse (rpc_clear_t &, bigint &obj, RPC_FIELD)
 {
   obj = 0;
   return true;
 }
 inline bool
-rpc_traverse (rpc_wipe_t &, bigint &obj)
+rpc_traverse (rpc_wipe_t &, bigint &obj, RPC_FIELD)
 {
   bigint zero (0);
   zero.swap (obj);

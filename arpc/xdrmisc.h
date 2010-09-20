@@ -189,7 +189,7 @@ xdr_getpadbytes (XDR *xdrs, void *p, size_t n)
 }
 
 inline bool
-rpc_traverse (XDR *xdrs, u_int32_t &obj)
+rpc_traverse (XDR *xdrs, u_int32_t &obj, RPC_FIELD)
 {
   switch (xdrs->x_op) {
   case XDR_ENCODE:
@@ -202,7 +202,7 @@ rpc_traverse (XDR *xdrs, u_int32_t &obj)
 }
 
 template<size_t n> inline bool
-rpc_traverse (XDR *xdrs, rpc_opaque<n> &obj)
+rpc_traverse (XDR *xdrs, rpc_opaque<n> &obj, RPC_FIELD)
 {
   switch (xdrs->x_op) {
   case XDR_ENCODE:
@@ -215,7 +215,7 @@ rpc_traverse (XDR *xdrs, rpc_opaque<n> &obj)
 }
 
 template<size_t max> inline bool
-rpc_traverse (XDR *xdrs, rpc_bytes<max> &obj)
+rpc_traverse (XDR *xdrs, rpc_bytes<max> &obj, RPC_FIELD)
 {
   switch (xdrs->x_op) {
   case XDR_ENCODE:
@@ -246,7 +246,7 @@ rpc_traverse (XDR *xdrs, rpc_bytes<max> &obj)
 }
 
 template<size_t max> inline bool
-rpc_traverse (XDR *xdrs, rpc_str<max> &obj)
+rpc_traverse (XDR *xdrs, rpc_str<max> &obj, RPC_FIELD)
 {
   switch (xdrs->x_op) {
   case XDR_ENCODE:
@@ -270,7 +270,7 @@ rpc_traverse (XDR *xdrs, rpc_str<max> &obj)
 }
 
 inline bool
-rpc_traverse (XDR *xdrs, str &obj)
+rpc_traverse (XDR *xdrs, str &obj, RPC_FIELD)
 {
   switch (xdrs->x_op) {
   case XDR_ENCODE:

@@ -32,6 +32,8 @@ pmshl (str id)
     XDR_RETURN " xdr_" << id << " (XDR *, void *);\n";
 }
 
+static const char *rpc_field = "const char *field = NULL";
+
 static str
 rpc_decltype (const rpc_decl *d)
 {
@@ -89,18 +91,25 @@ dumpstruct (const rpc_sym *s)
 
   aout << "\ntemplate<class T> "
        << (rs->decls.size () > 1 ? "" : "inline ") << "bool\n"
-       << "rpc_traverse (T &t, " << rs->id << " &obj)\n"
-       << "{\n";
+       << "rpc_traverse (T &t, " << rs->id << " &obj, " << rpc_field << ")\n"
+       << "{\n"
+       << "  bool ret = true;\n"
+       << "  rpc_enter_field (t, field);\n" ;
+
   const rpc_decl *rd = rs->decls.base ();
   if (rd < rs->decls.lim ()) {
-    aout << "  return rpc_traverse (t, obj." << (rd++)->id << ")";
-    while (rd < rs->decls.lim ())
-      aout << "\n    && rpc_traverse (t, obj." << (rd++)->id << ")";
+    aout << "  ret = rpc_traverse (t, obj." << rd->id 
+	 << ", \"" << rd->id << "\")";
+    rd++;
+    for ( ; rd < rs->decls.lim (); rd++ ) {
+      aout << "\n    && rpc_traverse (t, obj." << rd->id 
+	   << ", \"" << rd->id << "\")";
+    }
     aout << ";\n";
   }
-  else
-    aout << "  return true;\n";
-  aout << "}\n\n";
+  aout << "  rpc_exit_field (t, field);\n"
+       << "  return ret;\n"
+       << "}\n\n";
 }
 
 void
@@ -149,7 +158,8 @@ puniontraverse (str prefix, const rpc_union *rs, const rpc_utag *rt)
   if (rt->tag.type == "void")
     aout << prefix << "return true;\n";
   else
-    aout << prefix << "return rpc_traverse (t, *obj." << rt->tag.id << ");\n";
+    aout << prefix << "return rpc_traverse (t, *obj." << rt->tag.id 
+	 << ", \"" << rt->tag.id << "\");\n";
 }
 
 static void
@@ -242,21 +252,27 @@ dumpunion (const rpc_sym *s)
   aout << "};\n";
 
   aout << "\ntemplate<class T> bool\n"
-       << "rpc_traverse (T &t, " << rs->id << " &obj)\n"
+       << "rpc_traverse (T &t, " << rs->id << " &obj, " << rpc_field << ")\n"
        << "{\n"
+       << "  bool ret = true;\n"
+       << "  rpc_enter_field (t, field);\n"
        << "  " << rs->tagtype << " tag = obj." << rs->tagid << ";\n"
-       << "  if (!rpc_traverse (t, tag))\n"
-       << "    return false;\n"
-       << "  if (tag != obj." << rs->tagid << ")\n"
-       << "    obj.set_" << rs->tagid << " (tag);\n\n"
-       << "  rpcunion_switch_" << rs->id << "\n"
-       << "    (obj." << rs->tagid << ", RPCUNION_TRAVERSE, "
-       << "return true, return false);\n"
-       << "  /* gcc 4.0.3 makes buggy warnings without the following line */\n"
-       << "  return false;\n"
+       << "  if (!rpc_traverse (t, tag)) { \n"
+       << "    ret = false;\n"
+       << "  } else {\n"
+       << "    if (tag != obj." << rs->tagid << ")\n"
+       << "      obj.set_" << rs->tagid << " (tag);\n\n"
+       << "    rpcunion_switch_" << rs->id << "\n"
+       << "      (obj." << rs->tagid << ", RPCUNION_TRAVERSE, "
+       << "ret = true, ret = false);\n"
+       << "    /* gcc 4.0.3 makes buggy warnings without the following.. */\n"
+       << "  }\n"
+       << "  rpc_exit_field (t, field);\n"
+       << "  return ret;\n"
        << "}\n"
        << "inline bool\n"
-       << "rpc_traverse (const stompcast_t &s, " << rs->id << " &obj)\n"
+       << "rpc_traverse (const stompcast_t &s, " << rs->id << " &obj, "
+       << rpc_field << ")\n"
        << "{\n"
        << "  rpcunion_switch_" << rs->id << "\n"
        << "    (obj." << rs->tagid << ", RPCUNION_REC_STOMPCAST,\n"
@@ -301,13 +317,18 @@ dumpenum (const rpc_sym *s)
   aout << "TYPE2STRUCT( , " << rs->id << ");\n";
 
   aout << "\ntemplate<class T> inline bool\n"
-       << "rpc_traverse (T &t, " << rs->id << " &obj)\n"
+       << "rpc_traverse (T &t, " << rs->id << " &obj, " << rpc_field << ")\n"
        << "{\n"
        << "  u_int32_t val = obj;\n"
-       << "  if (!rpc_traverse (t, val))\n"
-       << "    return false;\n"
-       << "  obj = " << rs->id << " (val);\n"
-       << "  return true;\n"
+       << "  bool ret = true;\n"
+       << "  rpc_enter_field (t, field);\n"
+       << "  if (!rpc_traverse (t, val)) {\n"
+       << "    ret = false;\n"
+       << "  } else {\n"
+       << "    obj = " << rs->id << " (val);\n"
+       << "  }\n"
+       << "  rpc_exit_field (t, field);\n"
+       << "  return ret;\n"
        << "}\n";
 }
 
