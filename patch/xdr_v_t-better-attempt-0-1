@@ -1,0 +1,202 @@
+Index: arpc/xdrmisc.C
+===================================================================
+--- arpc/xdrmisc.C	(revision 5421)
++++ arpc/xdrmisc.C	(working copy)
+@@ -23,6 +23,7 @@
+ 
+ 
+ #include "arpc.h"
++#include "qhash.h"
+ 
+ const stompcast_t _stompcast = stompcast_t ();
+ struct rpc_clear_t _rpcclear;
+@@ -54,7 +55,7 @@
+ BOOL
+ xdr_string (XDR *xdrs, void *objp)
+ {
+-  return rpc_traverse (xdrs, *static_cast<rpc_str<RPC_INFINITY> *> (objp));
++  return top_rpc_traverse (xdrs, *static_cast<rpc_str<RPC_INFINITY> *> (objp));
+ }
+ void *
+ string_alloc ()
+@@ -69,10 +70,10 @@
+   switch (xdrs->x_op) {
+   case XDR_ENCODE:
+     val = *static_cast<int *> (objp);
+-    return rpc_traverse (xdrs, val);
++    return top_rpc_traverse (xdrs, val);
+   case XDR_DECODE:
+     val = 0; // silence buggy warning message in gcc 4.1
+-    if (!rpc_traverse (xdrs, val))
++    if (!top_rpc_traverse (xdrs, val))
+       return false;
+     *static_cast<int *> (objp) = val;
+   default:
+@@ -89,7 +90,7 @@
+ BOOL								\
+ xdr_##type (XDR *xdrs, void *objp)				\
+ {								\
+-  return rpc_traverse (xdrs, *static_cast<type *> (objp));	\
++  return top_rpc_traverse (xdrs, *static_cast<type *> (objp));	\
+ }								\
+ void *								\
+ type##_alloc ()							\
+@@ -115,3 +116,26 @@
+ RPC_PRINT_DEFINE(u_int32_t)
+ RPC_PRINT_DEFINE(int64_t)
+ RPC_PRINT_DEFINE(u_int64_t)
++
++//-----------------------------------------------------------------------
++
++static qhash<u_int64_t, XDR_v_t *> s_tab;
++
++u_int64_t key (XDR *x) { return u_int64_t (x); }
++
++XDR_v_t *
++XDR_v_t::lookup (XDR *x)
++{
++  XDR_v_t **p = s_tab[key(x)];
++  return p ? *p : NULL;
++}
++
++XDR_v_t::XDR_v_t ()
++{ 
++  s_tab.insert (key (&m_xdr), this);
++}
++
++XDR_v_t::~XDR_v_t ()
++{ 
++  s_tab.remove (key (&m_xdr));
++}
+Index: arpc/rpctypes.h
+===================================================================
+--- arpc/rpctypes.h	(revision 5421)
++++ arpc/rpctypes.h	(working copy)
+@@ -390,11 +390,21 @@
+  */
+ template<class T> void rpc_enter_field (T &t, const char *f) {}
+ template<class T> void rpc_exit_field (T &t, const char *f) {}
++inline void rpc_enter_field (XDR_v_t *x, const char *f) { x->enter_field (f); }
++inline void rpc_exit_field (XDR_v_t *x, const char *f) { x->enter_field (f); }
+ 
+-
+ /*
+  * Default traversal functions
+  */
++template<class T> inline bool
++top_rpc_traverse (XDR *x, T &obj, const char *field = NULL)
++{
++  XDR_v_t *xv = XDR_v_t::lookup (x);
++  bool ret = true;
++  if (xv) { ret = rpc_traverse (xv, obj, field); }
++  else { ret = rpc_traverse (x, obj, field); }
++  return ret;
++}
+ 
+ template<class T, class R, size_t n> inline bool
+ rpc_traverse (T &t, array<R, n> &obj, const char *field = NULL) 
+@@ -960,5 +970,39 @@
+ 
+ #endif /* MAINTAINER */
+ 
++
++#define XDR_v_RPC_TRAVERSE(typ) \
++  inline bool rpc_traverse (XDR_v_t *x, typ & arg, const char *field = NULL) \
++  { return x->traverse (arg, field); }
++
++template<size_t n> inline bool
++rpc_traverse (XDR_v_t *x, rpc_bytes<n> &obj, const char *field = NULL) 
++{
++  // XXX fill me in
++  return false;
++}
++
++template<size_t n> inline bool
++rpc_traverse (XDR_v_t *x, rpc_opaque<n> &obj, const char *field = NULL) 
++{
++  // XXX fill me in
++  return false;
++}
++
++template<size_t n> inline bool
++rpc_traverse (XDR_v_t *x, rpc_str<n> &obj, const char *field = NULL) 
++{
++  // XXX fill me in
++  return false;
++}
++
++XDR_v_RPC_TRAVERSE(bool)
++XDR_v_RPC_TRAVERSE(int32_t)
++XDR_v_RPC_TRAVERSE(u_int32_t)
++XDR_v_RPC_TRAVERSE(int64_t)
++XDR_v_RPC_TRAVERSE(u_int64_t)
++
++
++
+ #endif /* !_RPCTYPES_H_ */
+ 
+Index: arpc/xdrmisc.h
+===================================================================
+--- arpc/xdrmisc.h	(revision 5421)
++++ arpc/xdrmisc.h	(working copy)
+@@ -80,6 +80,27 @@
+ namespace sfs {
+   typedef BOOL (*xdrproc_t) (XDR *, void *);
+ }
++
++class XDR_v_t {
++public:
++  XDR_v_t ();
++  virtual ~XDR_v_t ();
++  static XDR_v_t *lookup (XDR *x);
++  virtual void enter_field (const char *f) {}
++  virtual void exit_field (const char *f) {}
++  virtual bool traverse (bool &b, const char *field) = 0;
++  virtual bool traverse (int32_t &i, const char *field) = 0;
++  virtual bool traverse (u_int32_t &u, const char *field) = 0;
++  virtual bool traverse (int64_t &i, const char *field) = 0;
++  virtual bool traverse (u_int64_t &i, const char *field) = 0;
++  virtual bool traverse_opaque (str &s, const char *field) = 0;
++  virtual bool traverse_string (str &s, const char *field) = 0;
++  XDR *xdrp () { return &m_xdr; }
++  virtual bool from_raw_to_cpp () const = 0;
++protected:
++  XDR m_xdr;
++};
++
+ #include "rpctypes.h"
+ 
+ #ifdef __APPLE__
+Index: rpcc/gencfile.C
+===================================================================
+--- rpcc/gencfile.C	(revision 5421)
++++ rpcc/gencfile.C	(working copy)
+@@ -48,7 +48,7 @@
+        << "  switch (xdrs->x_op) {\n"
+        << "  case XDR_ENCODE:\n"
+        << "  case XDR_DECODE:\n"
+-       << "    return rpc_traverse (xdrs, *static_cast<"
++       << "    return top_rpc_traverse (xdrs, *static_cast<"
+        << id << " *> (objp));\n"
+        << "  case XDR_FREE:\n"
+        << "    rpc_destruct (static_cast<" << id << " *> (objp));\n"
+Index: crypt/bigint.h
+===================================================================
+--- crypt/bigint.h	(revision 5421)
++++ crypt/bigint.h	(working copy)
+@@ -690,7 +690,15 @@
+ }
+ 
+ #ifdef _ARPC_XDRMISC_H_
++
+ inline bool
++rpc_traverse (XDR_v_t *v, bigint &obj, const char *field = NULL)
++{
++  // XXX fix me
++  return false;
++}
++
++inline bool
+ rpc_traverse (XDR *xdrs, bigint &obj, RPC_FIELD)
+ {
+   return xdr_mpz_t (xdrs, &obj);
