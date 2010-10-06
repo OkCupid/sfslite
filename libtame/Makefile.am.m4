@@ -81,6 +81,7 @@ libtame_la_SOURCES = \
 	thread.C \
 	trigger.C \
 	event.C \
+	profiler.C \
 	tame_out 
 
 libtame_la_LDFLAGS = $(LIBTOOL_VERSION_INFO)
@@ -112,6 +113,7 @@ sfsinclude_HEADERS = \
 	tame_aio.h \
 	tame_rpcserver.h \
 	tame_rpc.h \
+	tame_profiler.h \
 	tame_out_h
 
 .PHONY: tameclean

@@ -563,7 +563,7 @@ tame_fn_t::output_closure (outputter_t *o)
   if (slfargs) slfargs->paramlist (b, DECLARATIONS);
 
   b << ") : closure_t (\"" << state->infile_name () << "\", \"" 
-    << _name << "\"), "
+    << _name << "\", " << _lineno << "), "
     ;
 
   if (need_self ()) {

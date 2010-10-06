@@ -1,6 +1,7 @@
 
 #include "tame_closure.h"
 #include "tame_rendezvous.h"
+#include "tame_profiler.h"
 
 
 bool
@@ -23,14 +24,37 @@ closure_t::loc (int l) const
   return b;
 }
 
-closure_t::closure_t (const char *file, const char *fun)
+//-----------------------------------------------------------------------
+
+closure_t::closure_t (const char *file, const char *fun, int lineno)
   : _jumpto (0), 
     _id (++closure_serial_number),
     _filename (file),
-    _funcname (fun)
+    _funcname (fun),
+    _lineno (lineno)
 {
   g_stats->did_mkclosure ();
+  tame::profiler_t::profiler()->enter_closure (this);
 }
+
+//-----------------------------------------------------------------------
+
+closure_t::~closure_t ()
+{
+  tame::profiler_t::profiler()->exit_closure (this);
+}
+
+//-----------------------------------------------------------------------
+
+str
+closure_t::loc () const
+{
+  if (!_cached_loc) { _cached_loc = strbuf ("%s:%d", _filename, _lineno); }
+  return _cached_loc;
+}
+
+//-----------------------------------------------------------------------
+
 
 static void
 report_rv_problems (const vec<weakref<rendezvous_base_t> > &rvs)
