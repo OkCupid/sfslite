@@ -131,8 +131,10 @@ static const char *prefix = "(STP): ";
 void
 profile_site_t::report ()
 {
-  warn << prefix << _msec_avg << " " << _n << " " 
-       << _loc << " " << _func << "\n";
+  if (_n) {
+    warn << prefix << _msec_avg << " " << _n << " " 
+	 << _loc << " " << _func << "\n";
+  }
 }
 
 //-----------------------------------------------------------------------
