@@ -39,7 +39,7 @@ class rendezvous_base_t;
 
 class closure_t : public virtual refcount {
 public:
-  closure_t (const char *filename, const char *fun, int lineno);
+  closure_t (const char *filename, const char *fun, int lineno = 0);
   virtual ~closure_t ();
 
   // manage function reentry
