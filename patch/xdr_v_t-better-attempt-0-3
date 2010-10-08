@@ -1,0 +1,234 @@
+Index: arpc/xdrmisc.C
+===================================================================
+--- arpc/xdrmisc.C	(revision 5430)
++++ arpc/xdrmisc.C	(working copy)
+@@ -115,3 +115,60 @@
+ RPC_PRINT_DEFINE(u_int32_t)
+ RPC_PRINT_DEFINE(int64_t)
+ RPC_PRINT_DEFINE(u_int64_t)
++
++
++//=======================================================================
++
++ptr<v_XDR_dispatch_t> v_XDR_dispatch;
++
++//-----------------------------------------------------------------------
++
++v_XDR_t::~v_XDR_t () { m_dispatch->remove (m_x); }
++
++//-----------------------------------------------------------------------
++
++void v_XDR_dispatch_t::remove (XDR *x) 
++{ m_tab.remove (key (x)); }
++
++//-----------------------------------------------------------------------
++
++void v_XDR_dispatch_t::add (ptr<v_XDR_t> x) 
++{ m_tab.insert (key (x->xdrp ()), x); }
++
++//-----------------------------------------------------------------------
++
++ptr<v_XDR_t> v_XDR_dispatch_t::lookup (XDR *x)
++{ 
++  ptr<v_XDR_t> *retp, ret;
++  if ((retp = m_tab[key (x)])) {
++    ret = *retp;
++  }
++  return ret;
++}
++
++//-----------------------------------------------------------------------
++
++ptr<v_XDR_t> xdr_virtualize (XDR *x)
++{
++  ptr<v_XDR_t> ret;
++  if (v_XDR_dispatch) { ret = v_XDR_dispatch->lookup (x); }
++  return ret;
++}
++
++//-----------------------------------------------------------------------
++
++ptr<v_XDR_t> xdr_virtual_map (u_int32_t key, XDR *x)
++{
++  ptr<v_XDR_t> ret;
++  if (v_XDR_dispatch) {
++    ret = v_XDR_dispatch->alloc (key, x);
++  }
++  return ret;
++}
++
++//-----------------------------------------------------------------------
++
++uintptr_t v_XDR_dispatch_t::key (const XDR *v)
++{ return reinterpret_cast<uintptr_t> (v); }
++
++//=======================================================================
+Index: arpc/asrv.C
+===================================================================
+--- arpc/asrv.C	(revision 5430)
++++ arpc/asrv.C	(working copy)
+@@ -172,6 +172,9 @@
+   get_rpc_stats ().end_call (this, ts_start);
+ 
+   xdrsuio x (XDR_ENCODE);
++
++  ptr<v_XDR_t> vx = xdr_virtual_map (m_rpcvers, &x);
++
+   if (!xdr_replymsg (x.xdrp (), &rm)) {
+     warn ("svccb::reply: xdr_replymsg failed\n");
+     delete this;
+@@ -423,17 +426,22 @@
+   xdrmem x (msg, len, XDR_DECODE);
+   auto_ptr<svccb> sbp (New svccb);
+   rpc_msg *m = &sbp->msg;
++  ptr<v_XDR_t> v_x;
++  u_int32_t rpcvers;
+ 
+   if (!xdr_callmsg (x.xdrp (), m)) {
+     trace (1) << "asrv::dispatch: xdr_callmsg failed\n";
+     seteof (xi, src);
+     return;
+   }
+-  if (m->rm_call.cb_rpcvers != RPC_MSG_VERSION) {
++
++  if ((rpcvers = m->rm_call.cb_rpcvers) != RPC_MSG_VERSION &&
++      !(v_x = xdr_virtual_map (rpcvers, &x))) {
+     trace (1) << "asrv::dispatch: bad RPC message version\n";
+     asrv_rpc_mismatch (xi, src, m->rm_xid);
+     return;
+   }
++  sbp->set_rpcvers (rpcvers);
+ 
+   asrv *s = xi->stab[progvers (sbp->prog (), sbp->vers ())];
+   if (!s || !s->cb) {
+Index: arpc/xdrmisc.h
+===================================================================
+--- arpc/xdrmisc.h	(revision 5430)
++++ arpc/xdrmisc.h	(working copy)
+@@ -487,4 +487,68 @@
+   
+ };
+ 
++//=======================================================================
++
++// support for virtual XDR handlers
++
++class v_XDR_dispatch_t;
++
++//------------------------------------------------------------
++
++class v_XDR_t {
++public:
++  v_XDR_t (ptr<v_XDR_dispatch_t> d, XDR *x) : m_dispatch (d), m_x (x) {}
++  virtual ~v_XDR_t ();
++  XDR *xdrp () { return m_x; }
++protected:
++  ptr<v_XDR_dispatch_t> m_dispatch;
++  XDR *m_x;
++};
++
++//------------------------------------------------------------
++
++class v_XDR_dispatch_t {
++public:
++  virtual ptr<v_XDR_t> alloc (u_int32_t rpcvers, XDR *input) = 0;
++  void remove (XDR *x);
++  void add (ptr<v_XDR_t> x);
++  ptr<v_XDR_t> lookup (XDR *x);
++protected:
++  static uintptr_t key (const XDR *v);
++  qhash<uintptr_t, ptr<v_XDR_t> > m_tab;
++};
++
++//------------------------------------------------------------
++
++ptr<v_XDR_t> xdr_virtualize (XDR *x);
++ptr<v_XDR_t> xdr_virtual_map (u_int32_t key, XDR *x);
++
++//------------------------------------------------------------
++
++extern ptr<v_XDR_dispatch_t> v_XDR_dispatch;
++
++//------------------------------------------------------------
++
++#define V_RPC_TRAV_2(T)							\
++  inline bool								\
++  rpc_traverse (ptr<v_XDR_t> x, T &obj, const char *field = NULL)	\
++  { return rpc_traverse (x->xdrp (), obj, field); }
++
++V_RPC_TRAV_2(u_int32_t)
++
++
++template<size_t n> inline bool
++rpc_traverse (ptr<v_XDR_t> x, rpc_opaque<n> &obj, const char *field = NULL)
++{ return rpc_traverse (x->xdrp (), obj, field); }
++
++template<size_t max> inline bool
++rpc_traverse (ptr<v_XDR_t> x, rpc_bytes<max> &obj, const char *field = NULL)
++{ return rpc_traverse (x->xdrp (), obj, field); }
++
++template<size_t max> inline bool
++rpc_traverse (ptr<v_XDR_t> x, rpc_str<max> &obj, const char *field = NULL)
++{ return rpc_traverse (x->xdrp (), obj, field); }
++
++//=======================================================================
++
+ #endif /* !_ARPC_XDRMISC_H_ */
+Index: arpc/asrv.h
+===================================================================
+--- arpc/asrv.h	(revision 5430)
++++ arpc/asrv.h	(working copy)
+@@ -62,6 +62,8 @@
+ 
+   void init (asrv *, const sockaddr *);
+ 
++  u_int32_t m_rpcvers;
++
+ protected:
+   svccb ();
+   virtual ~svccb ();
+@@ -78,6 +80,7 @@
+   u_int32_t prog () const { return msg.rm_call.cb_prog; }
+   u_int32_t vers () const { return msg.rm_call.cb_vers; }
+   u_int32_t proc () const { return msg.rm_call.cb_proc; }
++  void set_rpcvers (u_int32_t r) { m_rpcvers = r; }
+ 
+   const ptr<asrv> &getsrv () const { return srv; }
+ 
+Index: rpcc/gencfile.C
+===================================================================
+--- rpcc/gencfile.C	(revision 5430)
++++ rpcc/gencfile.C	(working copy)
+@@ -48,8 +48,17 @@
+        << "  switch (xdrs->x_op) {\n"
+        << "  case XDR_ENCODE:\n"
+        << "  case XDR_DECODE:\n"
+-       << "    return rpc_traverse (xdrs, *static_cast<"
++       << "    {\n"
++       << "      ptr<v_XDR_t> v = xdr_virtualize (xdrs);\n"
++       << "      if (v) {\n"
++       << "        return rpc_traverse (v, *static_cast<"
+        << id << " *> (objp));\n"
++       << "      } else {\n"
++       << "        return rpc_traverse (xdrs, *static_cast<"
++       << id << " *> (objp));\n"
++       << "      }\n"
++       << "    }\n"
++       << "    break;\n"
+        << "  case XDR_FREE:\n"
+        << "    rpc_destruct (static_cast<" << id << " *> (objp));\n"
+        << "    return true;\n"
+Index: crypt/bigint.h
+===================================================================
+--- crypt/bigint.h	(revision 5430)
++++ crypt/bigint.h	(working copy)
+@@ -695,6 +695,9 @@
+ {
+   return xdr_mpz_t (xdrs, &obj);
+ }
++
++V_RPC_TRAV_2(bigint)
++
+ inline bool
+ rpc_traverse (const stompcast_t, bigint &obj, RPC_FIELD)
+ {
