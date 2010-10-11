@@ -105,7 +105,7 @@ Index: arpc/xdrmisc.h
 ===================================================================
 --- arpc/xdrmisc.h	(revision 5430)
 +++ arpc/xdrmisc.h	(working copy)
-@@ -487,4 +487,142 @@
+@@ -487,4 +487,165 @@
    
  };
  
@@ -130,6 +130,8 @@ Index: arpc/xdrmisc.h
 +  virtual bool rpc_encode (str s) = 0;
 +  virtual bool rpc_decode (str *s) = 0;
 +  virtual bool rpc_traverse (bigint &b) = 0;
++  virtual void enter_field (const char *f) = 0;
++  virtual void exit_field (const char *f) = 0;
 +protected:
 +  ptr<v_XDR_dispatch_t> m_dispatch;
 +  XDR *m_x;
@@ -159,10 +161,25 @@ Index: arpc/xdrmisc.h
 +
 +//------------------------------------------------------------
 +
++template<class T> 
++void rpc_enter_field (ptr<v_XDR_t> x, const char *f) 
++{ x->enter_field (f); }
++
++template<class T> void 
++rpc_exit_field (ptr<v_XDR_t> x, const char *f) 
++{ x->exit_field (f); }
++
++//------------------------------------------------------------
++
 +#define V_RPC_TRAV_2(T)							\
 +  inline bool								\
 +  rpc_traverse (ptr<v_XDR_t> x, T &obj, const char *field = NULL)	\
-+  { return x->rpc_traverse (obj); }
++  {									\
++    x->enter_field (field);						\
++    bool ret = x->rpc_traverse (obj);					\
++    x->exit_field (field);						\
++    return ret;								\
++  }
 +
 +V_RPC_TRAV_2(u_int32_t)
 +V_RPC_TRAV_2(u_int64_t)
@@ -173,6 +190,7 @@ Index: arpc/xdrmisc.h
 +rpc_traverse (ptr<v_XDR_t> x, rpc_opaque<n> &obj, const char *field = NULL)
 +{
 +  bool ret = false;
++  x->enter_field (field);
 +  switch (x->xdrp ()->x_op) {
 +  case XDR_ENCODE: 
 +    {
@@ -193,6 +211,7 @@ Index: arpc/xdrmisc.h
 +  default:
 +    break;
 +  }
++  x->exit_field (field);
 +  return ret;
 +}
 +
@@ -202,6 +221,7 @@ Index: arpc/xdrmisc.h
 +rpc_traverse (ptr<v_XDR_t> x, rpc_bytes<max> &obj, const char *field = NULL)
 +{
 +  bool ret = false;
++  x->enter_field (field);
 +  switch (x->xdrp()->x_op) {
 +  case XDR_ENCODE: 
 +    {
@@ -223,6 +243,7 @@ Index: arpc/xdrmisc.h
 +  default:
 +    break;
 +  }
++  x->exit_field (field);
 +  return ret;
 +}
 +
@@ -232,6 +253,7 @@ Index: arpc/xdrmisc.h
 +rpc_traverse (ptr<v_XDR_t> x, rpc_str<max> &obj, const char *field = NULL)
 +{ 
 +  bool ret = false;
++  x->enter_field (field);
 +  switch (x->xdrp()->x_op) {
 +  case XDR_ENCODE: 
 +    ret = x->rpc_encode (obj);
@@ -242,6 +264,7 @@ Index: arpc/xdrmisc.h
 +  default:
 +    break;
 +  }
++  x->exit_field (field);
 +  return ret;
 +}
 +
@@ -294,148 +317,152 @@ Index: rpcc/gencfile.C
         << "    return true;\n"
 Index: patch/xdr_v_t-better-attempt-0-3
 ===================================================================
---- patch/xdr_v_t-better-attempt-0-3	(revision 5433)
+--- patch/xdr_v_t-better-attempt-0-3	(revision 5434)
 +++ patch/xdr_v_t-better-attempt-0-3	(working copy)
 @@ -105,7 +105,7 @@
  ===================================================================
  --- arpc/xdrmisc.h	(revision 5430)
  +++ arpc/xdrmisc.h	(working copy)
--@@ -487,4 +487,98 @@
-+@@ -487,4 +487,142 @@
+-@@ -487,4 +487,142 @@
++@@ -487,4 +487,165 @@
     
   };
   
-@@ -126,6 +126,7 @@
- +  virtual ~v_XDR_t ();
- +  XDR *xdrp () { return m_x; }
- +  virtual bool rpc_traverse (u_int32_t &obj) = 0;
-++  virtual bool rpc_traverse (u_int64_t &obj) = 0;
+@@ -130,6 +130,8 @@
  +  virtual bool rpc_encode (str s) = 0;
  +  virtual bool rpc_decode (str *s) = 0;
  +  virtual bool rpc_traverse (bigint &b) = 0;
-@@ -164,7 +165,9 @@
- +  { return x->rpc_traverse (obj); }
+++  virtual void enter_field (const char *f) = 0;
+++  virtual void exit_field (const char *f) = 0;
+ +protected:
+ +  ptr<v_XDR_dispatch_t> m_dispatch;
+ +  XDR *m_x;
+@@ -159,10 +161,25 @@
+ +
+ +//------------------------------------------------------------
+ +
+++template<class T> 
+++void rpc_enter_field (ptr<v_XDR_t> x, const char *f) 
+++{ x->enter_field (f); }
+++
+++template<class T> void 
+++rpc_exit_field (ptr<v_XDR_t> x, const char *f) 
+++{ x->exit_field (f); }
+++
+++//------------------------------------------------------------
+++
+ +#define V_RPC_TRAV_2(T)							\
+ +  inline bool								\
+ +  rpc_traverse (ptr<v_XDR_t> x, T &obj, const char *field = NULL)	\
+-+  { return x->rpc_traverse (obj); }
+++  {									\
+++    x->enter_field (field);						\
+++    bool ret = x->rpc_traverse (obj);					\
+++    x->exit_field (field);						\
+++    return ret;								\
+++  }
  +
  +V_RPC_TRAV_2(u_int32_t)
-++V_RPC_TRAV_2(u_int64_t)
- +
-++//-----------------------------------------------------------------------
- +
- +template<size_t n> inline bool
+ +V_RPC_TRAV_2(u_int64_t)
+@@ -173,6 +190,7 @@
  +rpc_traverse (ptr<v_XDR_t> x, rpc_opaque<n> &obj, const char *field = NULL)
-@@ -193,13 +196,54 @@
+ +{
+ +  bool ret = false;
+++  x->enter_field (field);
+ +  switch (x->xdrp ()->x_op) {
+ +  case XDR_ENCODE: 
+ +    {
+@@ -193,6 +211,7 @@
+ +  default:
+ +    break;
+ +  }
+++  x->exit_field (field);
  +  return ret;
  +}
  +
-++//-----------------------------------------------------------------------
-++
- +template<size_t max> inline bool
+@@ -202,6 +221,7 @@
  +rpc_traverse (ptr<v_XDR_t> x, rpc_bytes<max> &obj, const char *field = NULL)
--+{ return rpc_traverse (x->xdrp (), obj, field); }
-++{
-++  bool ret = false;
-++  switch (x->xdrp()->x_op) {
-++  case XDR_ENCODE: 
-++    {
-++      mstr s (obj.size ());
-++      memcpy (s.cstr (), obj.base(), obj.size ());
-++      ret = x->rpc_encode (s);
-++    }
-++    break;
-++  case XDR_DECODE:
-++    {
-++      str s;
-++      if ((ret = x->rpc_decode (&s))) {
-++	size_t len = min<size_t> (s.len (), max);
-++	memcpy (obj.base (), s.cstr (), len);
-++	obj.setsize (len);
-++      }
-++    }
-++    break;
-++  default:
-++    break;
-++  }
-++  return ret;
-++}
+ +{
+ +  bool ret = false;
+++  x->enter_field (field);
+ +  switch (x->xdrp()->x_op) {
+ +  case XDR_ENCODE: 
+ +    {
+@@ -223,6 +243,7 @@
+ +  default:
+ +    break;
+ +  }
+++  x->exit_field (field);
+ +  return ret;
+ +}
  +
-++//-----------------------------------------------------------------------
-++
- +template<size_t max> inline bool
+@@ -232,6 +253,7 @@
  +rpc_traverse (ptr<v_XDR_t> x, rpc_str<max> &obj, const char *field = NULL)
--+{ return rpc_traverse (x->xdrp (), obj, field); }
-++{ 
-++  bool ret = false;
-++  switch (x->xdrp()->x_op) {
-++  case XDR_ENCODE: 
-++    ret = x->rpc_encode (obj);
-++    break;
-++  case XDR_DECODE:
-++    ret = x->rpc_decode (&obj);
-++    break;
-++  default:
-++    break;
-++  }
-++  return ret;
-++}
+ +{ 
+ +  bool ret = false;
+++  x->enter_field (field);
+ +  switch (x->xdrp()->x_op) {
+ +  case XDR_ENCODE: 
+ +    ret = x->rpc_encode (obj);
+@@ -242,6 +264,7 @@
+ +  default:
+ +    break;
+ +  }
+++  x->exit_field (field);
+ +  return ret;
+ +}
  +
- +//=======================================================================
- +
-@@ -248,107 +292,3 @@
+@@ -292,213 +315,3 @@
          << "  case XDR_FREE:\n"
          << "    rpc_destruct (static_cast<" << id << " *> (objp));\n"
          << "    return true;\n"
 -Index: patch/xdr_v_t-better-attempt-0-3
 -===================================================================
----- patch/xdr_v_t-better-attempt-0-3	(revision 5432)
+---- patch/xdr_v_t-better-attempt-0-3	(revision 5433)
 -+++ patch/xdr_v_t-better-attempt-0-3	(working copy)
 -@@ -105,7 +105,7 @@
 - ===================================================================
 - --- arpc/xdrmisc.h	(revision 5430)
 - +++ arpc/xdrmisc.h	(working copy)
---@@ -487,4 +487,68 @@
--+@@ -487,4 +487,98 @@
+--@@ -487,4 +487,98 @@
+-+@@ -487,4 +487,142 @@
 -    
 -  };
 -  
--@@ -117,11 +117,18 @@
-- +
-- +//------------------------------------------------------------
-- +
--++// forward-declare this, which is in crypt.h
--++class bigint;
--++
-- +class v_XDR_t {
-- +public:
-- +  v_XDR_t (ptr<v_XDR_dispatch_t> d, XDR *x) : m_dispatch (d), m_x (x) {}
+-@@ -126,6 +126,7 @@
 - +  virtual ~v_XDR_t ();
 - +  XDR *xdrp () { return m_x; }
--++  virtual bool rpc_traverse (u_int32_t &obj) = 0;
--++  virtual bool rpc_encode (str s) = 0;
--++  virtual bool rpc_decode (str *s) = 0;
--++  virtual bool rpc_traverse (bigint &b) = 0;
-- +protected:
-- +  ptr<v_XDR_dispatch_t> m_dispatch;
-- +  XDR *m_x;
--@@ -154,14 +161,37 @@
-- +#define V_RPC_TRAV_2(T)							\
-- +  inline bool								\
-- +  rpc_traverse (ptr<v_XDR_t> x, T &obj, const char *field = NULL)	\
---+  { return rpc_traverse (x->xdrp (), obj, field); }
--++  { return x->rpc_traverse (obj); }
+- +  virtual bool rpc_traverse (u_int32_t &obj) = 0;
+-++  virtual bool rpc_traverse (u_int64_t &obj) = 0;
+- +  virtual bool rpc_encode (str s) = 0;
+- +  virtual bool rpc_decode (str *s) = 0;
+- +  virtual bool rpc_traverse (bigint &b) = 0;
+-@@ -164,7 +165,9 @@
+- +  { return x->rpc_traverse (obj); }
 - +
 - +V_RPC_TRAV_2(u_int32_t)
+-++V_RPC_TRAV_2(u_int64_t)
 - +
+-++//-----------------------------------------------------------------------
 - +
 - +template<size_t n> inline bool
 - +rpc_traverse (ptr<v_XDR_t> x, rpc_opaque<n> &obj, const char *field = NULL)
+-@@ -193,13 +196,54 @@
+- +  return ret;
+- +}
+- +
+-++//-----------------------------------------------------------------------
+-++
+- +template<size_t max> inline bool
+- +rpc_traverse (ptr<v_XDR_t> x, rpc_bytes<max> &obj, const char *field = NULL)
 --+{ return rpc_traverse (x->xdrp (), obj, field); }
 -++{
 -++  bool ret = false;
--++  switch (x->xdrp ()->x_op) {
+-++  switch (x->xdrp()->x_op) {
 -++  case XDR_ENCODE: 
 -++    {
 -++      mstr s (obj.size ());
--++      memcpy (s.cstr (), obj.base (), obj.size ());
+-++      memcpy (s.cstr (), obj.base(), obj.size ());
 -++      ret = x->rpc_encode (s);
 -++    }
 -++    break;
@@ -443,8 +470,9 @@ Index: patch/xdr_v_t-better-attempt-0-3
 -++    {
 -++      str s;
 -++      if ((ret = x->rpc_decode (&s))) {
--++	size_t len = min<size_t> (s.len (), n);
+-++	size_t len = min<size_t> (s.len (), max);
 -++	memcpy (obj.base (), s.cstr (), len);
+-++	obj.setsize (len);
 -++      }
 -++    }
 -++    break;
@@ -454,12 +482,122 @@ Index: patch/xdr_v_t-better-attempt-0-3
 -++  return ret;
 -++}
 - +
+-++//-----------------------------------------------------------------------
+-++
 - +template<size_t max> inline bool
-- +rpc_traverse (ptr<v_XDR_t> x, rpc_bytes<max> &obj, const char *field = NULL)
--@@ -218,17 +248,3 @@
+- +rpc_traverse (ptr<v_XDR_t> x, rpc_str<max> &obj, const char *field = NULL)
+--+{ return rpc_traverse (x->xdrp (), obj, field); }
+-++{ 
+-++  bool ret = false;
+-++  switch (x->xdrp()->x_op) {
+-++  case XDR_ENCODE: 
+-++    ret = x->rpc_encode (obj);
+-++    break;
+-++  case XDR_DECODE:
+-++    ret = x->rpc_decode (&obj);
+-++    break;
+-++  default:
+-++    break;
+-++  }
+-++  return ret;
+-++}
+- +
+- +//=======================================================================
+- +
+-@@ -248,107 +292,3 @@
 -         << "  case XDR_FREE:\n"
 -         << "    rpc_destruct (static_cast<" << id << " *> (objp));\n"
 -         << "    return true;\n"
+--Index: patch/xdr_v_t-better-attempt-0-3
+--===================================================================
+----- patch/xdr_v_t-better-attempt-0-3	(revision 5432)
+--+++ patch/xdr_v_t-better-attempt-0-3	(working copy)
+--@@ -105,7 +105,7 @@
+-- ===================================================================
+-- --- arpc/xdrmisc.h	(revision 5430)
+-- +++ arpc/xdrmisc.h	(working copy)
+---@@ -487,4 +487,68 @@
+--+@@ -487,4 +487,98 @@
+--    
+--  };
+--  
+--@@ -117,11 +117,18 @@
+-- +
+-- +//------------------------------------------------------------
+-- +
+--++// forward-declare this, which is in crypt.h
+--++class bigint;
+--++
+-- +class v_XDR_t {
+-- +public:
+-- +  v_XDR_t (ptr<v_XDR_dispatch_t> d, XDR *x) : m_dispatch (d), m_x (x) {}
+-- +  virtual ~v_XDR_t ();
+-- +  XDR *xdrp () { return m_x; }
+--++  virtual bool rpc_traverse (u_int32_t &obj) = 0;
+--++  virtual bool rpc_encode (str s) = 0;
+--++  virtual bool rpc_decode (str *s) = 0;
+--++  virtual bool rpc_traverse (bigint &b) = 0;
+-- +protected:
+-- +  ptr<v_XDR_dispatch_t> m_dispatch;
+-- +  XDR *m_x;
+--@@ -154,14 +161,37 @@
+-- +#define V_RPC_TRAV_2(T)							\
+-- +  inline bool								\
+-- +  rpc_traverse (ptr<v_XDR_t> x, T &obj, const char *field = NULL)	\
+---+  { return rpc_traverse (x->xdrp (), obj, field); }
+--++  { return x->rpc_traverse (obj); }
+-- +
+-- +V_RPC_TRAV_2(u_int32_t)
+-- +
+-- +
+-- +template<size_t n> inline bool
+-- +rpc_traverse (ptr<v_XDR_t> x, rpc_opaque<n> &obj, const char *field = NULL)
+---+{ return rpc_traverse (x->xdrp (), obj, field); }
+--++{
+--++  bool ret = false;
+--++  switch (x->xdrp ()->x_op) {
+--++  case XDR_ENCODE: 
+--++    {
+--++      mstr s (obj.size ());
+--++      memcpy (s.cstr (), obj.base (), obj.size ());
+--++      ret = x->rpc_encode (s);
+--++    }
+--++    break;
+--++  case XDR_DECODE:
+--++    {
+--++      str s;
+--++      if ((ret = x->rpc_decode (&s))) {
+--++	size_t len = min<size_t> (s.len (), n);
+--++	memcpy (obj.base (), s.cstr (), len);
+--++      }
+--++    }
+--++    break;
+--++  default:
+--++    break;
+--++  }
+--++  return ret;
+--++}
+-- +
+-- +template<size_t max> inline bool
+-- +rpc_traverse (ptr<v_XDR_t> x, rpc_bytes<max> &obj, const char *field = NULL)
+--@@ -218,17 +248,3 @@
+--         << "  case XDR_FREE:\n"
+--         << "    rpc_destruct (static_cast<" << id << " *> (objp));\n"
+--         << "    return true;\n"
+---Index: crypt/bigint.h
+---===================================================================
+------ crypt/bigint.h	(revision 5430)
+---+++ crypt/bigint.h	(working copy)
+---@@ -695,6 +695,9 @@
+--- {
+---   return xdr_mpz_t (xdrs, &obj);
+--- }
+---+
+---+V_RPC_TRAV_2(bigint)
+---+
+--- inline bool
+--- rpc_traverse (const stompcast_t, bigint &obj, RPC_FIELD)
+--- {
 --Index: crypt/bigint.h
 --===================================================================
 ----- crypt/bigint.h	(revision 5430)
