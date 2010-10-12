@@ -695,6 +695,9 @@ rpc_traverse (XDR *xdrs, bigint &obj, RPC_FIELD)
 {
   return xdr_mpz_t (xdrs, &obj);
 }
+
+V_RPC_TRAV_2(bigint)
+
 inline bool
 rpc_traverse (const stompcast_t, bigint &obj, RPC_FIELD)
 {

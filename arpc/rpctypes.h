@@ -390,7 +390,10 @@ template<size_t n> struct hashfn<rpc_bytes<n> > {
  */
 template<class T> void rpc_enter_field (T &t, const char *f) {}
 template<class T> void rpc_exit_field (T &t, const char *f) {}
-
+template<class T> void rpc_enter_array (T &t, size_t i) {}
+template<class T> void rpc_exit_array (T &t) {}
+template<class T> void rpc_enter_slot (T &t, size_t i) {}
+template<class T> void rpc_pointer (T &t, bool b) {}
 
 /*
  * Default traversal functions
@@ -403,13 +406,18 @@ rpc_traverse (T &t, array<R, n> &obj, const char *field = NULL)
   bool ret = true;
 
   rpc_enter_field(t, field);
+  rpc_enter_array (t, obj.size ());
 
   elm_t *p = obj.base ();
   elm_t *e = obj.lim ();
-  while (ret && p < e)
+  size_t s = 0;
+  while (ret && p < e) {
+    rpc_enter_slot (t, s++);
     if (!rpc_traverse (t, *p++))
       ret = false;
+  }
 
+  rpc_exit_array (t);
   rpc_exit_field (t, field);
   return ret;
 }
@@ -421,8 +429,9 @@ rpc_traverse (T &t, rpc_vec<R, n> &obj, const char *field = NULL)
 
   bool ret = true;
   rpc_enter_field (t, field);
-
   u_int32_t size = obj.size ();
+  rpc_enter_array (t, size);
+
   if (!rpc_traverse (t, size) || size > obj.maxsize) {
     ret = false;
   } else {
@@ -437,13 +446,19 @@ rpc_traverse (T &t, rpc_vec<R, n> &obj, const char *field = NULL)
     
     elm_t *p = obj.base ();
     elm_t *e = obj.lim ();
-    while (ret && p < e)
+    size_t s = 0;
+    while (ret && p < e) {
+      rpc_enter_slot (t, s++);
       if (!rpc_traverse (t, *p++))
 	ret = false;
-    for (size_t i = size - obj.size (); ret && i > 0; i--)
+    }
+    for (size_t i = size - obj.size (); ret && i > 0; i--) {
+      rpc_enter_slot (t, s++);
       if (!rpc_traverse (t, obj.push_back ()))
 	ret = false;
+    }
   }
+  rpc_exit_array (t);
   rpc_exit_field (t, field);
   return ret;
 }
@@ -454,6 +469,7 @@ rpc_traverse (T &t, rpc_ptr<R> &obj, const char *field = NULL)
   bool nonnil = obj;
   bool ret = true;
   rpc_enter_field (t, field);
+  rpc_pointer (t, nonnil);
   if (!rpc_traverse (t, nonnil)) {
     ret = false;
   } else if (nonnil) {

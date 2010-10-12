@@ -62,6 +62,8 @@ class svccb {
 
   void init (asrv *, const sockaddr *);
 
+  u_int32_t m_rpcvers;
+
 protected:
   svccb ();
   virtual ~svccb ();
@@ -78,6 +80,7 @@ public:
   u_int32_t prog () const { return msg.rm_call.cb_prog; }
   u_int32_t vers () const { return msg.rm_call.cb_vers; }
   u_int32_t proc () const { return msg.rm_call.cb_proc; }
+  void set_rpcvers (u_int32_t r) { m_rpcvers = r; }
 
   const ptr<asrv> &getsrv () const { return srv; }
 

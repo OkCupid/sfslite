@@ -172,6 +172,9 @@ svccb::reply (const void *reply, sfs::xdrproc_t xdr, bool nocache)
   get_rpc_stats ().end_call (this, ts_start);
 
   xdrsuio x (XDR_ENCODE);
+
+  ptr<v_XDR_t> vx = xdr_virtual_map (m_rpcvers, &x);
+
   if (!xdr_replymsg (x.xdrp (), &rm)) {
     warn ("svccb::reply: xdr_replymsg failed\n");
     delete this;
@@ -423,17 +426,22 @@ asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
   xdrmem x (msg, len, XDR_DECODE);
   auto_ptr<svccb> sbp (New svccb);
   rpc_msg *m = &sbp->msg;
+  ptr<v_XDR_t> v_x;
+  u_int32_t rpcvers;
 
   if (!xdr_callmsg (x.xdrp (), m)) {
     trace (1) << "asrv::dispatch: xdr_callmsg failed\n";
     seteof (xi, src);
     return;
   }
-  if (m->rm_call.cb_rpcvers != RPC_MSG_VERSION) {
+
+  if ((rpcvers = m->rm_call.cb_rpcvers) != RPC_MSG_VERSION &&
+      !(v_x = xdr_virtual_map (rpcvers, &x))) {
     trace (1) << "asrv::dispatch: bad RPC message version\n";
     asrv_rpc_mismatch (xi, src, m->rm_xid);
     return;
   }
+  sbp->set_rpcvers (rpcvers);
 
   asrv *s = xi->stab[progvers (sbp->prog (), sbp->vers ())];
   if (!s || !s->cb) {
