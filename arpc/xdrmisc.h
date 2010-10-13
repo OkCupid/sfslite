@@ -521,7 +521,7 @@ protected:
 
 //------------------------------------------------------------
 
-class v_XDR_dispatch_t {
+class v_XDR_dispatch_t : public virtual refcount {
 public:
   virtual ptr<v_XDR_t> alloc (u_int32_t rpcvers, XDR *input) = 0;
   void remove (XDR *x);
