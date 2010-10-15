@@ -514,7 +514,7 @@ public:
   virtual void enter_slot (size_t i) = 0;
   virtual void exit_array () = 0;
   virtual void pointer (bool b) = 0;
-  virtual void set_payload (const char *msg, ssize_t len) {}
+  virtual void init_decode (const char *msg, ssize_t len) {}
 protected:
   ptr<v_XDR_dispatch_t> m_dispatch;
   XDR *m_x;

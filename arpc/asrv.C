@@ -446,7 +446,7 @@ asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
     // For the virtual XDRs, set the payload in a way that's very
     // accesible to the virtual wrapper class.
     ssize_t pos = XDR_GETPOS(x.xdrp());
-    v_x->set_payload (msg + pos, len - pos);
+    v_x->init_decode (msg + pos, len - pos);
   }
 
   sbp->set_rpcvers (rpcvers);
