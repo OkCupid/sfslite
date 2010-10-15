@@ -441,6 +441,14 @@ asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
     asrv_rpc_mismatch (xi, src, m->rm_xid);
     return;
   }
+
+  if (v_x) { 
+    // For the virtual XDRs, set the payload in a way that's very
+    // accesible to the virtual wrapper class.
+    ssize_t pos = XDR_GETPOS(x.xdrp());
+    v_x->set_payload (msg + pos, len - pos);
+  }
+
   sbp->set_rpcvers (rpcvers);
 
   asrv *s = xi->stab[progvers (sbp->prog (), sbp->vers ())];
