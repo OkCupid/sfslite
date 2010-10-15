@@ -442,13 +442,6 @@ asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
     return;
   }
 
-  if (v_x) { 
-    // For the virtual XDRs, set the payload in a way that's very
-    // accesible to the virtual wrapper class.
-    ssize_t pos = XDR_GETPOS(x.xdrp());
-    v_x->init_decode (msg + pos, len - pos);
-  }
-
   sbp->set_rpcvers (rpcvers);
 
   asrv *s = xi->stab[progvers (sbp->prog (), sbp->vers ())];
@@ -487,6 +480,22 @@ asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
   }
 
   const rpcgen_table *rtp = &s->tbl[sbp->proc ()];
+  if (v_x) { 
+    // For the virtual XDRs, set the payload in a way that's very
+    // accesible to the virtual wrapper class.
+    ssize_t pos = XDR_GETPOS(x.xdrp());
+    if (!(v_x->init_decode (msg + pos, len - pos))) {
+      if (asrvtrace >= 1)
+	warn ("asrv::dispatch: bad message %s:%s x=%x", s->rpcprog->name,
+	      rtp->name, xidswap (m->rm_xid))
+	  << sock2str (src) << "\n";
+      asrv_accepterr (xi, src, GARBAGE_ARGS, m);
+      s->inc_svccb_count ();
+      s->sendreply (sbp.release (), NULL, true);
+      return;
+    }
+  }
+
   sbp->arg = s->tbl[sbp->proc ()].alloc_arg ();
   if (!rtp->xdr_arg (x.xdrp (), sbp->arg)) {
     if (asrvtrace >= 1)

@@ -104,7 +104,7 @@ void ifchgcb_remove (ifchgcb_t *chg);
 #define SFSLITE_VERSION_MAJOR 1
 #define SFSLITE_VERSION_MINOR 2
 #define SFSLITE_VERSION_PATCHLEVEL 9
-#define SFSLITE_VERSION_PRE 4
+#define SFSLITE_VERSION_PRE 5
 
 //
 // VERSION_PRE < 100 means pre1, pre2, etc. releases
