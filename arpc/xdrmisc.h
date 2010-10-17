@@ -512,6 +512,7 @@ public:
   virtual void exit_field (const char *f) = 0;
   virtual void enter_array (size_t i) = 0;
   virtual void enter_slot (size_t i) = 0;
+  virtual void exit_slot (size_t i) = 0;
   virtual void exit_array () = 0;
   virtual void pointer (bool b) = 0;
   virtual bool init_decode (const char *msg, ssize_t len) = 0;
@@ -551,6 +552,7 @@ inline void rpc_exit_field (ptr<v_XDR_t> x, const char *f)
 inline void rpc_enter_array (ptr<v_XDR_t> x, size_t i) { x->enter_array (i); }
 inline void rpc_exit_array (ptr<v_XDR_t> x) { x->exit_array (); }
 inline void rpc_enter_slot (ptr<v_XDR_t> x, size_t s) { x->enter_slot (s); }
+inline void rpc_exit_slot (ptr<v_XDR_t> x, size_t s) { x->exit_slot (s); }
 inline void rpc_pointer (ptr<v_XDR_t> x, bool b) { x->pointer (b); }
 
 //------------------------------------------------------------

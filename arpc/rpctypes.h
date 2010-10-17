@@ -393,6 +393,7 @@ template<class T> void rpc_exit_field (T &t, const char *f) {}
 template<class T> void rpc_enter_array (T &t, size_t i) {}
 template<class T> void rpc_exit_array (T &t) {}
 template<class T> void rpc_enter_slot (T &t, size_t i) {}
+template<class T> void rpc_exit_slot (T &t, size_t i) {}
 template<class T> void rpc_pointer (T &t, bool b) {}
 
 /*
@@ -412,9 +413,10 @@ rpc_traverse (T &t, array<R, n> &obj, const char *field = NULL)
   elm_t *e = obj.lim ();
   size_t s = 0;
   while (ret && p < e) {
-    rpc_enter_slot (t, s++);
+    rpc_enter_slot (t, s);
     if (!rpc_traverse (t, *p++))
       ret = false;
+    rpc_exit_slot (t, s++);
   }
 
   rpc_exit_array (t);
@@ -448,14 +450,16 @@ rpc_traverse (T &t, rpc_vec<R, n> &obj, const char *field = NULL)
     elm_t *e = obj.lim ();
     size_t s = 0;
     while (ret && p < e) {
-      rpc_enter_slot (t, s++);
+      rpc_enter_slot (t, s);
       if (!rpc_traverse (t, *p++))
 	ret = false;
+      rpc_exit_slot (t, s++);
     }
     for (size_t i = size - obj.size (); ret && i > 0; i--) {
-      rpc_enter_slot (t, s++);
+      rpc_enter_slot (t, s);
       if (!rpc_traverse (t, obj.push_back ()))
 	ret = false;
+      rpc_exit_slot (t, s++);
     }
   }
   rpc_exit_array (t);
