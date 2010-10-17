@@ -394,7 +394,7 @@ template<class T> void rpc_enter_array (T &t, size_t i) {}
 template<class T> void rpc_exit_array (T &t) {}
 template<class T> void rpc_enter_slot (T &t, size_t i) {}
 template<class T> void rpc_exit_slot (T &t, size_t i) {}
-template<class T> void rpc_pointer (T &t, bool b) {}
+template<class T> void rpc_exit_pointer (T &t, bool b) {}
 
 /*
  * Default traversal functions
@@ -472,8 +472,6 @@ rpc_traverse (T &t, rpc_ptr<R> &obj, const char *field = NULL)
 {
   bool nonnil = obj;
   bool ret = true;
-  rpc_enter_field (t, field);
-  rpc_pointer (t, nonnil);
   if (!rpc_traverse (t, nonnil)) {
     ret = false;
   } else if (nonnil) {
@@ -481,7 +479,6 @@ rpc_traverse (T &t, rpc_ptr<R> &obj, const char *field = NULL)
   } else {
     obj.clear ();
   }
-  rpc_exit_field (t, field);
   return ret;
 }
 

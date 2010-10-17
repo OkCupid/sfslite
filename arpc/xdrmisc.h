@@ -514,8 +514,9 @@ public:
   virtual void enter_slot (size_t i) = 0;
   virtual void exit_slot (size_t i) = 0;
   virtual void exit_array () = 0;
-  virtual void pointer (bool b) = 0;
   virtual bool init_decode (const char *msg, ssize_t len) = 0;
+  virtual bool enter_pointer (bool &b) = 0;
+  virtual bool exit_pointer (bool b) = 0;
 protected:
   ptr<v_XDR_dispatch_t> m_dispatch;
   XDR *m_x;
@@ -553,7 +554,6 @@ inline void rpc_enter_array (ptr<v_XDR_t> x, size_t i) { x->enter_array (i); }
 inline void rpc_exit_array (ptr<v_XDR_t> x) { x->exit_array (); }
 inline void rpc_enter_slot (ptr<v_XDR_t> x, size_t s) { x->enter_slot (s); }
 inline void rpc_exit_slot (ptr<v_XDR_t> x, size_t s) { x->exit_slot (s); }
-inline void rpc_pointer (ptr<v_XDR_t> x, bool b) { x->pointer (b); }
 
 //------------------------------------------------------------
 
@@ -569,6 +569,27 @@ inline void rpc_pointer (ptr<v_XDR_t> x, bool b) { x->pointer (b); }
 
 V_RPC_TRAV_2(u_int32_t)
 V_RPC_TRAV_2(u_int64_t)
+
+//-----------------------------------------------------------------------
+
+template<class T> bool
+rpc_traverse (ptr<v_XDR_t> x, rpc_ptr<T> &obj, const char *field = NULL)
+{
+  bool ret = true;
+  bool nonnil = obj;
+
+  x->enter_field (field);
+  if (!x->enter_pointer (nonnil)) {
+    ret = false;
+  } else if (nonnil) {
+    ret = rpc_traverse (x, *obj.alloc ());
+  } else {
+    obj.clear ();
+  }
+  x->exit_pointer (nonnil);
+  x->exit_field (field);
+  return ret;
+}
 
 //-----------------------------------------------------------------------
 
