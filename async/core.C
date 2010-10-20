@@ -147,6 +147,22 @@ struct timecb_t {
 static itree<timespec, timecb_t, &timecb_t::ts, &timecb_t::link> timecbs;
 static bool timecbs_altered;
 
+struct yieldcbs_t;
+struct yieldcb_t {
+  tailq_entry<yieldcb_t> link;
+  void remove ();
+  void insert ();
+  const cbv cb;
+  yieldcbs_t *const list;
+  yieldcb_t (const cbv &c, yieldcbs_t *l) : cb (c), list (l) {}
+};
+struct yieldcbs_t : public tailq<yieldcb_t, &yieldcb_t::link> {};
+static yieldcbs_t yieldcbs[2];
+static yieldcbs_t *yieldcbs_now, *yieldcbs_next;
+
+void yieldcb_t::insert () { list->insert_tail (this); }
+void yieldcb_t::remove () { list->remove (this); }
+
 struct lazycb_t {
   const time_t interval;
   time_t next;
@@ -285,6 +301,56 @@ timecb_remove (timecb_t *to)
   timecbs_altered = true;
   timecbs.remove (to);
   delete to;
+}
+
+static void
+init_yieldcbs ()
+{
+  if (!yieldcbs_now) {
+    yieldcbs_now = &yieldcbs[0];
+    yieldcbs_next = &yieldcbs[1];
+  }
+}
+
+static void
+swap_yieldcbs ()
+{
+  yieldcbs_t *tmp = yieldcbs_next;
+  yieldcbs_next = yieldcbs_now;
+  yieldcbs_now = tmp;
+}
+
+void
+yieldcb_check ()
+{
+  yieldcbs_t *lst = yieldcbs_now;
+  swap_yieldcbs ();
+  yieldcb_t *ycb;
+
+  sfs_set_global_timestamp ();
+  while ((ycb = lst->first)) {
+    lst->remove (ycb);
+    STOP_ACHECK_TIMER ();
+    sfs_leave_sel_loop ();
+    (*ycb->cb) ();
+    START_ACHECK_TIMER ();
+    delete ycb;
+  }
+}
+
+yieldcb_t *
+yieldcb (const cbv &cb)
+{
+  yieldcb_t *ret = New yieldcb_t (cb, yieldcbs_now);
+  ret->insert ();
+  return ret;
+}
+
+void
+yieldcb_remove (yieldcb_t *y)
+{
+  y->remove ();
+  delete y;
 }
 
 void
@@ -524,6 +590,7 @@ _acheck ()
   sigcb_check ();
 
   timecb_check ();
+  yieldcb_check ();
 
   STOP_ACHECK_TIMER ();
 }
@@ -568,6 +635,8 @@ async_init::start ()
   if (initialized)
     panic ("async_init called twice\n");
   initialized = true;
+
+  init_yieldcbs ();
 
   /* Ignore SIGPIPE, since we may get a lot of these */
   struct sigaction sa;

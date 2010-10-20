@@ -34,6 +34,7 @@
 /* core.C */
 struct timecb_t;
 struct lazycb_t;
+struct yieldcb_t;
 INIT (async_init);
 void amain () __attribute__ ((noreturn));
 void acheck ();
@@ -45,6 +46,8 @@ timecb_t *delaycb (time_t sec, u_int32_t nsec, cbv cb);
 void timecb_remove (timecb_t *);
 lazycb_t *lazycb (time_t min_interval, cbv cb);
 void lazycb_remove (lazycb_t *lazy);
+yieldcb_t *yieldcb (cbv cb);
+void yieldcb_remove (yieldcb_t *yieldcb_t);
 
 #define fdcb(f,s,c) _fdcb(f,s,c,__FILE__,__LINE__)
 
@@ -104,7 +107,7 @@ void ifchgcb_remove (ifchgcb_t *chg);
 #define SFSLITE_VERSION_MAJOR 1
 #define SFSLITE_VERSION_MINOR 2
 #define SFSLITE_VERSION_PATCHLEVEL 9
-#define SFSLITE_VERSION_PRE 5
+#define SFSLITE_VERSION_PRE 6
 
 //
 // VERSION_PRE < 100 means pre1, pre2, etc. releases
@@ -122,6 +125,6 @@ void ifchgcb_remove (ifchgcb_t *chg);
                    SFSLITE_VERSION_PATCHLEVEL, \
                    SFSLITE_VERSION_PRE))
 
-#define SFSLITE_PATCHLEVEL_STR "1.2.9pre4"
+#define SFSLITE_PATCHLEVEL_STR "1.2.9pre6"
 
 #endif /* !_ASYNC_ASYNC_H_ */
