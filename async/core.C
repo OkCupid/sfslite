@@ -339,7 +339,7 @@ yieldcb_check ()
 }
 
 yieldcb_t *
-yieldcb (const cbv &cb)
+yieldcb (cbv cb)
 {
   yieldcb_t *ret = New yieldcb_t (cb, yieldcbs_now);
   ret->insert ();
