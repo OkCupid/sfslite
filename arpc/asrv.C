@@ -639,7 +639,7 @@ asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
     v_x = xdr_virtual_map (rpcvers, x.xdrp ());
   }
 
-  if (!my_xdr_callmsg (x.xdrp (), m)) {
+  if (!xdr_callmsg (x.xdrp (), m)) {
     trace (1) << "asrv::dispatch: xdr_callmsg failed\n";
     seteof (xi, src);
     return;
