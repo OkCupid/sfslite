@@ -127,6 +127,14 @@ v_XDR_t::~v_XDR_t () { m_dispatch->remove (m_x); }
 
 //-----------------------------------------------------------------------
 
+v_XDR_t::v_XDR_t (ptr<v_XDR_dispatch_t> d, XDR *x)
+  : m_dispatch (d), m_x (x)
+{
+  m_dispatch->add (mkref (this));
+}
+
+//-----------------------------------------------------------------------
+
 void v_XDR_dispatch_t::remove (XDR *x) 
 { m_tab.remove (key (x)); }
 
@@ -162,7 +170,7 @@ ptr<v_XDR_t> xdr_virtual_map (u_int32_t key, XDR *x)
   ptr<v_XDR_t> ret;
   if (v_XDR_dispatch) {
     ret = v_XDR_dispatch->alloc (key, x);
-  }
+  } 
   return ret;
 }
 

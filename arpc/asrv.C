@@ -414,6 +414,208 @@ asrv::setcb (asrv_cb::ptr c)
     (*cb) (NULL);
 }
 
+#if 0
+
+#define INTUSE(x) x
+
+bool_t
+my_xdr_callmsg (XDR *xdrs, struct rpc_msg *cmsg)
+{
+  int32_t *buf;
+  struct opaque_auth *oa;
+
+  if (xdrs->x_op == XDR_ENCODE)
+    {
+      if (cmsg->rm_call.cb_cred.oa_length > MAX_AUTH_BYTES)
+        {
+          return (FALSE);
+        }
+      if (cmsg->rm_call.cb_verf.oa_length > MAX_AUTH_BYTES)
+        {
+          return (FALSE);
+        }
+      buf = XDR_INLINE (xdrs, 8 * BYTES_PER_XDR_UNIT
+                        + RNDUP (cmsg->rm_call.cb_cred.oa_length)
+                        + 2 * BYTES_PER_XDR_UNIT
+                        + RNDUP (cmsg->rm_call.cb_verf.oa_length));
+      if (buf != NULL)
+        {
+          IXDR_PUT_LONG (buf, cmsg->rm_xid);
+          IXDR_PUT_ENUM (buf, cmsg->rm_direction);
+          if (cmsg->rm_direction != CALL)
+            return FALSE;
+          IXDR_PUT_LONG (buf, cmsg->rm_call.cb_rpcvers);
+          if (cmsg->rm_call.cb_rpcvers != RPC_MSG_VERSION)
+            return FALSE;
+          IXDR_PUT_LONG (buf, cmsg->rm_call.cb_prog);
+          IXDR_PUT_LONG (buf, cmsg->rm_call.cb_vers);
+          IXDR_PUT_LONG (buf, cmsg->rm_call.cb_proc);
+          oa = &cmsg->rm_call.cb_cred;
+          IXDR_PUT_ENUM (buf, oa->oa_flavor);
+          IXDR_PUT_INT32 (buf, oa->oa_length);
+          if (oa->oa_length)
+            {
+              memcpy ((caddr_t) buf, oa->oa_base, oa->oa_length);
+              buf = (int32_t *) ((char *) buf + RNDUP (oa->oa_length));
+            }
+          oa = &cmsg->rm_call.cb_verf;
+          IXDR_PUT_ENUM (buf, oa->oa_flavor);
+          IXDR_PUT_INT32 (buf, oa->oa_length);
+          if (oa->oa_length)
+            {
+              memcpy ((caddr_t) buf, oa->oa_base, oa->oa_length);
+              /* no real need....
+                 buf = (long *) ((char *) buf + RNDUP(oa->oa_length));
+               */
+            }
+          return TRUE;
+        }
+    }
+  if (xdrs->x_op == XDR_DECODE)
+    {
+      warn << "A\n";
+      buf = XDR_INLINE (xdrs, 8 * BYTES_PER_XDR_UNIT);
+      if (buf != NULL)
+        {
+	  warn << "B\n";
+          cmsg->rm_xid = IXDR_GET_LONG (buf);
+          cmsg->rm_direction = IXDR_GET_ENUM (buf, enum msg_type);
+          if (cmsg->rm_direction != CALL)
+            {
+	      warn << "C\n";
+              return FALSE;
+            }
+          cmsg->rm_call.cb_rpcvers = IXDR_GET_LONG (buf);
+          if (cmsg->rm_call.cb_rpcvers != RPC_MSG_VERSION)
+            {
+	      warn << "D\n";
+              return FALSE;
+            }
+	  warn << "E\n";
+          cmsg->rm_call.cb_prog = IXDR_GET_LONG (buf);
+	  warn << "PROG: " << cmsg->rm_call.cb_prog << "\n";
+          cmsg->rm_call.cb_vers = IXDR_GET_LONG (buf);
+	  warn << "VERS: " << cmsg->rm_call.cb_vers << "\n";
+          cmsg->rm_call.cb_proc = IXDR_GET_LONG (buf);
+	  warn << "PROC: " << cmsg->rm_call.cb_proc << "\n";
+          oa = &cmsg->rm_call.cb_cred;
+          oa->oa_flavor = IXDR_GET_ENUM (buf, enum_t);
+          oa->oa_length = IXDR_GET_INT32 (buf);
+          if (oa->oa_length)
+            {
+	      warn << "OAL: " << oa->oa_length << "\n";
+              if (oa->oa_length > MAX_AUTH_BYTES) {
+		warn << "F\n";
+                return FALSE;
+	      }
+              if (oa->oa_base == NULL)
+                {
+                  oa->oa_base = (caddr_t)
+                    mem_alloc (oa->oa_length);
+                }
+              buf = XDR_INLINE (xdrs, RNDUP (oa->oa_length));
+              if (buf == NULL)
+                {
+		  warn << "G\n";
+                  if (INTUSE(xdr_opaque) (xdrs, oa->oa_base,
+                                          oa->oa_length) == FALSE)
+                    return FALSE;
+                }
+              else
+                {
+                  memcpy (oa->oa_base, (caddr_t) buf, oa->oa_length);
+                  /* no real need....
+                     buf = (long *) ((char *) buf
+                     + RNDUP(oa->oa_length));
+                   */
+                }
+            }
+	  warn << "H\n";
+          oa = &cmsg->rm_call.cb_verf;
+          buf = XDR_INLINE (xdrs, 2 * BYTES_PER_XDR_UNIT);
+          if (buf == NULL)
+            {
+	      warn << "H1\n";
+              if (INTUSE(xdr_enum) (xdrs, &oa->oa_flavor) == FALSE ||
+                  INTUSE(xdr_u_int) (xdrs, &oa->oa_length) == FALSE)
+                {
+		  warn << "H2\n";
+                  return FALSE;
+                }
+            }
+          else
+            {
+	      warn << "HA1\n";
+              oa->oa_flavor = IXDR_GET_ENUM (buf, enum_t);
+              oa->oa_length = IXDR_GET_INT32 (buf);
+            }
+          if (oa->oa_length)
+            {
+	      warn << "HB1: " << oa->oa_length << "\n";
+              if (oa->oa_length > MAX_AUTH_BYTES)
+                return FALSE;
+              if (oa->oa_base == NULL)
+                {
+                  oa->oa_base = (caddr_t)
+                    mem_alloc (oa->oa_length);
+                }
+              buf = XDR_INLINE (xdrs, RNDUP (oa->oa_length));
+              if (buf == NULL)
+                {
+                  if (INTUSE(xdr_opaque) (xdrs, oa->oa_base,
+                                          oa->oa_length) == FALSE)
+                    return FALSE;
+                }
+              else
+                {
+                  memcpy (oa->oa_base, (caddr_t) buf, oa->oa_length);
+                  /* no real need...
+                     buf = (long *) ((char *) buf
+                     + RNDUP(oa->oa_length));
+                   */
+                }
+            }
+          return TRUE;
+        }
+    }
+  warn << "X\n";
+  if (
+       INTUSE(xdr_u_long) (xdrs, &(cmsg->rm_xid)) &&
+       INTUSE(xdr_enum) (xdrs, (enum_t *) & (cmsg->rm_direction)) &&
+       (cmsg->rm_direction == CALL) &&
+       INTUSE(xdr_u_long) (xdrs, &(cmsg->rm_call.cb_rpcvers)) &&
+       (cmsg->rm_call.cb_rpcvers == RPC_MSG_VERSION) &&
+       INTUSE(xdr_u_long) (xdrs, &(cmsg->rm_call.cb_prog)) &&
+       INTUSE(xdr_u_long) (xdrs, &(cmsg->rm_call.cb_vers)) &&
+       INTUSE(xdr_u_long) (xdrs, &(cmsg->rm_call.cb_proc)) &&
+       INTUSE(xdr_opaque_auth) (xdrs, &(cmsg->rm_call.cb_cred)))
+    return INTUSE(xdr_opaque_auth) (xdrs, &(cmsg->rm_call.cb_verf));
+  return FALSE;
+}
+#endif
+
+//-----------------------------------------------------------------------
+
+static u_int32_t
+xdr_virtual_version (XDR *x)
+{
+  u_int32_t rpcvers = RPC_MSG_VERSION;
+  if (v_XDR_dispatch) {
+    u_int32_t pos = xdr_getpos (x);
+    int32_t *buf = XDR_INLINE (x, 3*4);
+    if (buf) {
+      rpcvers = htonl (buf[2]);
+      if (rpcvers != RPC_MSG_VERSION) {
+	buf[2] = ntohl (RPC_MSG_VERSION);
+      }
+      xdr_setpos (x, pos);
+    }
+  }
+  return rpcvers;
+}
+
+//-----------------------------------------------------------------------
+
 void
 asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
 		const sockaddr *src)
@@ -429,14 +631,21 @@ asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
   ptr<v_XDR_t> v_x;
   u_int32_t rpcvers;
 
-  if (!xdr_callmsg (x.xdrp (), m)) {
+  // If the RPC MSG VERSION number in the packet does not 
+  // equal RPC_MSG_VERSION (=2), then fetch it out of the packet,
+  // allocate a virtual XDR objects accordingly, but then reset
+  // the packet to RPC_MSG_VERSION, so that xdr_callmsg succeeds..
+  if ((rpcvers = xdr_virtual_version (x.xdrp ())) != RPC_MSG_VERSION) {
+    v_x = xdr_virtual_map (rpcvers, x.xdrp ());
+  }
+
+  if (!my_xdr_callmsg (x.xdrp (), m)) {
     trace (1) << "asrv::dispatch: xdr_callmsg failed\n";
     seteof (xi, src);
     return;
   }
 
-  if ((rpcvers = m->rm_call.cb_rpcvers) != RPC_MSG_VERSION &&
-      !(v_x = xdr_virtual_map (rpcvers, &x))) {
+  if (m->rm_call.cb_rpcvers != RPC_MSG_VERSION) {
     trace (1) << "asrv::dispatch: bad RPC message version\n";
     asrv_rpc_mismatch (xi, src, m->rm_xid);
     return;

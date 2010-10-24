@@ -498,9 +498,9 @@ class v_XDR_dispatch_t;
 // forward-declare this, which is in crypt.h
 class bigint;
 
-class v_XDR_t {
+class v_XDR_t : public virtual refcount {
 public:
-  v_XDR_t (ptr<v_XDR_dispatch_t> d, XDR *x) : m_dispatch (d), m_x (x) {}
+  v_XDR_t (ptr<v_XDR_dispatch_t> d, XDR *x);
   virtual ~v_XDR_t ();
   XDR *xdrp () { return m_x; }
   virtual bool rpc_traverse (u_int32_t &obj) = 0;
@@ -538,7 +538,7 @@ protected:
 //------------------------------------------------------------
 
 ptr<v_XDR_t> xdr_virtualize (XDR *x);
-ptr<v_XDR_t> xdr_virtual_map (u_int32_t key, XDR *x);
+ptr<v_XDR_t> xdr_virtual_map (u_int32_t rpcvers, XDR *x);
 
 //------------------------------------------------------------
 
