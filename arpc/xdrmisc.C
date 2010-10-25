@@ -130,7 +130,7 @@ v_XDR_t::~v_XDR_t () { m_dispatch->remove (m_x); }
 v_XDR_t::v_XDR_t (ptr<v_XDR_dispatch_t> d, XDR *x)
   : m_dispatch (d), m_x (x)
 {
-  m_dispatch->add (mkref (this));
+  m_dispatch->add (this);
 }
 
 //-----------------------------------------------------------------------
@@ -140,16 +140,17 @@ void v_XDR_dispatch_t::remove (XDR *x)
 
 //-----------------------------------------------------------------------
 
-void v_XDR_dispatch_t::add (ptr<v_XDR_t> x) 
+void v_XDR_dispatch_t::add (v_XDR_t *x) 
 { m_tab.insert (key (x->xdrp ()), x); }
 
 //-----------------------------------------------------------------------
 
 ptr<v_XDR_t> v_XDR_dispatch_t::lookup (XDR *x)
 { 
-  ptr<v_XDR_t> *retp, ret;
+  v_XDR_t **retp;
+  ptr<v_XDR_t> ret;
   if ((retp = m_tab[key (x)])) {
-    ret = *retp;
+    ret = mkref (*retp);
   }
   return ret;
 }

@@ -374,6 +374,7 @@ RPC_PRINT_TYPE_DECL (type)
 
 #define RPCUNION_SET(type, field) field.select ()
 #define RPCUNION_TRAVERSE(type, field) return rpc_traverse (t, *obj.field)
+#define RPCUNION_TRAVERSE_2(type, field) rpc_traverse (t, *obj.field, #field)
 #define RPCUNION_STOMPCAST(type, field) field.Xstompcast ()
 #define RPCUNION_REC_STOMPCAST(type, field) \
   obj.field.Xstompcast (); return rpc_traverse (s, *obj.field)
@@ -517,6 +518,7 @@ public:
   virtual bool init_decode (const char *msg, ssize_t len) = 0;
   virtual bool enter_pointer (bool &b) = 0;
   virtual bool exit_pointer (bool b) = 0;
+  virtual void flush () {}
 protected:
   ptr<v_XDR_dispatch_t> m_dispatch;
   XDR *m_x;
@@ -528,11 +530,11 @@ class v_XDR_dispatch_t : public virtual refcount {
 public:
   virtual ptr<v_XDR_t> alloc (u_int32_t rpcvers, XDR *input) = 0;
   void remove (XDR *x);
-  void add (ptr<v_XDR_t> x);
+  void add (v_XDR_t *x);
   ptr<v_XDR_t> lookup (XDR *x);
 protected:
   static uintptr_t key (const XDR *v);
-  qhash<uintptr_t, ptr<v_XDR_t> > m_tab;
+  qhash<uintptr_t, v_XDR_t *> m_tab;
 };
 
 //------------------------------------------------------------
