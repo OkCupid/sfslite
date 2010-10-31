@@ -29,6 +29,7 @@ bhash<str> ids;
 const str shell ("/bin/sh");
 static str outfile;
 str python_module_name;
+bool guess_defines;
 
 str
 rpcprog (const rpc_program *rp, const rpc_vers *rv)
@@ -156,6 +157,8 @@ main (int argc, char **argv)
   av.push_back ("-DRPCC");
   av.push_back (NULL);
 
+  guess_defines = true;
+
   for (an = 1; an < argc; an++) {
     char *arg = argv[an];
     int arglen = strlen (arg);
@@ -189,6 +192,8 @@ main (int argc, char **argv)
       python_module_name = argv[an];
     else if (!strncmp (arg, "-n", 2) && !python_module_name && arg[2])
       python_module_name = arg + 2;
+    else if (!strcmp (arg, "-G")) 
+      guess_defines = false;
     else 
       usage ();
   }

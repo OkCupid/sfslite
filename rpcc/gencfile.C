@@ -22,6 +22,7 @@
  */
 
 #include "rpcc.h"
+#include "rxx.h"
 
 static void
 mkmshl (str id)
@@ -95,6 +96,48 @@ mkns (const rpc_namespace *ns)
   }
 }
 
+struct rpc_constant_t {
+  rpc_constant_t (str i, str t) : id (i), typ (t) {}
+  str id, typ;
+};
+
+vec<rpc_constant_t> rpc_constants;
+
+void collect_constant (str i, str t)
+{
+  rpc_constants.push_back (rpc_constant_t (i, t));
+}
+
+static void
+collect_enum (const rpc_sym *s)
+{
+  const rpc_enum *rs = s->senum.addr ();
+  for (const rpc_const *rc = rs->tags.base (); rc < rs->tags.lim (); rc++) {
+    collect_constant (rc->id, "RPC_CONSTANT_ENUM");
+  }
+}
+
+static void
+collect_pound_def (str s)
+{
+  static rxx x ("#\\s*define\\s*(\\S+)\\s+(.*)");
+  if (guess_defines && x.match (s)) {
+    collect_constant (x[1], "RPC_CONSTANT_POUND_DEF");
+  }
+}
+
+static void
+collect_prog (const rpc_program *rs)
+{
+  collect_constant (rs->id, "RPC_CONSTANT_PROG");
+  for (const rpc_vers *rv = rs->vers.base (); rv < rs->vers.lim (); rv++) {
+    collect_constant (rv->id, "RPC_CONSTANT_VERS");
+    for (const rpc_proc *rp = rv->procs.base (); rp < rv->procs.lim (); rp++) {
+      collect_constant (rp->id, "RPC_CONSTANT_PROC");
+    }
+  }
+}
+
 static void
 dumpsym (const rpc_sym *s)
 {
@@ -107,16 +150,23 @@ dumpsym (const rpc_sym *s)
     break;
   case rpc_sym::ENUM:
     mkmshl (s->senum->id);
+    collect_enum (s);
     break;
   case rpc_sym::TYPEDEF:
     mkmshl (s->stypedef->id);
     break;
   case rpc_sym::PROGRAM:
-    mktbl (s->sprogram.addr ());
+    {
+      const rpc_program *rp = s->sprogram.addr ();
+      mktbl (rp);
+      collect_prog (rp);
+    }
     break;
   case rpc_sym::NAMESPACE:
     mkns (s->snamespace);
     break;
+  case rpc_sym::LITERAL:
+    collect_pound_def (*s->sliteral);
   default:
     break;
   }

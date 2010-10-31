@@ -235,3 +235,6 @@ rpc_program *get_prog (bool creat);
 
 // added for pyc/pyh generation
 extern str python_module_name;
+
+// RPC Contants can try to guess #-defines
+extern bool guess_defines;
