@@ -28,6 +28,7 @@
 
 #include "async.h"
 #include "xdrmisc.h"
+#include "extensible_arpc.h"
 
 /* Solaris 2.4 specific fixes */
 #ifdef NEED_XDR_CALLMSG_DECL
