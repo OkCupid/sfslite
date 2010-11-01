@@ -15,6 +15,24 @@ class v_XDR_dispatch_t;
 // forward-declare this, which is in crypt.h
 class bigint;
 
+// forward declare this, which comes from asrv.h, for RPC_global_proc_t
+// below...
+class svccb;
+
+// A global proc is available for all instances of an RPC
+// protocol of a given family.  For instance, for protocol family
+// 3 (JSON/RPC), sending RPC = 92177 will fetch all of the RPC
+// constants, so that a client can refer to them as symbols
+// rather than magic constants....
+class rpc_global_proc_t : public virtual refcount {
+public:
+  rpc_global_proc_t () {}
+  virtual void process (svccb *sbp) = 0;
+  virtual const rpcgen_table *get_rpcgen_table () = 0;
+};
+
+//------------------------------------------------------------
+
 class v_XDR_t : public virtual refcount {
 public:
   v_XDR_t (ptr<v_XDR_dispatch_t> d, XDR *x);
@@ -35,6 +53,10 @@ public:
   virtual bool enter_pointer (bool &b) = 0;
   virtual bool exit_pointer (bool b) = 0;
   virtual void flush () {}
+
+  virtual ptr<rpc_global_proc_t> get_global_proc (u_int32_t num) 
+  { return NULL; }
+
 protected:
   ptr<v_XDR_dispatch_t> m_dispatch;
   XDR *m_x;
@@ -192,5 +214,39 @@ rpc_traverse (ptr<v_XDR_t> x, rpc_str<max> &obj, const char *field = NULL)
   x->exit_field (field);
   return ret;
 }
+
+//=======================================================================
+
+typedef enum {
+  RPC_CONSTANT_NONE = 0,
+  RPC_CONSTANT_PROG = 1,
+  RPC_CONSTANT_VERS = 2,
+  RPC_CONSTANT_PROC = 3,
+  RPC_CONSTANT_ENUM = 4,
+  RPC_CONSTANT_POUND_DEF = 5
+} rpc_constant_type_t;
+
+class rpc_constant_collector_t {
+public:
+  virtual ~rpc_constant_collector_t () {}
+  template<class T> void collect (const char *k, T d, rpc_constant_type_t t) {}
+  virtual void collect (const char *k, int i, rpc_constant_type_t t) = 0;
+  virtual void collect (const char *k, str v, rpc_constant_type_t t) = 0;
+  virtual void collect (const char *k, const char *c, rpc_constant_type_t t) 
+  = 0;
+};
+
+//-----------------------------------------------------------------------
+
+typedef void (*rpc_constant_collect_hook_t) (rpc_constant_collector_t *);
+typedef vec<rpc_constant_collect_hook_t> rpc_constant_collect_hooks_t;
+
+class rpc_add_cch_t {
+public:
+  rpc_add_cch_t (rpc_constant_collect_hook_t h);
+};
+
+ptr<rpc_constant_collect_hooks_t> fetch_rpc_constant_collect_hooks ();
+void global_rpc_constant_collect (rpc_constant_collector_t *rcc);
 
 //=======================================================================

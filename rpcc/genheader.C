@@ -619,6 +619,17 @@ makeguard (str fname)
 
   return guard;
 }
+  
+static void
+dump_constant_collect_hook (str fname)
+{
+  str csafe_fname = make_csafe_filename (fname);
+  str cch = make_constant_collect_hook (fname);
+  aout << "extern void "
+       << cch << " (rpc_constant_collector_t *rcc);\n"
+       << "static rpc_add_cch_t " 
+       << csafe_fname << "_obj (" << cch << ");\n\n";
+}
 
 void
 genheader (str fname)
@@ -643,6 +654,8 @@ genheader (str fname)
     last = s->type;
     dumpsym (s);
   }
+
+  dump_constant_collect_hook (fname);
 
   aout << "#endif /* !" << guard << " */\n";
 }

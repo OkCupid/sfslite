@@ -166,14 +166,24 @@ svccb::reply (const void *reply, sfs::xdrproc_t xdr, bool nocache)
   rm.acpted_rply.ar_verf = _null_auth;
   rm.acpted_rply.ar_stat = SUCCESS;
   rm.acpted_rply.ar_results.where = (char *) reply;
-  rm.acpted_rply.ar_results.proc
-    = reinterpret_cast<sun_xdrproc_t> (xdr ? xdr : srv->tbl[proc ()].xdr_res);
 
   get_rpc_stats ().end_call (this, ts_start);
 
   xdrsuio x (XDR_ENCODE);
 
   ptr<v_XDR_t> vx = xdr_virtual_map (m_rpcvers, &x);
+  ptr<rpc_global_proc_t> gproc;
+
+  if (proc () > srv->nproc) {
+    assert (vx);
+    gproc = vx->get_global_proc (proc ());
+    assert (gproc);
+    rm.acpted_rply.ar_results.proc =
+      reinterpret_cast<sun_xdrproc_t> (gproc->get_rpcgen_table ()->xdr_res);
+  } else {
+    rm.acpted_rply.ar_results.proc
+      = reinterpret_cast<sun_xdrproc_t> (xdr ? xdr : srv->tbl[proc ()].xdr_res);
+  }
 
   if (!xdr_replymsg (x.xdrp (), &rm)) {
     warn ("svccb::reply: xdr_replymsg failed\n");
@@ -676,7 +686,11 @@ asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
 
   sbp->init (s, src);
 
-  if (sbp->proc () >= s->nproc) {
+  ptr<rpc_global_proc_t> gproc;
+
+  if (sbp->proc () >= s->nproc && 
+      (!v_x || !(gproc = v_x->get_global_proc (sbp->proc ())))) {
+
     if (asrvtrace >= 1)
       warn ("asrv::dispatch: invalid procno %s:%u\n",
 	    s->rpcprog->name, (u_int) sbp->proc ());
@@ -691,7 +705,10 @@ asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
     return;
   }
 
-  const rpcgen_table *rtp = &s->tbl[sbp->proc ()];
+  const rpcgen_table *rtp = NULL;
+  if (gproc) { rtp = gproc->get_rpcgen_table (); }
+  else       { rtp = &s->tbl[sbp->proc ()]; }
+
   if (v_x) { 
     // For the virtual XDRs, set the payload in a way that's very
     // accesible to the virtual wrapper class.
@@ -708,7 +725,7 @@ asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
     }
   }
 
-  sbp->arg = s->tbl[sbp->proc ()].alloc_arg ();
+  sbp->arg = rtp->alloc_arg ();
   if (!rtp->xdr_arg (x.xdrp (), sbp->arg)) {
     if (asrvtrace >= 1)
       warn ("asrv::dispatch: bad message %s:%s x=%x", s->rpcprog->name,
@@ -739,7 +756,10 @@ asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
     rtp->print_arg (sbp->arg, NULL, asrvtrace - 4, "ARGS", "");
 
   s->inc_svccb_count ();
-  (*s->cb) (sbp.release ());
+
+  svccb *out_sbp = sbp.release ();
+  if (gproc) { gproc->process (out_sbp); }
+  else { (*s->cb) (out_sbp); }
 }
 
 

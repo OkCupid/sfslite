@@ -96,6 +96,8 @@ mkns (const rpc_namespace *ns)
   }
 }
 
+//-----------------------------------------------------------------------
+
 struct rpc_constant_t {
   rpc_constant_t (str i, str t) : id (i), typ (t) {}
   str id, typ;
@@ -137,6 +139,57 @@ collect_prog (const rpc_program *rs)
     }
   }
 }
+
+str
+make_csafe_filename (str fname)
+{
+  strbuf hdr;
+  const char *fnp, *cp;
+
+  if ((fnp = strrchr (fname, '/')))
+    fnp++;
+  else fnp = fname;
+
+  // strip off the suffix ".h" or ".C"
+  for (cp = fnp; *cp && *cp != '.' ; cp++ ) ;
+  size_t len = cp - fnp;
+
+  mstr out (len + 1);
+  for (size_t i = 0; i < len; i++) {
+    if (fnp[i] == '-') { out[i] = '_'; }
+    else { out[i] = fnp[i]; }
+  }
+  out[len] = 0;
+  out.setlen (len);
+
+  return out;
+}
+
+str 
+make_constant_collect_hook (str fname)
+{
+  strbuf b;
+  str csafe_fname = make_csafe_filename (fname);
+  b << csafe_fname << "_constant_collect";
+  return b;
+}
+
+static void
+dump_constant_collect_hook (str fname)
+{
+  str cch = make_constant_collect_hook (fname);
+  aout << "void\n"
+       << cch << " (rpc_constant_collector_t *rcc)\n"
+       << "{\n";
+  for (size_t i = 0; i < rpc_constants.size (); i++) {
+    const rpc_constant_t &rc = rpc_constants[i];
+    aout << "  rcc->collect (\"" << rc.id << "\", "
+	 << rc.id << ", " << rc.typ << ");\n";
+  }
+  aout << "}\n\n";
+}
+
+//-----------------------------------------------------------------------
 
 static void
 dumpsym (const rpc_sym *s)
@@ -394,6 +447,8 @@ gencfile (str fname)
   for (const rpc_sym *s = symlist.base (); s < symlist.lim (); s++)
     dumpsym (s);
 
+  dump_constant_collect_hook (fname);
+  
   aout << "\n";
 }
 

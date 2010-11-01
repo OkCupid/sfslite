@@ -65,4 +65,42 @@ ptr<v_XDR_t> xdr_virtual_map (u_int32_t key, XDR *x)
 uintptr_t v_XDR_dispatch_t::key (const XDR *v)
 { return reinterpret_cast<uintptr_t> (v); }
 
+//-----------------------------------------------------------------------
+
+static vec<rpc_constant_collect_hook_t> rpc_cch_vec;
+
+rpc_add_cch_t::rpc_add_cch_t (rpc_constant_collect_hook_t h)
+{
+  rpc_cch_vec.push_back (h);
+}
+
+//-----------------------------------------------------------------------
+
+ptr<rpc_constant_collect_hooks_t>
+fetch_rpc_constant_collect_hooks ()
+{
+  static ptr<rpc_constant_collect_hooks_t> ret;
+  if (!ret) {
+    ret = New refcounted<rpc_constant_collect_hooks_t> ();
+    bhash<uintptr_t> h;
+    for (size_t i = 0; i < rpc_cch_vec.size (); i++) {
+      uintptr_t hk = reinterpret_cast<uintptr_t> (rpc_cch_vec[i]);
+      if (!h[hk]) {
+	ret->push_back (rpc_cch_vec[i]);
+	h.insert (hk);
+      }
+    }
+  }
+  return ret;
+}
+
+//-----------------------------------------------------------------------
+
+void
+global_rpc_constant_collect (rpc_constant_collector_t *rcc)
+{
+  ptr<rpc_constant_collect_hooks_t> h = fetch_rpc_constant_collect_hooks ();
+  for (size_t i = 0; i < h->size (); i++) { (*(*h)[i])(rcc); }
+}
+
 //=======================================================================

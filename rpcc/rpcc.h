@@ -238,3 +238,6 @@ extern str python_module_name;
 
 // RPC Contants can try to guess #-defines
 extern bool guess_defines;
+
+str make_csafe_filename (str fname);
+str make_constant_collect_hook (str fname);
