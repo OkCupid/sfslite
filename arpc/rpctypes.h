@@ -390,11 +390,29 @@ template<size_t n> struct hashfn<rpc_bytes<n> > {
  */
 template<class T> void rpc_enter_field (T &t, const char *f) {}
 template<class T> void rpc_exit_field (T &t, const char *f) {}
-template<class T> void rpc_enter_array (T &t, size_t i) {}
 template<class T> void rpc_exit_array (T &t) {}
 template<class T> void rpc_enter_slot (T &t, size_t i) {}
 template<class T> void rpc_exit_slot (T &t, size_t i) {}
 template<class T> void rpc_exit_pointer (T &t, bool b) {}
+
+/*
+ * MK 2010/11/01
+ *
+ * rpc_enter_array is used for both RPC vectors and RPC arrays
+ * The former can size dynamically, the latter are statically sized.
+ * In default XDR, for vectors, this method will put on the wire
+ * (or read off the wire) the size of the vector. For arrays, that's
+ * not necessary.  For other types of RPC like JSON, it's
+ * not necessary for arrays or vectors.  They can specialize this
+ * template to achieve that result.
+ *
+ */
+template<class T> bool rpc_enter_array (T &t, u_int32_t &i, bool is_vector) 
+{
+  bool ret = true;
+  if (is_vector) { ret = rpc_traverse (t, i); }
+  return ret;
+}
 
 /*
  * Default traversal functions
@@ -407,7 +425,8 @@ rpc_traverse (T &t, array<R, n> &obj, const char *field = NULL)
   bool ret = true;
 
   rpc_enter_field(t, field);
-  rpc_enter_array (t, obj.size ());
+  u_int32_t sz = obj.size ();
+  rpc_enter_array (t, sz, false);
 
   elm_t *p = obj.base ();
   elm_t *e = obj.lim ();
@@ -432,9 +451,8 @@ rpc_traverse (T &t, rpc_vec<R, n> &obj, const char *field = NULL)
   bool ret = true;
   rpc_enter_field (t, field);
   u_int32_t size = obj.size ();
-  rpc_enter_array (t, size);
 
-  if (!rpc_traverse (t, size) || size > obj.maxsize) {
+  if (!rpc_enter_array (t, size, true) || size > obj.maxsize) {
     ret = false;
   } else {
     if (size < obj.size ())

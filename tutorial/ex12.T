@@ -3,7 +3,6 @@
 
 #include "tame.h"
 #include "parseopt.h"
-#include "ex_prot.h"
 
 //
 // A test case to make sure that biggest callbacks work.

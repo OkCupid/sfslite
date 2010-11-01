@@ -4,7 +4,6 @@
 #include "tame.h"
 #include "arpc.h"
 #include "parseopt.h"
-#include "ex_prot.h"
 
 tamed static 
 void dostuff (vec<str> hosts, int port, cbi done)

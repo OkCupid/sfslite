@@ -136,7 +136,7 @@ warnobj::warnobj (int f)
       cat (progname).cat ("[").cat (progpid).cat ("]: ");
     } else {
       cat (progname).cat (": ");
-	}
+    }
   }
   if (flags & panicflag)
     cat ("PANIC: ");

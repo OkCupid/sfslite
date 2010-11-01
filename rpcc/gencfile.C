@@ -88,14 +88,6 @@ mktbl (const rpc_program *rs)
   aout << "\n";
 }
 
-static void
-mkns (const rpc_namespace *ns)
-{
-  for (const rpc_program *rp = ns->progs.base (); rp < ns->progs.lim (); rp++) {
-    mktbl (rp);
-  }
-}
-
 //-----------------------------------------------------------------------
 
 struct rpc_constant_t {
@@ -187,6 +179,17 @@ dump_constant_collect_hook (str fname)
 	 << rc.id << ", " << rc.typ << ");\n";
   }
   aout << "}\n\n";
+}
+
+//-----------------------------------------------------------------------
+
+static void
+mkns (const rpc_namespace *ns)
+{
+  for (const rpc_program *rp = ns->progs.base (); rp < ns->progs.lim (); rp++) {
+    mktbl (rp);
+    collect_prog (rp);
+  }
 }
 
 //-----------------------------------------------------------------------

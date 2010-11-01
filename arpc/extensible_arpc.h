@@ -45,7 +45,7 @@ public:
   virtual bool rpc_traverse (bigint &b) = 0;
   virtual void enter_field (const char *f) = 0;
   virtual void exit_field (const char *f) = 0;
-  virtual void enter_array (size_t i) = 0;
+  virtual bool enter_array (u_int32_t &i, bool dyn_sized) = 0;
   virtual void enter_slot (size_t i) = 0;
   virtual void exit_slot (size_t i) = 0;
   virtual void exit_array () = 0;
@@ -90,7 +90,9 @@ inline void rpc_enter_field (ptr<v_XDR_t> x, const char *f)
 { x->enter_field (f); }
 inline void rpc_exit_field (ptr<v_XDR_t> x, const char *f) 
 { x->exit_field (f); }
-inline void rpc_enter_array (ptr<v_XDR_t> x, size_t i) { x->enter_array (i); }
+inline bool rpc_enter_array (ptr<v_XDR_t> x, u_int32_t &i, bool dyn_sized) 
+{ return x->enter_array (i, dyn_sized); }
+
 inline void rpc_exit_array (ptr<v_XDR_t> x) { x->exit_array (); }
 inline void rpc_enter_slot (ptr<v_XDR_t> x, size_t s) { x->enter_slot (s); }
 inline void rpc_exit_slot (ptr<v_XDR_t> x, size_t s) { x->exit_slot (s); }
@@ -229,7 +231,6 @@ typedef enum {
 class rpc_constant_collector_t {
 public:
   virtual ~rpc_constant_collector_t () {}
-  template<class T> void collect (const char *k, T d, rpc_constant_type_t t) {}
   virtual void collect (const char *k, int i, rpc_constant_type_t t) = 0;
   virtual void collect (const char *k, str v, rpc_constant_type_t t) = 0;
   virtual void collect (const char *k, const char *c, rpc_constant_type_t t) 

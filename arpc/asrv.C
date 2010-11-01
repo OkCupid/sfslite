@@ -170,6 +170,7 @@ svccb::reply (const void *reply, sfs::xdrproc_t xdr, bool nocache)
   get_rpc_stats ().end_call (this, ts_start);
 
   xdrsuio x (XDR_ENCODE);
+  const rpcgen_table *tbl = NULL;
 
   ptr<v_XDR_t> vx = xdr_virtual_map (m_rpcvers, &x);
   ptr<rpc_global_proc_t> gproc;
@@ -178,12 +179,14 @@ svccb::reply (const void *reply, sfs::xdrproc_t xdr, bool nocache)
     assert (vx);
     gproc = vx->get_global_proc (proc ());
     assert (gproc);
-    rm.acpted_rply.ar_results.proc =
-      reinterpret_cast<sun_xdrproc_t> (gproc->get_rpcgen_table ()->xdr_res);
+    tbl = gproc->get_rpcgen_table ();
+    assert (tbl);
   } else {
-    rm.acpted_rply.ar_results.proc
-      = reinterpret_cast<sun_xdrproc_t> (xdr ? xdr : srv->tbl[proc ()].xdr_res);
+    tbl = &srv->tbl[proc()];
   }
+
+  rm.acpted_rply.ar_results.proc
+    = reinterpret_cast<sun_xdrproc_t> (xdr ? xdr : tbl->xdr_res);
 
   if (!xdr_replymsg (x.xdrp (), &rm)) {
     warn ("svccb::reply: xdr_replymsg failed\n");
@@ -194,12 +197,13 @@ svccb::reply (const void *reply, sfs::xdrproc_t xdr, bool nocache)
   // Virtual flush feature for virtual dispatches
   if (vx) { vx->flush (); }
 
-  trace (4, "reply %s:%s x=%x\n",
-	 srv->rpcprog->name, srv->tbl[msg.rm_call.cb_proc].name,
+  trace (4, "reply %s:%s x=%x\n", srv->rpcprog->name, tbl->name, 
 	 xidswap (msg.rm_xid));
-  if (asrvtrace >= 5 && !xdr && srv->tbl[msg.rm_call.cb_proc].print_res)
-    srv->tbl[msg.rm_call.cb_proc].print_res (reply, NULL, asrvtrace - 4,
-					     "REPLY", "");
+
+  if (asrvtrace >= 5 && !xdr && tbl->print_res) {
+    tbl->print_res (reply, NULL, asrvtrace - 4, "REPLY", "");
+  }
+
   srv->sendreply (this, &x, nocache);
 }
 
