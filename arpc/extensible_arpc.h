@@ -18,18 +18,7 @@ class bigint;
 // forward declare this, which comes from asrv.h, for RPC_global_proc_t
 // below...
 class svccb;
-
-// A global proc is available for all instances of an RPC
-// protocol of a given family.  For instance, for protocol family
-// 3 (JSON/RPC), sending RPC = 92177 will fetch all of the RPC
-// constants, so that a client can refer to them as symbols
-// rather than magic constants....
-class rpc_global_proc_t : public virtual refcount {
-public:
-  rpc_global_proc_t () {}
-  virtual void process (svccb *sbp) = 0;
-  virtual const rpcgen_table *get_rpcgen_table () = 0;
-};
+class axprt;
 
 //------------------------------------------------------------
 
@@ -54,9 +43,6 @@ public:
   virtual bool exit_pointer (bool b) = 0;
   virtual void flush () {}
 
-  virtual ptr<rpc_global_proc_t> get_global_proc (u_int32_t num) 
-  { return NULL; }
-
 protected:
   ptr<v_XDR_dispatch_t> m_dispatch;
   XDR *m_x;
@@ -70,6 +56,7 @@ public:
   void remove (XDR *x);
   void add (v_XDR_t *x);
   ptr<v_XDR_t> lookup (XDR *x);
+  virtual void v_asrv_alloc (ptr<axprt> x) {}
 protected:
   static uintptr_t key (const XDR *v);
   qhash<uintptr_t, v_XDR_t *> m_tab;
@@ -79,6 +66,7 @@ protected:
 
 ptr<v_XDR_t> xdr_virtualize (XDR *x);
 ptr<v_XDR_t> xdr_virtual_map (u_int32_t rpcvers, XDR *x);
+void xdr_virtual_asrv_alloc (ptr<axprt> x);
 
 //------------------------------------------------------------
 

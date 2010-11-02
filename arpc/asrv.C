@@ -173,17 +173,7 @@ svccb::reply (const void *reply, sfs::xdrproc_t xdr, bool nocache)
   const rpcgen_table *tbl = NULL;
 
   ptr<v_XDR_t> vx = xdr_virtual_map (m_rpcvers, &x);
-  ptr<rpc_global_proc_t> gproc;
-
-  if (proc () > srv->nproc) {
-    assert (vx);
-    gproc = vx->get_global_proc (proc ());
-    assert (gproc);
-    tbl = gproc->get_rpcgen_table ();
-    assert (tbl);
-  } else {
-    tbl = &srv->tbl[proc()];
-  }
+  tbl = &srv->tbl[proc()];
 
   rm.acpted_rply.ar_results.proc
     = reinterpret_cast<sun_xdrproc_t> (xdr ? xdr : tbl->xdr_res);
@@ -366,15 +356,24 @@ asrv::xprt () const
 }
 
 ptr<asrv>
-asrv::alloc (ref<axprt> x, const rpc_program &pr, asrv_cb::ptr cb)
+asrv::alloc (ref<axprt> x, const rpc_program &pr, asrv_cb::ptr cb, 
+	     bool fire_virtual_hook)
 {
   ptr<xhinfo> xi = xhinfo::lookup (x);
-  if (!xi)
-    return NULL;
-  if (x->reliable)
-    return New refcounted<asrv> (xi, pr, cb);
-  else
-    return New refcounted<asrv_unreliable> (xi, pr, cb);
+  ptr<asrv> ret;
+  if (!xi) { }
+  else if (x->reliable) { 
+    ret = New refcounted<asrv> (xi, pr, cb);
+  } else {
+    ret = New refcounted<asrv_unreliable> (xi, pr, cb);
+  }
+
+  // There can be a virtual hook here, to register some companion
+  // asrv for every asrv allocated on this channel.
+  if (fire_virtual_hook) {
+    xdr_virtual_asrv_alloc (x);
+  }
+  return ret;
 }
 
 void
@@ -671,6 +670,7 @@ asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
   sbp->set_rpcvers (rpcvers);
 
   asrv *s = xi->stab[progvers (sbp->prog (), sbp->vers ())];
+
   if (!s || !s->cb) {
     if (asrvtrace >= 1) {
       if (s)
@@ -690,10 +690,7 @@ asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
 
   sbp->init (s, src);
 
-  ptr<rpc_global_proc_t> gproc;
-
-  if (sbp->proc () >= s->nproc && 
-      (!v_x || !(gproc = v_x->get_global_proc (sbp->proc ())))) {
+  if (sbp->proc () >= s->nproc) {
 
     if (asrvtrace >= 1)
       warn ("asrv::dispatch: invalid procno %s:%u\n",
@@ -709,9 +706,7 @@ asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
     return;
   }
 
-  const rpcgen_table *rtp = NULL;
-  if (gproc) { rtp = gproc->get_rpcgen_table (); }
-  else       { rtp = &s->tbl[sbp->proc ()]; }
+  const rpcgen_table *rtp = &s->tbl[sbp->proc ()]; 
 
   if (v_x) { 
     // For the virtual XDRs, set the payload in a way that's very
@@ -761,9 +756,7 @@ asrv::dispatch (ref<xhinfo> xi, const char *msg, ssize_t len,
 
   s->inc_svccb_count ();
 
-  svccb *out_sbp = sbp.release ();
-  if (gproc) { gproc->process (out_sbp); }
-  else { (*s->cb) (out_sbp); }
+  (*s->cb) (sbp.release ());
 }
 
 

@@ -62,6 +62,16 @@ ptr<v_XDR_t> xdr_virtual_map (u_int32_t key, XDR *x)
 
 //-----------------------------------------------------------------------
 
+void
+xdr_virtual_asrv_alloc (ptr<axprt> x)
+{
+  if (v_XDR_dispatch) {
+    v_XDR_dispatch->v_asrv_alloc (x);
+  }
+}
+
+//-----------------------------------------------------------------------
+
 uintptr_t v_XDR_dispatch_t::key (const XDR *v)
 { return reinterpret_cast<uintptr_t> (v); }
 

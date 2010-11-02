@@ -154,8 +154,9 @@ public:
   void set_recv_hook (cbv::ptr cb) { recv_hook = cb; }
 
   static void dispatch (ref<xhinfo>, const char *, ssize_t, const sockaddr *);
+
   static ptr<asrv> alloc (ref<axprt>, const rpc_program &,
-			  asrv_cb::ptr = NULL);
+			  asrv_cb::ptr = NULL, bool fire_virtual_hook = true);
 };
 
 class asrv_replay : public asrv {
