@@ -407,6 +407,7 @@ struct xdrsuio : xdrbase {
   suio *uio ();
   const iovec *iov ();
   u_int iovcnt ();
+  void hold_onto (str s) { uio()->hold_onto (s); }
 };
 
 struct xdrmem : xdrbase {

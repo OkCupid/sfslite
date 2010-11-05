@@ -43,6 +43,8 @@ public:
 
 size_t iovsize (const iovec *, int);
 
+class str;
+
 class suio {
 public:
   enum { smallbufsize = 0x80 };
@@ -61,6 +63,10 @@ private:
 
   vec<iovec, 4> iovs;
   vec<uiocb, 2> uiocbs;
+
+  // Hold onto some data objects until after the suio disappears...
+  vec<ptr<void > > m_hold_voids;
+  ptr<vec<str> > m_hold_strs;
 
   size_t uiobytes;
   u_int64_t nrembytes;
@@ -106,6 +112,8 @@ public:
   void take (suio *src);
   void rembytes (size_t n);
   void borrow_data (const suio *from);
+  void hold_onto (ptr<void> v);
+  void hold_onto (str s);
 
   void iovcb (cb_t cb) {
     if (uiobytes)

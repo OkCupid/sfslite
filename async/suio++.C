@@ -23,6 +23,7 @@
 
 #include "suio++.h"
 #include "sfs_profiler.h"
+#include "str.h"
 
 #ifdef DMALLOC
 
@@ -231,6 +232,13 @@ suio::clear ()
   scratch_pos = defbuf;
   iovs.clear ();
   uiocbs.clear ();
+
+  // Do these last....
+  if (m_hold_strs) {
+    m_hold_strs->clear ();
+    m_hold_strs = NULL;
+  }
+  m_hold_voids.clear ();
 }
 
 void
@@ -487,5 +495,25 @@ suio::borrow_data (const suio *from)
     else
       pushiov (v->iov_base, v->iov_len);
 }
+
+//-----------------------------------------------------------------------
+
+void
+suio::hold_onto (str s)
+{
+  if (!m_hold_strs) {
+    m_hold_strs = New refcounted<vec<str> > ();
+  }
+  m_hold_strs->push_back (s);
+}
+
+//-----------------------------------------------------------------------
+
+void
+suio::hold_onto (ptr<void> v)
+{
+  m_hold_voids.push_back (v);
+}
+
 
 //-----------------------------------------------------------------------

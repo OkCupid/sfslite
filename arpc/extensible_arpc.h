@@ -19,6 +19,7 @@ class bigint;
 // below...
 class svccb;
 class axprt;
+class xdrsuio;
 
 //------------------------------------------------------------
 
@@ -31,6 +32,8 @@ public:
   virtual bool rpc_traverse (u_int64_t &obj) = 0;
   virtual bool rpc_encode (str s) = 0;
   virtual bool rpc_decode (str *s) = 0;
+  virtual bool rpc_encode_opaque (str s) = 0;
+  virtual bool rpc_decode_opaque (str *s) = 0;
   virtual bool rpc_traverse (bigint &b) = 0;
   virtual void enter_field (const char *f) = 0;
   virtual void exit_field (const char *f) = 0;
@@ -41,7 +44,7 @@ public:
   virtual bool init_decode (const char *msg, ssize_t len) = 0;
   virtual bool enter_pointer (bool &b) = 0;
   virtual bool exit_pointer (bool b) = 0;
-  virtual void flush () {}
+  virtual void flush (xdrsuio *x) {}
 
 protected:
   ptr<v_XDR_dispatch_t> m_dispatch;
@@ -164,16 +167,16 @@ rpc_traverse (ptr<v_XDR_t> x, rpc_bytes<max> &obj, const char *field = NULL)
     {
       mstr s (obj.size ());
       memcpy (s.cstr (), obj.base(), obj.size ());
-      ret = x->rpc_encode (s);
+      ret = x->rpc_encode_opaque (s);
     }
     break;
   case XDR_DECODE:
     {
       str s;
-      if ((ret = x->rpc_decode (&s))) {
+      if ((ret = x->rpc_decode_opaque (&s))) {
 	size_t len = min<size_t> (s.len (), max);
-	memcpy (obj.base (), s.cstr (), len);
 	obj.setsize (len);
+	memcpy (obj.base (), s.cstr (), len);
       }
     }
     break;

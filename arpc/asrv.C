@@ -185,7 +185,7 @@ svccb::reply (const void *reply, sfs::xdrproc_t xdr, bool nocache)
   }
 
   // Virtual flush feature for virtual dispatches
-  if (vx) { vx->flush (); }
+  if (vx) { vx->flush (&x); }
 
   trace (4, "reply %s:%s x=%x\n", srv->rpcprog->name, tbl->name, 
 	 xidswap (msg.rm_xid));
