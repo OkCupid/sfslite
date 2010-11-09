@@ -313,6 +313,7 @@ public:
 
   void clear () { tosuio ()->clear (); }
   size_t len () const { return tosuio ()->resid (); }
+  void hold_onto (str s) { tosuio()->hold_onto (s); }
 
   // copy the bytes from the given buffer into the strbuf,
   // works for even binary data (unlike cat(foo, true) above).
