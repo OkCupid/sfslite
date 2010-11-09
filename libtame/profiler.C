@@ -47,6 +47,7 @@ profiler_t::clear ()
 void
 profiler_t::exit_closure (const closure_t *c)
 {
+  if (!_enabled) return;
   profile_site_t *s = _tab[c->loc ()];
   if (s) { s->remove_instance (c); }
 }
