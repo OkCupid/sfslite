@@ -54,8 +54,16 @@ false_alloc ()
 BOOL
 xdr_string (XDR *xdrs, void *objp)
 {
-  return rpc_traverse (xdrs, *static_cast<rpc_str<RPC_INFINITY> *> (objp));
+  ptr<v_XDR_t> vx = xdr_virtualize (xdrs);
+  bool ret = false;
+  if (vx) { 
+    ret = rpc_traverse (vx, *static_cast<rpc_str<RPC_INFINITY> *> (objp)); 
+  } else { 
+    ret = rpc_traverse (xdrs, *static_cast<rpc_str<RPC_INFINITY> *> (objp)); 
+  }
+  return ret;
 }
+
 void *
 string_alloc ()
 {
@@ -66,36 +74,50 @@ BOOL
 xdr_int (XDR *xdrs, void *objp)
 {
   u_int32_t val;
+  ptr<v_XDR_t> vx = xdr_virtualize (xdrs);
+  bool ret = true;
   switch (xdrs->x_op) {
   case XDR_ENCODE:
     val = *static_cast<int *> (objp);
-    return rpc_traverse (xdrs, val);
+    if (vx) { ret = rpc_traverse (vx, val); } 
+    else { ret = rpc_traverse (xdrs, val); }
+    break;
   case XDR_DECODE:
     val = 0; // silence buggy warning message in gcc 4.1
-    if (!rpc_traverse (xdrs, val))
-      return false;
-    *static_cast<int *> (objp) = val;
+    if (vx) { ret = rpc_traverse (vx, val); } 
+    else { ret = rpc_traverse (xdrs, val); }
+    if (ret) {
+      *static_cast<int *> (objp) = val;
+    }
+    break;
   default:
-    return true;
+    ret = true;
+    break;
   }
+  return ret;
 }
+
 void *
 int_alloc ()
 {
   return New int;
 }
 
-#define DEFXDR(type)						\
-BOOL								\
-xdr_##type (XDR *xdrs, void *objp)				\
-{								\
-  return rpc_traverse (xdrs, *static_cast<type *> (objp));	\
-}								\
-void *								\
-type##_alloc ()							\
-{								\
-  return New type;						\
-}
+#define DEFXDR(type)							\
+  BOOL									\
+  xdr_##type (XDR *xdrs, void *objp)					\
+  {									\
+    ptr<v_XDR_t> vx = xdr_virtualize (xdrs);				\
+    bool ret = false;							\
+    if (vx) { ret = rpc_traverse (vx, *static_cast<type *> (objp)); }	\
+    else { ret = rpc_traverse (xdrs, *static_cast<type *> (objp)); }	\
+    return ret;								\
+  }									\
+  void *								\
+  type##_alloc ()							\
+  {									\
+    return New type;							\
+  }
 
 DEFXDR(bool)
 DEFXDR(int32_t)
