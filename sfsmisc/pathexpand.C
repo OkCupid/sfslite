@@ -58,7 +58,7 @@ slashsfs2sch (str path)
     nosfs++;
   
   str s;
-  char *firstslash = strchr (nosfs, '/');
+  const char *firstslash = strchr (nosfs, '/');
   if (firstslash)
     s = strbuf (nosfs, firstslash - nosfs);
   else

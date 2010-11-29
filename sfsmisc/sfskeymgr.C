@@ -1009,7 +1009,7 @@ sfskeystore::generate (sfskey *k, u_int32_t l_opts)
   str kn = k->keyname;
   str knp = kn;
   if (kn) {
-    char *cp = strchr (k->keyname, '#');
+    const char *cp = strchr (k->keyname, '#');
     if (cp) 
       kn = substr (kn, 0, cp - k->keyname - 1);
     knp = strbuf (kn << "#");
@@ -1241,9 +1241,9 @@ sfskeyinfo::alloc (str raw, sfskeystore *ks, u_int32_t l_opts)
     }
     return ret;
   }
-  char *cp = strchr (raw.cstr (), '#');
-  char *cp2 = strchr (raw.cstr (), '/');
-  char *cp3 = strchr (raw.cstr (), '@');
+  const char *cp = strchr (raw.cstr (), '#');
+  const char *cp2 = strchr (raw.cstr (), '/');
+  const char *cp3 = strchr (raw.cstr (), '@');
   if (!cp || cp2 || (l_opts & KM_NOSRC)) {
     if (iskeyremote (raw, l_opts & KM_PKONLY)) {
       if (cp3 && raw.len () && (raw.cstr () + raw.len () - 1 == cp3)) {

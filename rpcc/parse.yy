@@ -27,7 +27,7 @@
 
 static int proc_compare (const void *, const void *);
 static int vers_compare (const void *, const void *);
-static str getnewid (str);
+static str getnewid (str, bool repeats_bad);
 static str getid (str);
 %}
 
@@ -57,7 +57,7 @@ static str getid (str);
 %token <str> T_OPAQUE
 %token <str> T_STRING
 
-%type <str> id newid type_or_void type base_type value
+%type <str> id newid type_or_void type base_type value nsid
 %type <decl> declaration
 %type <cnst> enum_cnstag
 %type <num> number
@@ -81,7 +81,7 @@ def_type: T_TYPEDEF declaration
 	  rpc_sym *s = &symlist.push_back ();
 	  s->settype (rpc_sym::TYPEDEF);
 	  *s->stypedef = $2;
-	  s->stypedef->id = getnewid (s->stypedef->id);
+	  s->stypedef->id = getnewid (s->stypedef->id, true);
 	}
 	| T_TYPEDEF T_STRUCT declaration
 	{
@@ -89,7 +89,7 @@ def_type: T_TYPEDEF declaration
 	  s->settype (rpc_sym::TYPEDEF);
 	  *s->stypedef = $3;
 	  s->stypedef->type = strbuf ("struct ") << $3.type;
-	  s->stypedef->id = getnewid (s->stypedef->id);
+	  s->stypedef->id = getnewid (s->stypedef->id, true);
 	}
 	;
 
@@ -149,7 +149,7 @@ def_program: T_PROGRAM newid '{'
 	}
 	;
 
-def_namespace: T_NAMESPACE newid '{'
+def_namespace: T_NAMESPACE nsid '{'
         {
 	  rpc_sym *s = &symlist.push_back ();
 	  s->settype (rpc_sym::NAMESPACE);
@@ -309,8 +309,11 @@ value: id | T_NUM
 number: T_NUM { $$ = strtoul ($1, NULL, 0); }
 	;
 
-newid: T_ID { $$ = getnewid ($1); }
+newid: T_ID { $$ = getnewid ($1, true); }
 	;
+
+nsid: T_ID { $$ = getnewid ($1, false); } 
+        ;
 
 id: T_ID { $$ = getid ($1); }
 	;
@@ -346,12 +349,14 @@ checkliterals ()
 }
 
 static str
-getnewid (str id)
+getnewid (str id, bool repeats_bad)
 {
-  if (ids[id])
+  if (!repeats_bad) { /* noop */ }
+  else if (ids[id]) {
     yywarn ("redefinition of symbol " << id);
-  else
+  } else {
     ids.insert (id);
+  }
   if (idprefix)
     id = idprefix << id;
   return id;

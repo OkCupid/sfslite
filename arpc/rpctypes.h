@@ -95,8 +95,10 @@ swap (rpc_ptr<T> &a, rpc_ptr<T> &b)
   a.swap (b);
 }
 
-
-template<class T, size_t max> class rpc_vec : private vec<T> {
+// MK 2010/11/29 -- change this inheritance to be public rather than
+// private...  it was causing too many headaches otherwise, and i don't
+// understand why it was the way it was....
+template<class T, size_t max> class rpc_vec : public vec<T> {
   typedef vec<T> super;
 public:
   typedef typename super::elm_t elm_t;

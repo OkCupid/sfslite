@@ -80,7 +80,36 @@ public:
   const std::type_info *type () const { return vptr ? vptr->type : NULL; }
 };
 
+
+// MK 2010/11/129
+//
+// Oy -- needed in 4.4.3 and above to solve this error:
+//
+//   dereferencing pointer ‘<anonymous>’ does break strict-aliasing rules
+//
+template<class D> D 
+hack_reinterpret_cast (char *input)
+{
+  D ret = NULL;
+  typedef char VerifySizesAreEqual[sizeof(input) == sizeof(ret) ? 1 : -1];
+
+  // It would be nice to use memcpy, but actually, GCC is too 'smart' for 
+  // that! So we'll have to roll out own.  
+  char *retp = reinterpret_cast<char *> (&ret);
+  char *inp = reinterpret_cast<char *> (&input);
+
+  for (size_t i = 0; i < sizeof (ret); i++) { retp[i] = inp[i]; }
+  return ret;
+}
+
+template<class D> D 
+hack_reinterpret_const_cast (const char *input)
+{
+  return hack_reinterpret_cast<D> (const_cast<char *> (input));
+}
+
 template<class T> class union_entry : public union_entry_base {
+
   union {
     AlignmentHack(T) _hack;
     char m[sizeof (T)];
@@ -102,8 +131,12 @@ template<class T> class union_entry : public union_entry_base {
     (void) (*dst->_addr () = *src->_addr ()); // XXX - cast required by egcs
   }
 
-  T *_addr () { return reinterpret_cast<T *> (m); }
-  const T *_addr () const { return reinterpret_cast<const T *> (m); }
+  T *_addr () { 
+    return hack_reinterpret_cast<T *> (m);
+  }
+  const T *_addr () const { 
+    return hack_reinterpret_const_cast <const T *> (m);
+  }
 
   void verify () const {
 #if TUNION_DEBUG
