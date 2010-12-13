@@ -37,6 +37,7 @@ public:
   virtual bool rpc_traverse (bigint &b) = 0;
   virtual void enter_field (const char *f) = 0;
   virtual void exit_field (const char *f) = 0;
+  virtual bool rpc_traverse_null () = 0;
   virtual bool enter_array (u_int32_t &i, bool dyn_sized) = 0;
   virtual void enter_slot (size_t i) = 0;
   virtual void exit_slot (size_t i) = 0;

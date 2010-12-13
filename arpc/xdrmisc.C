@@ -32,7 +32,10 @@ const char __xdr_zero_bytes[4] = { 0, 0, 0, 0 };
 BOOL
 xdr_void (XDR *xdrs, void *)
 {
-  return true;
+  ptr<v_XDR_t> vx = xdr_virtualize (xdrs);
+  bool ret = true;
+  if (vx) { ret = vx->rpc_traverse_null (); }
+  return ret;
 }
 void *
 void_alloc ()
