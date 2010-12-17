@@ -33,17 +33,19 @@
 #include "err.h"
 #include "qhash.h"
 
+typedef void * (*xdr_alloc_t) ();
+
 struct rpcgen_table {
   const char *name;
 
   const std::type_info *type_arg;
-  void *(*alloc_arg) ();
+  xdr_alloc_t alloc_arg;
   sfs::xdrproc_t xdr_arg;
   void (*print_arg) (const void *, const strbuf *, int,
 		     const char *, const char *);
 
   const std::type_info *type_res;
-  void *(*alloc_res) ();
+  xdr_alloc_t alloc_res;
   sfs::xdrproc_t xdr_res;
   void (*print_res) (const void *, const strbuf *, int,
 		     const char *, const char *);
@@ -56,6 +58,13 @@ struct rpc_program {
   size_t nproc;
   const char *name;
   bool lookup (const char *rpc, u_int32_t *out) const;
+};
+
+struct xdr_procpair_t {
+  xdr_procpair_t () : alloc (NULL), proc (NULL) {}
+  xdr_procpair_t (xdr_alloc_t a, sfs::xdrproc_t p) : alloc (a), proc (p) {}
+  xdr_alloc_t alloc;
+  sfs::xdrproc_t proc;
 };
 
 enum { RPC_INFINITY = 0x7fffffff };

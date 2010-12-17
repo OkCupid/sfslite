@@ -24,6 +24,8 @@
 #include "rpcc.h"
 #include "rxx.h"
 
+static void collect_rpctype (str i);
+
 static void
 mkmshl (str id)
 {
@@ -68,6 +70,7 @@ mkmshl (str id)
        << "  }\n"
        << "}\n"
        << "\n";
+  collect_rpctype (id);
 }
 
 static void
@@ -96,10 +99,16 @@ struct rpc_constant_t {
 };
 
 vec<rpc_constant_t> rpc_constants;
+vec<str> rpc_types;
 
 void collect_constant (str i, str t)
 {
   rpc_constants.push_back (rpc_constant_t (i, t));
+}
+
+void collect_rpctype (str i)
+{
+  rpc_types.push_back (i);
 }
 
 static void
@@ -178,6 +187,12 @@ dump_constant_collect_hook (str fname)
     aout << "  rcc->collect (\"" << rc.id << "\", "
 	 << rc.id << ", " << rc.typ << ");\n";
   }
+  for (size_t i = 0; i < rpc_types.size (); i++) {
+    str id = rpc_types[i];
+    aout << "  rcc->collect (\"" << id << "\", "
+	 << "xdr_procpair_t (" << id << "_alloc, xdr_" << id << "));\n";
+  }
+
   aout << "}\n\n";
 }
 

@@ -227,6 +227,9 @@ public:
   virtual void collect (const char *k, str v, rpc_constant_type_t t) = 0;
   virtual void collect (const char *k, const char *c, rpc_constant_type_t t) 
   = 0;
+
+  // Collect maps of XDR class names to XDR routines
+  virtual void collect (const char *k, xdr_procpair_t p) = 0;
 };
 
 //-----------------------------------------------------------------------
