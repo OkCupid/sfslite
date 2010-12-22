@@ -201,6 +201,19 @@ public:
   elm_t &push_back (const elm_t &e)
     { reserve (1); return cconstruct (*lastp++, e); }
 
+  void reverse () 
+  {
+    ssize_t right = size () - 1;
+    ssize_t left = 0;
+    while (left < right) {
+      elm_t tmp = (*this)[left];
+      (*this)[left] = (*this)[right];
+      (*this)[right] = tmp;
+      left++;
+      right--;
+    }
+  }
+
   elm_t pop_back () { zcheck (); return destroy_return (*--lastp); }
   void popn_back (size_t n) {
     pcheck (n);
