@@ -111,6 +111,7 @@ public:
   void reject (auth_stat);
   void reject (accept_stat);
   void ignore ();
+  int get_trace_fd () const;
 };
 
 
@@ -157,6 +158,7 @@ public:
 
   static ptr<asrv> alloc (ref<axprt>, const rpc_program &,
 			  asrv_cb::ptr = NULL, bool fire_virtual_hook = true);
+  int get_trace_fd () const;
 };
 
 class asrv_replay : public asrv {
@@ -248,4 +250,7 @@ void set_asrvtrace (int l);
 int get_asrvtrace (void);
 void set_asrvtime (bool b);
 bool get_asrvtime (void);
+void set_asrvsource (bool b);
+bool get_asrvsource (void);
+void set_asrv_debug (str s);
 #endif /* MAINTAINER */

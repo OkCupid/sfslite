@@ -88,9 +88,13 @@ struct traceobj : public strbuf {
   const char *prefix;
   const bool dotime;
   bool doprint;
+  int fd;
 
-  traceobj (int current_level, const char *prefix = "", bool dotime = false)
-    : current_level (current_level), prefix (prefix), dotime (dotime) {}
+  traceobj (int current_level, const char *prefix = "", 
+	    bool dotime = false, int f = -1)
+    : current_level (current_level), prefix (prefix), 
+      dotime (dotime), fd (f) {}
+
   ~traceobj ();
   void init ();
 

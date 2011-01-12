@@ -178,6 +178,16 @@ traceobj::init ()
   cat (prefix);
   if (dotime)
     cat (timestring ()).cat (" ");
+
+  if (fd >= 0) {
+    struct sockaddr_in sin;
+    socklen_t sinlen = sizeof (sin);
+    if (getpeername (fd, (struct sockaddr *)&sin, &sinlen) == 0) {
+      const char *ip = inet_ntoa (sin.sin_addr);
+      int port = ntohs (sin.sin_port);
+      cat (ip).cat (":").cat(port).cat (" ");
+    }
+  }
 }
 
 traceobj::~traceobj ()
