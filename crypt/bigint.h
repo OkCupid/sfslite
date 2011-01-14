@@ -27,15 +27,7 @@
 
 #include "sysconf.h"
 
-#if defined (HAVE_GMP_CXX_OPS) || !defined (__cplusplus)
 #include <gmp.h>
-#else /* !HAVE_GMP_CXX_OPS */
-/* Some older C++ header files fail to include some declarations
- * inside an extern "C". */
-extern "C" {
-#include <gmp.h>
-}
-#endif /* !HAVE_GMP_CXX_OPS */
 
 #ifdef __cplusplus
 extern "C" {

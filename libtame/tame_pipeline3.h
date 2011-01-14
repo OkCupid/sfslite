@@ -28,7 +28,7 @@ namespace pipeline3 {
   class runner_t {
   public:
     runner_t (ptr<control_t> c) : _control (c), _n_out (0), _i (0) {}
-    void gate_takeoff (evv_t ev, CLOSURE);
+    void queue_for_takeoff (evv_t ev, CLOSURE);
 
     evv_t mkev ();
 
@@ -56,6 +56,22 @@ namespace pipeline3 {
     size_t _i;
     evv_t::ptr _ev;
   };
+
+  //-----------------------------------------------------------------------
+
+  class passive_control_t : public control_t {
+  public:
+    passive_control_t (size_t ws = 5, time_t delay = 0)
+      : _window_size (ws), _delay_usec (delay) {}
+    size_t get_window_size () const { return _window_size; }
+    time_t get_delay_usec () const { return _delay_usec; }
+    static ptr<passive_control_t> alloc (size_t w, time_t d)
+    { return New refcounted<passive_control_t> (w, d); }
+  private:
+    size_t _window_size;
+    time_t _delay_usec;
+  };
+
 }
 
 //=======================================================================

@@ -10,19 +10,21 @@ namespace pipeline3 {
 //-----------------------------------------------------------------------
 
 tamed void
-runner_t::gate_takeoff (evv_t ev)
+runner_t::queue_for_takeoff (evv_t ev)
 {
   tvars {
     time_t d;
   }
 
-  while (_n_out > _control->get_window_size ()) {
+  while (_n_out >= _control->get_window_size ()) {
     twait { _ev = mkevent (); }
   }
 
   _n_out++;
   d = _control->get_delay_usec ();
-  twait { delaycb (d / 1000000, d * 1000, mkevent ()); }
+  if (d) {
+    twait { delaycb (d / 1000000, d * 1000, mkevent ()); }
+  }
 
   ev->trigger ();
 }

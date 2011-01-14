@@ -93,6 +93,7 @@ tame_rpcclient(ex17)
 tame_standalone(logtest)
 tame_standalone(dnstest)
 tame_standalone(profiler_test)
+tame_standalone(pipeline3)
 
 tame_standalone(buggy1)
 tame_standalone(buggy2)

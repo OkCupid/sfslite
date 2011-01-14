@@ -287,14 +287,14 @@ namespace connector {
   template<typename T1> ref<_event<T1> >
   extend (evv_t ev, T1 &t1)
   {
-    _tame_slot_set<T1> ss (t1);
+    _tame_slot_set<T1> ss (&t1);
     return connector_t<T1>::extend (ev, ss);
   }
 
   template<typename T1, typename T2> ref<_event<T1,T2> >
   extend (evv_t ev, T1 &t1, T2 &t2)
   {
-    _tame_slot_set<T1,T2> ss (t1, t2);
+    _tame_slot_set<T1,T2> ss (&t1, &t2);
     return connector_t<T1,T2>::extend (ev, ss);
   }
 
@@ -302,7 +302,7 @@ namespace connector {
   ref<_event<T1,T2,T3> >
   extend (evv_t ev, T1 &t1, T2 &t2, T3 &t3)
   {
-    _tame_slot_set<T1,T2,T3> ss (t1, t2, t3);
+    _tame_slot_set<T1,T2,T3> ss (&t1, &t2, &t3);
     return connector_t<T1,T2,T3>::extend (ev, ss);
   }
 
