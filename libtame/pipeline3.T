@@ -41,7 +41,7 @@ get_time_usec ()
 //-----------------------------------------------------------------------
 
 tamed void
-runner_t::_mkev (evv_t *out)
+runner_t::_mkev (evv_t::ptr *out)
 {
   tvars {
     size_t i;

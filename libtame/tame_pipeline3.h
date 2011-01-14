@@ -6,6 +6,7 @@
 #include "async.h"
 #include "tame.h"
 #include "tame_connectors.h"
+#include "refcnt.h"
 
 //=======================================================================
 //
@@ -15,7 +16,7 @@ namespace pipeline3 {
 
   //-----------------------------------------------------------------------
 
-  class control_t : public virtual refcont {
+  class control_t : public virtual refcount {
   public:
     virtual size_t get_window_size () const = 0;
     virtual time_t get_delay_usec () const = 0;
@@ -26,7 +27,7 @@ namespace pipeline3 {
 
   class runner_t {
   public:
-    runner_t (ptr<control_t> c) : _cfg (c), _n_out (0), _I (0);
+    runner_t (ptr<control_t> c) : _control (c), _n_out (0), _i (0) {}
     void gate_takeoff (evv_t ev, CLOSURE);
 
     evv_t mkev ();
@@ -48,7 +49,7 @@ namespace pipeline3 {
 
     void flush (evv_t ev, CLOSURE);
   private:
-    void mkev (evv_t *ev, CLOSURE);
+    void _mkev (evv_t::ptr *ev, CLOSURE);
 
     ptr<control_t> _control;
     size_t _n_out;
