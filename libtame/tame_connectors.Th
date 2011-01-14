@@ -73,6 +73,15 @@ public:
     return ncb;
   }
 
+  static typename event<T1,T2,T3>::ptr
+  extend (evv_t ev, _tame_slot_set<T1,T2,T3> ss)
+  {
+    typename event<T1,T2,T3>::ptr ret;
+    connector_t<T1,T2,T3> c;
+    c.__extend (&ret, ev, ss);
+    return ret;
+  }
+
 private:
   void __cnc (typename event<T1,T2,T3>::ptr *out, 
 	      typename event<T1,T2,T3>::ref in, 
@@ -96,6 +105,11 @@ private:
 	      int *sigp,
 	      _event_cancel_base *cobj, 
 	      CLOSURE);
+
+  void __extend (typename event<T1,T2,T3>::ptr *out,
+		 evv_t in,
+		 _tame_slot_set<T1,T2,T3> ss,
+		 CLOSURE);
 
 };
 
@@ -167,6 +181,13 @@ connector_t<T1,T2,T3>::__kto (typename event<T1,T2,T3>::ptr *out,
   }
 }
 
+tamed template<class T1, class T2, class T3> void 
+connector_t<T1,T2,T3>::__extend (typename event<T1,T2,T3>::ptr *out,
+				 evv_t in, _tame_slot_set<T1,T2,T3> ss)
+{
+  twait { *out = mkevent_rs (ss); }
+  in->trigger ();
+}
 
 tamed template<class T1, class T2, class T3> void 
 connector_t<T1,T2,T3>::__cnc (typename event<T1,T2,T3>::ptr *out, 
@@ -261,8 +282,31 @@ namespace connector {
   evb_t tand (evv_t in, bool *b);
   evb_t tor (evv_t in, bool *b);
 
-};
+  // Extend a given void event into an event that, when triggered,
+  // sets the passed references.  Same for the next three calls.
+  template<typename T1> ref<_event<T1> >
+  extend (evv_t ev, T1 &t1)
+  {
+    _tame_slot_set<T1> ss (t1);
+    return connector_t<T1>::extend (ev, ss);
+  }
 
+  template<typename T1, typename T2> ref<_event<T1,T2> >
+  extend (evv_t ev, T1 &t1, T2 &t2)
+  {
+    _tame_slot_set<T1,T2> ss (t1, t2);
+    return connector_t<T1,T2>::extend (ev, ss);
+  }
+
+  template<typename T1, typename T2, typename T3> 
+  ref<_event<T1,T2,T3> >
+  extend (evv_t ev, T1 &t1, T2 &t2, T3 &t3)
+  {
+    _tame_slot_set<T1,T2,T3> ss (t1, t2, t3);
+    return connector_t<T1,T2,T3>::extend (ev, ss);
+  }
+
+};
 
 //
 // klepto timeout grabs onto the current closure and holds onto it,
