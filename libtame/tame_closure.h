@@ -217,16 +217,17 @@ extern ptr<closure_t> null_closure;
 extern const char *__cls_type;
 #define CLOSURE              ptr<closure_t> __frame = NULL
 
-/*
-template<class C>
-typename event<>::ref
-_mkevent (const closure_wrapper<C> &c, const char *loc, const char *ctn)
+// Make an event in a twait{} block based upon a given result slotset.
+// Useful in some connectors...
+template<class C, class T1, class T2, class T3>
+typename event<T1,T2,T3>::ref
+_mkevent_rs (const closure_wrapper<C> &c, const char *loc, const char *ctn,
+	     const _tame_slot_set<T1,T2,T3> &ss)
 {
-  typename event<>::ref ret = 
-    _mkevent_implicit_rv (c.closure (), loc, _tame_slot_set<> ());
+  typename event<T1,T2,T3>::ref ret = 
+    _mkevent_implicit_rv (c.closure(), loc, ss);
   ret->set_gdb_info (ctn, c.closure ());
   return ret;
 }
-*/
 
 #endif /* _LIBTAME_CLOSURE_H_ */

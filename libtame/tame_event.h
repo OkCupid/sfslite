@@ -123,7 +123,6 @@ public:
   typedef struct ptr<_event<T1,T2,T3> > ptr;
 };
 
-
 #ifdef WRAP_DEBUG
 # define CALLBACK_ARGS(x) "???", x, x
 # else
