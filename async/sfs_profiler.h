@@ -11,6 +11,21 @@
 //
 class sfs_profiler {
 public:
+
+  //
+  // The core of the profiler --- what to do when we actually need to collect
+  // the data.  Also, a hook in the main look to potentially recharge
+  // the memory of the profiler.  Might eventually add more hooks here
+  // so we can virtualize in OKWS and other applications.
+  //
+  class core_t {
+  public:
+    virtual void profile_hook (const void *in) = 0;
+    virtual void recharge () = 0;
+    virtual void report () = 0;
+    virtual void reset () = 0;
+  };
+
   static bool enable ();
   static void disable ();
   static void report ();
@@ -24,6 +39,8 @@ public:
   static void enter_vomit_lib ();
   static void exit_vomit_lib ();
   static void init ();
+  static void set_core (sfs_profiler::core_t *c);
+
 };
 
 //
