@@ -1096,7 +1096,6 @@ void sfs_profiler::recharge () {}
 void sfs_profiler::enter_vomit_lib () {}
 void sfs_profiler::exit_vomit_lib () {}
 void sfs_profiler::init () {}
-void sfs_profiler::set_profiler_hook (hook_t h);
 sfs_profiler_core_t *set_core (sfs_profiler_core_t *c);
 
 //-----------------------------------------------------------------------
