@@ -12,6 +12,7 @@ struct app_t {
   app_t (int port) : _port (port) {}
   static void usage ();
   virtual void run (CLOSURE) = 0;
+  static size_t _def_bufsz;
 protected:
   int _port;
 };
@@ -38,6 +39,10 @@ protected:
 
 //=======================================================================
 
+size_t app_t::_def_bufsz = 0x10000;
+
+//-----------------------------------------------------------------------
+
 app_t *
 app_t::init (int argc, char *argv[])
 {
@@ -48,7 +53,7 @@ app_t::init (int argc, char *argv[])
   int port = -1;
   str hostname;
 
-  while ((ch = getopt (argc, argv, "p:"))) {
+  while ((ch = getopt (argc, argv, "p:")) != -1) {
     switch (ch) {
     case 'p':
       if (!convertint (optarg, &port)) {
@@ -102,11 +107,22 @@ app_t::init (int argc, char *argv[])
 void
 app_t::usage ()
 {
-  warnx << "usage: " << progname << " [-f <file>] -p <port> [<hostname>]\n"
+  warnx << "usage: " << progname << " [-f <file>] [-b <bufsz>]"
+	<< " -p <port> [<hostname>]\n"
+	<< "\n"
+	<< " nc++ (named ncpp for automake reasons) is a netcat improvement\n"
+	<< " that does nice things like allowing multiple clients to connect\n"
+	<< " to the same port or disconnecting clients aggressively on\n"
+	<< " failure.\n"
+	<< "\n"
 	<< "  - run as a server without the hostname argument\n"
 	<< "  - run as a client with the hostname arugment\n"
 	<< "  - specify -p for port in both cases\n"
-	<< "  - specify a <file> -f to output to a file\n"
+	<< "\n"
+	<< "Options:\n"
+	<< "  -f <file>    output to a file in server mode\n"
+	<< "  -b <bufsz>   tune the buffer size (default is " 
+	<< _def_bufsz <<  ")\n"
 	<< "\n";
 }
 
