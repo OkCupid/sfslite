@@ -148,7 +148,6 @@ connector_t<T1,T2,T3>::__sig (typename event<T1,T2,T3>::ptr *out,
 }
 
 tamed template<class T1, class T2, class T3> void
-
 connector_t<T1,T2,T3>::__kto (typename event<T1,T2,T3>::ptr *out, 
 			      ptr<closure_t> c,
 			      typename event<T1,T2,T3>::ref in, 

@@ -154,6 +154,8 @@ void daemonize (const str &name = NULL);
 void start_logger ();
 int start_logger (const str &pri, const str &tag, const str &line, 
 		  const str &logfile, int flags, mode_t mode);
+void set_syslog_logger (const vec<str> &v);
+bool get_syslog_logger (vec<str> *out);
 
 /* Random usefull operators */
 #include "keyfunc.h"
