@@ -9,19 +9,20 @@
 
 struct app_t {
   static app_t *init (int argc, char *argv[]);
-  app_t (int port) : _port (port) {}
+  app_t (int port, size_t b) : _port (port), _buf_sz (b) {}
   static void usage ();
   virtual void run (CLOSURE) = 0;
   static size_t _def_bufsz;
 protected:
   int _port;
+  size_t _buf_sz;
 };
 
 //=======================================================================
 
 class client_t : public app_t {
 public:
-  client_t (str h, int p) : app_t (p), _host (h) {}
+  client_t (str h, int p, size_t b) : app_t (p, b), _host (h) {}
   void run (CLOSURE) {}
 protected:
   str _host;
@@ -31,7 +32,7 @@ protected:
 
 class server_t : public app_t {
 public:
-  server_t (int p, str file) : app_t (p), _file (file) {}
+  server_t (int p, str file, size_t b) : app_t (p, b), _file (file) {}
   void run (CLOSURE) {}
 protected:
   str _file;
@@ -39,7 +40,7 @@ protected:
 
 //=======================================================================
 
-size_t app_t::_def_bufsz = 0x10000;
+size_t app_t::_def_bufsz = 0x100000;
 
 //-----------------------------------------------------------------------
 
@@ -52,6 +53,7 @@ app_t::init (int argc, char *argv[])
   app_t *ret = NULL;
   int port = -1;
   str hostname;
+  size_t bufsz = _def_bufsz;
 
   while ((ch = getopt (argc, argv, "p:")) != -1) {
     switch (ch) {
@@ -66,6 +68,12 @@ app_t::init (int argc, char *argv[])
       break;
     case 'h':
       err = true;
+      break;
+    case 'b':
+      if (!convertint (optarg, &bufsz)) {
+	warn << "cannot convert '" << optarg << "' to a buffer size\n";
+	err = true;
+      }
       break;
     default:
       break;
@@ -94,9 +102,9 @@ app_t::init (int argc, char *argv[])
   if (err) {
     usage ();
   } else if (hostname) {
-    ret = New client_t (hostname, port);
+    ret = New client_t (hostname, port, bufsz);
   } else {
-    ret = New server_t (port, file);
+    ret = New server_t (port, file, bufsz);
   }
 
   return NULL;
