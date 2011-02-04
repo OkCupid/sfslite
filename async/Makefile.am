@@ -101,6 +101,7 @@ env.mk: Makefile
 	echo "LDADD_THR = $(LDADD_THR)" >> $@~
 	echo "LDADD_STD_ALL = $(LDADD_STD_ALL)" >> $@~	
 	echo "CFLAGS_PROFILE = $(CFLAGS_PROFILE)" >> $@~
+	echo "SFSLITE_ABI_VERSION = $(ABI_VERSION)" >> $@~
 	mv -f $@~ $@
 
 EXTRA_DIST = .cvsignore pyenv.mk env.mk

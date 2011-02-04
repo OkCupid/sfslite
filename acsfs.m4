@@ -2435,7 +2435,14 @@ dnl
 dnl SFS_INIT_LDVERSION
 dnl
 AC_DEFUN([SFS_INIT_LDVERSION],
-[LIBTOOL_VERSION_INFO="-version-info $1"
+[
+if test "$2"; then
+    ABI_VERSION='[`] expr $1 + [$(]$2[) `]'
+else
+    ABI_VERSION="$1"
+fi
+LIBTOOL_VERSION_INFO="-version-info "'$(ABI_VERSION)'
+AC_SUBST(ABI_VERSION)
 AC_SUBST(LIBTOOL_VERSION_INFO)
 ])
 dnl
