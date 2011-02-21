@@ -137,12 +137,7 @@ public:
 
   bool apply_default ()
   { if (_has_default) *dest = _default; return _has_default; }
-
-  void dump (strbuf &b) const 
-  {
-    if (*dest) b << "\"" << *dest << "\"";
-    else b << "(null)";
-  }
+  void dump (strbuf &b) const;
 
 private:
   str *const dest;

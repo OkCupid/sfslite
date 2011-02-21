@@ -23,6 +23,7 @@
 
 #include "amisc.h"
 #include "parseopt.h"
+#include "rxx.h"
 
 static inline int
 isspc (char c)
@@ -404,4 +405,17 @@ conftab::run (const str &file, u_int opts, int fd, status_t *sp)
   }
 
   return !(errors || unknown);
+}
+
+void
+conftab_str::dump (strbuf &b) const
+{
+  str val;
+
+  if (!dest && cnfcb && tmp.size ()) { val = join(" ", tmp); } 
+  else if (dest && *dest)            { val = *dest; }
+
+  if (val) { b << "\"" << val << "\""; }
+  else     { b << "(null)"; }
+
 }
