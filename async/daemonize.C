@@ -22,6 +22,7 @@
  */
 
 #include "async.h"
+#include "rxx.h"
 
 str syslog_priority ("daemon.notice");
 str syslog_tag ("");
@@ -32,6 +33,43 @@ void set_syslog_logger (const vec<str> &v)
   g_syslog_logger = New vec<str> ();
   *g_syslog_logger = v;
 }
+
+//-----------------------------------------------------------------------
+
+bool
+check_syslog_logger (str s, vec<str> *out)
+{
+  bool ret = false;
+  static rxx x ("\\s+");
+  split (out, x, s);
+  if (!out->size ()) {
+    warn << "NULL logger speficified\n";
+  } else {
+    str cmd = (*out)[0];
+    if (access (cmd.cstr (), X_OK) != 0) {
+      warn ("Cannot access logger '%s': %m\n", cmd.cstr ());
+    } else {
+      ret = true;
+    }
+  }
+  return ret;
+}
+
+//-----------------------------------------------------------------------
+
+bool
+set_syslog_logger (str s)
+{
+  vec<str> argv;
+  bool ret = false;
+  if (check_syslog_logger (s, &argv)) {
+    set_syslog_logger (argv);
+    ret = true;
+  }
+  return ret;
+}
+
+//-----------------------------------------------------------------------
 
 bool
 get_syslog_logger (vec<str> *out)
