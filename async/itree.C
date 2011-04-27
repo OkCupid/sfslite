@@ -303,7 +303,7 @@ itree_check_node (oc x, oc low, oc high, int bd, const int lbd,
 		  int (*cmpfn) (void *, oc, oc), void *cmparg)
 {
   volatile oc l, r, p;
-  volatile enum itree_color cx, cl, cr, cp;
+  volatile enum itree_color cx, cl, cr;
 
   if (color (x) == BLACK)
     bd++;
@@ -314,7 +314,6 @@ itree_check_node (oc x, oc low, oc high, int bd, const int lbd,
 
   cx = color (x);
   p = up (x);
-  cp = color (p);
   l = left (x);
   cl = color (l);
   r = right (x);
