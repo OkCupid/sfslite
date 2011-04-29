@@ -194,16 +194,12 @@ punionmacrodefault (str prefix, const rpc_union *rs)
 static void
 dumpunion (const rpc_sym *s)
 {
-  bool hasdefault = false;
-
   const rpc_union *rs = s->sunion.addr ();
   aout << "\nstruct " << rs->id << " {\n"
        << "  const " << rs->tagtype << " " << rs->tagid << ";\n"
        << "  union {\n"
        << "    union_entry_base _base;\n";
   for (const rpc_utag *rt = rs->cases.base (); rt < rs->cases.lim (); rt++) {
-    if (!rt->swval)
-      hasdefault = true;
     if (rt->tagvalid && rt->tag.type != "void") {
       str type = rpc_decltype (&rt->tag);
       if (type[type.len ()-1] == '>')

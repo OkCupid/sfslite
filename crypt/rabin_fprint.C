@@ -54,7 +54,6 @@ rabin_fprint::chunk_data(const unsigned char *data, size_t size)
 {
   ptr<vec<unsigned int> > iv = NULL;
   u_int64_t f_break = 0;
-  size_t start_i = 0;
   for (size_t i=0; i<size; i++, _cur_pos++) {
     f_break = _w.slide8 (data[i]);
     size_t cs = _cur_pos - _last_pos;
@@ -70,7 +69,6 @@ rabin_fprint::chunk_data(const unsigned char *data, size_t size)
       _w.reset();
       iv->push_back(cs);
       _last_pos = _cur_pos;
-      start_i = i;
     }
   }
   return iv;

@@ -125,10 +125,10 @@ main (int argc, char *argv[])
       }
     }
   }
-
-  if (getenv ("TAME_DEBUG_SOURCE")) {
+  
+  if (debug || getenv ("TAME_DEBUG_SOURCE")) {
     no_line_numbers = true;
-	horiz_mode = false;
+    horiz_mode = false;
   }
 
   if (getenv ("TAME_NO_LINE_NUMBERS"))

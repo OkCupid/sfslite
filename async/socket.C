@@ -128,7 +128,6 @@ inetsocket (int type, u_int16_t port, u_int32_t addr)
 {
   int s;
   int n;
-  socklen_t sn;
   struct sockaddr_in sin;
 
   bzero (&sin, sizeof (sin));
@@ -141,7 +140,6 @@ inetsocket (int type, u_int16_t port, u_int32_t addr)
   if ((s = socket (AF_INET, type, 0)) < 0)
     return -1;
 
-  sn = sizeof (n);
   n = 1;
   /* Avoid those annoying TIME_WAITs for TCP */
   if (port && type == SOCK_STREAM

@@ -44,7 +44,7 @@ outputter_t::output_line_number ()
     if (!_last_char_was_nl)
       b << "\n";
     b << "# " << _lineno << " \"" << _infn << "\"\n";
-    _output_str (b, false);
+    _output_str (b, NULL);
     _last_lineno = _lineno;
     _did_output = false;
   }
@@ -87,7 +87,7 @@ outputter_t::output_str (str s)
       _do_output_line_number = false;
     }
 
-    _output_str (s, false);
+    _output_str (s, NULL);
     if (_mode == OUTPUT_PASSTHROUGH)
       _lineno += count_newlines (s);
   }
