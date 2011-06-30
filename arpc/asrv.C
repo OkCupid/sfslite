@@ -405,8 +405,8 @@ asrv::sendreply (svccb *sbp, xdrsuio *x, bool)
     // and other cases, we get a TRUE.
     if (!xi->xh->sendv (x->iov (), x->iovcnt (), sbp->addr)) {
 
-      warn ("RPC %d:%d:%d failed (due to excess packet largess?)\n",
-	    sbp->prog (), sbp->vers (), sbp->proc ());
+      warn ("RPC %d:%d:%d failed, maybe due to excess packet largess? "
+	    "error was: %m\n", sbp->prog (), sbp->vers (), sbp->proc ());
 
       // If the channel is robust to this failure case, then be polite
       // and tell the client on the other end that we refused to send
