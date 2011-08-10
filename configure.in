@@ -18,7 +18,7 @@ dnl versioning the .so's that we're going to spit out.  Start
 dnl with version 1.0.0, since 0.0.0 is already in use.  Must
 dnl manually update everytim we change the ABI.
 dnl
-SFS_INIT_LDVERSION(38)
+SFS_INIT_LDVERSION(39)
 
 dnl
 dnl begin SFSLITE change
