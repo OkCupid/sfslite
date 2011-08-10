@@ -186,6 +186,10 @@ axprt_pipe::sendv (const iovec *iov, int cnt, const sockaddr *)
   assert (!destroyed);
   u_int32_t len = iovsize (iov, cnt);
 
+  if (fdwrite >= 0x400) {
+    warn ("axprt_pipe::sendv(0x%x) len=%d", int (fdwrite), int (len));
+  }
+
   if (fdwrite < 0)
     panic ("axprt_pipe::sendv: called after an EOF\n");
 
@@ -242,12 +246,6 @@ axprt_pipe::output ()
     fail ();
   else if (out->resid () && !wcbset) {
     wcbset = true;
-
-    // Once we set a callback for write output, there is a path
-    // that will lead us to shutdown --- if we're called back
-    // at output without any data to write...  Note the best
-    // behavior, but it's a possibility.
-    _expect_shutdown = true;
 
     fdcb (fdwrite, selwrite, wrap (this, &axprt_pipe::output));
   }
