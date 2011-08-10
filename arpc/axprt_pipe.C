@@ -186,7 +186,7 @@ axprt_pipe::sendv (const iovec *iov, int cnt, const sockaddr *)
   assert (!destroyed);
   u_int32_t len = iovsize (iov, cnt);
 
-  if (fdwrite >= 0x400) {
+  if (false && fdwrite >= 0x400) {
     warn ("axprt_pipe::sendv(0x%x) len=%d\n", int (fdwrite), int (len));
   }
 
@@ -351,7 +351,7 @@ axprt_pipe::input ()
   _expect_shutdown = true;
 
   ssize_t n = doread (pktbuf + pktlen, bufsize - pktlen);
-  if (fdread >= 0x400) {
+  if (false && fdread >= 0x400) {
     warn ("axprt_pipe::input (0x%x) rc=%d\n", int (fdread), int (n));
   }
   if (n <= 0) {
