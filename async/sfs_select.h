@@ -99,6 +99,7 @@ namespace sfs_core {
     static int fd_set_bytes;
     static int maxfd;
     static void init (void);
+    int _maxfd_at_construction;
 
     cbv::ptr **fdcbs () { return _fdcbs; }
 
