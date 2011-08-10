@@ -125,7 +125,10 @@ axprt_pipe::fail ()
   if (fdwrite >= 0) {
     fdcb (fdwrite, selwrite, NULL);
     wcbset = false;
-    close (fdwrite);
+    // No need to close it twice if it's the same guy.
+    if (fdwrite != fdread) {
+      close (fdwrite);
+    }
   }
   fdread = fdwrite = -1;
   if (!destroyed) {
@@ -239,6 +242,13 @@ axprt_pipe::output ()
     fail ();
   else if (out->resid () && !wcbset) {
     wcbset = true;
+
+    // Once we set a callback for write output, there is a path
+    // that will lead us to shutdown --- if we're called back
+    // at output without any data to write...  Note the best
+    // behavior, but it's a possibility.
+    _expect_shutdown = true;
+
     fdcb (fdwrite, selwrite, wrap (this, &axprt_pipe::output));
   }
   else if (!out->resid () && wcbset) {
@@ -335,6 +345,12 @@ axprt_pipe::input ()
   if (!pktbuf) {
     pktbuf = (char *) xmalloc (bufsize);
   }
+
+  // MK 8/10/2011 -- trying to track down a bug in which fds over 1024
+  // behave poorly.
+  // Once we've done a read, we might need to shutdown due to an EOF
+  // or an error.  
+  _expect_shutdown = true;
 
   ssize_t n = doread (pktbuf + pktlen, bufsize - pktlen);
   if (n <= 0) {

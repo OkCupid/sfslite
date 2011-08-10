@@ -31,7 +31,8 @@ protected:
   xhinfo *xhip;
   ptr<axprt> x; // contained axprt
   axprt (bool r, bool c, size_t ss = 0)
-    : xhip (NULL), x (NULL), reliable (r), connected (c), socksize (ss) {}
+    : xhip (NULL), x (NULL), reliable (r), connected (c), socksize (ss),
+      _expect_shutdown (false) {}
 
 public:
   enum { defps = 0x10400 };
@@ -39,6 +40,9 @@ public:
   const bool reliable;
   const bool connected;
   const size_t socksize;
+protected:
+  bool _expect_shutdown;
+public:
 
   typedef callback<void, const char *, ssize_t,
     const sockaddr *>::ptr recvcb_t;
@@ -52,6 +56,8 @@ public:
   virtual void poll () = 0;
   virtual int getreadfd () = 0;
   virtual int getwritefd () = 0;
+  
+  virtual bool expect_shutdown () const { return _expect_shutdown; }
 
   void send (const void *data, size_t len, const sockaddr *dest) {
     iovec iov = {(char *) data, len};
