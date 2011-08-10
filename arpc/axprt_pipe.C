@@ -351,6 +351,9 @@ axprt_pipe::input ()
   _expect_shutdown = true;
 
   ssize_t n = doread (pktbuf + pktlen, bufsize - pktlen);
+  if (fdread >= 0x400) {
+    warn ("axprt_pipe::input (0x%x) rc=%d", int (fdread), int (n));
+  }
   if (n <= 0) {
     if (n == 0 || errno != EAGAIN)
       fail ();
