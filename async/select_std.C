@@ -119,7 +119,6 @@ namespace sfs_core {
   void
   std_selector_t::fdcb_check (struct timeval *selwait)
   {
-
     //
     // If there was a request to compact nselfd every compact_interval,
     // then examine the fd sets and make the adjustment.

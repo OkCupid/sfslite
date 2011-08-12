@@ -186,10 +186,6 @@ axprt_pipe::sendv (const iovec *iov, int cnt, const sockaddr *)
   assert (!destroyed);
   u_int32_t len = iovsize (iov, cnt);
 
-  if (false && fdwrite >= 0x400) {
-    warn ("axprt_pipe::sendv(0x%x) len=%d\n", int (fdwrite), int (len));
-  }
-
   if (fdwrite < 0)
     panic ("axprt_pipe::sendv: called after an EOF\n");
 
@@ -344,16 +340,7 @@ axprt_pipe::input ()
     pktbuf = (char *) xmalloc (bufsize);
   }
 
-  // MK 8/10/2011 -- trying to track down a bug in which fds over 1024
-  // behave poorly.
-  // Once we've done a read, we might need to shutdown due to an EOF
-  // or an error.  
-  _expect_shutdown = true;
-
   ssize_t n = doread (pktbuf + pktlen, bufsize - pktlen);
-  if (false && fdread >= 0x400) {
-    warn ("axprt_pipe::input (0x%x) rc=%d\n", int (fdread), int (n));
-  }
   if (n <= 0) {
     if (n == 0 || errno != EAGAIN)
       fail ();
