@@ -192,7 +192,18 @@ start_logger ()
     if (fds[1] != 0)
       close_on_exec (fds[1]);
     
-    if (spawn (av[0], av, fds[1], 0, 0) >= 0) {
+    //
+    // MK 2011/9/16
+    //
+    // The logger should not output to anywhere other than where
+    // it's supposed to log to.  However, in the case that it's
+    // buggy, give it sensible pipes to output to, in this case,
+    // the stdout and the stderr that okld was started with.
+    // To do otherwise might break the logger, and suprisingly,
+    // the rest of OKWS, whose processes might get stuck in 
+    // so_snd state waiting to write to stderr.
+    //
+    if (spawn (av[0], av, fds[1], 1, errfd) >= 0) {
       close (fds[1]);
       if (fds[0] != errfd) {
 	err_flush ();		// XXX - we shouldn't depend on aerr.C
