@@ -958,6 +958,8 @@ sfs_profiler_obj_t::crawl_stack (const ucontext_t &ctx)
 
   int lim = DEPTH;
 
+  prev = lookup_pc(ctx.UCONTEXT_RIP);
+
   while (valid_rbp_strict (framep, sigstack) && lim--) {
 
     my_intptr_t pc = framep2pc (framep);

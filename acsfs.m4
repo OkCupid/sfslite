@@ -2475,6 +2475,33 @@ if test ${sfs_cv_ucontext_rbp+set} ; then
    AC_DEFINE_UNQUOTED(UCONTEXT_RBP, $sfs_cv_ucontext_rbp, where in the ucontext object to find %rbp)
 fi
 ])
+
+AC_DEFUN([SFS_UCONTEXT_RIP],
+[AC_CACHE_CHECK(for rip structure in ucontext_t, sfs_cv_ucontext_rip,
+[
+
+for r in rip eip; do 
+    if test ! ${sfs_cv_ucontext_rip+set} ; then
+       AC_TRY_COMPILE([#include <ucontext.h>
+], [ ucontext_t ut; ut.uc_mcontext.mc_$r = 0; ], 
+   sfs_cv_ucontext_rip="uc_mcontext.mc_$r")
+   fi
+done
+
+for r in REG_RIP REG_EIP ; do
+    if test ! ${sfs_cv_ucontext_rip+set} ; then
+       AC_TRY_COMPILE([
+#define _GNU_SOURCE 1
+#include <ucontext.h>
+      ], [ ucontext_t ut; ut.uc_mcontext.gregs[$r] = 0; ],
+     sfs_cv_ucontext_rip=[["uc_mcontext.gregs[$r]"]] )
+    fi
+done
+])
+if test ${sfs_cv_ucontext_rip+set} ; then
+   AC_DEFINE_UNQUOTED(UCONTEXT_RIP, $sfs_cv_ucontext_rip, where in the ucontext object to find %rip)
+fi
+])
 dnl
 dnl Read RBP out of a register
 dnl
