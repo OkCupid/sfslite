@@ -948,17 +948,16 @@ sfs_profiler_obj_t::crawl_stack (const ucontext_t &ctx)
   }
 
 #else
-# ifdef UCONTEXT_RBP
+# if defined(UCONTEXT_RBP) && defined(UCONTEXT_RIP)
   const my_intptr_t *framep, *sigstack;
 
   if (!(framep = _vomit_rbp)) {
     framep = reinterpret_cast<const my_intptr_t *> (ctx.UCONTEXT_RBP);
+    prev = lookup_pc (ctx.UCONTEXT_RIP);
   }
   READ_RBP(sigstack);
 
   int lim = DEPTH;
-
-  prev = lookup_pc(ctx.UCONTEXT_RIP);
 
   while (valid_rbp_strict (framep, sigstack) && lim--) {
 
