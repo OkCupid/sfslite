@@ -65,7 +65,7 @@ public:
   typedef qhash_slot<K, V> slot;
   typedef ihash_core<slot, kludge> core;
 
-private:
+protected:
   const E eq;
   const H hash;
 
@@ -75,7 +75,7 @@ private:
       ;
     return s;
   }
-  void delslot (slot *s) { core::remove (s); delete s; }
+  virtual void delslot (slot *s) { core::remove (s); delete s; }
 
   void copyslot (const slot &s) { insert (s.key, s.value); }
 
@@ -117,13 +117,13 @@ public:
     else
       core::insert_val (New slot (k, V ()), hash (k));
   }
-  void insert (const K &k, typename CREF (V) v) {
+  virtual void insert (const K &k, typename CREF (V) v) {
     if (slot *s = getslot (k))
       s->value = v;
     else
       core::insert_val (New slot (k, v), hash (k));
   }
-  void insert (const K &k, typename NCREF (V) v) {
+  virtual void insert (const K &k, typename NCREF (V) v) {
     if (slot *s = getslot (k))
       s->value = v;
     else
