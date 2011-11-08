@@ -203,6 +203,11 @@ class Site:
     def setNode (self, n):
         self._node = n
 
+    ##----------------------------------------
+
+    def filename (self):
+        return self._file.name()
+
 ##=======================================================================
 
 class Node:
@@ -216,16 +221,21 @@ class Node:
         self._callee_hits = 0
         self._id = id
         self._callees = {}
+        self._sorted = False
 
     ##----------------------------------------
 
     def name (self): return self._name
     def addCalleeHits (self, h): self._callee_hits += h
     def addCallerHits (self, h): self._caller_hits += h
+
     def id (self): return self._id
 
     ##----------------------------------------
 
+    # XXX: There is a subtle bug which can cause this number to be wrong. The
+    # number of times this node is on the *top* of the call stack is subtracted
+    # from the actual number of hits (issue for deep call stacks)
     def hitsSelf (self):
         return max (0, self._callee_hits - self._caller_hits)
 
@@ -298,6 +308,11 @@ def node_sort_fn (a, b):
 
 def edge_sort_fn (a, b):
     return b.hits () - a.hits ()
+
+##-----------------------------------------------------------------------
+
+def node_sw_sort_fn (a, b):
+    return b.hitsSelf () - a.hitsSelf ()
 
 ##=======================================================================
 
@@ -491,10 +506,10 @@ class Graph:
 
     ##----------------------------------------
 
-    def penWidth (self, i, d):
+    def penWidth (self, i, d = None):
         if d is None:
             d = self._total_samples
-        x = max (1, float (i) * 8 / float (d))
+        x = min(8, max (1, float (i) * 8 / float (d)))
         return x
 
     ##----------------------------------------
@@ -502,13 +517,16 @@ class Graph:
     def color (self, i, d = None):
         if d is None:
             d = self._total_samples
-        r = 255 - i * 200 / d
+
+        x = min (1, float (i) / float (d))
+        r = 255 - x * 200
         return "#ff%2x%2x" % (r,r)
 
     ##----------------------------------------
 
     def initNodes (self):
-        """Map mutliple call sites to a signle Node object."""
+        """Map multiple call sites to a single Node object."""
+
         id = 0
         for v in self._sites.values ():
 
@@ -521,7 +539,16 @@ class Graph:
                     n = Node (funcname, id)
                     id += 1
                     self._nodes[funcname] = n
-                v.setNode (n)
+            else:
+                n = self._nodes.get (v.filename())
+                if not n:
+                    # Create a node to indicate the time spent in sites where
+                    # the function name lookup failed
+                    n = Node (v.filename(), id)
+                    id += 1
+                    self._nodes[v.filename()] = n
+
+            v.setNode (n)
 
     ##----------------------------------------
 
@@ -574,7 +601,12 @@ class Graph:
         v = self._nodes.values ()
         v.sort (node_sort_fn)
         self._sorted_nodes = v
-        self._total_samples = v[0].hits ()
+
+        v = self._nodes.values ()
+        v.sort (node_sw_sort_fn)
+        self._self_sorted_nodes = v
+
+        self._total_samples = sum(x.hitsSelf() for x in self._nodes.values())
 
     ##----------------------------------------
         
@@ -613,25 +645,48 @@ class Graph:
         self._dotfile = fn
         f = open (fn, "w")
 
-        nodes = self._sorted_nodes[0:props.numNodes ()]
-        node_set = set ([ n.id () for n in nodes ] )
+        # Select the list of nodes we think are important and want to display
+        if props.displayTop():
+            # New way, grabs both nodes that have high hits and hitsSelf
+            nodes = []
+            node_set = set()
+            for i in range(max(props.numNodes(), len(self._sorted_nodes))):
+                n = self._sorted_nodes[i] 
+                nodes.append(n)
+                node_set.add(n.id())
+
+                n = self._self_sorted_nodes[i] 
+                nodes.append(n)
+                node_set.add(n.id())
+
+                if len(node_set) >= props.numNodes():
+                    break
+        else:
+            # Old way, grabs only nodes that have high hits, not hitsSelf
+            nodes = self._sorted_nodes[0:props.numNodes ()]
+            node_set = set ([ n.id () for n in nodes ] )
 
         print >>f, "digraph ssp_profile_%d {" % self._serial
 
-        mhs = 0
-        for n in nodes:
-            mhs = max (mhs, n.hitsSelf ())
+        max_hs = self._self_sorted_nodes[0].hitsSelf()
 
         for n in nodes:
             hs = n.hitsSelf ()
             h = n.hits ()
+            
+            if props.displayTop():
+                color_args = (hs, max_hs)
+                pen_args = (h,)
+            else:
+                color_args = (h, )
+                pen_args = (hs, max_hs)
 
             label = "%s\\n%s\\n%s" % \
                 (csym_split (n.name ()), self.pct (h), self.pct (hs))
 
             params = [ ( 'label' , label ),
-                       ( 'fillcolor', self.color (h)),
-                       ( 'penwidth', self.penWidth (hs, mhs)),
+                       ( 'fillcolor', self.color (*color_args)),
+                       ( 'penwidth', self.penWidth (*pen_args)),
                        ( 'shape', 'ellipse' ),
                        ( 'style', 'filled' ),
                        ( 'fontsize', str (props.fontSize ())) ]
@@ -713,7 +768,7 @@ class Parser:
     end_rxx = re.compile ("\-{4} end report \-{4}")
 
     line_rxx = re.compile ("^((?P<prefix>.*?)\s+)?" +
-                           "(?P<prog>\w+):\s+" +
+                           "(?P<prog>[_a-zA-Z0-9\[\]:]+):\s+" +
                            "\(SSP\)\s+" +
                            "(?P<meat>.*?)\s*$")
 
@@ -778,13 +833,14 @@ class Props:
     def __init__ (self, argv):
         self._cmd = argv[0]
         self._num_edges = 500
-        self._num_nodes = 50
+        self._num_nodes = 80
         self._file = None
         self._jail = None
         self._types = OutputTypes.All ()
         self._inlining = False
         self._font_size = 20
         self._stem = "ssp"
+        self._display_top = False
 
         self.parse (argv)
 
@@ -835,8 +891,13 @@ class Props:
 
     ##----------------------------------------
 
+    def displayTop (self):
+        return self._display_top
+
+    ##----------------------------------------
+
     def parse (self, argv):
-        short_opts = "n:e:ht:j:if:s:"
+        short_opts = "n:e:ht:j:if:s:d"
         long_opts = [ "num-nodes=",
                       "num-edges=",
                       "jail=",
@@ -844,7 +905,8 @@ class Props:
                       "help",
                       "inlining",
                       "font-size=",
-                      "stem=" ]
+                      "stem=",
+                      "display-top" ]
 
         types = []
         try:
@@ -897,6 +959,9 @@ class Props:
                 if t == OutputTypes.PS or t == OutputTypes.PNG:
                     types.append (OutputTypes.DOT)
 
+            elif o in ("-d", "--display-top"):
+                self._display_top = True
+
             else:
                 self.usage (err = "unknown argument: %s" % o)
 
@@ -940,6 +1005,10 @@ class Props:
          Number of edges to show in the output (default = 500)
     -j <jail>, --jail=<jail>
          Specify a jail directory (default = /)
+    -d, --display-top
+         Sort node importance by amount of time spent on top of the stack,
+         rather than total amount of time spent on stack.  Resulting graph 
+         is also colored to highlight self hits over total hits.
     -t <type> --type=<type>
          Output type, one or more of { 'txt', 'dot', 'png', 'eps' }
 """ % self._cmd.split ('/')[-1]
