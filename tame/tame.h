@@ -241,9 +241,9 @@ public:
   str pointer () const { return _pointer; }
   str to_str () const;
   str to_str_w_template_args (bool p = true) const;
-  str mk_ptr () const;
+  str mk_ptr (bool usetmpl=true) const;
   str alloc_ptr (const str &nm, const str &args) const;
-  str type_without_pointer () const;
+  str type_without_pointer (bool usetmpl=true) const;
   void set_base_type (const str &t) { _base_type = t; }
   void set_pointer (const str &p) { _pointer = p; }
   bool is_complete () const { return _base_type; }
@@ -312,7 +312,7 @@ public:
   ptr<initializer_t> initializer () const { return _initializer; }
   bool do_output () const;
 
-  str decl () const;
+  str decl (bool usetmpl=true) const;
   str decl (const str &prfx, int n) const;
   str decl (const str &prfx) const;
   str ref_decl () const;
@@ -497,6 +497,10 @@ public:
   str loc () const { return _loc; }
 
   str return_expr () const;
+
+  bool is_template_spec() const {
+    return (_template && _template.len() == 0);
+  }
 
   str template_str () const
   { return (_template ? str (strbuf ("template< " ) << _template << " >") 

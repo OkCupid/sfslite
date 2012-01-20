@@ -65,21 +65,21 @@ void element_list_t::output (outputter_t *o)
 #define TAME_PREFIX           "__tame_"
 
 str
-type_t::type_without_pointer () const
+type_t::type_without_pointer (bool usetmpl) const
 {
   strbuf b;
   b << _base_type;
-  if (_template_args)
+  if (usetmpl && _template_args)
     b << _template_args << " ";
   return b;
 }
 
 str
-type_t::mk_ptr () const
+type_t::mk_ptr (bool usetmpl) const
 {
   my_strbuf_t b;
   b << "ptr<";
-  b.mycat (type_without_pointer()) << " >";
+  b.mycat (type_without_pointer(usetmpl)) << " >";
   return b;
 }
 
@@ -126,10 +126,13 @@ type_t::to_str_w_template_args (bool p) const
 }
 
 str
-var_t::decl () const
+var_t::decl (bool usetmpl) const
 {
   strbuf b;
-  b << _type.to_str_w_template_args () << _name;
+  strbuf tyname;
+
+  tyname << ((usetmpl) ? _type.to_str_w_template_args() : _type.to_str());
+  b << tyname << _name;
   if (_initializer) {
     b << _initializer->output_in_declaration ();
   }
@@ -358,10 +361,13 @@ str
 tame_fn_t::decl_casted_closure (bool do_lhs) const
 {
   strbuf b;
+  bool actual_tmpl = (_template);
   if (do_lhs) {
     b << "  " << _closure.decl ()  << " =\n";
   }
-  b << "    reinterpret_cast<" << _closure.type ().to_str_w_template_args () 
+  strbuf tyname = (actual_tmpl) ? _closure.type().to_str_w_template_args() : 
+      _closure.type().to_str();
+  b << "    reinterpret_cast<" << tyname 
     << "> (static_cast<closure_t *> (" << closure_generic ().name () << "));";
   return b;
 }
@@ -540,7 +546,7 @@ tame_fn_t::output_closure (outputter_t *o)
   my_strbuf_t b;
   output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL);
 
-  if (_template) {
+  if (_template && !is_template_spec()) {
     b.mycat (template_str ()) << "\n";
   }
 
@@ -769,16 +775,17 @@ void
 tame_fn_t::output_vars (outputter_t *o, int ln)
 {
   my_strbuf_t b;
-
+  bool actual_tmpl = (_template);
   output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL, ln);
 
-  b << "  " << _closure.decl () << ";\n"
+  b << "  " << _closure.decl (actual_tmpl) << ";\n"
     << "  "
     ;
-  b.mycat (_closure.type ().mk_ptr ());
+  b.mycat (_closure.type ().mk_ptr (actual_tmpl));
   b << " " << CLOSURE_RFCNT << ";\n"
     << "  const char *" << CLOSURE_TYPE << " = \"" 
-    << _closure.type().type_without_pointer () << "\";\n"
+    << _closure.type().type_without_pointer(actual_tmpl)
+    << "\";\n"
     << "  use_reference (" << CLOSURE_TYPE << ");\n";
 
   b << "  if (!" << closure_generic ().name() << ") {\n"
@@ -786,7 +793,7 @@ tame_fn_t::output_vars (outputter_t *o, int ln)
 
   b << "    if (tame_check_leaks ()) start_rendezvous_collection ();\n"
     << "    " << CLOSURE_RFCNT << " = New refcounted<"
-    << _closure.type().type_without_pointer() << "> (";
+    << _closure.type().type_without_pointer(actual_tmpl) << "> (";
 
   if (need_self ()) {
     b << "this";
@@ -852,6 +859,8 @@ tame_block_ev_t::output (outputter_t *o)
 {
   my_strbuf_t b;
   str tmp;
+  str tyname;
+  bool actual_tmpl;
 
   output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL);
 
@@ -861,8 +870,11 @@ tame_block_ev_t::output (outputter_t *o)
 
   // Make a closure container named __cls_g, the first argument
   // insert by the mkevent() macro
+  actual_tmpl = (_fn->template_str() != NULL);
+  tyname = (actual_tmpl) ? _fn->closure().type().to_str_w_template_args(false) :
+      _fn->closure().type().type_without_pointer(false);
   b << "  closure_wrapper<";
-  b.mycat (_fn->closure ().type ().to_str_w_template_args (false));
+  b.mycat (tyname);
   b << "> " CLOSURE_GENERIC " (" CLOSURE_RFCNT ");\n";
 
   b << "    " << TAME_CLOSURE_NAME << "->init_block (" 
