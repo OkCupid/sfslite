@@ -44,6 +44,7 @@
 
 #include "callback.h"
 #include "keyfunc.h"
+#include "vec.h"
 
 template<class T> class ihash_entry;
 template<class T, ihash_entry<T> T::*field> class ihash_core;
@@ -168,6 +169,7 @@ public:
     clear ();
   }
   size_t size () const { return t.entries; }
+  size_t buckets() const { return t.buckets; }
   bool constructed () const { return t.buckets > 0; }
 
   bool has_room () const { return t.entries < t.buckets; }
@@ -197,12 +199,24 @@ public:
     return NULL;
   }
 
+  T *first_in_bucket (const size_t bucket) const {
+    if (bucket < t.buckets && t.tab[bucket])
+      return (T *) t.tab[bucket];
+    return NULL;
+  }
+
   T *next (const T *n) const {
     if ((n->*field).next)
       return (T *) (n->*field).next;
     for (size_t i = (n->*field).val % t.buckets; ++i < t.buckets;)
       if (t.tab[i])
 	return (T *) t.tab[i];
+    return NULL;
+  }
+
+  T *next_in_bucket(const T *n) const {
+    if ((n->*field).next)
+      return (T *) (n->*field).next;
     return NULL;
   }
 

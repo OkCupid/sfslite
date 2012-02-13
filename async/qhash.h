@@ -249,6 +249,67 @@ private:
   const qhash<K,V,H,E> &_qh;
 };
 
+template<class K, class V, class H = hashfn<K> , class E = equals<K> >
+class qhash_safe_const_iterator_t {
+public:
+  qhash_safe_const_iterator_t (const qhash<K,V,H,E> &q) 
+    : bucket_values(), _qh (q) {
+    reset();
+  }
+
+  void reset () { 
+    bucket_values.clear();
+    bucket=0; 
+    buckets=0;
+  }
+
+private: 
+
+  inline bool done() {
+    return bucket >= buckets;
+  }
+  
+  inline bool  refill() {
+    const qhash_slot<K, V> *_i;
+    if (done())
+      return false;
+
+    if (!(_i= _qh.first_in_bucket(bucket))) {
+      bucket += 1;
+      return false;
+    }
+    while(_i) {
+      bucket_values.push_back(*_i);
+      _i = _qh.next_in_bucket(_i);
+    }    
+    bucket += 1;
+    return true;
+  }
+  
+public:
+  bool next ( K *key,  V *val = NULL) {
+    if (!buckets)
+      buckets = _qh.buckets();
+
+    if (bucket_values.empty())  {
+      while (!refill()) {
+	if (done())
+	  return false;
+      }
+    } 
+    qhash_slot<K, V> _i(bucket_values.pop_back());     
+    if (val) 
+      *val = _i.value;
+    *key = _i.key;
+    return true;
+  }
+  
+private:
+  size_t bucket, buckets;
+  vec<qhash_slot< K, V> > bucket_values;
+  const qhash< K,V,H,E> &_qh;
+};
+
 template<class K, class V, class H = hashfn<K>, class E = equals<K> >
 class qhash_iterator_t {
 public:
