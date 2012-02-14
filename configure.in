@@ -4,7 +4,7 @@ dnl Process this file with autoconf to produce a configure script.
 dnl
 
 AC_INIT(acinclude.m4)
-AM_INIT_AUTOMAKE(sfslite,1.2.9.14)
+AM_INIT_AUTOMAKE(sfslite,1.2.9.15)
 AM_CONFIG_HEADER(config.h)
 
 dnl
@@ -18,7 +18,7 @@ dnl versioning the .so's that we're going to spit out.  Start
 dnl with version 1.0.0, since 0.0.0 is already in use.  Must
 dnl manually update everytim we change the ABI.
 dnl
-SFS_INIT_LDVERSION(43)
+SFS_INIT_LDVERSION(44)
 
 dnl
 dnl begin SFSLITE change

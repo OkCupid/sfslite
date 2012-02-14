@@ -32,6 +32,7 @@ public:
   virtual bool rpc_traverse (u_int64_t &obj) = 0;
   virtual bool rpc_traverse (int32_t &obj) = 0;
   virtual bool rpc_traverse (int64_t &obj) = 0;
+  virtual bool rpc_traverse (double &obj) = 0;
   virtual bool rpc_encode (str s) = 0;
   virtual bool rpc_decode (str *s) = 0;
   virtual bool rpc_encode_opaque (str s) = 0;
@@ -107,6 +108,7 @@ V_RPC_TRAV_2(u_int32_t)
 V_RPC_TRAV_2(u_int64_t)
 V_RPC_TRAV_2(int64_t)
 V_RPC_TRAV_2(int32_t)
+V_RPC_TRAV_2(double)
 
 //-----------------------------------------------------------------------
 
