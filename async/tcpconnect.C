@@ -45,7 +45,7 @@ struct tcpportconnect_t : tcpconnect_t {
   void reply (int s) { if (s == fd) fd = -1; (*cb) (s); delete this; }
   void fail (int error) { errno = error; reply (-1); }
   void connect_to_name (str hostname, bool dnssearch);
-  void name_cb (ptr<hostent> h, int err);
+  void name_cb (str hn, ptr<hostent> h, int err);
   void connect_to_in_addr (const in_addr &a);
   void connect_cb ();
 };
@@ -76,12 +76,12 @@ tcpportconnect_t::~tcpportconnect_t ()
 void
 tcpportconnect_t::connect_to_name (str hostname, bool dnssearch)
 {
-  dnsp = dns_hostbyname (hostname, wrap (this, &tcpportconnect_t::name_cb),
-			 dnssearch);
+  dnsp = dns_hostbyname (hostname, wrap (this, &tcpportconnect_t::name_cb,
+              hostname), dnssearch);
 }
 
 void
-tcpportconnect_t::name_cb (ptr<hostent> h, int err)
+tcpportconnect_t::name_cb (str hn, ptr<hostent> h, int err)
 {
   dnsp = NULL;
   if (!h) {
@@ -92,6 +92,7 @@ tcpportconnect_t::name_cb (ptr<hostent> h, int err)
       if (tcpconnect_debug) { warn << "tcpconnect: no-entry error\n"; }
       fail (ENOENT);
     }
+    warn << "dns_hostbyname(\"" << hn << "\"): " << dns_strerror(err) << "\n";
     return;
   }
   if (namep)
@@ -115,6 +116,7 @@ tcpportconnect_t::connect_to_in_addr (const in_addr &a)
 
   fd = inetsocket (SOCK_STREAM);
   if (fd < 0) {
+    warn << "inetsocket: " << strerror(errno) << "\n";
     delaycb (0, wrap (this, &tcpportconnect_t::fail, errno));
     return;
   }
@@ -122,6 +124,7 @@ tcpportconnect_t::connect_to_in_addr (const in_addr &a)
   close_on_exec (fd);
   if (connect (fd, (sockaddr *) &sin, sizeof (sin)) < 0
       && errno != EINPROGRESS) {
+    warn << "connect: " << strerror(errno) << "\n";
     delaycb (0, wrap (this, &tcpportconnect_t::fail, errno));
     return;
   }
@@ -142,8 +145,12 @@ tcpportconnect_t::connect_cb ()
 
   int err = 0;
   sn = sizeof (err);
-  getsockopt (fd, SOL_SOCKET, SO_ERROR, (char *) &err, &sn);
-  fail (err ? err : ECONNREFUSED);
+  int rv = getsockopt (fd, SOL_SOCKET, SO_ERROR, (char *) &err, &sn);
+  err = err ? err : ECONNREFUSED;
+  warn << "connect_cb: rv: " << rv
+       << " errno: " << strerror(errno) << " (" << errno << ")"
+       << " err:  " << strerror(err) << " (" << err << ")\n";
+  fail (err);
 }
 
 tcpconnect_t *
