@@ -92,7 +92,9 @@ tcpportconnect_t::name_cb (str hn, ptr<hostent> h, int err)
       if (tcpconnect_debug) { warn << "tcpconnect: no-entry error\n"; }
       fail (ENOENT);
     }
-    warn << "dns_hostbyname(\"" << hn << "\"): " << dns_strerror(err) << "\n";
+    if (tcpconnect_debug) {
+      warn << "dns_hostbyname(\"" << hn << "\"): " << dns_strerror(err) << "\n";
+    }
     return;
   }
   if (namep)
@@ -116,7 +118,9 @@ tcpportconnect_t::connect_to_in_addr (const in_addr &a)
 
   fd = inetsocket (SOCK_STREAM);
   if (fd < 0) {
-    warn << "inetsocket: " << strerror(errno) << "\n";
+    if (tcpconnect_debug) {
+      warn << "inetsocket: " << strerror(errno) << "\n";
+    }
     delaycb (0, wrap (this, &tcpportconnect_t::fail, errno));
     return;
   }
@@ -124,7 +128,9 @@ tcpportconnect_t::connect_to_in_addr (const in_addr &a)
   close_on_exec (fd);
   if (connect (fd, (sockaddr *) &sin, sizeof (sin)) < 0
       && errno != EINPROGRESS) {
-    warn << "connect: " << strerror(errno) << "\n";
+    if (tcpconnect_debug) {
+      warn << "connect: " << strerror(errno) << "\n";
+    }
     delaycb (0, wrap (this, &tcpportconnect_t::fail, errno));
     return;
   }
@@ -147,9 +153,11 @@ tcpportconnect_t::connect_cb ()
   sn = sizeof (err);
   int rv = getsockopt (fd, SOL_SOCKET, SO_ERROR, (char *) &err, &sn);
   err = err ? err : ECONNREFUSED;
-  warn << "connect_cb: rv: " << rv
-       << " errno: " << strerror(errno) << " (" << errno << ")"
-       << " err:  " << strerror(err) << " (" << err << ")\n";
+  if (tcpconnect_debug) { 
+    warn << "connect_cb: rv: " << rv
+         << " errno: " << strerror(errno) << " (" << errno << ")"
+         << " err:  " << strerror(err) << " (" << err << ")\n";
+  }
   fail (err);
 }
 
