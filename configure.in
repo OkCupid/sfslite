@@ -270,6 +270,9 @@ fi
 dnl Add SFS libraries to LDADD by default.
 CPPFLAGS="$CPPFLAGS -I"'$(top_srcdir)'
 
+dnl Add UTF8-Support
+CPPFLAGS="$CPPFLAGS -DSUPPORT_UTF8=1"
+
 dnl
 dnl on some Linuxes, there are /usr/include/{err|crypt}.h; we want to suck
 dnl in SFS's {err|crypt}.h instead, so we change the ordering of these includes

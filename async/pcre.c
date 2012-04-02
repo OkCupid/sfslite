@@ -5577,6 +5577,8 @@ const uschar *pp;                  /* version of this code that uses an    */
 const uschar *prev;                /* external "stack" implemented on the  */
 const uschar *saved_eptr;          /* heap, it is easier to declare them   */
                                    /* all here, so the declarations can    */
+ const uschar *lastptr;
+ const uschar *charptr;
 recursion_info new_recursive;      /* be cut out in a block. The only      */
                                    /* declarations within blocks below are */
 BOOL cur_is_word;                  /* for variables that do not have to    */

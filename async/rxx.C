@@ -118,6 +118,9 @@ rxx::init (const char *pat, const char *opt)
     case 'S':
       studyit = true;
       break;
+    case '8':
+      options |= PCRE_UTF8;
+      break;
     default:
       return strbuf ("invalid regular expression option '%c'\n", *opt);
     }
