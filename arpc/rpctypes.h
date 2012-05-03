@@ -221,6 +221,11 @@ do {								\
   template<size_t m> rpc_vec &operator+= (const vec<T,m> &v)
   { return append(v); }
 
+  template<size_t m> rpc_vec (const vec<T, m> &v) {
+    init ();
+    (void) append (v);
+  }
+
 #undef append
 
   elm_t &push_back () {
