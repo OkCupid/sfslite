@@ -80,6 +80,7 @@ namespace sfs_core {
   void set_compact_interval (u_int i);
   int  set_select_policy (select_policy_t i);
   void set_zombie_collect (bool b);
+  int reset_to_std_selector();
 
   //
   // end public API

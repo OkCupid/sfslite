@@ -93,6 +93,27 @@ sfs_core::set_select_policy (select_policy_t p)
   return ret;
 }
 
+int
+sfs_core::reset_to_std_selector ()
+{
+
+    int ret = 1;
+    selector_t *ns = NULL;
+
+    sfs_core::selector_t::init ();
+    ns = New std_selector_t();
+
+    if (ns) {
+        delete selector;
+        selector = ns;
+        ret = 1;
+    } else {
+        ret = -1;
+    }
+
+    return ret;
+}
+
 #ifdef WRAP_DEBUG
 #define CBTR_FD    0x0001
 #define CBTR_TIME  0x0002
