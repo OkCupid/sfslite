@@ -419,7 +419,7 @@ struct xdrmem : xdrbase {
   }
 };
 
-inline const str &str2wstr (const str &s);
+const str &str2wstr (const str &s);
 template<class T> str
 xdr2str (const T &t, bool scrub = false)
 {
