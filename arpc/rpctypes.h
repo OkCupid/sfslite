@@ -937,8 +937,12 @@ rpc_print_array_vec (const strbuf &sb, const T &obj,
 	sb << "[" << i << "] = ";
 	rpc_print (sb, obj[i], recdepth, NULL, npref);
       }
-      if (i < obj.size ())
-	sb << (i ? sep : "") << npref << "..." << (npref ? "\n" : " ");
+      if (i < obj.size ()) {
+        sb << (i ? sep : "");
+        if (npref)
+          sb << npref;
+        sb << "..." << (npref ? "\n" : " ");
+      }
     }
     else {
       size_t i;
