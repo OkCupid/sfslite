@@ -87,9 +87,9 @@ namespace rpc_stats {
     m_last_print = sfs_get_tsnow();
   }
 
-  void rpc_stat_collector_t::end_call(svccb *call_obj, const timespec &strt)
-  {
-    if (!m_active || call_obj == NULL) {
+  void rpc_stat_collector_t::end_call(uint32_t prog, uint32_t vers, 
+                                      uint32_t proc, const timespec& strt) {
+    if (!m_active) {
       return;
     }
 
@@ -102,9 +102,9 @@ namespace rpc_stats {
     
     // update rpc stats
     rpc_proc_t proc_info;
-    proc_info.prog = call_obj->prog();
-    proc_info.vers = call_obj->vers();
-    proc_info.proc = call_obj->proc();
+    proc_info.prog = prog;
+    proc_info.vers = vers;
+    proc_info.proc = proc;
     rpc_stats_t *stat_entry = m_stats[proc_info];
     if (stat_entry == NULL) {
       rpc_stats_t new_entry;
@@ -127,6 +127,14 @@ namespace rpc_stats {
 	int64_t(m_interval) * 1000000) {
       print_info();
     }
+  }
+
+  void rpc_stat_collector_t::end_call(svccb *call_obj, const timespec &strt)
+  {
+      if (!m_active || call_obj == NULL) {
+          return;
+      }
+      end_call(call_obj->prog(), call_obj->vers(), call_obj->proc(), strt);
   }
 }
 
