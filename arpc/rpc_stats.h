@@ -104,6 +104,8 @@ namespace rpc_stats {
     
     /** Call this at the end of an RPC handler */
     void end_call(svccb *call_obj, const timespec &strt);
+    void end_call(uint32_t prog, uint32_t vers, uint32_t proc, 
+                  const timespec &strt);
 
   protected:
     bool m_active;
