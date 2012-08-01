@@ -949,6 +949,46 @@ fi
 CFLAGS=$ac_save_CFLAGS
 CPPFLAGS="$CPPFLAGS $sfs_cv_pthread_h"
 LIBS="$ac_save_LIBS $sfs_cv_libpthread"])
+
+dnl
+dnl Find PCRE
+dnl
+AC_DEFUN([SFS_FIND_PCRE],
+[AC_ARG_WITH(pcre,
+--with-pcre=DIR       Specify location of pcre)
+ac_save_CFLAGS=$CFLAGS
+ac_save_LIBS=$LIBS
+dirs="$with_pcre ${prefix} ${prefix}/pcre"
+dirs="$dirs /usr/local /usr/local/pcre"
+AC_CACHE_CHECK(for pcre.h, sfs_cv_pcre_h,
+[for dir in " " $dirs; do
+    iflags="-I${dir}/include"
+    CFLAGS="${ac_save_CFLAGS} $iflags"
+    AC_TRY_COMPILE([#include <pcre.h>], 0,
+	sfs_cv_pcre_h="${iflags}"; break)
+done])
+if test -z "${sfs_cv_pcre_h+set}"; then
+    AC_MSG_ERROR("Can\'t find pcre.h anywhere")
+fi
+AC_CACHE_CHECK(for libpcre, sfs_cv_libpcre,
+[for dir in "" " " $dirs; do
+    case $dir in
+	"") lflags=" " ;;
+	" ") lflags="-lpcre" ;;
+	*) lflags="-L${dir}/lib -lpcre" ;;
+    esac
+    LIBS="$ac_save_LIBS $lflags"
+    AC_TRY_LINK([#include <pcre.h>],
+	pcre_compile ("", 0, NULL, NULL,NULL);,
+	sfs_cv_libpcre=$lflags; break)
+done])
+if test -z ${sfs_cv_libpcre+set}; then
+    AC_MSG_ERROR("Can\'t find libpcre anywhere")
+fi
+CFLAGS=$ac_save_CFLAGS
+CPPFLAGS="$CPPFLAGS $sfs_cv_pcre_h"
+LIBS="$ac_save_LIBS $sfs_cv_libpcre"])
+
 dnl
 dnl Find GMP
 dnl
