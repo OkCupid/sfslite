@@ -67,7 +67,7 @@ calc_l_size (size_t mms)
 }
 
 ocb::ocb (size_t mms)
-  : maxmsg_size (mms), l_size (calc_l_size (mms)),
+  : l_size (calc_l_size (mms)),
     l ((New blk[l_size + 2]) + 1)
 {
 }

@@ -132,9 +132,9 @@ fix_exec_path (str path, str dir)
     np = builddir << prog << prog;
     if (execok (np))
       return np;
-    if (np = searchdir (builddir, prog))
+    if ((np = searchdir (builddir, prog)))
       return np;
-    if (np = searchdir (builddir << "/lib", prog))
+    if ((np = searchdir (builddir << "/lib", prog)))
       return np;
   }
 #endif /* MAINTAINER */

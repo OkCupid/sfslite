@@ -71,7 +71,7 @@ protected:
 
   slot *getslot (const K &k) const {
     slot *s;
-    for (s = lookup_val (hash (k)); s && !eq (s->key, k); s = next_val (s))
+    for (s = this->lookup_val (hash (k)); s && !eq (s->key, k); s = this->next_val (s))
       ;
     return s;
   }
@@ -180,7 +180,7 @@ private:
 
   slot *getslot (const K &k) const {
     slot *s;
-    for (s = lookup_val (hash (k)); s && !eq (s->key, k); s = next_val (s))
+    for (s = this->lookup_val (hash (k)); s && !eq (s->key, k); s = this->next_val (s))
       ;
     return s;
   }

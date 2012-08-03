@@ -250,7 +250,7 @@ public:
 #else
   V *operator[] (const K &k) {
     // return search (wrap (this, &kvcmp, &k));
-    return search (skvcmp, &kcmp, &k);
+    return this->search (skvcmp, &kcmp, &k);
   }
 #endif
 };

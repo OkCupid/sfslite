@@ -134,7 +134,7 @@ class outputter_t {
 public:
   outputter_t (const str &in, const str &out, bool ox) 
     : _mode (OUTPUT_NONE), _infn (in), _outfn (out), _fd (-1), 
-      _lineno (1), _output_xlate (ox), _need_xlate (false), 
+      _lineno (1), _output_xlate (ox),  
       _last_char_was_nl (false), _last_output_in_mode (OUTPUT_NONE),
       _last_lineno (-1), _did_output (false), 
       _do_output_line_number (false) {}
@@ -159,7 +159,6 @@ private:
 
   strbuf _buf;
   vec<str> _strs;
-  bool _need_xlate;
   bool _last_char_was_nl;
   output_mode_t _last_output_in_mode;
   int _last_lineno;
@@ -182,7 +181,7 @@ class tame_el_t {
 public:
   tame_el_t () {}
   virtual ~tame_el_t () {}
-  virtual bool append (const str &s) { return false; }
+  virtual bool append (const lstr &s) { return false; }
   virtual void output (outputter_t *o) = 0;
   virtual bool goes_after_vars () const { return true; }
   tailq_entry<tame_el_t> _lnk;
@@ -738,10 +737,8 @@ protected:
 class tame_wait_t : public tame_join_t {
 public:
   tame_wait_t (tame_fn_t *f, ptr<expr_list_t> l, int ln) 
-    : tame_join_t (f, l), _lineno (ln) {}
+    : tame_join_t (f, l) {}
   void output (outputter_t *o);
-private:
-  int _lineno;
 };
 
 extern parse_state_t *state;

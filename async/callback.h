@@ -1596,7 +1596,7 @@ public:
     : dest (df[0] == '&' ? df + 1 : df), src (f), line (l) {}
 #endif /* WRAP_DEBUG */
   virtual R operator() (B1 b1) = 0;
-  virtual void trigger (B1 b1) { (void) (*this) (b1); }
+  virtual void trigger (const B1& b1) { (void) (*this) (b1); }
   virtual ~callback () {}
   callback () : _closure_type (NULL), _closure_void (NULL) {}
   void set_gdb_info (const char *typ, const void *v)
@@ -2488,7 +2488,7 @@ public:
     : dest (df[0] == '&' ? df + 1 : df), src (f), line (l) {}
 #endif /* WRAP_DEBUG */
   virtual R operator() (B1 b1, B2 b2) = 0;
-  virtual void trigger (B1 b1, B2 b2) { (void) (*this) (b1, b2); }
+  virtual void trigger (const B1& b1, const B2& b2) { (void) (*this) (b1, b2); }
   virtual ~callback () {}
   callback () : _closure_type (NULL), _closure_void (NULL) {}
   void set_gdb_info (const char *typ, const void *v)
@@ -3380,7 +3380,9 @@ public:
     : dest (df[0] == '&' ? df + 1 : df), src (f), line (l) {}
 #endif /* WRAP_DEBUG */
   virtual R operator() (B1 b1, B2 b2, B3 b3) = 0;
-  virtual void trigger (B1 b1, B2 b2, B3 b3) { (void) (*this) (b1, b2, b3); }
+  virtual void trigger (const B1& b1, const B2& b2, const B3& b3) { 
+      (void) (*this) (b1, b2, b3); 
+  }
   virtual ~callback () {}
   callback () : _closure_type (NULL), _closure_void (NULL) {}
   void set_gdb_info (const char *typ, const void *v)

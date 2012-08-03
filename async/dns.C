@@ -483,7 +483,7 @@ resolv_conf::srchlist (int n)
 
 
 dnsreq::dnsreq (resolver *rp, str n, u_int16_t t, bool search)
-  : ntries (0), resp (rp), usetcp (false), constructed (false),
+  : resp (rp), usetcp (false), constructed (false),
     error (0), type (t)
 {
   while (n.len () && n[n.len () - 1] == '.') {

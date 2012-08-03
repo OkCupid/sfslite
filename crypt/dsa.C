@@ -66,7 +66,8 @@ mulpowm (const bigint &b1, const bigint &e1,
          const bigint &b2, const bigint &e2, const bigint &m)
 {
   int t = e1.nbits() > e2.nbits() ? e1.nbits() : e2.nbits();
-  int index, k = 2;
+  int index;
+  const int k = 2;
   bigint basearray[2] = { b1, b2 };
   bigint exparray[2] = { e1, e2 };
   bigint G[1 << k];

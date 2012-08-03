@@ -287,19 +287,19 @@ public:
   const int fd;
   template<class T> T *getptr (aiomsg_t pos) {
 #ifdef CHECK_BOUNDS
-    assert (pos >= 0 && pos + sizeof (T) <= len);
+    assert (/*pos >= 0 && */pos + sizeof (T) <= len);
 #endif /* CHECK_BOUNDS */
     return reinterpret_cast<T *> (buf + pos);
   }
   aiod_op getop (aiomsg_t pos) {
 #ifdef CHECK_BOUNDS
-    assert (pos >= 0 && pos + sizeof (aiod_op) <= len);
+    assert (/*pos >= 0 &&*/ pos + sizeof (aiod_op) <= len);
 #endif /* CHECK_BOUNDS */
     return *reinterpret_cast<aiod_op *> (buf + pos);
   }
   void *getbuf (aiod_iobuf *bp) {
 #ifdef CHECK_BOUNDS
-    assert (bp->buf >= 0 && bp->buf + (size_t) bp->len <= len);
+    assert (/*bp->buf >= 0 && */bp->buf + (size_t) bp->len <= len);
 #endif /* CHECK_BOUNDS */
     return buf + bp->buf;
   }
@@ -310,7 +310,7 @@ template<> inline void *
 shmbuf::getptr<void> (aiomsg_t pos)
 {
 #ifdef CHECK_BOUNDS
-    assert (pos >= 0 && pos <= len);
+    assert (/*pos >= 0 && */pos <= len);
 #endif /* CHECK_BOUNDS */
     return buf + pos;
 }
@@ -689,8 +689,8 @@ read_fd (int fd, fd_set *set, aiomsg_t *msg)
   bool ret = false;
   if (FD_ISSET (fd, set)) {
     size_t msz = sizeof (*msg);
-    size_t n = fullread (fd, msg, msz);
-    if (n == msz) {
+    ssize_t n = fullread (fd, msg, msz);
+    if (n == (ssize_t)msz) {
       ret = true;
     } else if (n < 0) {
       warn ("error in reading from fd=%d: %m\n", fd);

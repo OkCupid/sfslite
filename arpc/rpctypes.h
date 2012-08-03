@@ -209,7 +209,7 @@ public:
 do {								\
   reserve (v.size ());						\
   for (const elm_t *s = v.base (), *e = v.lim (); s < e; s++)	\
-    cconstruct (*lastp++, *s);					\
+    this->cconstruct (*lastp++, *s);					\
 } while (0)
 
   template<size_t m> rpc_vec &append (const rpc_vec<T,m> &v)

@@ -31,7 +31,6 @@
 
 class resolver;
 class dnsreq {
-  int ntries;
   int srchno;
 
 public:

@@ -358,7 +358,7 @@ namespace gc {
 
   template<class T, class G>
   void
-  bigobj_arena_t<T,G>::report (void) const
+  bigobj_arena_t<T,G>::report (const char* v) const
   {
     size_t sz = 0;
     for (bigslot_t<T,G> *s = _memslots->first; s; s = _memslots->next (s)) {

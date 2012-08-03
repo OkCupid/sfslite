@@ -51,7 +51,6 @@ public:
   static void rshift (blk *d) { rshift (d, *d); }
 
 private:
-  const size_t maxmsg_size;
   const u_int l_size;
   aes k;
   blk *l;

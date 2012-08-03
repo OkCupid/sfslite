@@ -234,7 +234,7 @@ axprt_pipe::output ()
   do {
     while (!syncpts.empty () && out->iovno () >= syncpts.front ())
       syncpts.pop_front ();
-    cnt = syncpts.empty () ? (size_t) -1
+    cnt = syncpts.empty () ? -1
       : int (syncpts.front () - out->iovno ());
   } while ((n = dowritev (cnt)) > 0);
 

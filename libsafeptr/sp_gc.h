@@ -382,8 +382,8 @@ namespace gc {
       return ret;
     }
 
-    aptr<T,V,G> operator++ (size_t s) { return (*this) += 1; }
-    aptr<T,V,G> operator-- (size_t s) { return (*this) -= 1; }
+    aptr<T,V,G> operator++ () { return (*this) += 1; }
+    aptr<T,V,G> operator-- () { return (*this) -= 1; }
 
     aptr<T,V,G> &operator+= (size_t s) 
     {
@@ -541,7 +541,7 @@ namespace gc {
 
     virtual redirector_t<T,G> aalloc (size_t sz) = 0;
     virtual bool gc_make_room (size_t sz) { return false; }
-    virtual void report (void) const {}
+    virtual void report (const char* v = NULL) const {}
     virtual void gc (lru_mgr_t *m) = 0;
     virtual bigobj_arena_t<T,G> *to_boa () { return NULL; }
     virtual smallobj_arena_t<T,G> *to_soa () { return NULL; }
@@ -588,7 +588,7 @@ namespace gc {
     size_t free_space () const;
     
     void sanity_check () const;
-    virtual void report (void) const;
+    virtual void report (const char*v = NULL) const;
 
     void debug_init () { _magic = magic; }
     void check() { assert (magic == _magic); }

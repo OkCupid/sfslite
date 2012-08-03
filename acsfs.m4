@@ -1509,7 +1509,7 @@ case $host_os in
 	;;
     linux*|freebsd*)
 	sfs_gnu_WFLAGS="-Wall -Werror"
-	sfs_gnu_CXXWFLAGS="$sfs_gnu_WFLAGS"
+	sfs_gnu_CXXWFLAGS="$sfs_gnu_WFLAGS -Wno-mismatched-tags -Wno-overloaded-virtual -Wno-unused-private-field"
 	;;
     *)
 	sfs_gnu_WFLAGS="-Wall"
@@ -2548,7 +2548,7 @@ dnl
 AC_DEFUN([SFS_RBP_ASM_REG],
 [AC_CACHE_CHECK(for reading %rbp from assembly, sfs_cv_read_rbp,
 [
-for r in "movl %%ebp" "movq %%rbp" ; do
+for r in "movq %%rbp" "movl %%ebp" ; do
     if ! test ${sfs_cv_read_rbp+set} ; then
        AC_TRY_COMPILE([], [
           void *v;

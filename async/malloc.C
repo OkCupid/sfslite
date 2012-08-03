@@ -269,7 +269,7 @@ nodelete_addptr (const void *obj, const char *fl, int *fp)
 {
   if (!do_nodelete_flag) {
     u_long dmalloc_flags = dmalloc_debug_current ();
-    do_nodelete_flag = (dmalloc_flags && 0x800) ? 1 : -1;
+    do_nodelete_flag = (dmalloc_flags & 0x800) ? 1 : -1;
   }
   if (do_nodelete ())
     vNew objref (obj, fl, fp);

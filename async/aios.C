@@ -324,6 +324,8 @@ aios::aios (int fd, size_t rbsz)
 aios::~aios ()
 {
   if (fd >= 0) {
+    make_sync(fd);
+    dooutput();
     if (debugname)
       warnx << debugname << errpref << "EOF\n";
     fdcb (fd, selread, NULL);
