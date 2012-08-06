@@ -1507,9 +1507,13 @@ case $host_os in
 	sfs_gnu_WFLAGS="-Wall -Wsign-compare -Wchar-subscripts -Werror"
 	sfs_gnu_CXXWFLAGS="$sfs_gnu_WFLAGS"
 	;;
-    linux*|freebsd*)
+    linux*)
 	sfs_gnu_WFLAGS="-Wall -Werror"
 	sfs_gnu_CXXWFLAGS="$sfs_gnu_WFLAGS -Wno-mismatched-tags -Wno-overloaded-virtual -Wno-unused-private-field"
+	;;
+    freebsd*)
+	sfs_gnu_WFLAGS="-Wall -Werror"
+	sfs_gnu_CXXWFLAGS="$sfs_gnu_WFLAGS"
 	;;
     *)
 	sfs_gnu_WFLAGS="-Wall"
