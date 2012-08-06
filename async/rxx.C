@@ -143,8 +143,9 @@ rxx::init (const char *pat, const char *opt)
       return strbuf () << "Could not study regular expression: " << err;
   }
 
-  int ns = pcre_info (re, NULL, NULL);
-  assert (ns >= 0);
+  int ns;
+  int rc = pcre_fullinfo (re, NULL, PCRE_INFO_CAPTURECOUNT, &ns);
+  assert (rc == 0);
   ovecsize = (ns + 1) * 3;
   return NULL;
 }

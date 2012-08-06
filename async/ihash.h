@@ -228,7 +228,7 @@ public:
       }
   }
 
-  void traverse (typename callback<void, const T &>::ref cb) const {
+  void traverse (typename callback<void, const T&>::ref cb) const {
     for (size_t i = 0; i < t.buckets; i++)
       for (T *n = (T *) t.tab[i], *nn; n; n = nn) {
 	nn = (T *) (n->*field).next;
