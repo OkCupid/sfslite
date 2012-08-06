@@ -28,6 +28,7 @@
 
 #include "sysconf.h"
 #include "sfs_profiler.h"
+#include "wmstr.h"
 
 extern "C" {
 #define xdrproc_t sun_xdrproc_t
@@ -419,7 +420,6 @@ struct xdrmem : xdrbase {
   }
 };
 
-const str &str2wstr (const str &s);
 template<class T> str
 xdr2str (const T &t, bool scrub = false)
 {
