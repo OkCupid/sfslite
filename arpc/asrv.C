@@ -421,7 +421,9 @@ asrv::sendreply (svccb *sbp, xdrsuio *x, bool)
   /* If x contains a marshaled version of sbp->template getres<...> (),
    * we need to clear the uio first (since deleting sbp will delete
    * the object getres returned). */
-  if (sbp->resdat)
+  // MM: don't do this if there is no xdrsuio passed in, this happens
+  // if we had called getvoidres() and then rejected the RPC
+  if (sbp->resdat && x)
     xsuio (x)->clear ();
   dec_svccb_count ();
   delete sbp;
