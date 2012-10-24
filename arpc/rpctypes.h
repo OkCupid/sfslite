@@ -561,7 +561,7 @@ rpc_traverse (T &t, double &obj, const char *field = NULL)
     obj = (double)n / (double)d;
   }
   rpc_exit_field (t, field);
-  return true;
+  return ret;
 }
 
 template<class T> inline bool

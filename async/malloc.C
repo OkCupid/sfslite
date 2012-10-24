@@ -50,7 +50,8 @@ dmalloc_t dmalloc;
 /* Want to catch array new followed by non-array delete */
 enum { new_array_shift = 8 };
 static char array_marker[new_array_shift] = { 
-  0x79, 0x46, 0x55, 0x93, 0x12, 0x69, 0xaa, 0x7f
+  (char) 0x79, (char) 0x46, (char) 0x55, (char) 0x93, (char) 0x12, 
+  (char) 0x69, (char) 0xaa, (char) 0x7f
 };
 #endif /* !CHECK_ARRAY_DELETE */
 

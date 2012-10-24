@@ -50,7 +50,6 @@ app_t::init (int argc, char *argv[])
   int ch;
   str file;
   bool err = false;
-  app_t *ret = NULL;
   int port = -1;
   str hostname;
   size_t bufsz = _def_bufsz;
@@ -102,9 +101,9 @@ app_t::init (int argc, char *argv[])
   if (err) {
     usage ();
   } else if (hostname) {
-    ret = New client_t (hostname, port, bufsz);
+    vNew client_t (hostname, port, bufsz);
   } else {
-    ret = New server_t (port, file, bufsz);
+    vNew server_t (port, file, bufsz);
   }
 
   return NULL;
