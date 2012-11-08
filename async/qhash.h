@@ -54,6 +54,13 @@ template<class K, class V> struct qhash_slot {
   qhash_slot (const K &k, typename NCREF (V) v) : key (k), value (v) {}
 };
 
+template<class K, class V, class H, class E>
+class qhash_const_iterator_t;
+template<class K, class V, class H, class E>
+class qhash_iterator_t;
+template<class K, class H, class E>
+class bhash_const_iterator_t;
+
 template<class K, class V, class H = hashfn<K>, class E = equals<K>,
   // XXX - We need to kludge this for both g++ and KCC
   class R = qhash_lookup_return<V>,
@@ -156,6 +163,25 @@ public:
     else
       return R::const_ret (NULL);
   }
+
+  qhash_const_iterator_t<K,V,H,E> begin () const { 
+    return qhash_const_iterator_t<K,V,H,E>(*this);
+  };
+  qhash_iterator_t<K,V,H,E> begin () { 
+    return qhash_iterator_t<K,V,H,E>(*this);
+  };
+
+  qhash_const_iterator_t<K,V,H,E> end () const { 
+    qhash_const_iterator_t<K,V,H,E> itr(*this);
+    itr._i = NULL;
+    return itr;
+  };
+  qhash_iterator_t<K,V,H,E> end () { 
+    qhash_iterator_t<K,V,H,E> itr(*this);
+    itr._i = NULL;
+    return itr;
+  };
+
 };
 
 template<class K> struct qhash_slot<K, void> {
@@ -227,10 +253,21 @@ public:
 #endif
   void traverse (ref<callback <void, const K &> > cb)
     { core::traverse (wrap (mkcbr, cb)); }
+
+  bhash_const_iterator_t<K,H,E> begin () const { 
+    return bhash_const_iterator_t<K,H,E>(*this);
+  };
+  bhash_const_iterator_t<K,H,E> end () const { 
+    bhash_const_iterator_t<K,H,E> itr(*this);
+    itr._i = NULL;
+    return itr;
+  };
+
 };
 
 template<class K, class V, class H = hashfn<K> , class E = equals<K> >
 class qhash_const_iterator_t {
+  friend class qhash<K,V,H,E>;
 public:
   qhash_const_iterator_t (const qhash<K,V,H,E> &q) 
     : _i (q.first ()), _qh (q) {}
@@ -244,6 +281,14 @@ public:
     }
     return r;
   }
+
+  typedef qhash_const_iterator_t<K,V,H,E> my_type;
+  bool operator==(const my_type& other) const { return _i == other._i; }
+  bool operator!=(const my_type& other) const { return !(*this == other); }
+  const K operator*() const { return _i->key; }
+  const my_type& operator++() { next(); return *this; }
+  const my_type operator++(int) { my_type tmp(*this); next(); return tmp; }
+
 private:
   const qhash_slot<K,V> *_i;
   const qhash<K,V,H,E> &_qh;
@@ -312,6 +357,7 @@ private:
 
 template<class K, class V, class H = hashfn<K>, class E = equals<K> >
 class qhash_iterator_t {
+  friend class qhash<K,V,H,E>;
 public:
   qhash_iterator_t (qhash<K,V,H,E> &q) : _i (q.first ()), _qh (q) {}
   void reset () { _i = _qh.first (); }
@@ -324,6 +370,14 @@ public:
     }
     return r;
   }
+
+  typedef qhash_iterator_t<K,V,H,E> my_type;
+  bool operator==(const my_type& other) const { return _i == other._i; }
+  bool operator!=(const my_type& other) const { return !(*this == other); }
+  const K operator*() const { return _i->key; }
+  const my_type& operator++() { next(); return *this; }
+  const my_type operator++(int) { my_type tmp(*this); next(); return tmp; }
+
 private:
   qhash_slot<K,V> *_i;
   qhash<K,V,H,E> &_qh;
@@ -331,6 +385,7 @@ private:
 
 template<class K, class H = hashfn<K>, class E = equals<K> >
 class bhash_const_iterator_t {
+  friend class bhash<K,H,E>;
 public:
   bhash_const_iterator_t (const bhash<K,H,E> &h) 
     : _i (h.first ()), _bh (h) {}
@@ -345,6 +400,13 @@ public:
     return r;
   }
   
+  typedef bhash_const_iterator_t<K,H,E> my_type;
+  bool operator==(const my_type& other) const { return _i == other._i; }
+  bool operator!=(const my_type& other) const { return !(*this == other); }
+  const K operator*() const { return _i->key; }
+  const my_type& operator++() { next(); return *this; }
+  const my_type operator++(int) { my_type tmp(*this); next(); return tmp; }
+
 private:
   const qhash_slot<K,void> *_i;
   const bhash<K,H,E> &_bh;

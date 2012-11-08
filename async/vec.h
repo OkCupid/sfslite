@@ -186,6 +186,11 @@ public:
   const elm_t *base () const { return firstp; }
   elm_t *lim () { return lastp; }
   const elm_t *lim () const { return lastp; }
+  elm_t *begin () { return firstp; }
+  const elm_t *begin () const { return firstp; }
+  elm_t *end () { return lastp; }
+  const elm_t *end () const { return lastp; }
+
   size_t size () const { return lastp - firstp; }
   bool empty () const { return lastp == firstp; }
 
