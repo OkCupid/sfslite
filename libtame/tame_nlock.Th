@@ -74,6 +74,10 @@ namespace tame {
     void acquire (ptr<lock_handle_t<T> > *out,
 		  T n, lock_t::mode_t mode, cbv cb,
 		  CLOSURE);
+    void timed_acquire (ptr<lock_handle_t<T> > *out,
+            T n, lock_t::mode_t mode, u_int s, u_int ms, cbb cb,
+            CLOSURE);
+
   private:
     ihash<T, named_lock_t<T>, &named_lock_t<T>::_name, 
 	  &named_lock_t<T>::_lnk> _locks;
@@ -108,7 +112,31 @@ namespace tame {
     } 
     (*cb) ();
   }
-
+  
+  tamed template<class T> void
+  lock_table_t<T>::timed_acquire (ptr<lock_handle_t<T> > *out,
+              T n, lock_t::mode_t mode, u_int s, u_int ms, cbb cb)
+  {
+    tvars {
+      named_lock_t<T> *l (NULL);
+      ptr<lock_handle_t<T> > ret;
+      bool do_acquire (true);
+      bool ok (true);
+    }
+    
+    l = _locks[n];
+    if (!l) {
+      l = New named_lock_t<T> (n, mode);
+      _locks.insert (l);
+      do_acquire = false;
+    } 
+    ret = New refcounted<lock_handle_t<T> > (this, l);
+    *out = ret;
+    if (do_acquire) {
+      twait { l->timed_acquire (mode, s, ms, mkevent (ok)); }
+    } 
+    (*cb) (ok);
+  }
 };
   
   
