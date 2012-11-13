@@ -436,6 +436,16 @@ public:
   ref (const ::ptr<U> &r)
     : refpriv (rc (r)) { p = refpriv::rp (r); inc (); }
 
+  // MM: in case the compiler really wants move semantics, force them
+  // to the copy constructor
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+  ref (ref<T>&& src) : ref<T>(src) { }
+  template<class U>
+  ref (ref<U>&& src) : ref<T>(src) { }
+  template<class U>
+  ref (::ptr<U>&& src) : ref<T>(src) { }
+#endif
+
   ~ref () { dec (); }
 
   template<class U, reftype v> ref<T> &operator= (refcounted<U, v> *pp)

@@ -64,6 +64,9 @@ public:
   strobjptr () : p (NULL) {}
   strobjptr (strobj *pp) : p (pp) { if (p) p->refcount_inc (); }
   strobjptr (const strobjptr &b) : p (b.p) { if (p) p->refcount_inc (); }
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+  strobjptr (strobjptr&& src) : strobjptr(src) { }
+#endif
   ~strobjptr () { if (p) p->refcount_dec (); }
 
   strobjptr &operator= (strobj *pp) {
