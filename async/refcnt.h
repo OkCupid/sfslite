@@ -497,6 +497,16 @@ public:
   ptr (const ::ref<U> &r)
     : refpriv (rc (r)) { p = refpriv::rp (r); inc (); }
 
+  // MM: in case the compiler really wants move semantics, force them
+  // to the copy constructor
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+  ptr (ptr<T>&& src) : ptr<T>(src) { }
+  template<class U>
+  ptr (ptr<U>&& src) : ptr<T>(src) { }
+  template<class U>
+  ptr (::ref<U>&& src) : ptr<T>(src) { }
+#endif
+
   ~ptr () { dec (); }
 
   ptr<T> &operator= (privtype *)
