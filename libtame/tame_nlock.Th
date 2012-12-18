@@ -135,6 +135,10 @@ namespace tame {
     if (do_acquire) {
       twait { l->timed_acquire (mode, s, ms, mkevent (ok)); }
     } 
+
+    if (!ok) {
+        (*out)->cancel();
+    }
     (*cb) (ok);
   }
 };
