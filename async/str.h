@@ -148,11 +148,17 @@ public:
     const char *e = s + len ();
     while (*s == *p)
       if (!*p++)
-	return e - s;
+          return e - s;
       else if (s++ == e)
-	return -1;
+          return -1;
     return (u_char) *s - (u_char) *p;
   }
+
+  // Leaving base == 0 implies strtoull will auto-detect based on the prefix
+  bool to_int32(int32_t* out, int base = 0);
+  bool to_int64(int64_t* out, int base = 0);
+  bool to_uint32(uint32_t* out, int base = 0);
+  bool to_uint64(uint64_t* out, int base = 0);
 
   bool operator== (const str &s) const
     { return len () == s.len () && !memcmp (cstr (), s.cstr (), len ()); }

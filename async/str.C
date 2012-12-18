@@ -99,6 +99,90 @@ str::iov2strobj (const iovec *iov, int cnt)
   return b;
 }
 
+bool str::to_int32(int32_t* out, int base)
+{
+  bool ret = false;
+  char *ep;
+  errno = 0;
+  str s = *this;
+  if (s[0] == '-') {
+    /* negative numbers are not welcome here (thought strtoull will
+       strangely accept them */
+  } else {
+    int32_t v = strtol (s, &ep, 0);
+    if (errno == ERANGE || errno == EINVAL) {
+      /* no-op */
+    } else if (ep && *ep == '\0') {
+      *out = v;
+      ret = true;
+    }
+  }
+  return ret;
+}
+
+bool str::to_int64(int64_t* out, int base)
+{
+  bool ret = false;
+  char *ep;
+  errno = 0;
+  str s = *this;
+  if (s[0] == '-') {
+    /* negative numbers are not welcome here (thought strtoull will
+       strangely accept them */
+  } else {
+    int64_t v = strtoll (s, &ep, 0);
+    if (errno == ERANGE || errno == EINVAL) {
+      /* no-op */
+    } else if (ep && *ep == '\0') {
+      *out = v;
+      ret = true;
+    }
+  }
+  return ret;
+}
+
+bool str::to_uint32(uint32_t* out, int base)
+{
+  bool ret = false;
+  char *ep;
+  errno = 0;
+  str s = *this;
+  if (s[0] == '-') {
+    /* negative numbers are not welcome here (thought strtoull will
+       strangely accept them */
+  } else {
+    u_int64_t v = strtoul (s, &ep, 0);
+    if (errno == ERANGE || errno == EINVAL) {
+      /* no-op */
+    } else if (ep && *ep == '\0') {
+      *out = v;
+      ret = true;
+    }
+  }
+  return ret;
+}
+
+bool str::to_uint64(uint64_t* out, int base)
+{
+  bool ret = false;
+  char *ep;
+  errno = 0;
+  str s = *this;
+  if (s[0] == '-') {
+    /* negative numbers are not welcome here (thought strtoull will
+       strangely accept them */
+  } else {
+    u_int64_t v = strtoull (s, &ep, 0);
+    if (errno == ERANGE || errno == EINVAL) {
+      /* no-op */
+    } else if (ep && *ep == '\0') {
+      *out = v;
+      ret = true;
+    }
+  }
+  return ret;
+}
+
 strbuf::strbuf (const char *fmt, ...)
   : uio (New refcounted<suio>)
 {
