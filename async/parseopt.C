@@ -269,6 +269,17 @@ conftab_bool::convert (const vec<str> &v, const str &l, bool *e)
   return (!err);
 }
 
+bool conftab_double::convert (const vec<str> &v, const str &cf, bool *e)
+{
+  if (!count_args (v, 2))
+    return false;
+
+  char *endptr;
+  tmp = strtod(v[1].cstr(), &endptr);
+
+  return (endptr != v[1].cstr());
+}
+
 bool
 conftab::match (const vec<str> &av, const str &cf, int ln, bool *err)
 {

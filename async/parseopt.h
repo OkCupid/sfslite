@@ -34,7 +34,7 @@ class parseargs {
 
   char *buf;
   const char *lim;
-  const char *p; 
+  const char *p;
 
   void skipblanks ();
   void skiplwsp ();
@@ -73,7 +73,7 @@ str mytolower (const str &in);
 
 class conftab_el {
 public:
-  conftab_el (const str &n) : 
+  conftab_el (const str &n) :
     name (n), lcname (mytolower (n)), _was_set (false),
     _set_by_default (false) {}
 
@@ -114,7 +114,7 @@ public:
 typedef callback<void, vec<str>, str, bool *>::ref confcb;
 class conftab_str : public conftab_el {
 public:
-  conftab_str (const str &n, str *d, bool c) 
+  conftab_str (const str &n, str *d, bool c)
     : conftab_el (n), dest (d), cnfcb (NULL), scb (NULL), check (c),
       _has_default (false) {}
   conftab_str (const str &n, confcb c)
@@ -167,7 +167,7 @@ public:
   conftab_int (const str &n, T *d, T l, T u, T def)
     : conftab_el (n), dest (d), lb (l), ub (u),
       _default (def), _has_default (true) {}
-      
+
   bool convert (const vec<str> &v, const str &cf, bool *e)
   { return (count_args (v, 2) && convertint (v[1], &tmp)); }
   bool inbounds () { return (tmp >= lb && tmp <= ub); }
@@ -190,10 +190,10 @@ private:
 
 class conftab_bool : public conftab_el {
 public:
-  conftab_bool (const str &n, bool *b) 
+  conftab_bool (const str &n, bool *b)
     : conftab_el (n), dest (b), err (false), _has_default (false) {}
 
-  conftab_bool (const str &n, bool *b, bool def) 
+  conftab_bool (const str &n, bool *b, bool def)
     : conftab_el (n), dest (b), err (false),
       _default (def), _has_default (true) {}
 
@@ -215,10 +215,41 @@ private:
   bool _has_default;
 };
 
+class conftab_double : public conftab_el {
+public:
+  // If no default value provided...
+  conftab_double (const str &n, double *d, double l, double u)
+    : conftab_el (n), dest (d), lb (l), ub (u),
+      _default (0.0), _has_default (false) {}
+
+  // If default value provided...
+  conftab_double (const str &n, double *d, double l, double u, double def)
+    : conftab_el (n), dest (d), lb (l), ub (u),
+      _default (def), _has_default (true) {}
+
+  bool convert (const vec<str> &v, const str &cf, bool *e);
+  bool inbounds () { return (tmp >= lb && tmp <= ub); }
+  void set () { *dest = tmp; }
+
+  bool apply_default ()
+  { if (_has_default) *dest = _default; return _has_default; }
+
+  void dump (strbuf &b) const { b << *dest; }
+
+private:
+  double *dest;
+  const double lb;
+  const double ub;
+  double tmp;
+
+  double _default;
+  bool _has_default;
+};
+
 enum {
   CONFTAB_VERBOSE = 0x1,
   CONFTAB_APPLY_DEFAULTS = 0x2
-}; 
+};
 
 class conftab {
 public:
@@ -227,20 +258,20 @@ public:
   typedef enum { OK = 0,
 		 ERROR = 1,
 		 UNKNOWN = 2 } status_t;
-  
+
   bool run (const str &file, u_int opts = 0, int fd = -1,
             status_t *sp = NULL);
 
-  template<class P, class D> 
+  template<class P, class D>
   conftab &add (const str &nm, P *dp, D lb, D ub)
   { return insert (New conftab_int<P> (nm, dp, lb, ub)); }
 
-  template<class P, class D> 
+  template<class P, class D>
   conftab &add (const str &nm, P *dp, D lb, D ub, P def)
   { return insert (New conftab_int<P> (nm, dp, lb, ub, def)); }
 
   template<class A>
-  conftab &add (const str &nm, A a) 
+  conftab &add (const str &nm, A a)
   { return insert (New conftab_str (nm, a)); }
 
   conftab &ads (const str &nm, cbs c) // XXX: cannot overload
@@ -258,11 +289,17 @@ public:
   conftab &add_check (const str &nm, str *s, const str &def)
   { return insert (New conftab_str (nm, s, def, true)); }
 
-  conftab &add (const str &nm, bool *b) 
+  conftab &add (const str &nm, bool *b)
   { return insert (New conftab_bool (nm, b)); }
 
-  conftab &add (const str &nm, bool *b, bool def) 
+  conftab &add (const str &nm, bool *b, bool def)
   { return insert (New conftab_bool (nm, b, def)); }
+
+  conftab &add (const str &nm, double *d, double lb, double ub)
+  { return insert (New conftab_double (nm, d, lb, ub)); }
+
+  conftab &add (const str &nm, double *d, double lb, double ub, double def)
+  { return insert (New conftab_double (nm, d, lb, ub, def)); }
 
   conftab &ignore (const str &m)
   { return insert (New conftab_ignore (m)); }
