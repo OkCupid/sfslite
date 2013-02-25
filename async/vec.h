@@ -29,6 +29,9 @@
 #include "stllike.h"
 #include "array.h"
 #include "msb.h"
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+#include <utility>
+#endif
 
 size_t vec_resize_fn (u_int nwanted, u_int nalloc, int objid);
 class vec_resizer_t {
@@ -118,6 +121,13 @@ protected:
     { return *new (implicit_cast<void *> (&e)) elm_t; }
   static elm_t &cconstruct (elm_t &e, const elm_t &v)
     { return *new (implicit_cast<void *> (&e)) elm_t (v); }
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+  template<typename... Params>
+  static elm_t &vconstruct(elm_t& e, Params&&... p) { 
+      return *new(implicit_cast<void *>(&e)) elm_t(std::forward<Params>(p)...); 
+  }
+#endif
+
   static void destroy (elm_t &e) { e.~elm_t (); }
 
   void init () { lastp = firstp = basep = def_basep (); limp = def_limp (); }
@@ -205,6 +215,12 @@ public:
   elm_t &push_back () { reserve (1); return construct (*lastp++); }
   elm_t &push_back (const elm_t &e)
     { reserve (1); return cconstruct (*lastp++, e); }
+
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+  template<typename... Params>
+  elm_t &emplace_back (Params&&... p) 
+    { reserve (1); return vconstruct (*lastp++, std::forward<Params>(p)...); }
+#endif
 
   void reverse () 
   {
