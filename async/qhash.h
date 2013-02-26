@@ -103,6 +103,9 @@ public:
     core::clear ();
   }
   ~qhash () { clear (); }
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+  qhash(qhash<K,V,H,E,R>&& q) = delete;
+#endif
 
   qhash<K,V,H,E,R> &operator= (const qhash<K,V,H,E,R> &in)
   {
@@ -224,6 +227,9 @@ public:
   bhash () {}
   void clear () { this->deleteall (); }
   ~bhash () { clear (); }
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+  bhash(bhash<K,H,E>&& b) = delete;
+#endif
 
   bhash (const bhash<K,H,E> &in)
   {
