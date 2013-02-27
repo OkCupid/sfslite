@@ -48,7 +48,6 @@ int filename_return ();
 %}
 
 %option stack
-%option debug
 
 ID	[a-zA-Z_][a-zA-Z_0-9]*
 WSPACE	[ \t]
