@@ -25,7 +25,10 @@
 #include "arc4.h"
 #include "bbuddy.h"
 
+#ifndef __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS
+#endif
+
 #include <inttypes.h>
 
 
