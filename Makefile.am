@@ -28,9 +28,9 @@ ARPCGEN =
 endif
 
 if USE_TESTS
-TESTS = tests
+TESTS_DIR = tests
 else
-TESTS = 
+TESTS_DIR = 
 endif
 
 if USE_TOOLS
@@ -53,7 +53,7 @@ SUBDIRS = \
 	tame \
 	libtame \
 	libaapp \
-	$(TESTS) \
+	$(TESTS_DIR) \
 	$(TUTORIAL) \
 	$(TOOLS)
 
