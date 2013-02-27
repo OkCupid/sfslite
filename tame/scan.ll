@@ -48,6 +48,7 @@ int filename_return ();
 %}
 
 %option stack
+%option debug
 
 ID	[a-zA-Z_][a-zA-Z_0-9]*
 WSPACE	[ \t]
@@ -169,8 +170,8 @@ template	{ yy_push_state (TEMPLATE_ENTER); return T_TEMPLATE; }
 
 <PP,PP_BASE>{
 \n			{ ++lineno; }
-[^()\]\n/_]+|[/_]	{ return std_ret (T_PASSTHROUGH); }
-[(]			{ yy_push_state (PP); return std_ret (T_PASSTHROUGH); }
+[^()\[\]\n/_]+|[/_]	{ return std_ret (T_PASSTHROUGH); }
+[(\[]			{ yy_push_state (PP); return std_ret (T_PASSTHROUGH); }
 }
 
 <PP,PP_BASE,TAME,TAME_BASE>{
@@ -180,7 +181,7 @@ __LOC__         { return loc_return (); }
 }
 
 <PP>{
-[)]		{ yy_pop_state (); return std_ret (T_PASSTHROUGH); }
+[)\]]		{ yy_pop_state (); return std_ret (T_PASSTHROUGH); }
 }
 
 

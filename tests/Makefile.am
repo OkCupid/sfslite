@@ -1,6 +1,9 @@
 ## Process this file with automake to produce Makefile.in
 # $Id$
 
+.T.C:
+	$(TAME) -o $@ $< || (rm -f $@ && false)
+
 LDADD = $(LIBTAME) $(LIBSFSCRYPT) $(LIBARPC) $(LIBSAFEPTR) $(LIBASYNC) $(LIBGMP) 
 
 TESTS = test_aes \
@@ -21,6 +24,7 @@ TESTS = test_aes \
 	test_rabin \
 	test_sha1 \
 	test_srp \
+	test_tame \
 	test_passfd \
 	test_tiger \
 	test_timecb \
@@ -64,6 +68,7 @@ test_sp1_SOURCES = test_sp1.C
 test_sp2_SOURCES = test_sp2.C
 test_sp3_SOURCES = test_sp3.C
 test_rxx_SOURCES = test_rxx.C
+test_tame_SOURCES = test_tame.T
 
 $(check_PROGRAMS): $(LDEPS)
 
