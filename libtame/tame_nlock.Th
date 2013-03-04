@@ -47,7 +47,7 @@ namespace tame {
   class lock_handle_t : public virtual refcount {
   public:
     lock_handle_t (lock_table_t<T> *t, named_lock_t<T> *l)
-      : _tab (t), _lock (l), _released (false) { l->incref (); }
+      : _tab (t), _lock (l), _waiter(NULL), _released (false) { l->incref (); }
     
     ~lock_handle_t ()
     {
@@ -55,7 +55,7 @@ namespace tame {
       _lock->decref (_tab);
     }
     
-    void cancel () { _released = true; _lock->cancel (_waiter); }
+    void cancel () { _released = true; if (_waiter) _lock->cancel (_waiter); }
     void release () { _released = true; _lock->release (); }
     void set_waiter (lock_t::waiter_t *w) { _waiter = w; }
     
