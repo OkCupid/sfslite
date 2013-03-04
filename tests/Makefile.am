@@ -68,6 +68,7 @@ test_sp1_SOURCES = test_sp1.C
 test_sp2_SOURCES = test_sp2.C
 test_sp3_SOURCES = test_sp3.C
 test_rxx_SOURCES = test_rxx.C
+test_tame_CXXFLAGS = --std=gnu++11 $(AM_CXXFLAGS)
 test_tame_SOURCES = test_tame.T
 
 $(check_PROGRAMS): $(LDEPS)

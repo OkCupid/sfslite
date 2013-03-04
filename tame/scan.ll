@@ -48,7 +48,6 @@ int filename_return ();
 
 %option stack
 %option yylineno
-%option debug
 
 ID	[a-zA-Z_][a-zA-Z_0-9]*
 WSPACE	[ \t\n]
@@ -59,16 +58,30 @@ XNUM 	[+-]?0x[0-9a-fA-F]
 /* 
   c++11 lambdas:
 
- [      ]  ()   mutable/const/throws    -> ty { }
-  ^     ^    ^                       ^       ^
-  SQ    1    2                       3       Lambda :)
+ [      ]  ( )   mutable    -> ty       { }
+  ^         ^                            ^
+  SQ     LAM_PARAM                   LAM_BODY  
+  (PL = PRE_LAMBDA)
 
-Up to 2 we aren't sure that we're looking at a lambda expr.
+
+
+According to http://en.cppreference.com/w/cpp/language/lambda#Syntax we are looking for:
+  [ capture ] ( params ) mutable exception attribute -> ret { body } 	(1) 	
+  [ capture ] ( params ) -> ret { body } 	(2) 	
+  [ capture ] ( params ) { body } 	(3) 	
+  [ capture ] { body } (4)
+
+We need to be careful to not parse expression fragments that start like lambdas but aren't
+(e.g. [4]() can be used on a list of callable objects as such:
+v[4]();
+)
+
 */
 
-%x FULL_PARSE FN_ENTER VARS_ENTER 
+%x FULL_PARSE VARS_ENTER 
 %x TAME_BASE C_COMMENT CXX_COMMENT TAME
-%x TAME_SQUARE_BRACKET TAME_LAMBDA1 TAME_LAMBDA2 TAME_LAMBDA3
+%x TAME_SQUARE_BRACKET TAME_LAMBDA_PARAMS
+%x LAMBDA_BODY PAR_EXPR
 %x ID_OR_NUM NUM_ONLY HALF_PARSE PP PP_BASE
 %x JOIN_LIST JOIN_LIST_BASE
 %x TWAIT_ENTER TWAIT_BODY TWAIT_BODY_BASE
@@ -80,8 +93,8 @@ Up to 2 we aren't sure that we're looking at a lambda expr.
 
 %%
 
-<FN_ENTER,FULL_PARSE,SIG_PARSE,VARS_ENTER,ID_LIST,ID_OR_NUM,NUM_ONLY,HALF_PARSE,TWAIT_ENTER,JOIN_LIST,JOIN_LIST_BASE,EXPR_LIST,EXPR_LIST_BASE,DEFRET_ENTER>{
-{TWSPACE}+	/*discard*/;
+<FULL_PARSE,SIG_PARSE,VARS_ENTER,ID_LIST,ID_OR_NUM,NUM_ONLY,HALF_PARSE,TWAIT_ENTER,JOIN_LIST,JOIN_LIST_BASE,EXPR_LIST,EXPR_LIST_BASE,DEFRET_ENTER>{
+{WSPACE}+	/*discard*/;
 }
 
 <ID_OR_NUM>{
@@ -134,7 +147,7 @@ template	{ yy_push_state (TEMPLATE_ENTER); return T_TEMPLATE; }
 }
 
 <TEMPLATE_ENTER>{
-{TWSPACE}+	/* discard */ ;
+{WSPACE}+	/* discard */ ;
 "<"		{ switch_to_state (TEMPLATE_BASE); return yytext[0]; }
 .		{ return yyerror ("unexpected token after 'template'"); }
 }
@@ -162,13 +175,6 @@ template	{ yy_push_state (TEMPLATE_ENTER); return T_TEMPLATE; }
 
 <FULL_PARSE,HALF_PARSE,SIG_PARSE>{
 .		{ return yyerror ("illegal token found in parsed "
-				  "environment"); }
-}
-
-<FN_ENTER>{
-[(]		{ yy_push_state (FULL_PARSE); return yytext[0]; }
-[{]		{ switch_to_state (TAME_BASE); return yytext[0]; }
-.		{ return yyerror ("illegal token found in function "
 				  "environment"); }
 }
 
@@ -297,11 +303,40 @@ return/[ \t\n(;]	{ return yyerror ("cannot return withint twait{..}"); }
 [}]		{ yy_pop_state (); return std_ret (T_PASSTHROUGH); }
 }
 
-<TAME_SQUARE_BRACKET>
-[\]] { yy_pop_state (); return std_ret (T_PASSTHROUGH); }
+<LAMBDA_BODY>{
+\"		        { yy_push_state (QUOTE); 
+                          return std_ret (T_PASSTHROUGH); }
+\'		        { yy_push_state (SQUOTE); 
+                          return std_ret (T_PASSTHROUGH); }
+[}]		{ yy_pop_state (); return std_ret (T_PASSTHROUGH); }
+[{]		{ yy_push_state (LAMBDA_BODY); return std_ret (T_PASSTHROUGH); }
+[^{}'"]+ { return std_ret (T_PASSTHROUGH); }
+}
+
+<PAR_EXPR,TAME_LAMBDA_PARAMS>{
+[^()]+ {return std_ret (T_PASSTHROUGH);}
+[(]    {yy_push_state(PAR_EXPR); return std_ret (T_PASSTHROUGH);}
+[)]    {yy_pop_state(); return std_ret (T_PASSTHROUGH);}
+}
+
+<TAME_LAMBDA_PARAMS>{
+")"{WSPACE}*(mutable)?{WSPACE}*"{" {switch_to_state(LAMBDA_BODY); return std_ret (T_PASSTHROUGH);}
+")"{WSPACE}*(mutable)?{WSPACE}*"->"[^{]+"{" {
+   /* [^{] is a gross over approximation but it should work
+      in 99.9% of cases (the only way I could see to have { in a type would be to use decltype) */
+   switch_to_state(LAMBDA_BODY); 
+   return std_ret (T_PASSTHROUGH);
+}
+}
+
+<TAME_SQUARE_BRACKET>{
+"]"{WSPACE}*"{" { switch_to_state(LAMBDA_BODY); return std_ret (T_PASSTHROUGH); }
+"]"{WSPACE}*"(" { switch_to_state(TAME_LAMBDA_PARAMS); return std_ret (T_PASSTHROUGH); }
+"]" { yy_pop_state (); return std_ret (T_PASSTHROUGH); }
+}
 
 <TAME,TAME_BASE,TAME_SQUARE_BRACKET>{
-[^\[\] \t{}"'/trD_]+|[ \t/trD_]+ {
+[^\[\] \t{}"'/trD_]+|[ \t/trD_] {
        /* t r and D are not matched in the first group because we want to make sure that 
           tvars, return etc... are caught by their own rules. */
        yylval.str = yytext; return T_PASSTHROUGH; 
@@ -385,7 +420,7 @@ TAME_ON		{ tame_on = 1; GOBBLE_RET; }
 }
 
 
-<FULL_PARSE,SIG_PARSE,FN_ENTER,VARS_ENTER,HALF_PARSE,PP,PP_BASE,EXPR_LIST,EXPR_LIST_BASE,ID_LIST,RETURN_PARAMS,EXPR_LIST_BR,EXPR_LIST_BR_BASE,DEFRET_ENTER,TWAIT_BODY,TWAIT_BODY_BASE>{
+<FULL_PARSE,SIG_PARSE,VARS_ENTER,HALF_PARSE,PP,PP_BASE,EXPR_LIST,EXPR_LIST_BASE,ID_LIST,RETURN_PARAMS,EXPR_LIST_BR,EXPR_LIST_BR_BASE,DEFRET_ENTER,TWAIT_BODY,TWAIT_BODY_BASE>{
 
 "//"		{ gobble_flag = 1; yy_push_state (CXX_COMMENT); }
 "/*"		{ gobble_flag = 1; yy_push_state (C_COMMENT); }
