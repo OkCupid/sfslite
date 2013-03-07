@@ -1538,7 +1538,7 @@ AC_DEFUN([SFS_CFLAGS],
 [unset CFLAGS
 unset CXXFLAGS
 CFLAGS='$(DEBUG) $(WFLAGS) $(ECFLAGS) $(CFLAGS_PROFILE)'
-CXXFLAGS='$(CXXDEBUG) $(CXXWFLAGS) $(ECXXFLAGS) $(CFLAGS_PROFILE)'])
+CXXFLAGS='$(CXXDEBUG) $(CXXWFLAGS) $(ECXXFLAGS) $(CFLAGS_PROFILE) $(CXX11FLAGS)'])
 dnl
 dnl Check for xdr_u_intNN_t, etc
 dnl
@@ -2598,4 +2598,44 @@ then
     AC_SUBST(CFLAGS_PROFILE)
     AC_DEFINE(SIMPLE_PROFILER, 1, Define to turn on a simple profiler)
 fi
+])
+
+dnl we strongly prefer c++11
+AC_DEFUN([SFS_CPP11_IF_POSSIBLE],
+[
+    OLDCXXFLAGS="$CXXFLAGS"
+    CXXFLAGS="-Werror --std=gnu++0x"
+    OLDCPPFLAGS="$CPPFLAGS"
+    CPPFLAGS=""
+    AC_LANG_PUSH(C++)
+    AC_CACHE_CHECK(for c++11, sfs_cv_cpp11,
+        AC_TRY_COMPILE([], [
+           auto x = 0;
+        ], sfs_cv_cpp11=yes, sfs_cv_cpp11=no)
+    )
+    AC_LANG_POP()
+    CPPFLAGS="$OLDCPPFLAGS"
+    CXXFLAGS="$OLDCXXFLAGS"
+
+    if test "$sfs_cv_cpp11" = yes; then
+        CXX11FLAGS="--std=gnu++0x"
+        AC_ARG_WITH(custom-cpp11-stl,
+        --with-custom-cpp11-stl=DIR     specify a custom directory for cpp11's stl,
+        [
+            STLDIR=$withval
+            AC_CHECK_FILE($STLDIR/vector, [], [
+                AC_MSG_ERROR(Invalid stl directory $STLDIR)
+            ])
+            CXX11FLAGS="$CXX11FLAGS -I$STLDIR -I$STLDIR/backward -I$STLDIR/x86_64-unknown-linux-gnu/"
+        ], [] )
+        AC_SUBST(CXX11FLAGS)
+    fi
+
+    AC_ARG_ENABLE(force-cpp11,
+    --enable-force-cpp11        fail if c++11 is not available,
+    [
+        if test "$sfs_cv_cpp11" = no; then
+            AC_MSG_ERROR(you specified --enable-force-cpp11 but your compiler does not support c++11.)
+        fi
+    ], [] )
 ])
