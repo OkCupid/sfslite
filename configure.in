@@ -398,8 +398,6 @@ fi
 AC_SUBST(sfsbindir)
 CPPFLAGS="$CPPFLAGS -DEXECDIR="'\"$(sfsexecdir)\"'
 
-dnl SFS_CLANG_CFLAGS
-
 SFS_CPP11_IF_POSSIBLE
 
 dnl
