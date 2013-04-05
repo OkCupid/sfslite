@@ -46,9 +46,9 @@ SFS_PYTHON
 
 dnl Checks for programs.
 AC_SYS_LARGEFILE  dnl MW adding b/c we want 64-bit offsets
-AC_PROG_CC
+AC_PROG_CC([clang gcc cc])
 AC_PROG_CPP
-AC_PROG_CXX
+AC_PROG_CXX([clang++ g++ c++])
 AM_PROG_LEX
 
 dnl AC_PROG_YACC defaults to yacc when nothing is found.
@@ -397,6 +397,8 @@ else
 fi
 AC_SUBST(sfsbindir)
 CPPFLAGS="$CPPFLAGS -DEXECDIR="'\"$(sfsexecdir)\"'
+
+SFS_CPP11_IF_POSSIBLE
 
 dnl
 dnl END sfslite changes
