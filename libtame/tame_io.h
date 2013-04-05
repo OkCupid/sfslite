@@ -130,6 +130,11 @@ namespace tame {
     virtual bool read_error (str *s) { return false; }
     virtual bool write_error (str *s) { return false; }
 
+    // Can be read without having to wait for data
+    // on the file descriptor.
+    virtual bool is_sync_readable() const { return false; }
+    virtual bool is_sync_writeable() const { return false; }
+
     void do_debug (const str &msg) const;
 
     evv_t::ptr _poke_ev;

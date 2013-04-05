@@ -1,5 +1,4 @@
-
-// -*-c++-*-
+// -*- mode: c++; tab-width: 8; c-basic-offset: 4; indent-tabs-mode: nil; -*-
 #include "tame.h"
 #include "tame_io.h"
 #include "tame_connectors.h"
@@ -182,14 +181,20 @@ proxy_t::go (int infd, int outfd, evv_t ev)
   // We might revisit in the future and require that proxy takes
   // an rcfd_t; that's a surefire solution to the issue.
   while (!err && !cancelled && (!is_eof() || is_writable ())) {
-    
-    if (is_readable () && !is_eof ()) read.on ();
-    else read.off ();
-    
-    if (is_writable ()) write.on ();
-    else write.off ();
 
-    twait (rv, which);
+    if (is_sync_readable() && !is_eof()) {
+        which = READ;
+    } else if (is_sync_writeable()) {
+        which = WRITE;
+    } else {
+        if (is_readable () && !is_eof ()) read.on ();
+        else read.off ();
+    
+        if (is_writable ()) write.on ();
+        else write.off ();
+
+        twait (rv, which);
+    }
 
     switch (which) {
     case POKE:
