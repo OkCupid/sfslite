@@ -35,7 +35,6 @@ str filename = "(stdin)";
 static void switch_to_state (int i);
 static int std_ret (int i);
 static int tame_ret (int s, int t);
-int get_yy_lineno () { return yylineno ;}
 str get_yy_loc ();
 int tame_on = 1;
 int gobble_flag =0;
@@ -439,14 +438,14 @@ switch_to_state (int s)
 int
 yyerror (str msg)
 {
-  warnx << filename << ":" << yylineno << ": " << msg << "\n";
+  warnx << filename << ":" << yyget_lineno() << ": " << msg << "\n";
   exit (1);
 }
 
 int
 yywarn (str msg)
 {
-  warnx << filename << ":" << yylineno << ": Warning: " << msg << "\n";
+  warnx << filename << ":" << yyget_lineno() << ": Warning: " << msg << "\n";
   return 0;
 }
 
@@ -479,7 +478,7 @@ str
 get_yy_loc ()
 {
    strbuf b (filename);
-   b << ":" << yylineno;
+   b << ":" << yyget_lineno();
    return b;
 }
 
@@ -488,7 +487,7 @@ lineno_return ()
 {
    strbuf b; 
    b << yylineno; 
-   yylval.str = lstr (yylineno, str (b));
+   yylval.str = lstr (yyget_lineno(), str (b));
    return T_PASSTHROUGH;
 }
 
@@ -497,14 +496,14 @@ filename_return ()
 {
   strbuf b; 
   b << "\"" << filename << "\"";
-  yylval.str = lstr (yylineno, str (b));
+  yylval.str = lstr (yyget_lineno(), str (b));
   return T_PASSTHROUGH; 
 }
 
 int
 loc_return ()
 {
-   strbuf b ("\"%s:%d\"", filename.cstr (), yylineno);
-  yylval.str = lstr (yylineno, str (b));
+   strbuf b ("\"%s:%d\"", filename.cstr (), yyget_lineno());
+  yylval.str = lstr (yyget_lineno(), str (b));
   return T_PASSTHROUGH; 
 }

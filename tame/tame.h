@@ -65,7 +65,6 @@ extern int yyerror (str);
 extern int yyparse ();
 extern int yydebug;
 extern FILE *yyin;
-extern int get_yy_lineno ();
 extern str get_yy_loc ();
 
 typedef enum { NONE = 0, ARG = 1, STACK = 2, CLASS = 3, EXPR = 4 } vartyp_t ;

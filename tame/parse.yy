@@ -105,7 +105,7 @@ fn_or_twait: fn
 	| twait				{ state->new_el ($1); }
 	;
 
-passthrough: /* empty */	    { $$ = lstr (get_yy_lineno ()); }
+passthrough: /* empty */	    { $$ = lstr (yyget_lineno ()); }
 	| passthrough T_PASSTHROUGH 
 	{
 	   strbuf b ($1);
@@ -122,7 +122,7 @@ fn:	tame_decl '{'
 	{
 	  state->new_fn ($1);
 	  state->push_list ($1);
-	  $1->set_lbrace_lineno (get_yy_lineno ());
+	  $1->set_lbrace_lineno (yyget_lineno ());
 	}
 	fn_statements '}'
 	{
@@ -130,9 +130,9 @@ fn:	tame_decl '{'
 	    yyerror ("Function has non-void return type but no "
 	    	     "DEFAULT_RETURN specified");
  	  }
-	  state->push (New tame_fn_return_t (get_yy_lineno (), 
+	  state->push (New tame_fn_return_t (yyget_lineno (), 
 				            state->function ()));
-	  state->passthrough (lstr (get_yy_lineno (), "}"));
+	  state->passthrough (lstr (yyget_lineno (), "}"));
 	  state->pop_list ();
 	  state->clear_fn ();
 	}
@@ -156,7 +156,7 @@ static_opt: T_STATIC 	{ $$ = STATIC_DECL; }
 /* declaration_specifiers is no longer optional ?! */
 fn_declaration: fn_specifiers declaration_specifiers declarator const_opt
 	{
-	   $$ = New tame_fn_t ($1, $2.to_str (), $3, $4, get_yy_lineno (), 
+	   $$ = New tame_fn_t ($1, $2.to_str (), $3, $4, yyget_lineno (), 
 	                       get_yy_loc ());
 	}
 	;
@@ -196,7 +196,7 @@ default_return: T_DEFAULT_RETURN '{' passthrough '}'
 
 vars:	T_VARS 
 	{
-	  vars_lineno = get_yy_lineno ();
+	  vars_lineno = yyget_lineno ();
 	} 
 	'{' declaration_list_opt '}'
 	{
@@ -217,11 +217,11 @@ vars:	T_VARS
 
 return_statement: T_RETURN passthrough ';'
 	{
-	   tame_ret_t *r = New tame_ret_t (get_yy_lineno (), 
+	   tame_ret_t *r = New tame_ret_t (yyget_lineno (), 
 			  	    state->function ());	
 	   if ($2)
 	     r->add_params ($2);
- 	   r->passthrough (lstr (get_yy_lineno (), ";"));
+ 	   r->passthrough (lstr (yyget_lineno (), ";"));
 	   $$ = r;
 	}
 	;
@@ -231,11 +231,11 @@ block_body: '{'
 	  tame_fn_t *fn = state->function ();
 	  tame_block_t *bb;
 	  if (fn) {
- 	    bb = New tame_block_ev_t (fn, get_yy_lineno ());
+ 	    bb = New tame_block_ev_t (fn, yyget_lineno ());
 	    fn->add_env (bb);
 	    fn->hit_tame_block ();
 	  } else {
-	    bb = New tame_block_thr_t (get_yy_lineno ());
+	    bb = New tame_block_thr_t (yyget_lineno ());
 	  }
 	  state->new_block (bb);
 	  state->push_list (bb);
@@ -280,7 +280,7 @@ join_list: passthrough id_list_opt
 wait_body: '(' join_list ')' ';'
 	{
 	  tame_fn_t *fn = state->function ();
-	  tame_wait_t *w = New tame_wait_t (fn, $2, get_yy_lineno ());
+	  tame_wait_t *w = New tame_wait_t (fn, $2, yyget_lineno ());
 	  if (fn) fn->add_env (w);
 	  else {
 	    yyerror ("Cannot have a twait() statement outside of a "
