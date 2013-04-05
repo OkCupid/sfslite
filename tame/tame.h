@@ -61,6 +61,7 @@ extern int yylex ();
 extern int yyparse ();
 #undef yyerror
 extern int yyerror (str);
+extern int yyget_lineno();
 
 extern int yyparse ();
 extern int yydebug;
