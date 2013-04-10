@@ -1,4 +1,3 @@
-// -*- mode: c++; tab-width: 8; c-basic-offset: 4; indent-tabs-mode: nil; -*-
 
 #include "sfs_select.h"
 #include "async.h"
