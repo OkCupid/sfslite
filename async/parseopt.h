@@ -56,12 +56,12 @@ public:
 int64_t strtoi64 (const char *nptr, char **endptr = NULL, int base = 0);
 
 template<class T> bool
-convertint (const char *cp, T *resp)
+convertint (const char *cp, T *resp, int base = 0)
 {
   if (!*cp)
     return false;
   char *end;
-  T res = strtoi64 (cp, &end, 0);
+  T res = strtoi64 (cp, &end, base);
   if (*end)
     return false;
   *resp = res;
