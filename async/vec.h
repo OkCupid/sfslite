@@ -31,6 +31,7 @@
 #include "msb.h"
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
 #include <utility>
+#include <initializer_list>
 #endif
 
 size_t vec_resize_fn (u_int nwanted, u_int nalloc, int objid);
@@ -153,6 +154,14 @@ do {								\
 public:
   vec () { init (); }
   vec (const vec &v) { init (); append (v); }
+
+  #ifdef __GXX_EXPERIMENTAL_CXX0X__
+  explicit vec(std::initializer_list<T> l) {
+    reserve(l.size());
+    for (auto v:l) {push_back(v); }
+  }
+  #endif
+
   template<size_t NN> vec (const vec<T, NN> &v) { init (); append (v); }
   ~vec () { del (); }
   void clear () { del (); init (); }

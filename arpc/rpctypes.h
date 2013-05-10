@@ -33,6 +33,11 @@
 #include "err.h"
 #include "qhash.h"
 
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+#include <initializer_list>
+#endif
+
+
 typedef void * (*xdr_alloc_t) ();
 
 struct rpcgen_table {
@@ -152,6 +157,14 @@ protected:
 public:
   rpc_vec () { init (); }
   rpc_vec (const rpc_vec &v) { init (); copy (v); }
+
+  #ifdef __GXX_EXPERIMENTAL_CXX0X__
+  explicit rpc_vec(std::initializer_list<T> l) {
+    reserve(l.size());
+    for (auto v:l) { push_back(v); }
+  }
+  #endif
+
   template<size_t m> rpc_vec (const rpc_vec<T, m> &v) { init (); copy (v); }
   ~rpc_vec () { if (nofree) super::init (); }
   void clear () { del (); init (); }
