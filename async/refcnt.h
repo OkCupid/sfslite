@@ -33,11 +33,8 @@
  *      f = new refcounted<foo> ( ... );
  *      b = NULL;
  *
- * A refcounted<foo> takes the same constructor arguments as foo,
- * except that constructors with more than 7 arguments cannot be
- * called.  (This is because there are no varargs templates.  You can
- * raise the limit from 7 to an arbitrary number if you wish, however,
- * by editting vatmpl.h.)
+ * A refcounted<foo> takes the same constructor arguments as foo (limited to
+ * seven arguments when compiled without C++11 support).
  *
  * A ptr<foo> behaves like a foo *, except that it is reference
  * counted.  The foo will be deleted when all pointers go away.  Also,
@@ -142,7 +139,11 @@ void refcnt_warn (const char *op, const type_info &type, void *addr, int cnt);
 #endif /* VERBOSE_REFCNT */
 
 #include "opnew.h"
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+#include <utility>
+#else
 #include "vatmpl.h"
+#endif
 
 class __globaldestruction_t {
   static bool started;
@@ -330,7 +331,13 @@ class refcounted<T, scalar>
   ~refcounted () {}
 
 public:
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+  template <typename... Params>
+  explicit refcounted (Params&&... args) :
+      type2struct<T>::type(std::forward<Params> (args)...) {}
+#else
   VA_TEMPLATE (explicit refcounted, : type2struct<T>::type, {})
+#endif
 };
 
 template<class T>
@@ -348,7 +355,12 @@ class refcounted<T, vbase>
   ~refcounted () {}
 
 public:
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+  template <typename... Params>
+  explicit refcounted(Params&&...args) : obj(std::forward<Params>(args)...) {}
+#else
   VA_TEMPLATE (explicit refcounted, : obj, {})
+#endif
 };
 
 

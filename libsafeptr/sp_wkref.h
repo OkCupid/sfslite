@@ -1,7 +1,11 @@
 
 // -*- c++ -*-
 #include "safeptr.h"
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+#include <utility>
+#else
 #include "vatmpl.h"
+#endif
 
 namespace sp {
 
@@ -101,9 +105,6 @@ namespace sp {
 
   //=======================================================================
 
-#define OP (
-#define CP )
-
   //
   // An allocator class for man_ptr's:
   //
@@ -113,23 +114,27 @@ namespace sp {
   class man_alloc {
   public:
 
-    //
-    // Note, need to use OP instead of '(' to satisfy the preprocessor.
-    // Same goes for CP instead of ')'
-    //
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+    template <typename... Params>
+    explicit man_alloc (Params&&... args) :
+        _p (man_ptr<T> (New T (std::forward (args)...))) {}
+#else
+#define OP (
+#define CP )
+
     VA_TEMPLATE( explicit man_alloc ,		\
 		 : _p OP man_ptr<T> OP New T ,	\
 				   CP CP {} )
+
+#undef CP
+#undef OP
+#endif
     
     operator man_ptr<T>&() { return _p; }
     operator const man_ptr<T> &() const { return _p; }
   private:
     man_ptr<T> _p;
   };
-
-#undef CP
-#undef OP
-
 
   //=======================================================================
 

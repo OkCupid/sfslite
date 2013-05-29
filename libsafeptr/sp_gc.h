@@ -1,6 +1,10 @@
 
 // -*- c++ -*-
 
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+#include <utility>
+#endif
+
 #include "refcnt.h"
 #include "callback.h"
 #include "list.h"
@@ -797,24 +801,36 @@ namespace gc {
 
   //=======================================================================
 
-#define COMMA ,
-
   template<class T, class V = memptr_t, class G = nil::gc_ptr_t>
   class alloc {
   public:
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+    template<typename... Params>
+    explicit alloc (Params&&... args) {
+        redirector_t<V, G> r =
+            mgr_t<V, G>::get()->aalloc(sizeof(T));
+        if (r) {
+            (void) new (r.data ()) T (std::forward (args)...);
+            _p = ptr<T, V, G> (r);
+        }
+    }
+#else
+#define COMMA ,
+
     VA_TEMPLATE(explicit alloc ,					\
 		{ redirector_t<V COMMA G> r =				\
 		    mgr_t<V COMMA G>::get()->aalloc(sizeof(T));		\
 		  if (r) {						\
 		    (void) new (r.data ()) T ,				\
 		      ; _p = ptr<T COMMA V COMMA G> (r); } } )
+
+#undef COMMA
+#endif
     operator ptr<T,V,G>&() { return _p; }
     operator const ptr<T,V,G> &() const { return _p; }
   private:
     ptr<T,V,G> _p;
   };
-
-#undef COMMA
 
   //=======================================================================
 
