@@ -2,6 +2,17 @@
 #ifndef __TAME_REDUNDANT_H__
 #define __TAME_REDUNDANT_H__
 
+/* MM: The redundant caller allows for placing a timer
+ * on a tamed function call which will serve to place a 
+ * timeout on that call, upon which we will spawn additional
+ * tasks until one of the spawned tasks has returned.
+ *  
+ * This is useful if you have a multiple node system, where
+ * many nodes are equivalent. You can dispatch a job on one, and
+ * if it doesn't return fast enough, you can spawn on more and 
+ * have them race. 
+ */
+
 template<typename ResultType, typename TaskType>
 struct redundant_caller_t {
 
