@@ -47,6 +47,7 @@ tame_src(pipeline3)
 tame_src(connectors)
 tame_hdr(tame_connectors)
 tame_hdr(tame_nlock)
+tame_hdr(tame_redundant)
 
 dnl
 dnl

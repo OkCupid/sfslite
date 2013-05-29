@@ -1,0 +1,81 @@
+// -*-c++-*-
+#ifndef __TAME_REDUNDANT_H__
+#define __TAME_REDUNDANT_H__
+
+template<typename ResultType, typename TaskType>
+struct redundant_caller_t {
+
+    redundant_caller_t(size_t delay) : m_delay(delay), m_ctask(0) { }
+    
+    void operator()(typename event<ResultType>::ptr res_ev) {
+        go(res_ev);
+    }
+    void operator+=(const TaskType& t) {
+        m_tasks.push_back(t);
+    }
+
+protected:
+    
+    void go(typename event<ResultType>::ptr res_ev, CLOSURE);
+    void timer_wrapper(CLOSURE); 
+    void task_wrapper(TaskType task, CLOSURE);
+
+    size_t m_delay;
+    size_t m_ctask;
+    vec<TaskType> m_tasks;
+    typename event<bool, ResultType>::ptr m_monitor;
+};
+
+//-----------------------------------------------------------------------------
+
+tamed template<typename ResultType, typename TaskType>
+void redundant_caller_t<ResultType, TaskType>::task_wrapper(TaskType task) {
+    tvars { ResultType res; }
+    twait { task(mkevent(res)); }
+    m_monitor->trigger(false, res);
+}
+
+//-----------------------------------------------------------------------------
+
+tamed template<typename ResultType, typename TaskType>
+void redundant_caller_t<ResultType, TaskType>::timer_wrapper() {
+    twait { delaycb(m_delay, 0, mkevent()); }
+    m_monitor->trigger(true, ResultType());
+}
+
+//-----------------------------------------------------------------------------
+
+tamed template<typename ResultType, typename TaskType>
+void redundant_caller_t<ResultType, TaskType>::go
+    (typename event<ResultType>::ptr res_ev) {
+
+    tvars {
+        rendezvous_t<> rv(__FILE__, __LINE__);
+        bool timer(false);
+        ResultType result;
+    }
+
+    if (!m_tasks.size()) { res_ev->trigger(result); return; }
+
+    m_monitor = mkevent(rv, timer, result);
+    m_monitor->set_reuse(true);
+
+    task_wrapper(m_tasks[m_ctask++]);
+    timer_wrapper();
+    while (true) {
+        twait(rv);
+        if (timer) {
+            if (m_ctask < m_tasks.size()) {
+                task_wrapper(m_tasks[m_ctask++]);
+                timer_wrapper();
+            } else {
+            }
+        } else {
+            break;
+        }
+    }
+
+    res_ev->trigger(result);
+}
+
+#endif
