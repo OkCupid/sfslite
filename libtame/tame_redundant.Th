@@ -2,6 +2,9 @@
 #ifndef __TAME_REDUNDANT_H__
 #define __TAME_REDUNDANT_H__
 
+#include "async.h"
+#include "tame.h"
+
 /* MM: The redundant caller allows for placing a timer
  * on a tamed function call which will serve to place a 
  * timeout on that call, upon which we will spawn additional
