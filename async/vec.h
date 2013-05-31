@@ -156,7 +156,7 @@ public:
   vec (const vec &v) { init (); append (v); }
 
   #ifdef __GXX_EXPERIMENTAL_CXX0X__
-  explicit vec(std::initializer_list<T> l) {
+  explicit vec(std::initializer_list<T> l) : vec() {
     reserve(l.size());
     for (auto v:l) {push_back(v); }
   }

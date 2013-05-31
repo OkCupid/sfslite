@@ -159,7 +159,7 @@ public:
   rpc_vec (const rpc_vec &v) { init (); copy (v); }
 
   #ifdef __GXX_EXPERIMENTAL_CXX0X__
-  explicit rpc_vec(std::initializer_list<T> l) {
+  explicit rpc_vec(std::initializer_list<T> l) : rpc_vec() {
     reserve(l.size());
     for (auto v:l) { push_back(v); }
   }
