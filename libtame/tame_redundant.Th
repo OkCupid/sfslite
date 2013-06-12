@@ -19,7 +19,7 @@
 template<typename ResultType, typename TaskType>
 struct redundant_caller_t {
 
-    redundant_caller_t(size_t delay) : m_delay(delay), m_ctask(0) { }
+    redundant_caller_t(size_t delay) : m_delay(delay), m_ctask(0), m_timer(NULL) { }
     
     void operator()(typename event<ResultType>::ptr res_ev) {
         go(res_ev);
@@ -37,6 +37,7 @@ protected:
     size_t m_delay;
     size_t m_ctask;
     vec<TaskType> m_tasks;
+    timecb_t *m_timer;
     typename event<bool, ResultType>::ptr m_monitor;
 };
 
@@ -53,7 +54,10 @@ void redundant_caller_t<ResultType, TaskType>::task_wrapper(TaskType task) {
 
 tamed template<typename ResultType, typename TaskType>
 void redundant_caller_t<ResultType, TaskType>::timer_wrapper() {
-    twait { delaycb(m_delay, 0, mkevent()); }
+    twait {
+        m_timer = delaycb(m_delay, 0, mkevent());
+    }
+    m_timer = NULL;
     m_monitor->trigger(true, ResultType());
 }
 
@@ -88,7 +92,9 @@ void redundant_caller_t<ResultType, TaskType>::go
             break;
         }
     }
-
+    if (m_timer) {
+        timecb_remove(m_timer);
+    }
     res_ev->trigger(result);
 }
 
