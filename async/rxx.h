@@ -185,7 +185,7 @@ int split (vec<str> *out, rxx pat, str expr,
 	   size_t lim = (size_t) -1, bool emptylast = false);
 template <typename T>
 
-str join (str sep, const vec<T> &v);
+str join (str sep, const vec<T> &v)
 {
   strbuf sb;
   const str *sp = v.base ();
