@@ -183,6 +183,18 @@ operator/ (const str &s, const char *p)
 
 int split (vec<str> *out, rxx pat, str expr,
 	   size_t lim = (size_t) -1, bool emptylast = false);
-str join (str sep, const vec<str> &v);
+template <typename T>
+
+str join (str sep, const vec<T> &v);
+{
+  strbuf sb;
+  const str *sp = v.base ();
+  if (sp < v.lim ()) {
+    sb.cat (*sp++);
+    while (sp < v.lim ())
+      sb.cat (sep).cat (*sp++);
+  }
+  return sb;
+}
 
 #endif /* !_RXX_H_ */

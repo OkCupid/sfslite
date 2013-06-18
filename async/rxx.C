@@ -250,16 +250,3 @@ split (vec<str> *out, rxx pat, str expr, size_t lim, bool emptylast)
   }
   return n;
 }
-
-str
-join (str sep, const vec<str> &v)
-{
-  strbuf sb;
-  const str *sp = v.base ();
-  if (sp < v.lim ()) {
-    sb.cat (*sp++);
-    while (sp < v.lim ())
-      sb.cat (sep).cat (*sp++);
-  }
-  return sb;
-}
