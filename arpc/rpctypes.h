@@ -561,6 +561,23 @@ rpc_traverse (T &t, u_int64_t &obj, const char *field = NULL)
 }
 
 template<class T> inline bool
+rpc_traverse (T &t, float &obj, const char *field = NULL)
+{
+  static_assert(sizeof(u_int32_t) == sizeof(float),
+                "Expected float to be 32 bits wide");
+  union { float f; u_int32_t i; } u = {obj};
+  bool ret = true;
+  rpc_enter_field (t, field);
+  if (!rpc_traverse (t, u.i)) {
+    ret = false;
+  } else {
+    obj = u.f;
+  }
+  rpc_exit_field (t, field);
+  return ret;
+}
+
+template<class T> inline bool
 rpc_traverse (T &t, double &obj, const char *field = NULL)
 {
   static_assert(sizeof(u_int64_t) == sizeof(double),
@@ -897,6 +914,11 @@ rpc_isstruct (u_int64_t)
 }
 inline bool
 rpc_isstruct (int64_t)
+{
+  return false;
+}
+inline bool
+rpc_isstruct (float)
 {
   return false;
 }
