@@ -4,6 +4,8 @@
 #include "tame.h"
 #include "rxx.h"
 
+extern "C" int yylineno;
+
 parse_state_t *state;
 
 static void
@@ -175,6 +177,7 @@ main (int argc, char *argv[])
 
   // only on if YYDEBUG is on :(
   // yydebug = 1;
+  yylineno = 1;
 
   yyparse ();
 

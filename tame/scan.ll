@@ -478,7 +478,7 @@ str
 get_yy_loc ()
 {
    strbuf b (filename);
-   b << ":" << yyget_lineno();
+   b << ":" << yyget_lineno()-1;
    return b;
 }
 
@@ -486,7 +486,7 @@ int
 lineno_return ()
 {
    strbuf b; 
-   b << yylineno; 
+   b << yyget_lineno(); 
    yylval.str = lstr (yyget_lineno(), str (b));
    return T_PASSTHROUGH;
 }
