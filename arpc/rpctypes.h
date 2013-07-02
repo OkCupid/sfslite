@@ -563,15 +563,15 @@ rpc_traverse (T &t, u_int64_t &obj, const char *field = NULL)
 template<class T> inline bool
 rpc_traverse (T &t, double &obj, const char *field = NULL)
 {
-  int64_t d = 100000000;
-  double tmp = obj * d;
-  int64_t n = int64_t (tmp);
+  static_assert(sizeof(u_int64_t) == sizeof(double),
+                "Expected double to be 64 bits wide");
+  union { double f; u_int64_t i; } u = {obj};
   bool ret = true;
   rpc_enter_field (t, field);
-  if (!rpc_traverse (t, d) || !rpc_traverse (t, n)) {
+  if (!rpc_traverse (t, u.i)) {
     ret = false; 
   } else {
-    obj = (double)n / (double)d;
+    obj = u.i;
   }
   rpc_exit_field (t, field);
   return ret;
