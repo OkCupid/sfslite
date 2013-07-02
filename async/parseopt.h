@@ -267,7 +267,7 @@ public:
   { return insert (New conftab_int<P> (nm, dp, lb, ub)); }
 
   template<class P, class D>
-  conftab &add (const str &nm, P *dp, D lb, D ub, P def)
+  conftab &add (const str &nm, P *dp, D lb, D ub, D def)
   { return insert (New conftab_int<P> (nm, dp, lb, ub, def)); }
 
   template<class A>
