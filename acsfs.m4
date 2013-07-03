@@ -2050,7 +2050,7 @@ case $with_mode in
 		enable_shared=yes
 		DEBUG=-g
 		CXXDEBUG=-g
-		with_dmalloc=yes
+		with_dmalloc=no
 		;;
 
 	"profile" )
