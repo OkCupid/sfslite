@@ -29,6 +29,7 @@
 #include "str.h"
 #include "ihash.h"
 #include "amisc.h"
+#include "weak_template.h"
 
 class parseargs {
 
@@ -262,13 +263,14 @@ public:
   bool run (const str &file, u_int opts = 0, int fd = -1,
             status_t *sp = NULL);
 
-  template<class P, class D>
-  conftab &add (const str &nm, P *dp, D lb, D ub)
-  { return insert (New conftab_int<P> (nm, dp, lb, ub)); }
+  template<typename T>
+  conftab &add (const str &nm, T *dp, WEAK_TMPL(T) lb, WEAK_TMPL(T) ub)
+  { return insert (New conftab_int<T> (nm, dp, lb, ub)); }
 
-  template<class P, class D>
-  conftab &add (const str &nm, P *dp, D lb, D ub, D def)
-  { return insert (New conftab_int<P> (nm, dp, lb, ub, def)); }
+  template<typename T>
+  conftab &add (const str &nm, T *dp,
+    WEAK_TMPL(T) lb, WEAK_TMPL(T) ub, WEAK_TMPL(T) def
+  ) { return insert (New conftab_int<T> (nm, dp, lb, ub, def)); }
 
   template<class A>
   conftab &add (const str &nm, A a)

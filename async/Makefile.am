@@ -29,7 +29,7 @@ parseopt.h qhash.h refcnt.h rxx.h serial.h stllike.h str.h	\
 suio++.h sysconf.h union.h vatmpl.h vec.h rwfd.h litetime.h       	\
 corebench.h qtailq.h sfs_select.h rclist.h dynenum.h         \
 rctailq.h rctree.h sfs_bundle.h alog2.h sfs_profiler.h wide_str.h 	\
-sfs_const.h
+sfs_const.h weak_template.h
 
 #
 # begin sfslite changes

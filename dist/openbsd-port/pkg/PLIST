@@ -125,6 +125,7 @@ include/sfslite-${REV}/shared/wmstr.h
 include/sfslite-${REV}/shared/xdr_suio.h
 include/sfslite-${REV}/shared/xdrmisc.h
 include/sfslite-${REV}/shared/xhinfo.h
+include/sfslite-${REV}/shared/weak_template.h
 lib/sfslite
 lib/sfslite-${REV}/acsfs.m4
 lib/sfslite-${REV}/shared/aiod

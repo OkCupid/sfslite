@@ -135,6 +135,7 @@ include/sfslite-%%VERSION%%/%%TAG%%/rabin_fprint.h
 include/sfslite-%%VERSION%%/%%TAG%%/rabinpoly.h
 include/sfslite-%%VERSION%%/%%TAG%%/rexcommon.h
 include/sfslite-%%VERSION%%/%%TAG%%/sfssesscrypt.h
+include/sfslite-%%VERSION%%/%%TAG%%/weak_template.h
 lib/sfslite
 lib/sfslite-%%VERSION%%/acsfs.m4
 lib/sfslite-%%VERSION%%/%%TAG%%/aiod
