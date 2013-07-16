@@ -105,17 +105,12 @@ bool str::to_int32(int32_t* out, int base)
   char *ep;
   errno = 0;
   str s = *this;
-  if (s[0] == '-') {
-    /* negative numbers are not welcome here (thought strtoull will
-       strangely accept them */
-  } else {
-    int32_t v = strtol (s, &ep, 0);
-    if (errno == ERANGE || errno == EINVAL) {
-      /* no-op */
-    } else if (ep && *ep == '\0') {
-      *out = v;
-      ret = true;
-    }
+  int32_t v = strtol (s, &ep, base);
+  if (errno == ERANGE || errno == EINVAL) {
+    /* no-op */
+  } else if (ep && *ep == '\0') {
+    *out = v;
+    ret = true;
   }
   return ret;
 }
@@ -126,18 +121,14 @@ bool str::to_int64(int64_t* out, int base)
   char *ep;
   errno = 0;
   str s = *this;
-  if (s[0] == '-') {
-    /* negative numbers are not welcome here (thought strtoull will
-       strangely accept them */
-  } else {
-    int64_t v = strtoll (s, &ep, 0);
-    if (errno == ERANGE || errno == EINVAL) {
-      /* no-op */
-    } else if (ep && *ep == '\0') {
-      *out = v;
-      ret = true;
-    }
+  int64_t v = strtoll (s, &ep, base);
+  if (errno == ERANGE || errno == EINVAL) {
+    /* no-op */
+  } else if (ep && *ep == '\0') {
+    *out = v;
+    ret = true;
   }
+
   return ret;
 }
 
@@ -151,7 +142,7 @@ bool str::to_uint32(uint32_t* out, int base)
     /* negative numbers are not welcome here (thought strtoull will
        strangely accept them */
   } else {
-    u_int64_t v = strtoul (s, &ep, 0);
+    u_int64_t v = strtoul (s, &ep, base);
     if (errno == ERANGE || errno == EINVAL) {
       /* no-op */
     } else if (ep && *ep == '\0') {
@@ -172,7 +163,7 @@ bool str::to_uint64(uint64_t* out, int base)
     /* negative numbers are not welcome here (thought strtoull will
        strangely accept them */
   } else {
-    u_int64_t v = strtoull (s, &ep, 0);
+    u_int64_t v = strtoull (s, &ep, base);
     if (errno == ERANGE || errno == EINVAL) {
       /* no-op */
     } else if (ep && *ep == '\0') {
@@ -181,6 +172,19 @@ bool str::to_uint64(uint64_t* out, int base)
     }
   }
   return ret;
+}
+
+bool str::to_double(double* out)
+{
+    bool ret = false;
+    const char *start = cstr();
+    char *ep = NULL;
+    double d = strtod(start, &ep);
+    if (ep && *ep == '\0') {
+        ret = true;
+        *out = d;
+    }
+    return ret;
 }
 
 strbuf::strbuf (const char *fmt, ...)

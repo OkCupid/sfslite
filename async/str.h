@@ -154,11 +154,19 @@ public:
     return (u_char) *s - (u_char) *p;
   }
 
-  // Leaving base == 0 implies strtoull will auto-detect based on the prefix
-  bool to_int32(int32_t* out, int base = 0);
-  bool to_int64(int64_t* out, int base = 0);
-  bool to_uint32(uint32_t* out, int base = 0);
-  bool to_uint64(uint64_t* out, int base = 0);
+  // Setting base == 0 implies strtoull will auto-detect based on the string's
+  // prefix. Converting to double will always auto-detect the number base.
+  //
+  // Base prefixes:
+  //     010    Octal
+  //      10    Decimal
+  //    0x10    Hexadecimal
+
+  bool to_int32(int32_t* out, int base = 10);
+  bool to_int64(int64_t* out, int base = 10);
+  bool to_uint32(uint32_t* out, int base = 10);
+  bool to_uint64(uint64_t* out, int base = 10);
+  bool to_double(double* out);
 
   bool operator== (const str &s) const
     { return len () == s.len () && !memcmp (cstr (), s.cstr (), len ()); }
