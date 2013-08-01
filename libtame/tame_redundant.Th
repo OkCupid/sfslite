@@ -55,7 +55,8 @@ void redundant_caller_t<ResultType, TaskType>::task_wrapper(TaskType task) {
 tamed template<typename ResultType, typename TaskType>
 void redundant_caller_t<ResultType, TaskType>::timer_wrapper() {
     twait {
-        m_timer = delaycb(m_delay, 0, mkevent());
+        m_timer = delaycb(m_delay / 1000,
+                (m_delay % 1000) * 1000000, mkevent());
     }
     m_timer = NULL;
     m_monitor->trigger(true, ResultType());
