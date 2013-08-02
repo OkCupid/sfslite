@@ -17,9 +17,10 @@
  */
 
 template<typename ResultType, typename TaskType>
-struct redundant_caller_t {
+struct redundant_caller_t : public virtual refcount {
 
-    redundant_caller_t(size_t delay) : m_delay(delay), m_ctask(0), m_timer(NULL) { }
+    redundant_caller_t(size_t delay) 
+        : m_delay(delay), m_ctask(0), m_timer(NULL), m_complete(false) { }
     
     void operator()(typename event<ResultType>::ptr res_ev) {
         go(res_ev);
@@ -39,15 +40,22 @@ protected:
     vec<TaskType> m_tasks;
     timecb_t *m_timer;
     typename event<bool, ResultType>::ptr m_monitor;
+    bool m_complete;
 };
 
 //-----------------------------------------------------------------------------
 
 tamed template<typename ResultType, typename TaskType>
 void redundant_caller_t<ResultType, TaskType>::task_wrapper(TaskType task) {
-    tvars { ResultType res; }
+    tvars { 
+        ResultType res; 
+        ptr<redundant_caller_t<ResultType, TaskType>> p_this;
+    }
+
+    p_this = mkref(this);
     twait { task(mkevent(res)); }
-    m_monitor->trigger(false, res);
+    if (!m_complete)
+        m_monitor->trigger(false, res);
 }
 
 //-----------------------------------------------------------------------------
@@ -96,6 +104,7 @@ void redundant_caller_t<ResultType, TaskType>::go
     if (m_timer) {
         timecb_remove(m_timer);
     }
+    m_complete = true;
     res_ev->trigger(result);
 }
 
