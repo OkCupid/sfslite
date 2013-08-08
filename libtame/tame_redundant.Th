@@ -130,11 +130,13 @@ void redundant_caller_t<ResultType, TaskType>::task_wrapper(TaskType task,
         p_manager->inc ();
     }
     twait { task(mkevent(res, err)); }
+
+    if (!m_complete)
+        m_monitor->trigger(false, res, err);
+
     if (p_manager) {
         p_manager->dec();
     }
-    if (!m_complete)
-        m_monitor->trigger(false, res, err);
 }
 
 //-----------------------------------------------------------------------------
