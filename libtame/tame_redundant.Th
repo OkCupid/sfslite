@@ -85,7 +85,7 @@ public:
         : m_ctask(0), m_timer(NULL), m_complete(false) { }
 
     void operator()(typename event<ResultType, int>::ptr res_ev,
-            redundant_caller_manager_t <ResultType, TaskType>* manager=NULL) {
+            redundant_caller_manager_t <ResultType, TaskType>* manager) {
         go (res_ev, manager);
     }
     
@@ -98,11 +98,11 @@ public:
 protected:
     
     void go(typename event<ResultType, int>::ptr res_ev,
-            redundant_caller_manager_t <ResultType, TaskType>* manager=NULL,
+            redundant_caller_manager_t <ResultType, TaskType>* manager,
             CLOSURE);
     void timer_wrapper(CLOSURE); 
     void task_wrapper(TaskType task,
-            redundant_caller_manager_t <ResultType, TaskType>* manager=NULL,
+            redundant_caller_manager_t <ResultType, TaskType>* manager,
             CLOSURE);
 
     size_t m_delay;
@@ -171,13 +171,13 @@ void redundant_caller_t<ResultType, TaskType>::go (
     m_monitor = mkevent(rv, timer, result, err);
     m_monitor->set_reuse(true);
 
-    task_wrapper(m_tasks[m_ctask++]);
+    task_wrapper(m_tasks[m_ctask++], manager);
     timer_wrapper();
     while (true) {
         twait(rv);
         if (timer) {
             if (m_ctask < m_tasks.size()) {
-                task_wrapper(m_tasks[m_ctask++]);
+                task_wrapper(m_tasks[m_ctask++], manager);
                 timer_wrapper();
             } else {
             }
