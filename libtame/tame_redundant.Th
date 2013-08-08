@@ -30,10 +30,10 @@ public:
 
     void call (size_t index,
             size_t delay,
-            typename event<ResultType>::ptr res_ev, CLOSURE);
+            typename event<ResultType, int>::ptr res_ev, CLOSURE);
 
     redundant_caller_manager_t (size_t n) : count(0) {
-        callers = new redundant_caller_t <ResultType, TaskType>[n];
+        callers = New redundant_caller_t <ResultType, TaskType>[n];
     }
     void inc () {
         count++;
@@ -44,6 +44,13 @@ public:
         }
         if (!count) {
             delete [] callers;
+            callers = NULL;
+        }
+    }
+    virtual ~redundant_caller_manager_t () {
+        if (callers) {
+            delete [] callers;
+
         }
     }
 private:
@@ -56,15 +63,16 @@ tamed template<typename ResultType, typename TaskType>
 void redundant_caller_manager_t<ResultType, TaskType>::call (
     size_t index,
     size_t delay,
-    typename event<ResultType>::ptr res_ev) {
+    typename event<ResultType, int>::ptr res_ev) {
     tvars {
         ResultType result;
+        int err;
     }
     callers[index].set_delay(delay);
     twait {
-        (callers[index])(mkevent(result), this);
+        (callers[index])(mkevent(result, err), this);
     }
-    res_ev->trigger(result);
+    res_ev->trigger(result, err);
 }
 
 template<typename ResultType, typename TaskType>
@@ -76,7 +84,7 @@ public:
     redundant_caller_t() 
         : m_ctask(0), m_timer(NULL), m_complete(false) { }
 
-    void operator()(typename event<ResultType>::ptr res_ev,
+    void operator()(typename event<ResultType, int>::ptr res_ev,
             redundant_caller_manager_t <ResultType, TaskType>* manager=NULL) {
         go (res_ev, manager);
     }
@@ -89,7 +97,7 @@ public:
     }
 protected:
     
-    void go(typename event<ResultType>::ptr res_ev,
+    void go(typename event<ResultType, int>::ptr res_ev,
             redundant_caller_manager_t <ResultType, TaskType>* manager=NULL,
             CLOSURE);
     void timer_wrapper(CLOSURE); 
@@ -101,7 +109,7 @@ protected:
     size_t m_ctask;
     vec<TaskType> m_tasks;
     timecb_t *m_timer;
-    typename event<bool, ResultType>::ptr m_monitor;
+    typename event<bool, ResultType, int>::ptr m_monitor;
     bool m_complete;
 };
 
@@ -114,18 +122,19 @@ void redundant_caller_t<ResultType, TaskType>::task_wrapper(TaskType task,
     tvars { 
         ResultType res; 
         ptr<redundant_caller_manager_t <ResultType, TaskType>> p_manager(NULL);
+        int err(-1);
     }
     
     if (manager) {
         p_manager = mkref(manager);
         p_manager->inc ();
     }
-    twait { task(mkevent(res)); }
-    if (!m_complete)
-        m_monitor->trigger(false, res);
+    twait { task(mkevent(res, err)); }
     if (p_manager) {
         p_manager->dec();
     }
+    if (!m_complete)
+        m_monitor->trigger(false, res, err);
 }
 
 //-----------------------------------------------------------------------------
@@ -137,25 +146,27 @@ void redundant_caller_t<ResultType, TaskType>::timer_wrapper() {
                 (m_delay % 1000) * 1000000, mkevent());
     }
     m_timer = NULL;
-    m_monitor->trigger(true, ResultType());
+    m_monitor->trigger(true, ResultType(), 0);
 }
 
 //-----------------------------------------------------------------------------
 
 tamed template<typename ResultType, typename TaskType>
 void redundant_caller_t<ResultType, TaskType>::go (
-        typename event<ResultType>::ptr res_ev,
+        typename event<ResultType, int>::ptr res_ev,
         redundant_caller_manager_t <ResultType, TaskType>* manager) {
 
     tvars {
         rendezvous_t<> rv(__FILE__, __LINE__);
         bool timer(false);
         ResultType result;
+        int err;
     }
 
-    if (!m_tasks.size()) { res_ev->trigger(result); return; }
+    if (!m_tasks.size()) { res_ev->trigger(result, 0); return; }
 
-    m_monitor = mkevent(rv, timer, result);
+
+    m_monitor = mkevent(rv, timer, result, err);
     m_monitor->set_reuse(true);
 
     task_wrapper(m_tasks[m_ctask++]);
@@ -177,7 +188,7 @@ void redundant_caller_t<ResultType, TaskType>::go (
     }
     m_complete = true;
     rv.cancel();
-    res_ev->trigger(result);
+    res_ev->trigger(result, err);
 }
 
 #endif
