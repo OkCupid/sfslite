@@ -16,48 +16,116 @@
  * have them race. 
  */
 
+
+template<typename ResultType, typename TaskType>
+struct redundant_caller_t;
+
+
+template<typename ResultType, typename TaskType>
+struct redundant_caller_manager_t : public virtual refcount {
+public:
+    void add_task(size_t index, const TaskType& task) {
+        callers[index] += task;
+    }
+
+    void call (size_t index,
+            size_t delay,
+            typename event<ResultType>::ptr res_ev, CLOSURE);
+
+    redundant_caller_manager_t (size_t n) : count(0) {
+        callers = new redundant_caller_t <ResultType, TaskType>[n];
+    }
+    void inc () {
+        count++;
+    }
+    void dec () {
+        if (count > 0) {
+            count--;
+        }
+        if (!count) {
+            delete [] callers;
+        }
+    }
+private:
+    size_t count;
+    redundant_caller_t <ResultType, TaskType>* callers;
+};
+
+
+tamed template<typename ResultType, typename TaskType>
+void redundant_caller_manager_t<ResultType, TaskType>::call (
+    size_t index,
+    size_t delay,
+    typename event<ResultType>::ptr res_ev) {
+    tvars {
+        ResultType result;
+    }
+    callers[index].set_delay(delay);
+    twait {
+        (callers[index])(mkevent(result), this);
+    }
+    res_ev->trigger(result);
+}
+
 template<typename ResultType, typename TaskType>
 struct redundant_caller_t {
-
+public:
     redundant_caller_t(size_t delay) 
-        : m_delay(delay), m_ctask(0), m_timer(NULL) { }
+        : m_delay(delay), m_ctask(0), m_timer(NULL), m_complete(false) { }
     
     redundant_caller_t() 
-        : m_ctask(0), m_timer(NULL) { }
+        : m_ctask(0), m_timer(NULL), m_complete(false) { }
 
-    void operator()(typename event<ResultType>::ptr res_ev) {
-        go(res_ev);
+    void operator()(typename event<ResultType>::ptr res_ev,
+            redundant_caller_manager_t <ResultType, TaskType>* manager=NULL) {
+        go (res_ev, manager);
     }
+    
     void operator+=(const TaskType& t) {
         m_tasks.push_back(t);
     }
     void set_delay(size_t delay) {
         m_delay = delay;
     }
-
 protected:
     
-    void go(typename event<ResultType>::ptr res_ev, CLOSURE);
+    void go(typename event<ResultType>::ptr res_ev,
+            redundant_caller_manager_t <ResultType, TaskType>* manager=NULL,
+            CLOSURE);
     void timer_wrapper(CLOSURE); 
-    void task_wrapper(TaskType task, CLOSURE);
+    void task_wrapper(TaskType task,
+            redundant_caller_manager_t <ResultType, TaskType>* manager=NULL,
+            CLOSURE);
 
     size_t m_delay;
     size_t m_ctask;
     vec<TaskType> m_tasks;
     timecb_t *m_timer;
     typename event<bool, ResultType>::ptr m_monitor;
+    bool m_complete;
 };
 
 //-----------------------------------------------------------------------------
 
+
 tamed template<typename ResultType, typename TaskType>
-void redundant_caller_t<ResultType, TaskType>::task_wrapper(TaskType task) {
+void redundant_caller_t<ResultType, TaskType>::task_wrapper(TaskType task,
+        redundant_caller_manager_t <ResultType, TaskType>* manager) {
     tvars { 
         ResultType res; 
+        ptr<redundant_caller_manager_t <ResultType, TaskType>> p_manager(NULL);
     }
-
+    
+    if (manager) {
+        p_manager = mkref(manager);
+        p_manager->inc ();
+    }
     twait { task(mkevent(res)); }
-    m_monitor->trigger(false, res);
+    if (!m_complete)
+        m_monitor->trigger(false, res);
+    if (p_manager) {
+        p_manager->dec();
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -75,8 +143,9 @@ void redundant_caller_t<ResultType, TaskType>::timer_wrapper() {
 //-----------------------------------------------------------------------------
 
 tamed template<typename ResultType, typename TaskType>
-void redundant_caller_t<ResultType, TaskType>::go
-    (typename event<ResultType>::ptr res_ev) {
+void redundant_caller_t<ResultType, TaskType>::go (
+        typename event<ResultType>::ptr res_ev,
+        redundant_caller_manager_t <ResultType, TaskType>* manager) {
 
     tvars {
         rendezvous_t<> rv(__FILE__, __LINE__);
@@ -106,6 +175,7 @@ void redundant_caller_t<ResultType, TaskType>::go
     if (m_timer) {
         timecb_remove(m_timer);
     }
+    m_complete = true;
     rv.cancel();
     res_ev->trigger(result);
 }
