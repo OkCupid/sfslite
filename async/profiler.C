@@ -583,9 +583,7 @@ sfs_profiler_obj_t::schedule_next_event ()
 {
   struct itimerval val;
 
-  long rsz = _interval_us * RANGE_SIZE_PCT / 100;
-  long offset = random () % rsz - (rsz/2);
-  long interval = fix_interval (offset + _interval_us);
+  long interval = fix_interval (_interval_us);
 
   val.it_value.tv_usec = interval;
   val.it_value.tv_sec = 0;

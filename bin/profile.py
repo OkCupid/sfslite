@@ -458,7 +458,7 @@ class Graph:
                 
                 for trip in dat.split (";"):
                     v = split_to_ints (trip.strip ())
-                    if len (v) == 3:
+                    if v != None and len (v) == 3:
                         edges.append (tuple(v))
 
         self._sites = {}
@@ -480,6 +480,8 @@ class Graph:
         for k in sites.keys ():
 
             (file_id, addr) = sites[k]
+            if files.get(file_id) == None:
+                continue;
             file = files[file_id]
             addr = file.applyOffset (addr)
 
@@ -558,6 +560,9 @@ class Graph:
         self._edges = {}
         for e in edges:
             hits = e[2]
+            if self._sites.get(e[0]) == None or self._sites.get(e[1]) == None:
+                continue;
+
             caller = self._sites[e[0]].node ()
             callee = self._sites[e[1]].node ()
             if caller and callee:
