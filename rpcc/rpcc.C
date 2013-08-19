@@ -77,9 +77,9 @@ setstdout ()
 {
   if (outfile[0] != '|') {
     int fd;
-    unlink (outfile);
-    if ((fd = open (outfile, O_CREAT|O_WRONLY, 0666)) < 0) {
-      perror (outfile);
+    unlink (outfile.cstr());
+    if ((fd = open (outfile.cstr(), O_CREAT|O_WRONLY, 0666)) < 0) {
+      perror (outfile.cstr());
       exit (1);
     }
     if (fd != 1) {
@@ -104,7 +104,8 @@ setstdout ()
       dup2 (fds[1], 0);
       if (fds[1])
         close (fds[1]);
-      execl (shell, shell, "-c", outfile.cstr () + 1, (char *) NULL);
+      execl (shell.cstr(), shell.cstr(), "-c", outfile.cstr () + 1,
+             (char *) NULL);
       exit (1);
     }
     close (fds[1]);
@@ -119,7 +120,7 @@ static void
 cleanup ()
 {
   if (outfile)
-    unlink (outfile);
+    unlink (outfile.cstr());
 }
 
 static void

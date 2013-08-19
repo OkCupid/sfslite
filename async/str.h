@@ -26,6 +26,17 @@
 #ifndef _ASYNC_STR_H_
 #define _ASYNC_STR_H_ 1
 
+#ifndef DEPRECATED
+#ifdef __clang__
+// For some reason we are compiling with the deprecated flag turned off
+// so we use unavailable instead.
+#pragma clang diagnostic error "-Wdeprecated-declarations"
+#define DEPRECATED(_msg)  __attribute__((deprecated(_msg)))
+#else
+#define DEPRECATED(_msg)
+#endif // __clang__
+#endif // DEPRECATED
+
 #include "suio++.h"
 #include "keyfunc.h"
 #include "stllike.h"
@@ -134,7 +145,11 @@ public:
 
   size_t len () const { return b->len; }
   const char *cstr () const { return b ? b->dat () : NULL; }
-  operator const char *() const { return cstr (); }
+  operator const char *() const
+  DEPRECATED("use cstr instead.")
+  {
+    return cstr ();
+  }
   char operator[] (ptrdiff_t n) const {
 #ifdef CHECK_BOUNDS
     assert (size_t (n) <= b->len);
@@ -171,6 +186,9 @@ public:
   bool to_uint32(uint32_t* out, int base = 10);
   bool to_uint64(uint64_t* out, int base = 10);
   bool to_double(double* out);
+
+  bool operator! () const { return !b; }
+  explicit operator bool() const { return b; }
 
   bool operator== (const str &s) const
     { return len () == s.len () && !memcmp (cstr (), s.cstr (), len ()); }

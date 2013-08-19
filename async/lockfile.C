@@ -54,7 +54,7 @@ checkstat (const str &path, const struct stat &sb)
 lockfile::~lockfile ()
 {
   if (fdok () && (islocked || acquire (false)))
-    unlink (path);
+    unlink (path.cstr());
   closeit ();
 }
 
@@ -67,7 +67,7 @@ lockfile::openit ()
     closeit ();
 
   errno = 0;
-  if (lstat (path, &sb) >= 0 && !checkstat (path, sb))
+  if (lstat (path.cstr(), &sb) >= 0 && !checkstat (path.cstr(), sb))
     return false;
   else if (errno && errno != ENOENT) {
     warn << path << ": " << strerror (errno) << "\n";
@@ -78,14 +78,14 @@ lockfile::openit ()
    * LOCK_SH.  Anyone with read permission to a file can flock it
    * with LOCK_SH, thereby blocking those with write permission who
    * want to lock it with LOCK_EX. */
-  fd = open (path, O_RDWR|O_CREAT, 0600);
+  fd = open (path.cstr(), O_RDWR|O_CREAT, 0600);
   if (fd < 0) {
     warn << path << ": " << strerror (errno) << "\n";
     return false;
   }
   close_on_exec (fd);
   errno = 0;
-  if (fstat (fd, &sb) < 0 || !checkstat (path, sb)) {
+  if (fstat (fd, &sb) < 0 || !checkstat (path.cstr(), sb)) {
     if (errno)
       warn << "fstat (" << path << "): " << strerror (errno) << "\n";
     closeit ();
@@ -121,7 +121,7 @@ lockfile::acquire (bool wait)
       return false;
     }
 
-    utimes (path, NULL);
+    utimes (path.cstr(), NULL);
     islocked = true;
   }
 }
@@ -139,7 +139,7 @@ bool
 lockfile::fdok ()
 {
   struct stat sb, fsb;
-  if (fd < 0 || stat (path, &sb) < 0 || fstat (fd, &fsb) < 0
+  if (fd < 0 || stat (path.cstr(), &sb) < 0 || fstat (fd, &fsb) < 0
       || !stat_unchanged (&sb, &fsb)) {
     closeit ();
     return false;

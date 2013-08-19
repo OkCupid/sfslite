@@ -418,7 +418,7 @@ aiosrv::pathop (aiomsg_t msg)
   case AIOD_STATVFS: 
     {
       str s = rq->path1 ();
-      int rc = statvfs (s, rq->statvfsbuf ());
+      int rc = statvfs (s.cstr(), rq->statvfsbuf ());
       if (rc != 0) {
 	warn ("statvfs('%s') failed: %m\n", s.cstr ());
       } else {

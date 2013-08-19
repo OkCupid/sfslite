@@ -91,15 +91,15 @@ execok (const char *path)
 static str
 searchdir (str dir, str prog)
 {
-  DIR *dirp = opendir (dir);
+  DIR *dirp = opendir (dir.cstr());
   if (!dirp)
     return NULL;
   while (dirent *dp = readdir (dirp)) {
     struct stat sb;
     str file = dir << "/" << dp->d_name;
     str np;
-    if (!stat (file, &sb) && S_ISDIR (sb.st_mode)
-	&& execok (np = file << prog)) {
+    if (!stat (file.cstr(), &sb) && S_ISDIR (sb.st_mode)
+&& execok ((np = file << prog).cstr())) {
       closedir (dirp);
       return np;
     }
@@ -112,14 +112,14 @@ searchdir (str dir, str prog)
 str
 fix_exec_path (str path, str dir)
 {
-  const char *prog = strrchr (path, '/');
+  const char *prog = strrchr (path.cstr(), '/');
   if (prog)
     return path;
 
   if (!dir)
     dir = execdir;
   path = dir << "/" << path;
-  prog = strrchr (path, '/');
+  prog = strrchr (path.cstr(), '/');
   if (!prog)
     panic ("No EXECDIR for unqualified path %s.\n", path.cstr ());
 
@@ -127,10 +127,10 @@ fix_exec_path (str path, str dir)
   if (builddir && dir == execdir) {
     str np;
     np = builddir << prog;
-    if (execok (np))
+    if (execok (np.cstr()))
       return np;
     np = builddir << prog << prog;
-    if (execok (np))
+    if (execok (np.cstr()))
       return np;
     if ((np = searchdir (builddir, prog)))
       return np;
@@ -149,7 +149,7 @@ find_program (const char *program)
   str r;
   if (strchr (program, '/')) {
     r = program;
-    if (execok (r))
+    if (execok (r.cstr()))
       return r;
     return NULL;
   }
@@ -157,13 +157,13 @@ find_program (const char *program)
 #ifdef MAINTAINER
   if (builddir) {
     r = fix_exec_path (program);
-    if (execok (r))
+    if (execok (r.cstr()))
       return r;
   }
 #endif /* MAINTAINER */
   if (progdir) {
     r = progdir << program;
-    if (execok (r))
+    if (execok (r.cstr()))
       return r;
   }
 
@@ -176,7 +176,7 @@ find_program (const char *program)
     if (!*sp || !sp->len ())
       continue;
     r = *sp << "/" << program;
-    if (execok (r))
+    if (execok (r.cstr()))
       return r;
   }
   return NULL;
@@ -186,7 +186,7 @@ str
 find_program_plus_libsfs (const char *program)
 {
   str s = fix_exec_path (program);
-  if (!s || !execok (s))
+  if (!s || !execok (s.cstr()))
     s = find_program (program);
   return s;
 }

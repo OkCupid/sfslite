@@ -256,8 +256,8 @@ srp_server::sane (str info)
   rxx r (srpinforx);
   if (!info || !r.search (info))
     return false;
-  bigint N (r[1]);
-  bigint g (r[2]);
+  bigint N (r[1].cstr());
+  bigint g (r[2].cstr());
   if (!checkparam (N, g, 0))
     return false;
   return true;
@@ -271,7 +271,7 @@ srp_server::init (srpmsg *msgout, const srpmsg *msgin,
   if (msgin->size () || !info || !info.len ())
     return SRP_FAIL;
   rxx r (srpinforx);
-  if (!r.search (info) || !(N = r[1], g = r[2], checkparam (1))) {
+  if (!r.search (info) || !(N = r[1].cstr(), g = r[2].cstr(), checkparam (1))) {
     /* Unnecessary sanity check */
     warn << "Bad SRP parameters for user " << uu << "\n";
     return SRP_FAIL;
@@ -279,7 +279,7 @@ srp_server::init (srpmsg *msgout, const srpmsg *msgin,
   user = uu;
   salt = r[3];
   sessid = sid;
-  v = r[4];
+  v = r[4].cstr();
 
   srp_msg1 m;
   m.salt = salt;

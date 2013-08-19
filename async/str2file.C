@@ -32,10 +32,10 @@ mktmp_atomic (str tmpfile, int perm)
 
   for (;;) {
     for (;;) {
-      if ((fd = open (tmpfile, O_CREAT|O_EXCL|O_WRONLY, perm)) >= 0
+      if ((fd = open (tmpfile.cstr(), O_CREAT|O_EXCL|O_WRONLY, perm)) >= 0
 	  || errno != EEXIST)
 	return fd;
-      if (lstat (tmpfile, &sb1) >= 0) {
+      if (lstat (tmpfile.cstr(), &sb1) >= 0) {
 	if (!S_ISREG (sb1.st_mode)) {
 	  errno = EEXIST;
 	  return -1;
@@ -47,11 +47,11 @@ mktmp_atomic (str tmpfile, int perm)
     }
 
     for (;;) {
-      if ((fd = open (tmpfile, O_CREAT|O_EXCL|O_WRONLY, perm)) >= 0
+      if ((fd = open (tmpfile.cstr(), O_CREAT|O_EXCL|O_WRONLY, perm)) >= 0
 	  || errno != EEXIST)
 	return fd;
       sleep (1);
-      if (lstat (tmpfile, &sb2) < 0) {
+      if (lstat (tmpfile.cstr(), &sb2) < 0) {
 	if (errno != ENOENT)
 	  return -1;
 	continue;
@@ -63,7 +63,7 @@ mktmp_atomic (str tmpfile, int perm)
       if (sb1.st_dev != sb2.st_dev || sb1.st_ino != sb2.st_ino
 	  || sb1.st_size != sb2.st_size)
 	sb1 = sb2;
-      else if (unlink (tmpfile) >= 0) {
+      else if (unlink (tmpfile.cstr()) >= 0) {
 	sleep (1);
 	break;
       }
@@ -75,7 +75,7 @@ bool
 str2file (str file, str s, int perm, bool excl, struct stat *sbp, bool binary,
 	  bool do_fsync)
 {
-  if (!file.len () || file.len () < strlen (file)) {
+  if (!file.len () || file.len () < strlen (file.cstr())) {
     errno = EINVAL;
     return false;
   }
@@ -85,10 +85,10 @@ str2file (str file, str s, int perm, bool excl, struct stat *sbp, bool binary,
   }
 
   str tmpfile = file << "~";
-  unlink (tmpfile);
+  unlink (tmpfile.cstr());
   int fd;
   if (excl)
-    fd = open (tmpfile, O_CREAT|O_EXCL|O_WRONLY, perm);
+    fd = open (tmpfile.cstr(), O_CREAT|O_EXCL|O_WRONLY, perm);
   else
     fd = mktmp_atomic (tmpfile, perm);
   if (fd < 0)
@@ -96,7 +96,7 @@ str2file (str file, str s, int perm, bool excl, struct stat *sbp, bool binary,
 
   if (write (fd, s.cstr (), s.len ()) != int (s.len ())) {
     close (fd);
-    unlink (tmpfile);
+    unlink (tmpfile.cstr());
     return false;
   }
   if (s.len () && s[s.len () - 1] != '\n' && !binary)
@@ -104,20 +104,20 @@ str2file (str file, str s, int perm, bool excl, struct stat *sbp, bool binary,
   int err = do_fsync ? fsync (fd) : 0;
   if (sbp && !err)
     err = fstat (fd, sbp);
-  if (close (fd) < 0 || err < 0 || (excl && link (tmpfile, file) < 0)
-      || (!excl && rename (tmpfile, file) < 0)) {
-    unlink (tmpfile);
+  if (close (fd) < 0 || err < 0 || (excl && link (tmpfile.cstr(), file.cstr()) < 0)
+      || (!excl && rename (tmpfile.cstr(), file.cstr()) < 0)) {
+    unlink (tmpfile.cstr());
     return false;
   }
   if (excl)
-    unlink (tmpfile);
+    unlink (tmpfile.cstr());
   return true;
 }
 
 str
 file2str (str file)
 {
-  int fd = open (file, O_RDONLY, 0);
+  int fd = open (file.cstr(), O_RDONLY, 0);
   if (fd < 0)
     return NULL;
 

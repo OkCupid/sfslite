@@ -154,7 +154,7 @@ public:
 
   const char *cstr (const int base = 16,
 		    const mutablestr &ms = mutablestr ()) const
-    { return ms.s = getstr (base); }
+  { return (ms.s = getstr (base)).cstr(); }
 
   str getraw () const {
     size_t size = mpz_rawsize (this);
@@ -162,7 +162,7 @@ public:
     mpz_get_raw (ret, size, this);
     return ret;
   };
-  void setraw (str s) { mpz_set_raw (this, s, s.len ()); }
+  void setraw (str s) { mpz_set_raw (this, s.cstr(), s.len ()); }
 
 #define ASSOPX(X, fn)				\
   bigint &operator X (const bigint &b)		\

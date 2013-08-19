@@ -1579,7 +1579,7 @@ dump_c_enum (const rpc_enum *rs, bool d)
     else if (lastval && (isdigit (lastval[0]) || lastval[0] == '-'
 			 || lastval[0] == '+')) {
      
-      long l = strtol (lastval, NULL, 0) + ctr ++;
+      long l = strtol (lastval.cstr(), NULL, 0) + ctr ++;
       b << l;
       ev = b;
       if (d)
@@ -1985,7 +1985,7 @@ makemodulename (str fname)
   static rxx x2 ("(.*?).[a-zA-Z]+");
   static rxx x3 ("([a-zA-Z0-9_]+)");
 
-  if ((p = strrchr (fname, '/')))
+  if ((p = strrchr (fname.cstr(), '/')))
     p++;
   else p = fname;
 
@@ -2162,7 +2162,7 @@ makehdrname (str fname)
 
   if (!x.match (fname)) {
     // old-style translation
-    if ((p = strrchr (fname, '/')))
+    if ((p = strrchr (fname.cstr(), '/')))
       p++;
     else p = fname;
     
@@ -2268,7 +2268,7 @@ makeguard (str fname)
   strbuf guard;
   const char *p;
 
-  if ((p = strrchr (fname, '/')))
+  if ((p = strrchr (fname.cstr(), '/')))
     p++;
   else p = fname;
 

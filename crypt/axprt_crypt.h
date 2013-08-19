@@ -56,7 +56,7 @@ public:
   void encrypt (const void *sendkey, size_t sendkeylen,
 		const void *recvkey, size_t recvkeylen);
   void encrypt (const str &sendkey, const str &recvkey)
-    { encrypt (sendkey, sendkey.len (), recvkey, recvkey.len ()); }
+  { encrypt (sendkey.cstr(), sendkey.len (), recvkey.cstr(), recvkey.len ()); }
 
   static ref<axprt_crypt> alloc (int, size_t = axprt_stream::defps);
 };

@@ -152,7 +152,7 @@ parseargs::error (str msg)
 parseargs::parseargs (str file, int fd)
   : buf (NULL), lim (buf), p (buf), filename (file), lineno (0)
 {
-  if (fd == -1 && (fd = open (file, O_RDONLY, 0)) < 0)
+  if (fd == -1 && (fd = open (file.cstr(), O_RDONLY, 0)) < 0)
     error (strbuf ("%m"));
 
   // XXX - should fstat fd for initial size, to optimize for common case

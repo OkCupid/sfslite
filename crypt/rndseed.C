@@ -126,7 +126,7 @@ random_set_seedfile (str path)
     path = strbuf () << home << (path.cstr () + 1);
   }
 
-  int fd = open (path, O_CREAT|O_RDWR, 0600);
+  int fd = open (path.cstr(), O_CREAT|O_RDWR, 0600);
   if (fd < 0) {
     warn ("%s: %m\n", path.cstr ());
     return;

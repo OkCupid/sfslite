@@ -119,7 +119,7 @@ timestring ()
   clock_gettime (CLOCK_REALTIME, &ts);
   static str buf;
   buf = strbuf ("%d.%06d", int (ts.tv_sec), int (ts.tv_nsec/1000));
-  return buf;
+  return buf.cstr();
 }
 
 /*

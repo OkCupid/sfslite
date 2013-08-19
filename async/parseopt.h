@@ -69,6 +69,10 @@ convertint (const char *cp, T *resp, int base = 0)
   return true;
 }
 
+template<class T> bool
+convertint (const str &s, T *resp, int base = 0)
+{ return convertint(s.cstr(), resp, base); }
+
 void mytolower (char *dest, const char *src);
 str mytolower (const str &in);
 

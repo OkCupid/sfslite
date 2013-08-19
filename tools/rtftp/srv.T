@@ -665,7 +665,7 @@ gname2gid (const str &g)
 {
   struct group *gr;
   int ret = -1;
-  if ((gr = getgrnam (g))) {
+  if ((gr = getgrnam (g.cstr()))) {
     ret = gr->gr_gid;
   }
   endgrent ();
@@ -679,7 +679,7 @@ uname2uid (const str &n)
 {
   struct passwd *pw;
   int ret = -1;
-  if ((pw = getpwnam (n))) {
+  if ((pw = getpwnam (n.cstr()))) {
     ret = pw->pw_uid;
   }
   endpwent ();

@@ -105,7 +105,7 @@ bool str::to_int32(int32_t* out, int base)
   char *ep;
   errno = 0;
   str s = *this;
-  int32_t v = strtol (s, &ep, base);
+  int32_t v = strtol (s.cstr(), &ep, base);
   if (errno == ERANGE || errno == EINVAL) {
     /* no-op */
   } else if (ep && *ep == '\0') {
@@ -121,7 +121,7 @@ bool str::to_int64(int64_t* out, int base)
   char *ep;
   errno = 0;
   str s = *this;
-  int64_t v = strtoll (s, &ep, base);
+  int64_t v = strtoll (s.cstr(), &ep, base);
   if (errno == ERANGE || errno == EINVAL) {
     /* no-op */
   } else if (ep && *ep == '\0') {
@@ -142,7 +142,7 @@ bool str::to_uint32(uint32_t* out, int base)
     /* negative numbers are not welcome here (thought strtoull will
        strangely accept them */
   } else {
-    u_int64_t v = strtoul (s, &ep, base);
+    u_int64_t v = strtoul (s.cstr(), &ep, base);
     if (errno == ERANGE || errno == EINVAL) {
       /* no-op */
     } else if (ep && *ep == '\0') {
@@ -163,7 +163,7 @@ bool str::to_uint64(uint64_t* out, int base)
     /* negative numbers are not welcome here (thought strtoull will
        strangely accept them */
   } else {
-    u_int64_t v = strtoull (s, &ep, base);
+    u_int64_t v = strtoull (s.cstr(), &ep, base);
     if (errno == ERANGE || errno == EINVAL) {
       /* no-op */
     } else if (ep && *ep == '\0') {
@@ -210,13 +210,13 @@ strbuf::fmt (const char *fmt, ...) const
 const char *
 cstr (const str s)
 {
-  return s;
+  return s.cstr();
 }
 
 const char *
 cstrp (const str *s)
 {
-  return *s;
+  return s->cstr();
 }
 
 //-----------------------------------------------------------------------

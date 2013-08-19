@@ -437,7 +437,7 @@ xdr2str (const T &t, bool scrub = false)
 template<class T> bool
 str2xdr (T &t, const str &s)
 {
-  xdrmem x (s, s.len ());
+  xdrmem x (s.cstr(), s.len ());
   XDR *xp = &x;
   return rpc_traverse (xp, t);
 }

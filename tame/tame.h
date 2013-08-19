@@ -245,7 +245,7 @@ public:
   str type_without_pointer (bool usetmpl=true) const;
   void set_base_type (const str &t) { _base_type = t; }
   void set_pointer (const str &p) { _pointer = p; }
-  bool is_complete () const { return _base_type; }
+  bool is_complete () const { return bool(_base_type); }
   bool is_void () const 
   { return (_base_type == "void" && (!_pointer || _pointer.len () == 0)); } 
   bool is_ref () const { return _pointer && strchr (_pointer.cstr (), '&'); }

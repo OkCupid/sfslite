@@ -152,7 +152,7 @@ parseconfig (const char *dir, const char *file)
   else
     cf = strbuf ("%s/%s", dir, file);
 
-  if (access (cf, F_OK) < 0) {
+  if (access (cf.cstr(), F_OK) < 0) {
     if (errno != ENOENT)
       warn << cf << ": " << strerror (errno) << "\n";
     return false;
@@ -174,7 +174,7 @@ parseconfig (const char *dir, const char *file)
   int line;
   vec<str> av;
   while (pa.getline (&av, &line)) {
-    if (!strcasecmp (av[0], "sfsuser")) {
+    if (!strcasecmp (av[0].cstr(), "sfsuser")) {
       if (uid) {
 	errors = true;
 	warn << cf << ":" << line << ": Duplicate sfsuser directive\n";
@@ -190,7 +190,7 @@ parseconfig (const char *dir, const char *file)
 	warn << cf << ":" << line << ": usage: sfsuser user [group]\n";
       }
     }
-    else if (!strcasecmp (av[0], "anonuser")) {
+    else if (!strcasecmp (av[0].cstr(), "anonuser")) {
       if (nuid) {
 	errors = true;
 	warn << cf << ":" << line << ": Duplicate anonuser directive\n";
@@ -210,7 +210,7 @@ parseconfig (const char *dir, const char *file)
       gid_t g = 0;
       if (ngid) {
 	if (!convertint (ngid, &g)) {
-	  if (struct group *gr = getgrnam (ngid))
+	  if (struct group *gr = getgrnam (ngid.cstr()))
 	    g = gr->gr_gid;
 	  else {
 	    errors = true;
@@ -222,7 +222,7 @@ parseconfig (const char *dir, const char *file)
 
       uid_t u;
       if (!convertint (nuid, &u)) {
-	struct passwd *pw = getpwnam (nuid);
+        struct passwd *pw = getpwnam (nuid.cstr());
 	if (!pw) {
 	  errors = true;
 	  warn << cf << ":" << line << ": no user " << nuid << "\n";
@@ -244,7 +244,7 @@ parseconfig (const char *dir, const char *file)
 	continue;
       }
     }
-    else if (!strcasecmp (av[0], "resvgids")) {
+    else if (!strcasecmp (av[0].cstr(), "resvgids")) {
       if (resvgidhigh) {
 	errors = true;
 	warn << cf << ":" << line << ": Duplicate resvgids directive\n";
@@ -282,15 +282,15 @@ mksfsdir (str path, mode_t mode, struct stat *sbp, uid_t uid)
 
   mode_t m = umask (0);
   struct stat sb;
-  if (stat (path, &sb) < 0) {
-    if (errno != ENOENT || (mkdir (path, mode) < 0 && errno != EEXIST))
+  if (stat (path.cstr(), &sb) < 0) {
+    if (errno != ENOENT || (mkdir (path.cstr(), mode) < 0 && errno != EEXIST))
       fatal ("%s: %m\n", path.cstr ());
-    if (chown (path, uid, sfs_gid) < 0) {
+    if (chown (path.cstr(), uid, sfs_gid) < 0) {
       int saved_errno = errno;
-      rmdir (path);
+      rmdir (path.cstr());
       fatal ("chown (%s): %s\n", path.cstr (), strerror (saved_errno));
     }
-    if (stat (path, &sb) < 0)
+    if (stat (path.cstr(), &sb) < 0)
       fatal ("stat (%s): %m\n", path.cstr ());
   }
   umask (m);
@@ -344,7 +344,7 @@ sfsconst_init (bool lite_mode)
     sfssockdir = sfsdir;
     etc3dir = etc1dir;
     etc1dir = sfsdir;
-    etc2dir = xstrdup (str (builddir << "/etc"));
+    etc2dir = xstrdup ((str (builddir << "/etc")).cstr());
   }
 #endif /* MAINTAINER */
   if (char *ps = safegetenv ("SFS_PORT"))
@@ -353,15 +353,15 @@ sfsconst_init (bool lite_mode)
 
   str sfs_config = safegetenv ("SFS_CONFIG");
   if (sfs_config && sfs_config[0] == '/') {
-    if (!parseconfig (NULL, sfs_config))
+    if (!parseconfig (NULL, sfs_config.cstr()))
       fatal << sfs_config << ": " << strerror (errno) << "\n";
   }
   else {
-    if (!parseconfig (etc3dir, sfs_config)) {
+    if (!parseconfig (etc3dir, sfs_config.cstr())) {
       parseconfig (etc3dir, "sfs_config");
-      if (!parseconfig (etc2dir, sfs_config)) {
+      if (!parseconfig (etc2dir, sfs_config.cstr())) {
 	parseconfig (etc2dir, "sfs_config");
-	if (!parseconfig (etc1dir, sfs_config)) 
+	if (!parseconfig (etc1dir, sfs_config.cstr())) 
 	  parseconfig (etc1dir, "sfs_config");
       }
     }
@@ -382,9 +382,9 @@ sfsconst_init (bool lite_mode)
     mksfsdir (sfsdir, 0755);
     mksfsdir (sfssockdir, 0750);
   }
-  else if (runinplace && access (sfsdir, 0) < 0) {
+  else if (runinplace && access (sfsdir.cstr(), 0) < 0) {
     struct stat sb;
-    if (!stat (builddir, &sb)) {
+    if (!stat (builddir.cstr(), &sb)) {
       mode_t m = umask (0);
       if (!getuid ()) {
 	if (pid_t pid = fork ())
@@ -393,13 +393,13 @@ sfsconst_init (bool lite_mode)
 	  umask (0);
 	  setgid (sfs_gid);
 	  setuid (sb.st_uid);
-	  if (mkdir (sfsdir, 02770) >= 0)
-	    rc_ignore (chown (sfsdir, (uid_t) -1, sfs_gid));
+	  if (mkdir (sfsdir.cstr(), 02770) >= 0)
+	    rc_ignore (chown (sfsdir.cstr(), (uid_t) -1, sfs_gid));
 	  _exit (0);
 	}
       }
       else
-	mkdir (sfsdir, 0777);
+        mkdir (sfsdir.cstr(), 0777);
       umask (m);
     }
   }
@@ -425,13 +425,13 @@ sfsconst_etcfile (const char *name, const char *const *path)
   str file;
   if (name[0] == '/') {
     file = name;
-    if (!access (file, F_OK))
+    if (!access (file.cstr(), F_OK))
       return file;
     return NULL;
   }
   for (const char *const *d = path; *d; d++) {
     file = strbuf ("%s/%s", *d, name);
-    if (!access (file, F_OK))
+    if (!access (file.cstr(), F_OK))
       return file;
     if (errno != ENOENT)
       fatal << file << ": " << strerror (errno) << "\n";

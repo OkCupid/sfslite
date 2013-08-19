@@ -291,7 +291,7 @@ bool
 get2_cli_t::init ()
 {
   bool rc;
-  if (chdir (_dir) != 0) {
+  if (chdir (_dir.cstr()) != 0) {
     warn ("cannot chdir to directory %s: %m\n", _dir.cstr ());
     rc = false;
   } else {
@@ -305,7 +305,7 @@ bool
 get_cli_t::init ()
 {
   bool rc;
-  if (chdir (_dir) != 0) {
+  if (chdir (_dir.cstr()) != 0) {
     warn ("cannot chdir to directory %s: %m\n", _dir.cstr ());
     rc = false;
   } else {

@@ -117,7 +117,7 @@ aiod::daemon::launch (str path, int shmfd, int commonfd, bool skip_sigs)
   *avp++ = const_cast<char *> (rwfdarg.cstr ());
   *avp++ = NULL;
 
-  pid = spawn (path, av);
+  pid = spawn (path.cstr(), av);
   close (fds[1]);
   if (pid < 0) {
     warn << path << ": " << strerror (errno) << "\n";
@@ -151,7 +151,7 @@ aiod::aiod (u_int nproc, ssize_t shmsize, size_t mb, bool sp,
       tmpdir = strbuf () << tmpdir << "aioshmXXXXXXXX";
     else
       tmpdir = strbuf () << tmpdir << "/aioshmXXXXXXXX";
-    char *temp = xstrdup (tmpdir);
+    char *temp = xstrdup (tmpdir.cstr());
     shmfd = mkstemp (temp);
     if (shmfd > 0)
       tmpfile = temp;
@@ -199,7 +199,7 @@ aiod::aiod (u_int nproc, ssize_t shmsize, size_t mb, bool sp,
      * to flock the same file descriptor, there would be no
      * synchronization.  (The same is not true of fcntl locking, but
      * wherever possible we use flock as it is faster.)  */
-    int fd = ::open (tmpfile, O_RDWR);
+    int fd = ::open (tmpfile.cstr(), O_RDWR);
     if (fd < 0)
       fatal ("cannot reopen %s: %m\n", tmpfile.cstr ());
     struct stat sb2;
@@ -222,7 +222,7 @@ aiod::aiod (u_int nproc, ssize_t shmsize, size_t mb, bool sp,
    * we die and leave it sitting around.  However, we unlink it before
    * consuming disk space to make sure it gets garbage collected
    * properly.  */
-  if (::unlink (tmpfile) < 0)
+  if (::unlink (tmpfile.cstr()) < 0)
     fatal ("aiod: unlink (%s): %m\n", tmpfile.cstr ());
 }
 
@@ -494,7 +494,7 @@ aiod::mkdir (str d, int mode, cbi cb)
   rq->op = AIOD_MKDIR;
   rq->err = 0;
   rq->bufsize = bufsize;
-  rq->setpath (d);
+  rq->setpath (d.cstr());
   rq->mode = mode;
   sendmsg (buf, wrap (cbi_cb, cb));
 }
@@ -526,7 +526,7 @@ aiod::pathop (aiod_op op, str p1, str p2, cbb cb, size_t minsize)
   rq->op = op;
   rq->err = 0;
   rq->bufsize = bufsize;
-  rq->setpath (p1, p2 ? p2.cstr () : "");
+  rq->setpath (p1.cstr(), p2 ? p2.cstr () : "");
   sendmsg (buf, cb);
 }
 
@@ -552,7 +552,7 @@ aiod::open (str path, int flags, int mode,
   aiod_file *af = buf2file (fhbuf);
   bzero (af, sizeof (*af));
   af->oflags = flags;
-  strcpy (af->path, path);
+  strcpy (af->path, path.cstr());
   ref<aiofh> fh = New refcounted<aiofh> (this, fhbuf);
 
   aiod_fhop *rq = buf2fhop (rqbuf);
@@ -582,7 +582,7 @@ aiod::opendir (str path, callback<void, ptr<aiofh>, int>::ref cb)
 
   aiod_file *af = buf2file (fhbuf);
   bzero (af, sizeof (*af));
-  strcpy (af->path, path);
+  strcpy (af->path, path.cstr());
   ref<aiofh> fh = New refcounted<aiofh> (this, fhbuf, true);
 
   aiod_fhop *rq = buf2fhop (rqbuf);

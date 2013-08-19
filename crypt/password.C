@@ -55,7 +55,7 @@ pw_dearmorsalt (u_int *costp, str *bsaltp, str *ptextp, str armor)
   if (bsaltp)
     *bsaltp = s;
   if (costp)
-    *costp = strtoi64 (saltrx[1]);
+    *costp = strtoi64 (saltrx[1].cstr());
   if (ptextp)
     *ptextp = saltrx[3];
 
@@ -91,7 +91,7 @@ pw_rawcrypt (u_int cost, str pwd, str bsalt,
     char hsh[2 * sha1::hashsize];
     sha1_hash (reinterpret_cast <u_char *> (hsh), pwd.cstr (), pwd.len ());
     sha1_hash (reinterpret_cast <u_char *> (hsh + sha1::hashsize), 
-      str (hsh, sha1::hashsize), sha1::hashsize);
+               (str (hsh, sha1::hashsize).cstr()), sha1::hashsize);
     pwd = str (hsh, (2*sha1::hashsize < maxlen) ? 2*sha1::hashsize : maxlen);
   }
   eksb->eksetkey (cost, pwd.cstr (), pwd.len (), bsalt.cstr (), bsalt.len ());

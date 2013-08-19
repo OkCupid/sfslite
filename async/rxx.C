@@ -223,7 +223,7 @@ rxx::operator= (const rxx &r)
 int
 split (vec<str> *out, rxx pat, str expr, size_t lim, bool emptylast)
 {
-  const char *p = expr;
+  const char *p = expr.cstr();
   const char *const e = p + expr.len ();
   size_t n;
   if (out)

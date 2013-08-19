@@ -303,7 +303,7 @@ dumpenum (const rpc_sym *s)
     else if (lastval && (isdigit (lastval[0]) || lastval[0] == '-'
 			 || lastval[0] == '+'))
       aout << "  " << rc->id << " = "
-	   << strtol (lastval, NULL, 0) + ctr++ << ",\n";
+           << strtol (lastval.cstr(), NULL, 0) + ctr++ << ",\n";
     else if (lastval)
       aout << "  " << rc->id << " = " << lastval << " + " << ctr++ << ",\n";
     else
@@ -626,7 +626,7 @@ makeguard (str fname)
   strbuf guard;
   const char *p;
 
-  if ((p = strrchr (fname, '/')))
+  if ((p = strrchr (fname.cstr(), '/')))
     p++;
   else p = fname;
 

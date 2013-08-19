@@ -239,10 +239,10 @@ pidclean ()
   for (; !pidfiles.empty (); pidfiles.pop_front ()) {
     pidfile &pf = pidfiles.front ();
     struct stat sb;
-    if (!stat (pf.path, &sb)
+    if (!stat (pf.path.cstr(), &sb)
 	&& sb.st_dev == pf.sb.st_dev
 	&& sb.st_ino == pf.sb.st_ino)
-      unlink (pf.path);
+      unlink (pf.path.cstr());
   }
 }
 

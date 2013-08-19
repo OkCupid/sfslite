@@ -126,7 +126,7 @@ axprt_unix::alloc (int f, size_t ps)
 static ptr<axprt_unix>
 tryconnect (str path, const char *arg0, u_int ps)
 {
-  const char *prog = strrchr (path, '/');
+  const char *prog = strrchr (path.cstr(), '/');
   if (!prog)
     panic ("tryconnect: path '%s' has no '/'\n", path.cstr ());
   prog++;
@@ -145,7 +145,7 @@ tryconnect (str path, const char *arg0, u_int ps)
     str np = strbuf ("%s/.%s",
 		     buildtmpdir ? buildtmpdir.cstr () : builddir.cstr (),
 		     a0);
-    return axprt_unix_connect (np, ps);
+    return axprt_unix_connect (np.cstr(), ps);
   }
   return NULL;
 }
@@ -163,7 +163,7 @@ axprt_unix_dospawnv (str path, const vec<str> &avs,
 
   // path = fix_exec_path (path);
 #ifdef MAINTAINER
-  if (ptr<axprt_unix> x = tryconnect (path, avs[0], ps)) {
+  if (ptr<axprt_unix> x = tryconnect (path.cstr(), avs[0].cstr(), ps)) {
     axprt_unix_spawn_connected = true;
     return x;
   }
@@ -182,9 +182,9 @@ axprt_unix_dospawnv (str path, const vec<str> &avs,
   close_on_exec (fds[0]);
   pid_t pid;
   if (async)
-    pid = aspawn (path, av.base (), fds[1], fds[1], 2, postforkcb, env);
+    pid = aspawn (path.cstr(), av.base (), fds[1], fds[1], 2, postforkcb, env);
   else
-    pid = spawn (path, av.base (), fds[1], fds[1], 2, postforkcb, env);
+    pid = spawn (path.cstr(), av.base (), fds[1], fds[1], 2, postforkcb, env);
   axprt_unix_spawn_pid = pid;
   close (fds[1]);
   if (pid < 0) {
@@ -251,7 +251,7 @@ axprt_unix_spawn (str path, size_t ps, char *arg0, ...)
     return NULL;
   }
   close_on_exec (fds[0]);
-  pid_t pid = spawn (path, av.base (), fds[1]);
+  pid_t pid = spawn (path.cstr(), av.base (), fds[1]);
   axprt_unix_spawn_pid = pid;
   close (fds[1]);
   if (pid < 0) {
@@ -313,7 +313,7 @@ axprt_unix_stdin (size_t ps)
     str np = strbuf ("%s/.%s",
 		     buildtmpdir ? buildtmpdir.cstr () : builddir.cstr (),
 		     progname.cstr ());
-    x = axprt_unix_accept (np, ps);
+    x = axprt_unix_accept (np.cstr(), ps);
   }
 #endif /* MAINTAINER */
   if (x && !x->ateof ())

@@ -364,7 +364,7 @@ str
 tame_fn_t::decl_casted_closure (bool do_lhs) const
 {
   strbuf b;
-  bool actual_tmpl = (_template);
+  bool actual_tmpl = bool(_template);
   if (do_lhs) {
     b << "  " << _closure.decl ()  << " =\n";
   }
@@ -778,7 +778,7 @@ void
 tame_fn_t::output_vars (outputter_t *o, int ln)
 {
   my_strbuf_t b;
-  bool actual_tmpl = (_template);
+  bool actual_tmpl = bool(_template);
   output_mode_t om = o->switch_to_mode (OUTPUT_TREADMILL, ln);
 
   b << "  " << _closure.decl (actual_tmpl) << ";\n"

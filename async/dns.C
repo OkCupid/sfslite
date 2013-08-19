@@ -262,7 +262,7 @@ resolver::sendreq (dnsreq *r)
 
   u_char qb[QBSIZE];
   int n;
-  n = res_mkquery (QUERY, r->name, C_IN, r->type,
+  n = res_mkquery (QUERY, r->name.cstr(), C_IN, r->type,
 		   NULL, 0, NULL, qb, sizeof (qb));
   //warn ("query (%s, %d): %d\n", r->name.cstr (), r->type, n);
   if (n < 0) {
@@ -316,7 +316,7 @@ resolver::pktready (bool tcp, u_char *qb, ssize_t n)
   dnsreq *r;
   for (r = reqtab[reply.hdr->id];
        r && (r->usetcp != tcp || r->type != q.q_type
-	     || strcasecmp (r->name, q.q_name));
+             || strcasecmp (r->name.cstr(), q.q_name));
        r = reqtab.nextkeq (r))
     ;
   if (!r)
@@ -427,7 +427,7 @@ resolv_conf::reload_cb (ref<bool> d, bool failure, str newres)
 
   char oldnsaddr[sizeof (_res.nsaddr_list)];
   memcpy (oldnsaddr, _res.nsaddr_list, sizeof (oldnsaddr));
-  memcpy (&_res, newres, sizeof (_res));
+  memcpy (&_res, newres.cstr(), sizeof (_res));
   if (memcmp (oldnsaddr, _res.nsaddr_list, sizeof (oldnsaddr))) {
     warn ("reloaded DNS configuration (resolv.conf)\n");
     ns_idx =  _res.nscount ? _res.nscount - 1 : 0;
@@ -621,7 +621,7 @@ dns_hostbyname (str name, cbhent cb,
 	&& inet_aton (name.cstr (), &addr)) {
       ptr<hostent> h = refcounted<hostent, vsize>::alloc
 	(sizeof (*h) + 3 * sizeof (void *)
-	 + sizeof (addr) + strlen (name) + 1);
+	 + sizeof (addr) + strlen (name.cstr()) + 1);
       h->h_aliases = (char **) &h[1];
       h->h_addrtype = AF_INET;
       h->h_length = sizeof (addr);
@@ -633,7 +633,7 @@ dns_hostbyname (str name, cbhent cb,
 
       *(struct in_addr *) h->h_addr_list[0] = addr;
       h->h_name = (char *) h->h_addr_list[0] + sizeof (addr);
-      strcpy ((char *) h->h_name, name);
+      strcpy ((char *) h->h_name, name.cstr());
 
       (*cb) (h, 0);
       return NULL;
@@ -776,13 +776,13 @@ dnsreq_ptr::readvrfy (int i, ptr<hostent> h, int err)
   *(in_addr *) h->h_addr_list[0] = addr;
 
   char *dp = h->h_addr_list[0] + sizeof (in_addr);
-  memcpy (h->h_name = dp, vnames[0], vnames[0].len () + 1);
+  memcpy (h->h_name = dp, vnames[0].cstr(), vnames[0].len () + 1);
   dp += vnames[0].len () + 1;
   vnames.pop_front ();
   char **ap = h->h_aliases;
   while (!vnames.empty ()) {
     *ap = dp;
-    memcpy (dp, vnames.front (), vnames.front ().len () + 1);
+    memcpy (dp, vnames.front ().cstr(), vnames.front ().len () + 1);
     dp += vnames.front ().len () + 1;
     ap++;
     vnames.pop_front ();

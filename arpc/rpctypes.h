@@ -818,18 +818,18 @@ template<size_t n> struct rpc_namedecl<rpc_str<n> > {
 };
 template<class T> struct rpc_namedecl<rpc_ptr<T> > {
   static str decl (const char *name) {
-    return rpc_namedecl<T>::decl (str (strbuf () << "*" << name));
+    return rpc_namedecl<T>::decl ((str (strbuf () << "*" << name)).cstr());
   }
 };
 template<class T, size_t n> struct rpc_namedecl<rpc_vec<T, n> > {
   static str decl (const char *name) {
-    return strbuf () << rpc_namedecl<T>::decl (rpc_parenptr (name))
+    return strbuf () << rpc_namedecl<T>::decl ((rpc_parenptr (name)).cstr())
 		     << rpc_dynsize (n);
   }
 };
 template<class T, size_t n> struct rpc_namedecl<array<T, n> > {
   static str decl (const char *name) {
-    return rpc_namedecl<T>::decl (rpc_parenptr (name)) << "[" << n << "]";
+    return rpc_namedecl<T>::decl ((rpc_parenptr (name)).cstr()) << "[" << n << "]";
   }
 };
 template<size_t n> struct rpc_namedecl<rpc_bytes<n> > {
@@ -948,7 +948,7 @@ rpc_print_array_vec (const strbuf &sb, const T &obj,
 	if (npref)
 	  sb << npref;
 	sb << "[" << i << "] = ";
-	rpc_print (sb, obj[i], recdepth, NULL, npref);
+	rpc_print (sb, obj[i], recdepth, NULL, npref.cstr());
       }
       if (i < obj.size ()) {
         sb << (i ? sep : "");

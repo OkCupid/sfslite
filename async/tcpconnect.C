@@ -241,7 +241,7 @@ tcpsrvconnect_t::nextsrv (bool timeout)
     addrhint **hint;
     for (hint = srvl->s_hints;
 	 *hint && ((*hint)->h_addrtype != AF_INET
-		   || strcasecmp ((*hint)->h_name, name));
+            || strcasecmp ((*hint)->h_name, name.cstr()));
 	 hint++)
       ;
     if (*hint) {
@@ -308,7 +308,7 @@ tcpsrvconnect_t::tcpsrvconnect_t (str name, str s, cbi cb, u_int16_t dp,
     error (0), srvlp (sp), namep (np)
 {
   areq = dns_hostbyname (name, wrap (this, &tcpsrvconnect_t::dnsacb), search);
-  srvreq = dns_srvbyname (name, "tcp", s,
+  srvreq = dns_srvbyname (name.cstr(), "tcp", s.cstr(),
 			  wrap (this, &tcpsrvconnect_t::dnssrvcb), search);
 }
 

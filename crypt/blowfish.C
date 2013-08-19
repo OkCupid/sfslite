@@ -253,7 +253,7 @@ eksblowfish::hashpwd (str pwd, str saltstr)
 
   if (saltstr) {
     char *p;
-    u_int c = strtol (saltstr, &p, 10);
+    u_int c = strtol (saltstr.cstr(), &p, 10);
     if (p != saltstr && c <= 16) {
       cost = c;
       if (*p++ == '$') {
