@@ -203,7 +203,7 @@ public:
   typedef qhash_slot<K, void> slot;
   typedef ihash_core<slot, kludge> core;
 
-private:
+protected:
   const E eq;
   const H hash;
 

@@ -64,6 +64,8 @@ public:
 #endif /* gcc2 */
 
   char *dat () { return (char *) this + sizeof (*this); }
+  const char *dat () const { return (char *) this + sizeof (*this); }
+
   static strobj *alloc (size_t n)
     { return new (opnew (n + sizeof (strobj))) strobj; }
 };
@@ -99,6 +101,7 @@ public:
 };
 
 class str {
+protected:
   // friend const strbuf &strbuf_cat (const strbuf &, const str &);
   friend void suio_print (suio *, const str &);
   friend class str_init;
