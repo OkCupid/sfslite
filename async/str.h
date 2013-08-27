@@ -64,8 +64,9 @@ public:
   strobjptr () : p (NULL) {}
   strobjptr (strobj *pp) : p (pp) { if (p) p->refcount_inc (); }
   strobjptr (const strobjptr &b) : p (b.p) { if (p) p->refcount_inc (); }
+  void swap(strobjptr &b) { strobj *old = p; p = b.p; b.p = old; }
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
-  strobjptr (strobjptr&& src) : strobjptr(src) { }
+  strobjptr(strobjptr&& src) : p(src.p) { src.p = nullptr; }
 #endif
   ~strobjptr () { if (p) p->refcount_dec (); }
 
@@ -101,12 +102,15 @@ class str {
 public:
   str () {}
   str (const str &s) : b (s.b) {}
+  str (str &&s) : b (std::move(s.b)) {}
   str (const char *p) { b = p ? buf2strobj (p, strlen (p)) : NULL; }
   str (const strbuf &b);
   explicit str (const suio &u) : b (iov2strobj (u.iov (), u.iovcnt ())) {}
   str (const char *buf, size_t len) : b (buf2strobj (buf, len)) {}
   str (const iovec *iov, int cnt) { setiov (iov, cnt); }
   str (mstr &);
+
+  void swap(str &s) { b.swap(s.b); }
 
   str &operator= (const str &s) { b = s.b; return *this; }
   str &operator= (const char *p) {
