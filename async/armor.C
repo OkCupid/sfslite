@@ -318,8 +318,6 @@ dearmor64 (const char *_s, ssize_t len)
   const u_char *s = reinterpret_cast<const u_char *> (_s);
   if (len < 0)
     len = armor64len (s);
-  if (len & 3)
-    return NULL;
   return _dearmor64 (a2b64, s, len);
 }
 
@@ -413,7 +411,5 @@ dearmor64X (const char *_s, ssize_t len)
   const u_char *s = reinterpret_cast<const u_char *> (_s);
   if (len < 0)
     len = armor64Xlen (s);
-  if (len & 3)
-    return NULL;
   return _dearmor64 (a2b64X, s, len);
 }
