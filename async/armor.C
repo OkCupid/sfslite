@@ -268,7 +268,8 @@ _dearmor64 (const signed char *a2b, const u_char *s, ssize_t len)
   if (!len)
     return "";
 
-  mstr bin (len - (len>>2));
+  // Same as ceil(4 * len / 3)
+  mstr bin((3 * len) + 3 >> 2);
   char *d = bin;
   int c0, c1, c2, c3;
 
@@ -291,7 +292,6 @@ _dearmor64 (const signed char *a2b, const u_char *s, ssize_t len)
       *d++ = c2 << 6 | c3;
   }
 
-  bin.setlen (d - bin);
   return bin;
 }
 
