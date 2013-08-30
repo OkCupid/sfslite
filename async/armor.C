@@ -268,8 +268,7 @@ _dearmor64 (const signed char *a2b, const u_char *s, ssize_t len)
   if (!len)
     return "";
 
-  // Same as ceil(4 * len / 3)
-  mstr bin((3 * len) + 3 >> 2);
+  mstr bin((3 * len) >> 2);
   char *d = bin;
   int c0, c1, c2, c3;
 
@@ -310,7 +309,7 @@ _armor64len (const signed char *a2b, bool pad, const u_char *s)
   return p - s;
 }
 
-size_t armor64len (const u_char *s) { return _armor64len (a2b64, true, s); }
+size_t armor64len (const u_char *s) { return _armor64len (a2b64, false, s); }
 
 str
 dearmor64 (const char *_s, ssize_t len)
