@@ -24,8 +24,8 @@ struct redundant_caller_t;
 template<typename ResultType, typename TaskType>
 struct redundant_caller_manager_t : public virtual refcount {
 public:
-    void add_task(size_t index, const TaskType& task) {
-        callers[index] += task;
+    void add_tasks(size_t index, TaskType* tasks, size_t count) {
+        callers[index].add_tasks(tasks, count);
     }
 
     void call (size_t index,
@@ -79,19 +79,33 @@ template<typename ResultType, typename TaskType>
 struct redundant_caller_t {
 public:
     redundant_caller_t(size_t delay) 
-        : m_delay(delay), m_ctask(0), m_timer(NULL), m_complete(false) { }
+        : m_delay(delay), m_ctask(0), m_pTasks(NULL), m_timer(NULL),
+        m_complete(false), m_taskCount(0) { }
     
     redundant_caller_t() 
-        : m_ctask(0), m_timer(NULL), m_complete(false) { }
+        : m_ctask(0), m_pTasks(NULL), m_timer(NULL), m_complete(false),
+        m_taskCount(0) { }
 
     void operator()(typename event<ResultType, int>::ptr res_ev,
             redundant_caller_manager_t <ResultType, TaskType>* manager) {
         go (res_ev, manager);
     }
     
-    void operator+=(const TaskType& t) {
+    /*void operator+=(const TaskType& t) {
         m_tasks.push_back(t);
+    }*/
+    void add_tasks (TaskType* pTasks, size_t count) {
+        m_pTasks = pTasks;
+        m_taskCount = count;
     }
+
+    ~redundant_caller_t () {
+        if (!m_pTasks) {
+            delete [] m_pTasks;
+            m_pTasks = NULL;
+        }
+    }
+
     void set_delay(size_t delay) {
         m_delay = delay;
     }
@@ -107,10 +121,11 @@ protected:
 
     size_t m_delay;
     size_t m_ctask;
-    vec<TaskType> m_tasks;
+    TaskType* m_pTasks;
     timecb_t *m_timer;
     typename event<bool, ResultType, int>::ptr m_monitor;
     bool m_complete;
+    size_t m_taskCount;
 };
 
 //-----------------------------------------------------------------------------
@@ -165,19 +180,19 @@ void redundant_caller_t<ResultType, TaskType>::go (
         int err;
     }
 
-    if (!m_tasks.size()) { res_ev->trigger(result, 0); return; }
+    if (!m_taskCount) { res_ev->trigger(result, 0); return; }
 
 
     m_monitor = mkevent(rv, timer, result, err);
     m_monitor->set_reuse(true);
 
-    task_wrapper(m_tasks[m_ctask++], manager);
+    task_wrapper(m_pTasks[m_ctask++], manager);
     timer_wrapper();
     while (true) {
         twait(rv);
         if (timer) {
-            if (m_ctask < m_tasks.size()) {
-                task_wrapper(m_tasks[m_ctask++], manager);
+            if (m_ctask < m_taskCount) {
+                task_wrapper(m_pTasks[m_ctask++], manager);
                 timer_wrapper();
             } else {
             }
