@@ -309,7 +309,7 @@ _armor64len (const signed char *a2b, bool pad, const u_char *s)
   return p - s;
 }
 
-size_t armor64len (const u_char *s) { return _armor64len (a2b64, true, s); }
+size_t armor64len (const u_char *s, bool pad) { return _armor64len (a2b64, pad, s); }
 
 str
 dearmor64 (const char *_s, ssize_t len)
