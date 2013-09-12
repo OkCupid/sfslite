@@ -52,6 +52,7 @@ int vars_lineno;
 %token T_HOLDVAR
 
 %token T_2COLON
+%token T_ELLIPSIS
 %token T_RETURN
 
 /* Keywords for our new filter */
@@ -65,7 +66,7 @@ int vars_lineno;
 %token T_2DOLLAR
 
 %type <str> pointer pointer_opt template_instantiation_arg pointer_or_ref
-%type <str> template_instantiation_list template_instantiation
+%type <str> ellipsis_opt template_instantiation_list template_instantiation
 %type <str> template_instantiation_opt typedef_name_single
 %type <str> template_instantiation_list_opt identifier
 %type <str> typedef_name
@@ -548,10 +549,14 @@ template_instantiation_list: template_instantiation_arg
 	}
 	;
 
-template_instantiation_arg: declaration_specifiers pointer_opt
+template_instantiation_arg: declaration_specifiers pointer_opt ellipsis_opt
 	{
-	  CONCAT($1.lineno (), $1.to_str () << " " << $2, $$);
+	  CONCAT($1.lineno (), $1.to_str () << " " << $2 << $3, $$);
 	}
+	;
+
+ellipsis_opt: /* empty */	{ $$ = ""; }
+	| T_ELLIPSIS { $$ = "..."; }
 	;
 
 pointer_opt: /* empty */	{ $$ = ""; }

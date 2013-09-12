@@ -206,7 +206,10 @@ mangle (const str &in)
   mstr m (in.len ());
   for (i = in.cstr (), o = m.cstr (); *i; i++) {
     if (!isspace (*i)) {
-      *o = (*i == ':' || *i == '<' || *i == '>' || *i == ',') ? '_' : *i;
+      switch(*i) {
+        case ':': case '<': case '>': case ',': case '.': *o = '_'; break;
+        default: *o = *i;
+      }
       o++;
     }
   }

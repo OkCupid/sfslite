@@ -134,6 +134,7 @@ template	{ yy_push_state (TEMPLATE_ENTER); return T_TEMPLATE; }
 
 [<>;,:*&]	{ return yytext[0]; }
 "::"		{ return T_2COLON; }
+"..."		{ return T_ELLIPSIS; }
 }
 
 <FULL_PARSE,HALF_PARSE>{
