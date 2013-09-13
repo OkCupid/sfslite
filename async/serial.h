@@ -88,7 +88,7 @@ gethyper (const void *_dp)
 }
 
 str armor64 (const void *, size_t);
-size_t armor64len (const u_char *, bool pad = false);
+size_t armor64len (const u_char *);
 str dearmor64 (const char *, ssize_t len = -1);
 
 
@@ -105,16 +105,10 @@ armor64 (str bin)
 inline str
 dearmor64 (str asc)
 {
-  // Length without padding
-  size_t len = armor64len (reinterpret_cast<const u_char *> (asc.cstr ()));
-  // Size of padding, if any
-  size_t padding = armor64len (
-    reinterpret_cast<const u_char *> (asc.cstr () + len),
-    true
-  );
-  if (len + padding != asc.len ())
+  if (armor64len (reinterpret_cast<const u_char *> (asc.cstr ()))
+      != asc.len ())
     return NULL;
-  return dearmor64 (asc.cstr (), len);
+  return dearmor64 (asc.cstr (), asc.len ());
 }
 
 str armor32 (const void *, size_t);
