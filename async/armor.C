@@ -268,7 +268,7 @@ _dearmor64 (const signed char *a2b, const u_char *s, ssize_t len)
   if (!len)
     return "";
 
-  mstr bin((3 * len) >> 2);
+  mstr bin (len - (len>>2));
   char *d = bin;
   int c0, c1, c2, c3;
 
@@ -291,6 +291,7 @@ _dearmor64 (const signed char *a2b, const u_char *s, ssize_t len)
       *d++ = c2 << 6 | c3;
   }
 
+  bin.setlen (d - bin);
   return bin;
 }
 
@@ -309,7 +310,7 @@ _armor64len (const signed char *a2b, bool pad, const u_char *s)
   return p - s;
 }
 
-size_t armor64len (const u_char *s, bool pad) { return _armor64len (a2b64, pad, s); }
+size_t armor64len (const u_char *s) { return _armor64len (a2b64, true, s); }
 
 str
 dearmor64 (const char *_s, ssize_t len)
@@ -317,6 +318,8 @@ dearmor64 (const char *_s, ssize_t len)
   const u_char *s = reinterpret_cast<const u_char *> (_s);
   if (len < 0)
     len = armor64len (s);
+  if (len & 3)
+    return NULL;
   return _dearmor64 (a2b64, s, len);
 }
 
@@ -410,5 +413,7 @@ dearmor64X (const char *_s, ssize_t len)
   const u_char *s = reinterpret_cast<const u_char *> (_s);
   if (len < 0)
     len = armor64Xlen (s);
+  if (len & 3)
+    return NULL;
   return _dearmor64 (a2b64X, s, len);
 }
