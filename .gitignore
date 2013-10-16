@@ -8,6 +8,10 @@
 # Emacs files
 *~
 
+# Vim files
+*.swp
+*.swo
+
 # NFS files that were deleted but are still open
 .nfs*
 

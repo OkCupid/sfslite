@@ -52,6 +52,7 @@ int vars_lineno;
 %token T_HOLDVAR
 
 %token T_2COLON
+%token T_DECLTYPE
 %token T_ELLIPSIS
 %token T_RETURN
 
@@ -67,7 +68,7 @@ int vars_lineno;
 
 %type <str> pointer pointer_opt template_instantiation_arg pointer_or_ref
 %type <str> ellipsis_opt template_instantiation_list template_instantiation
-%type <str> template_instantiation_opt typedef_name_single
+%type <str> template_instantiation_opt typedef_name_single decltype
 %type <str> template_instantiation_list_opt identifier
 %type <str> typedef_name
 %type <str> type_specifier 
@@ -430,6 +431,12 @@ direct_declarator_cpp:	identifier
 	}
 	;
 
+decltype: T_DECLTYPE '(' passthrough ')'
+	{
+		CONCAT($3.lineno(), "decltype(" << $3 << ")", $$);
+	}
+	;
+
 /* 
  * use "typedef_name" instead of identifier for C++-style names
  *
@@ -520,6 +527,7 @@ typedef_name:  typedef_name_single
 	{
 	   CONCAT($1.lineno (), $1 << "::" << $3, $$);
 	}
+	| decltype
 	;
 
 typedef_name_single: identifier template_instantiation_opt

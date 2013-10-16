@@ -8,7 +8,6 @@ import getopt
 
 ##=======================================================================
 
-ADDR2LINE = "addr2line"
 DOT = "dot"
 FILE = "file"
 
@@ -581,7 +580,7 @@ class Graph:
 
         for f in self._sites_by_file:
 
-            cmd = [ ADDR2LINE ]
+            cmd = [ props.addr2line() ]
             if inln:
                 cmd +=  [ "-i" ]
             cmd += [ "-C", "-f", "-e", f.jname () ]
@@ -846,6 +845,7 @@ class Props:
         self._font_size = 20
         self._stem = "ssp"
         self._display_top = False
+        self._addr2line = "addr2line"
 
         self.parse (argv)
 
@@ -901,8 +901,13 @@ class Props:
 
     ##----------------------------------------
 
+    def addr2line (self):
+        return self._addr2line
+
+    ##----------------------------------------
+
     def parse (self, argv):
-        short_opts = "n:e:ht:j:if:s:d"
+        short_opts = "n:e:ht:j:if:s:da:"
         long_opts = [ "num-nodes=",
                       "num-edges=",
                       "jail=",
@@ -911,7 +916,8 @@ class Props:
                       "inlining",
                       "font-size=",
                       "stem=",
-                      "display-top" ]
+                      "display-top",
+                      "addr2line="]
 
         types = []
         try:
@@ -966,6 +972,9 @@ class Props:
 
             elif o in ("-d", "--display-top"):
                 self._display_top = True
+
+            elif o in ("-a", "--addr2line"):
+                self._addr2line = a
 
             else:
                 self.usage (err = "unknown argument: %s" % o)

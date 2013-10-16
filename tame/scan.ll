@@ -126,6 +126,7 @@ unsigned	return T_UNSIGNED;
 static		return T_STATIC;
 holdvar		return T_HOLDVAR;
 template	{ yy_push_state (TEMPLATE_ENTER); return T_TEMPLATE; }
+decltype	return T_DECLTYPE;
 
 {ID} 		{ return std_ret (T_ID); }
 {DNUM}|{XNUM}	{ return std_ret (T_NUM); }
