@@ -490,13 +490,13 @@ class ptr : public refpriv, public refops <T> {
     if (pp) {
       rinc (pp);
       if (decme)
-	dec ();
+          dec ();
       p = refpriv::rp (pp);
       c = rc (pp);
     }
     else {
       if (decme)
-	dec ();
+          dec ();
       p = NULL;
       c = NULL;
     }
@@ -542,6 +542,12 @@ public:
     { rinc (r); dec (); p = refpriv::rp (r); c = rc (r); return *this; }
   template<class U> ptr<T> &operator= (const ::ref<U> &r)
     { rinc (r); dec (); p = refpriv::rp (r); c = rc (r); return *this; }
+
+  template <typename... Params>
+  void alloc(Params&&... args) {
+      set(New refcounted<T>(std::forward<Params>(args)...), true);
+  }
+
 };
 
 template<class T>
