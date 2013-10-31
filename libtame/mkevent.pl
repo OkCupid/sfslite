@@ -23,9 +23,9 @@ sub mklist ($$)
     my ($tmplt, $n) = @_;
     my @out;
     for (my $i = 1; $i <= $n; $i++) {
-	my $a = $tmplt;
-	$a =~ s/%/$i/g;
-	push @out, $a;
+        my $a = $tmplt;
+        $a =~ s/%/$i/g;
+        push @out, $a;
     }
     return @out
 }
@@ -34,11 +34,11 @@ sub mklist_multi (@)
 {
     my @arr;
     foreach my $e (@_) {
-	if (ref ($e)) {
-	    push @arr, mklist ($e->[0], $e->[1]);
-	} else {
-	    push @arr, $e;
-	}
+        if (ref ($e)) {
+            push @arr, mklist ($e->[0], $e->[1]);
+        } else {
+            push @arr, $e;
+        }
     }
     return @arr;
 }
@@ -98,7 +98,7 @@ sub do_trigger_funcs ($)
 sub do_event_class ($)
 {
     my ($t) = @_;
-    my ($tlist, $tlist2);
+    my ($tlist);
 
     print("template<", arglist (["class T%", $t]), ">\n");
     $tlist = "<" . arglist (["T%", $t]) . ">";
@@ -109,30 +109,35 @@ sub do_event_class ($)
 
     # print the classname
     print("class ${CN}", $tlist, " :\n",
-	   "     public ${BASE},\n",
-	   "     public callback${vlist}\n",
-	   "{\n",
-	   "public:\n");
+          "     public ${BASE},\n",
+          "     public callback${vlist}\n",
+          "{\n",
+          "public:\n");
+
+    # print some handy typedefs
+    foreach my $td (mklist_multi(["typedef T% _T%", $t])) {
+        print "    ${td};\n";
+    }
 
     # print the constructors
     print("  ${CN} (const _tame_slot_set$tlist &rs, const char *loc)\n",
-	   "   : ${BASE} (loc),\n",
-	   "     callback${vlist} (CALLBACK_ARGS(loc))");
+          "   : ${BASE} (loc),\n",
+          "     callback${vlist} (CALLBACK_ARGS(loc))");
     if ($t) {
-	print(",\n",
-	       "    _slot_set (rs)");
+        print(",\n",
+              "    _slot_set (rs)");
     }
     print("\n",
-	   "    {}\n\n");
+          "    {}\n\n");
 
     if ($t) {
-	print("  ${ctss}slot_set() const\n",
-	       "  { return _slot_set; }\n");
-	print("  void slot_set_reassign (${ctss}ss) { _slot_set = ss; }");
+        print("  ${ctss}slot_set() const\n",
+              "  { return _slot_set; }\n");
+        print("  void slot_set_reassign (${ctss}ss) { _slot_set = ss; }");
     } else {
-	print("  _tame_slot_set$tlist slot_set() const\n",
-	       "  { return _tame_slot_set$tlist (); }");
-	print("  void slot_set_reassign (${ctss}ss) {}");
+        print("  _tame_slot_set$tlist slot_set() const\n",
+              "  { return _tame_slot_set$tlist (); }");
+        print("  void slot_set_reassign (${ctss}ss) {}");
     }
     print("\n\n");
 
@@ -418,7 +423,7 @@ for (my $t = 0; $t <= $N_tv; $t++) {
     do_event_impl_classes ($t);
     do_mkevent_block ($t);
     for (my $w = 0; $w <= $N_wv; $w++) {
-	do_generic ($t, $w);
+        do_generic ($t, $w);
     }
 }
 
