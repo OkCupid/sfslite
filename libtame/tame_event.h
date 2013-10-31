@@ -121,6 +121,11 @@ class event {
 public:
   typedef struct ref<_event<T1,T2,T3> > ref;
   typedef struct ptr<_event<T1,T2,T3> > ptr;
+
+public:
+  typedef T1 type1;
+  typedef T2 type2;
+  typedef T3 type3;
 };
 
 #ifdef WRAP_DEBUG
