@@ -100,7 +100,7 @@ outputter_t::_output_str (str s, str sep_str)
     return;
 
   _last_output_in_mode = _mode;
-  _did_output = true;
+  // _did_output = true;
 
   _strs.push_back (s);
   _buf << s;

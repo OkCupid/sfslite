@@ -162,8 +162,9 @@ str
 var_t::ref_decl () const
 {
   my_strbuf_t b;
-  b.mycat (_type.to_str ());
-  if (!_type.is_ref ()) {
+  // b.mycat (_type.to_str ());
+  b.mycat ("auto &");
+  if (false && !_type.is_ref ()) {
     if (_initializer) {
       b.mycat (_initializer->ref_prefix ());
     } else {
@@ -572,24 +573,22 @@ tame_fn_t::output_closure (outputter_t *o)
   if (slfargs) slfargs->paramlist (b, DECLARATIONS);
 
   b << ") : closure_t (\"" << state->infile_name () << "\", \"" 
-    << _name << "\", " << _lineno << "), "
+    << _name << "\", " << _lineno << ")"
     ;
 
   if (need_self ()) {
-    str s = _self.name ();
-    b.mycat (s) << " (";
-    b.mycat (s) << "), ";
+      b << ", ";
+      str s = _self.name ();
+      b.mycat (s) << " (";
+      b.mycat (s) << ")";
   }
 
-  b << " _stack ("
-    ;
-
-  if (slfargs) slfargs->paramlist (b, NAMES);
-
-  b << "), _args ("
-    ;
-
+  b << ", _args (";
   if (_args) _args->paramlist (b, NAMES);
+  b << ")";
+
+  b << ", _stack (";
+  if (slfargs) slfargs->paramlist (b, NAMES);
   b << ")";
 
   b << " {}\n\n";
@@ -600,6 +599,27 @@ tame_fn_t::output_closure (outputter_t *o)
   }
 
   output_reenter (b);
+
+  // output the argument capture structure
+  b << "\n"
+    << "  struct args_t {\n"
+    << "    args_t (" ;
+  if (_args && _args->size ()) 
+    _args->paramlist (b, DECLARATIONS);
+  b << ")";
+  if (_args && _args->size ()) {
+    b << " : ";
+    _args->initialize (b, true);
+  }
+  b << " {}\n";
+  if (_args)  _args->declarations (b, "    ");
+  b << "  };\n";
+
+  if (need_self ()) {
+    b << "  ";
+    b.mycat (_self.decl ()) << ";\n";
+  }
+  b << "  args_t _args;\n" ;
 
   // output the stack structure
   b << "  struct stack_t {\n"
@@ -623,27 +643,7 @@ tame_fn_t::output_closure (outputter_t *o)
   _stack_vars.declarations (b, "    ");
   b << "  };\n";
  
-  // output the argument capture structure
-  b << "\n"
-    << "  struct args_t {\n"
-    << "    args_t (" ;
-  if (_args && _args->size ()) 
-    _args->paramlist (b, DECLARATIONS);
-  b << ")";
-  if (_args && _args->size ()) {
-    b << " : ";
-    _args->initialize (b, true);
-  }
-  b << " {}\n";
-  if (_args)  _args->declarations (b, "    ");
-  b << "  };\n";
-
-  if (need_self ()) {
-    b << "  ";
-    b.mycat (_self.decl ()) << ";\n";
-  }
-  b << "  stack_t _stack;\n"
-    << "  args_t _args;\n" ;
+  b << "  stack_t _stack;\n";
 
   if (_class)
     b << "  method_type_t _method;\n";
@@ -669,7 +669,7 @@ tame_fn_t::output_stack_vars (strbuf &b)
     const var_t &v = _stack_vars._vars[i];
     if (v.do_output ()) {
       b << "  " << v.ref_decl () << " = " 
-	<< closure_nm () << "->_stack." << v.name () << ";\n" ;
+        << closure_nm () << "->_stack." << v.name () << ";\n" ;
     }
   } 
 }
@@ -680,7 +680,8 @@ tame_fn_t::output_arg_references (strbuf &b)
   for (u_int i = 0; _args && i < _args->size (); i++) {
     const var_t &v = _args->_vars[i];
     b << "  " << v.ref_decl () << " = "
-      << closure_nm () << "->_args." << v.name () << ";\n";
+      << closure_nm () << "->_args." << v.name ()
+      << "; /* " << v.type().to_str() << "*/\n";
   }
 
   // compiler might complain that the variable references aren't
