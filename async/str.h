@@ -517,4 +517,12 @@ strbuf_cat(const strbuf& b, const double& d)
   return strbuf_cat (b, x);
 }
 
+template <typename T>
+inline const strbuf&
+strbuf_cat(const strbuf& b, T const *p)
+{
+  b.fmt("%p", p);
+  return b;
+}
+
 #endif /* !_ASYNC_STR_H_ */
