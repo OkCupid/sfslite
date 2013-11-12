@@ -46,6 +46,7 @@ bool __globaldestruction_t::started;
 
 #include "callback.h"
 
+const ptr_alloc_t ptr_alloc = {};
 
 static void
 ignore_void ()
