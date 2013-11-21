@@ -26,7 +26,7 @@ aiod.h aiod_prot.h aios.h amisc.h arena.h array.h async.h backoff.h	\
 bbuddy.h bitvec.h callback.h cbuf.h dns.h dnsimpl.h dnsparse.h err.h	\
 fdlim.h ihash.h init.h itree.h keyfunc.h list.h msb.h opnew.h		\
 parseopt.h qhash.h refcnt.h rxx.h serial.h stllike.h str.h	\
-suio++.h sysconf.h union.h vatmpl.h vec.h rwfd.h litetime.h       	\
+suio++.h sysconf.h union.h vec.h rwfd.h litetime.h       	\
 corebench.h qtailq.h sfs_select.h rclist.h dynenum.h         \
 rctailq.h rctree.h sfs_bundle.h alog2.h sfs_profiler.h wide_str.h 	\
 sfs_const.h weak_template.h
