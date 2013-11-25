@@ -78,7 +78,7 @@ cloneserv (int fd, cloneserv_cb cb, size_t ps)
 {
   if (!isunixsocket (fd))
     return false;
-  ref<axprt_unix> x = axprt_unix::alloc (fd, ps);
+  ptr<axprt_unix> x = axprt_unix::alloc (fd, ps);
   x->setrcb (wrap (cloneserv_accept, x, cb));
   return true;
 }
