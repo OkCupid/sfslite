@@ -235,7 +235,8 @@ tcpsrvconnect_t::nextsrv (bool timeout)
   }
   else if (h && !strcasecmp (srvl->s_srvs[n].name, h->h_name))
     cons.push_back (tcpconnect (*(in_addr *) h->h_addr, srvl->s_srvs[n].port,
-				wrap (this, &tcpsrvconnect_t::connectcb, n)));
+                                wrap (this, &tcpsrvconnect_t::connectcb,
+                                      static_cast<int>(n))));
   else {
     str name = srvl->s_srvs[n].name;
     addrhint **hint;
@@ -248,10 +249,11 @@ tcpsrvconnect_t::nextsrv (bool timeout)
       in_addr *tmp = (in_addr *)(*hint)->h_address;
       cons.push_back (tcpconnect (*tmp, srvl->s_srvs[n].port,
 				  wrap (this, &tcpsrvconnect_t::connectcb,
-					n)));
+                        static_cast<int>(n))));
     } else {
       cons.push_back (tcpconnect (srvl->s_srvs[n].name, srvl->s_srvs[n].port,
-				  wrap (this, &tcpsrvconnect_t::connectcb, n),
+                                  wrap (this, &tcpsrvconnect_t::connectcb,
+                                        static_cast<int>(n)),
 				  false));
     }
   }
@@ -317,7 +319,8 @@ tcpsrvconnect_t::tcpsrvconnect_t (ref<srvlist> sl, cbi cb, str *np)
   : defport (0), cb (cb), dnserr (0), areq (NULL), srvreq (NULL),
     tmo (NULL), cbad (0), error (0), srvlp (NULL), namep (np)
 {
-  delaycb (0, wrap (this, &tcpsrvconnect_t::dnssrvcb, sl, 0));
+  delaycb (0, wrap (this, &tcpsrvconnect_t::dnssrvcb,
+                    static_cast<ptr<srvlist>>(sl), 0));
 }
 
 tcpsrvconnect_t::~tcpsrvconnect_t ()

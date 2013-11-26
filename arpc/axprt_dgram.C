@@ -85,8 +85,11 @@ axprt_dgram::sendv (const iovec *iov, int cnt, const sockaddr *sap)
 void
 axprt_dgram::setrcb (recvcb_t c)
 {
+  typedef ptr<callback<void>> cb_t;
   cb = c;
-  fdcb (fd, selread, c ? wrap (this, &axprt_dgram::input) : NULL);
+  fdcb (fd, selread, c ?
+        static_cast<cb_t>(wrap (this, &axprt_dgram::input)) :
+        static_cast<cb_t>(nullptr));
 }
 
 void

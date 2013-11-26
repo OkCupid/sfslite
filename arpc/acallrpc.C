@@ -33,7 +33,8 @@ static rpc_program noprog;
 
 ptr<axprt_stream> aclnt_axprt_stream_alloc (size_t ps, int fd);
 const axprtalloc_fn axprt_stream_alloc_default
-  = gwrap (aclnt_axprt_stream_alloc, int (axprt_stream::defps));
+  = gwrap (aclnt_axprt_stream_alloc,
+           static_cast<unsigned long>(axprt_stream::defps));
 
 static void
 acallrpc_init ()
@@ -396,7 +397,7 @@ pmap_map_2 (callback<void, bool>::ptr cb, size_t mpos, clnt_stat stat)
   }
   ref<bool> resp (New refcounted<bool> (false));
   acallrpc (&pmapaddr, pmap_prog_2, PMAPPROC_SET, &pmap_mappings[mpos], resp,
-	    wrap (pmap_map_3, cb, resp, mpos));
+            wrap (pmap_map_3, cb, resp, mpos));
 }
 
 static void
