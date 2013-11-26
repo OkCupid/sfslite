@@ -139,7 +139,11 @@ void refcnt_warn (const char *op, const type_info &type, void *addr, int cnt);
 #endif /* VERBOSE_REFCNT */
 
 #include "opnew.h"
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
 #include <utility>
+#else
+#include "vatmpl.h"
+#endif
 
 class __globaldestruction_t {
   static bool started;
@@ -327,9 +331,13 @@ class refcounted<T, scalar>
   ~refcounted () {}
 
 public:
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
   template <typename... Params>
   explicit refcounted (Params&&... args) :
       type2struct<T>::type(std::forward<Params> (args)...) {}
+#else
+  VA_TEMPLATE (explicit refcounted, : type2struct<T>::type, {})
+#endif
 };
 
 template<class T>
@@ -469,13 +477,6 @@ public:
 /* To skip initialization of ptr's in BSS */
 struct __bss_init {};
 
-// Dummy argument to force the ptr to call the constructor for the underlying
-// class
-class ptr_alloc_t {};
-
-extern const ptr_alloc_t ptr_alloc;
-
-
 template<class T>
 class ptr : public refpriv, public refops <T> {
   friend class refpriv;
@@ -527,11 +528,6 @@ public:
   template<class U>
   ptr (::ref<U>&& src) : ptr<T>(src) { }
 #endif
-
-  template <typename... Params>
-  ptr(const ptr_alloc_t&, Params&&... args) :
-    ptr(New refcounted<T>(std::forward<Params>(args)...))
-  {}
 
   ~ptr () { dec (); }
 

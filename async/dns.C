@@ -722,8 +722,7 @@ dnsreq_ptr::readreply (dnsparse *reply)
       remove ();
       for (u_int i = 0; i < names.size (); i++)
 	vrfyv.push_back (New dnsreq_a (resp, names[i],
-                                   wrap (this, &dnsreq_ptr::readvrfy,
-                                         static_cast<int>(i)),
+				       wrap (this, &dnsreq_ptr::readvrfy, i),
 				       addr));
       return;
     }

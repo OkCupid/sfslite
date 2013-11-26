@@ -245,8 +245,7 @@ void
 suio::condemn_scratch ()
 {
   if (scratch_buf != defbuf)
-    iovcb (wrap (deallocator, static_cast<void *>(scratch_buf),
-                 static_cast<unsigned long>(scratch_lim - scratch_buf)));
+    iovcb (wrap (deallocator, scratch_buf, scratch_lim - scratch_buf));
 }
 
 char *

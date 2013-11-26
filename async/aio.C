@@ -214,7 +214,7 @@ aiod::aiod (u_int nproc, ssize_t shmsize, size_t mb, bool sp,
       fail ();
       break;
     }
-    fdcb (dv[i].fd, selread, wrap (this, &aiod::input, static_cast<int>(i)));
+    fdcb (dv[i].fd, selread, wrap (this, &aiod::input, i));
   }
   close (rfd);
 
@@ -728,8 +728,7 @@ aiofh::rw (aiod_op op, off_t pos, ptr<aiobuf> iobuf,
   rq->iobuf.pos = pos;
   rq->iobuf.buf = iobuf->pos + iostart;
   rq->iobuf.len = iosize;
-  iod->sendmsg (rqbuf, wrap (mkref (this), &aiofh::rw_cb,
-                             static_cast<ref<aiobuf>>(iobuf), cb));
+  iod->sendmsg (rqbuf, wrap (mkref (this), &aiofh::rw_cb, iobuf, cb));
 }
 
 void
