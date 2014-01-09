@@ -90,7 +90,7 @@ struct traceobj : public strbuf {
   bool doprint;
   int fd;
 
-  traceobj (int current_level, const char *prefix = "", 
+  explicit traceobj (int current_level, const char *prefix = "", 
 	    bool dotime = false, int f = -1)
     : current_level (current_level), prefix (prefix), 
       dotime (dotime), fd (f) {}
