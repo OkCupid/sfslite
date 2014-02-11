@@ -59,8 +59,7 @@ outputter_H_t::output_str (str s)
     output_line_number ();
     split (&v, x, s);
     for (u_int i = 0; i < v.size (); i++) {
-      // only output a newline on the last line
-      _output_str (v[i], (i == v.size () - 1 ? "\n" : " "));
+      _output_str (v[i], (i == v.size () - 1 ? NULL : " "));
     }
   } else {
     outputter_t::output_str (s);
@@ -100,7 +99,7 @@ outputter_t::_output_str (str s, str sep_str)
     return;
 
   _last_output_in_mode = _mode;
-  // _did_output = true;
+  _did_output = true;
 
   _strs.push_back (s);
   _buf << s;
