@@ -231,6 +231,10 @@ public:
   bhash(bhash<K,H,E>&& b) = delete;
 #endif
 
+  explicit bhash(std::initializer_list<K> l) {
+    for (const auto& v:l) { insert(v); }
+  }
+
   bhash (const bhash<K,H,E> &in)
   {
     in.core::traverse (wrap (this, &bhash::copyslot));
