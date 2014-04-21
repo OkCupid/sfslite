@@ -25,7 +25,7 @@
 #include "amisc.h"
 
 // the default behavior is to panic on any rxx errors.
-bool sfs_rxx_panic = true;
+bool sfs_rxx_panic = false;
 
 
 struct rcbase {
