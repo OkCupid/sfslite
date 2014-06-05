@@ -143,6 +143,14 @@ public:
     if (slot *s = getslot (k))
       delslot (s);
   }
+  bool lookup(const K &k, typename R::type v) {
+      auto _v = (*this)[k];
+      if (_v) {
+          *v = *_v;
+          return true;
+      }
+      return false;
+  }
   typename R::type operator[] (const K &k) {
     if (slot *s = getslot (k))
       return R::ret (&s->value);
