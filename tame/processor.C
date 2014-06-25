@@ -1,5 +1,6 @@
 
 #include "tame.h"
+#include "keyfunc.h"
 #include "rxx.h"
 #include <ctype.h>
 
@@ -200,11 +201,11 @@ array_initializer_t::ref_prefix () const
 }
 
 str
-mangle (const str &in)
+mangle (const str &in, const str &loc)
 {
   const char *i;
   char *o;
-  mstr m (in.len ());
+  mstr m (in.len () + 10);
   for (i = in.cstr (), o = m.cstr (); *i; i++) {
     if (!isspace (*i)) {
       switch(*i) {
@@ -214,7 +215,14 @@ mangle (const str &in)
       o++;
     }
   }
-  m.setlen (o - m.cstr ());
+
+  // Make distcc happy by only looking at the basename
+  const char *loc_start = strrchr(loc.cstr(), '/');
+  if (!loc_start) {
+    loc_start = loc.cstr();
+  }
+  snprintf(o , 10, "_%08x", hash_string(loc_start));
+  m.setlen (o + 9 - m.cstr ());
   return m;
 }
 
