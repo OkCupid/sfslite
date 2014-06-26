@@ -382,9 +382,9 @@ private:
 
 // Convert:
 //
-//   foo_t::max<int,int> => foo_t__max_int_int_
+//   foo_t::max<int,int> test.C:808 => foo_t__max_int_int_6eabcd
 //
-str mangle (const str &in);
+str mangle (const str &in, const str &loc);
 
 //
 // convert 
@@ -418,7 +418,7 @@ public:
     : _ret_type (ws_strip (r), 
 		 d->pointer () ? ws_strip (d->pointer ()) : NULL), 
       _name (d->name ()),
-      _name_mangled (mangle (_name)), 
+      _name_mangled (mangle (_name, loc)),
       _method_name (strip_to_method (_name)),
       _class (strip_off_method (_name)), 
       _self (c ? str (strbuf ("const ") << _class) : _class, "*", "_self"),
