@@ -161,6 +161,36 @@ inetsocket (int type, u_int16_t port, u_int32_t addr)
   return -1;
 }
 
+int inetsocket6(int type, u_int16_t port, const in6_addr& addr) {
+    int s;
+    int n;
+    struct sockaddr_in6 sin;
+
+    bzero (&sin, sizeof (sin));
+    sin.sin6_family = AF_INET6;
+    sin.sin6_port = htons (port);
+    sin.sin6_flowinfo = 0;
+    for (size_t i = 0; i < 4; i++) {
+        sin.sin6_addr.s6_addr32[i] = htonl(addr.s6_addr32[i]);
+    }
+
+    if ((s = socket (PF_INET6, type, 0)) < 0)
+        return -1;
+
+    n = 1;
+    /* Avoid those annoying TIME_WAITs for TCP */
+    if (port && type == SOCK_STREAM
+        && setsockopt (s, SOL_SOCKET, SO_REUSEADDR, (char *) &n, sizeof (n)) < 0)
+        fatal ("inetsocket: SO_REUSEADDR: %s\n", strerror (errno));
+
+    if (bind (s, (struct sockaddr *) &sin, sizeof (sin)) >= 0) {
+        return s;
+    }
+
+    close (s);
+    return -1;
+}
+
 int
 unixsocket (const char *path)
 {

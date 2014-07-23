@@ -58,6 +58,8 @@ char *strnnsep (char **, const char *);
 /* socket.C */
 extern in_addr inet_bindaddr;
 int inetsocket (int, u_int16_t = 0, u_int32_t = INADDR_ANY);
+int inetsocket6 (int, u_int16_t = 0, 
+                 const in6_addr& addr = in6addr_any);
 int inetsocket_resvport (int, u_int32_t = INADDR_ANY);
 int unixsocket (const char *);
 int unixsocket_connect (const char *);

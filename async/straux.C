@@ -31,8 +31,8 @@ char *
 mempbrk (char *s1, const char *s2, int len)
 {
   const char *const eom = s1 + len;
-  register const char *cp;
-  register int i1, i2;
+  const char *cp;
+  int i1, i2;
 
   while (s1 < eom) {
     i1 = *s1++;
