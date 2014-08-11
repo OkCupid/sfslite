@@ -43,6 +43,7 @@ enum { maxsobufsize = 0x05000 }; /* 16K + header */
 #endif /* !SFS_ALLOW_LARGE_BUFFER */
 int sndbufsize = maxsobufsize;
 int rcvbufsize = maxsobufsize;
+bool use_reuseaddr = false;
 in_addr inet_bindaddr;
 INITFN(init_env);
 static void
@@ -52,6 +53,9 @@ init_env ()
     sndbufsize = atoi (p);
   if (char *p = safegetenv ("RCVBUFSIZE"))
     rcvbufsize = atoi (p);
+  if (char *p = safegetenv ("SFS_USE_REUSEADDR")) {
+      use_reuseaddr = (bool) atoi(p);
+  }
 
   char *p = safegetenv ("BINDADDR");
   if (!p || inet_aton (p, &inet_bindaddr) <= 0)
@@ -142,7 +146,7 @@ inetsocket (int type, u_int16_t port, u_int32_t addr)
 
   n = 1;
   /* Avoid those annoying TIME_WAITs for TCP */
-  if (port && type == SOCK_STREAM
+  if ( (port || use_reuseaddr) && type == SOCK_STREAM
       && setsockopt (s, SOL_SOCKET, SO_REUSEADDR, (char *) &n, sizeof (n)) < 0)
     fatal ("inetsocket: SO_REUSEADDR: %s\n", strerror (errno));
  again:
