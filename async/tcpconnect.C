@@ -23,8 +23,22 @@
 
 #include "async.h"
 #include "dns.h"
+#include "init.h"
+
+//-----------------------------------------------------------------------------
 
 bool tcpconnect_debug = false;
+int tcpconnect_conn_rets = 0;
+INITFN(init_env);
+static void
+init_env() {
+    if (char *p = safegetenv ("SFS_TCPCONNECT_DEBUG"))
+        tcpconnect_debug = (bool) atoi (p);
+    if (char *p = safegetenv ("SFS_TCPCONNECT_CONN_RETRIES"))
+        tcpconnect_conn_rets = atoi (p);
+}
+
+//-----------------------------------------------------------------------------
 
 struct tcpconnect_t {
   virtual ~tcpconnect_t () {}
@@ -110,31 +124,51 @@ tcpportconnect_t::name_cb (str hn, ptr<hostent> h, int err)
 void
 tcpportconnect_t::connect_to_in_addr (const in_addr &a)
 {
-  sockaddr_in sin;
-  bzero (&sin, sizeof (sin));
-  sin.sin_family = AF_INET;
-  sin.sin_port = htons (port);
-  sin.sin_addr = a;
 
-  fd = inetsocket (SOCK_STREAM);
-  if (fd < 0) {
-    if (tcpconnect_debug) {
-      warn << "inetsocket: " << strerror(errno) << "\n";
+    size_t max_retries = tcpconnect_conn_rets; 
+    sockaddr_in sin;
+    bzero (&sin, sizeof (sin));
+    sin.sin_family = AF_INET;
+    sin.sin_port = htons (port);
+    sin.sin_addr = a;
+
+    for (size_t retry = 0; retry <= max_retries; retry++) {
+        fd = inetsocket (SOCK_STREAM);
+        if (fd < 0) {
+            if (tcpconnect_debug) {
+                warn << "inetsocket: " << strerror(errno) << "\n";
+            }
+            delaycb (0, wrap (this, &tcpportconnect_t::fail, errno));
+            return;
+        }
+        make_async (fd);
+        close_on_exec (fd);
+        if (connect (fd, (sockaddr *) &sin, sizeof (sin)) < 0 
+            && errno != EINPROGRESS) {
+
+            if (tcpconnect_debug) {
+                warn << "connect: " << strerror(errno) << "\n";
+            }
+
+            // MM: If we are binding to ports using SO_REUSEADDR, then 
+            // it's possible we will try to connect() to a 4-tuple that
+            // is already in use. If that is the case, just try again.
+            // 
+            // Note: This will just be a failure in the default case
+            // where max_retries == 0
+            if (errno == EADDRINUSE) {
+                continue;
+            }
+
+            delaycb (0, wrap (this, &tcpportconnect_t::fail, errno));
+            return;
+        }
+
+        fdcb (fd, selwrite, wrap (this, &tcpportconnect_t::connect_cb));
+        return;
     }
+
     delaycb (0, wrap (this, &tcpportconnect_t::fail, errno));
-    return;
-  }
-  make_async (fd);
-  close_on_exec (fd);
-  if (connect (fd, (sockaddr *) &sin, sizeof (sin)) < 0
-      && errno != EINPROGRESS) {
-    if (tcpconnect_debug) {
-      warn << "connect: " << strerror(errno) << "\n";
-    }
-    delaycb (0, wrap (this, &tcpportconnect_t::fail, errno));
-    return;
-  }
-  fdcb (fd, selwrite, wrap (this, &tcpportconnect_t::connect_cb));
 }
 
 void
