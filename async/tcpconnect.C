@@ -38,6 +38,11 @@ init_env() {
         tcpconnect_conn_rets = atoi (p);
 }
 
+#define TCP_DEBUG(s) \
+    if (tcpconnect_debug) { \
+        warn << "SFS: TCP_DEBUG: " << s << "\n"; \
+    }
+
 //-----------------------------------------------------------------------------
 
 struct tcpconnect_t {
@@ -100,24 +105,22 @@ tcpportconnect_t::name_cb (str hn, ptr<hostent> h, int err)
   dnsp = NULL;
   if (!h) {
     if (dns_tmperr (err)) {
-      if (tcpconnect_debug) { warn << "tcpconnect: retryable error\n"; }
-      fail (EAGAIN);
+        TCP_DEBUG("DNS retryable error");
+        fail (EAGAIN);
     } else {
-      if (tcpconnect_debug) { warn << "tcpconnect: no-entry error\n"; }
-      fail (ENOENT);
+        TCP_DEBUG("DNS no-entry error");
+        fail (ENOENT);
     }
-    if (tcpconnect_debug) {
-      warn << "dns_hostbyname(\"" << hn << "\"): " << dns_strerror(err) << "\n";
-    }
+
+    TCP_DEBUG("dns_hostbyname(\"" << hn << "\"): " << dns_strerror(err));
     return;
   }
   if (namep)
     *namep = h->h_name;
 
   in_addr *a = reinterpret_cast<in_addr *> (h->h_addr);
-  if (tcpconnect_debug) {
-    warn << "tcpconnect: DNS resolution yiedled " << inet_ntoa (*a) << "\n";
-  }
+  TCP_DEBUG(str("DNS resolution yiedled ") << inet_ntoa (*a));
+
   connect_to_in_addr (*a);
 }
 
@@ -135,9 +138,7 @@ tcpportconnect_t::connect_to_in_addr (const in_addr &a)
     for (size_t retry = 0; retry <= max_retries; retry++) {
         fd = inetsocket (SOCK_STREAM);
         if (fd < 0) {
-            if (tcpconnect_debug) {
-                warn << "inetsocket: " << strerror(errno) << "\n";
-            }
+            TCP_DEBUG(str("inetsocket: ") << strerror(errno));
             delaycb (0, wrap (this, &tcpportconnect_t::fail, errno));
             return;
         }
@@ -146,9 +147,7 @@ tcpportconnect_t::connect_to_in_addr (const in_addr &a)
         if (connect (fd, (sockaddr *) &sin, sizeof (sin)) < 0 
             && errno != EINPROGRESS) {
 
-            if (tcpconnect_debug) {
-                warn << "connect: " << strerror(errno) << "\n";
-            }
+            TCP_DEBUG(str("connect: ") << strerror(errno) );
 
             // MM: If we are binding to ports using SO_REUSEADDR, then 
             // it's possible we will try to connect() to a 4-tuple that
@@ -156,7 +155,8 @@ tcpportconnect_t::connect_to_in_addr (const in_addr &a)
             // 
             // Note: This will just be a failure in the default case
             // where max_retries == 0
-            if (errno == EADDRINUSE) {
+            if (errno == EADDRINUSE || errno == EADDRNOTAVAIL) {
+                TCP_DEBUG("connect: retrying bind()");
                 continue;
             }
 
@@ -187,32 +187,26 @@ tcpportconnect_t::connect_cb ()
   sn = sizeof (err);
   int rv = getsockopt (fd, SOL_SOCKET, SO_ERROR, (char *) &err, &sn);
   err = err ? err : ECONNREFUSED;
-  if (tcpconnect_debug) { 
-    warn << "connect_cb: rv: " << rv
-         << " errno: " << strerror(errno) << " (" << errno << ")"
-         << " err:  " << strerror(err) << " (" << err << ")\n";
-  }
+  TCP_DEBUG(str("connect_cb: rv: ") << rv
+            << " errno: " << strerror(errno) << " (" << errno << ")"
+            << " err:  " << strerror(err) << " (" << err << ")");
   fail (err);
 }
 
 tcpconnect_t *
 tcpconnect (in_addr addr, u_int16_t port, cbi cb)
 {
-  if (tcpconnect_debug) {
-    warn << "tcpconnect: connect to " << inet_ntoa (addr) << ":" << port 
-	 << "\n";
-  }
-  return New tcpportconnect_t (addr, port, cb);
+    TCP_DEBUG(str("tcpconnect: connect to ") << inet_ntoa (addr) << ":" 
+              << port);
+    return New tcpportconnect_t (addr, port, cb);
 }
 
 tcpconnect_t *
 tcpconnect (str hostname, u_int16_t port, cbi cb,
 	    bool dnssearch, str *namep)
 {
-  if (tcpconnect_debug) {
-    warn << "tcpconnect: connect to " << hostname << ":" << port << "\n";
-  }
-  return New tcpportconnect_t (hostname, port, cb, dnssearch, namep);
+    TCP_DEBUG(str("tcpconnect: connect to ") << hostname << ":" << port);
+    return New tcpportconnect_t (hostname, port, cb, dnssearch, namep);
 }
 
 void
