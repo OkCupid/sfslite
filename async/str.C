@@ -99,7 +99,7 @@ str::iov2strobj (const iovec *iov, int cnt)
   return b;
 }
 
-bool str::to_int32(int32_t* out, int base)
+bool str::to_int32(int32_t* out, int base) const
 {
   bool ret = false;
   char *ep;
@@ -115,7 +115,7 @@ bool str::to_int32(int32_t* out, int base)
   return ret;
 }
 
-bool str::to_int64(int64_t* out, int base)
+bool str::to_int64(int64_t* out, int base) const
 {
   bool ret = false;
   char *ep;
@@ -132,7 +132,7 @@ bool str::to_int64(int64_t* out, int base)
   return ret;
 }
 
-bool str::to_uint32(uint32_t* out, int base)
+bool str::to_uint32(uint32_t* out, int base) const
 {
   bool ret = false;
   char *ep;
@@ -153,7 +153,7 @@ bool str::to_uint32(uint32_t* out, int base)
   return ret;
 }
 
-bool str::to_uint64(uint64_t* out, int base)
+bool str::to_uint64(uint64_t* out, int base) const
 {
   bool ret = false;
   char *ep;
@@ -174,7 +174,7 @@ bool str::to_uint64(uint64_t* out, int base)
   return ret;
 }
 
-bool str::to_double(double* out)
+bool str::to_double(double* out) const
 {
     bool ret = false;
     const char *start = cstr();
