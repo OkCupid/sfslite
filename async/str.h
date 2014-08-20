@@ -183,11 +183,11 @@ public:
   //      10    Decimal
   //    0x10    Hexadecimal
 
-  bool to_int32(int32_t* out, int base = 10);
-  bool to_int64(int64_t* out, int base = 10);
-  bool to_uint32(uint32_t* out, int base = 10);
-  bool to_uint64(uint64_t* out, int base = 10);
-  bool to_double(double* out);
+  bool to_int32(int32_t* out, int base = 10) const;
+  bool to_int64(int64_t* out, int base = 10) const;
+  bool to_uint32(uint32_t* out, int base = 10) const;
+  bool to_uint64(uint64_t* out, int base = 10) const;
+  bool to_double(double* out) const;
 
   bool operator! () const { return !b; }
   explicit operator bool() const { return b; }
