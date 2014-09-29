@@ -98,6 +98,9 @@ public:
   {
     in.core::traverse (wrap (this, &qhash::copyslot));
   }
+  explicit qhash(std::initializer_list<slot> l) {
+      for (const auto &v : l) { core::insert_val(New slot(v), hash(v.key)); }
+  }
   void clear () {
     core::traverse (wrap (this, &qhash::delslot));
     core::clear ();
