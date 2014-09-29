@@ -77,11 +77,16 @@ uintptr_t v_XDR_dispatch_t::key (const XDR *v)
 
 //-----------------------------------------------------------------------
 
-static vec<rpc_constant_collect_hook_t> rpc_cch_vec;
+// This variable is used in other static initializers; its initialization is
+// wrapped in a function to avoid "static initializer fiasco".
+vec<rpc_constant_collect_hook_t>& rpc_cch_vec() {
+  static vec<rpc_constant_collect_hook_t> ans;
+  return ans;
+}
 
 rpc_add_cch_t::rpc_add_cch_t (rpc_constant_collect_hook_t h)
 {
-  rpc_cch_vec.push_back (h);
+  rpc_cch_vec().push_back (h);
 }
 
 //-----------------------------------------------------------------------
@@ -93,10 +98,11 @@ fetch_rpc_constant_collect_hooks ()
   if (!ret) {
     ret = New refcounted<rpc_constant_collect_hooks_t> ();
     bhash<uintptr_t> h;
-    for (size_t i = 0; i < rpc_cch_vec.size (); i++) {
-      uintptr_t hk = reinterpret_cast<uintptr_t> (rpc_cch_vec[i]);
+    auto v = rpc_cch_vec();
+    for (size_t i = 0, sz= v.size(); i < sz; i++) {
+      uintptr_t hk = reinterpret_cast<uintptr_t> (v[i]);
       if (!h[hk]) {
-	ret->push_back (rpc_cch_vec[i]);
+	ret->push_back (v[i]);
 	h.insert (hk);
       }
     }
