@@ -65,8 +65,6 @@ tools/tinetd/Makefile.in
 /autom4te*.cache
 /config.cache
 /config.guess
-/config.h
-/config.h.in
 /config.log
 /config.status
 /config.sub
@@ -292,3 +290,6 @@ tools/tinetd/Makefile.in
 /tutorial/ex10.C
 /tutorial/ex3b.C
 /tutorial/ex12.C
+
+/async/sfs_config.h
+/async/sfs_config.h.in
