@@ -175,13 +175,6 @@ public:
     return (u_char) *s - (u_char) *p;
   }
 
-  char* leakdat() {
-    return static_cast<strobj *>(b.Xleak())->dat();
-  }
-  const char* leakdat() const {
-    return static_cast<strobj *>(b.Xleak())->dat();
-  }
-
   // Setting base == 0 implies strtoull will auto-detect based on the string's
   // prefix. Converting to double will always auto-detect the number base.
   //
