@@ -1,6 +1,6 @@
 /* $Id$ */
 
-#include "sfs_config.h"
+#include <config.h>
 #include "init.h"
 
 #if defined (HAVE_MLOCKALL)

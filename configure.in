@@ -5,7 +5,7 @@ dnl
 
 AC_INIT(acinclude.m4)
 AM_INIT_AUTOMAKE(sfslite,1.2.9.15)
-AM_CONFIG_HEADER(async/sfs_config.h)
+AM_CONFIG_HEADER(config.h)
 
 dnl
 dnl Autoconf now recommending this...
@@ -510,7 +510,7 @@ AC_OUTPUT(Makefile async/Makefile libsafeptr/Makefile rpcc/Makefile
 	arpcgen/Makefile 
         libsfs/Makefile tests/Makefile tutorial/Makefile
 	tools/Makefile tools/rtftp/Makefile tools/tinetd/Makefile
-	tools/logger/Makefile tools/ncpp/Makefile )
+	tools/logger/Makefile tools/ncpp/Makefile async/sfs_assert.h)
 
 dnl
 dnl end SFSlite changes

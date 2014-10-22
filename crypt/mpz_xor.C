@@ -23,7 +23,7 @@
  */
 
 #ifdef HAVE_CONFIG_H
-#include "sfs_config.h"
+#include <config.h>
 #endif /* HAVE_CONFIG_H */
 
 #ifndef HAVE_MPZ_XOR
