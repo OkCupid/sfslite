@@ -39,7 +39,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 #ifdef HAVE_CONFIG_H
-#include <config.h>
+#include "sfs_config.h"
 #endif /* HAVE_CONFIG_H */
 
 #include "autoconf.h"
