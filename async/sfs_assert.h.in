@@ -1,10 +1,14 @@
 // -*-c++-*-
 #pragma once
-#include "sfs_config.h"
 #include <cassert>
 
-#ifdef SFS_DEBUG
+#define _SFS_DEBUG @sfsdebug@
+
+#if _SFS_DEBUG == 1
+#define SFS_DEBUG 1
 #define DASSERT(_X) assert(_X)
 #else
 #define DASSERT(_X)
 #endif
+
+#undef _SFS_DEGUG

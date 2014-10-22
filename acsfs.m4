@@ -2017,10 +2017,10 @@ if test "${with_tag+set}" = "set" -a "$with_tag" != "no"; then
 	sfstag=$with_tag
 fi
 install_to_system_bin=0
-sfsdebug="no"
+sfsdebug=0
 case $with_mode in
 	"debug" )
-		sfsdebug="yes"
+		sfsdebug=1
 		DEBUG=-g
 		CXXDEBUG=-g
 		sfstag=$with_mode
@@ -2048,7 +2048,7 @@ case $with_mode in
 		;;
 
 	"shdbg"  )
-		sfsdebug="yes"
+		sfsdebug=1
 		sfstag=$with_mode
 		enable_shared=yes
 		DEBUG=-g
@@ -2063,7 +2063,7 @@ case $with_mode in
 		;;
 
 	"pydbg" )
-		sfsdebug="yes"
+		sfsdebug=1
 		sfstag=$with_mode
 		DEBUG=-g
 		CXXDEBUG=-g
@@ -2106,13 +2106,14 @@ fi
 
 AC_SUBST(sfstagdir)
 AC_SUBST(sfstag)
+AC_SUBST(sfsdebug)
 
 if test "${enable_shared}" = "yes"; then
 	AC_DEFINE(SFS_COMPILE_SHARED, 1,
 	     Define if SFS libs are compiled with shared libs)
 fi
 
-if test "x${sfsdebug}" = "xyes"; then
+if test "x${sfsdebug}" = "x1"; then
 	AC_DEFINE([SFS_DEBUG], 1,
 	     [Define if SFS libs are compiled in debug mode])
 fi
