@@ -512,7 +512,7 @@ AC_OUTPUT(Makefile async/Makefile libsafeptr/Makefile rpcc/Makefile
 	arpcgen/Makefile 
         libsfs/Makefile tests/Makefile tutorial/Makefile
 	tools/Makefile tools/rtftp/Makefile tools/tinetd/Makefile
-	tools/logger/Makefile tools/ncpp/Makefile )
+	tools/logger/Makefile tools/ncpp/Makefile async/sfs_assert.h)
 
 dnl
 dnl end SFSlite changes
