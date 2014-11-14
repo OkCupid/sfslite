@@ -28,6 +28,7 @@
 
 #include "opnew.h"
 #include "array.h"
+#include "sfs_attr.h"
 #include <typeinfo>
 
 #ifndef TUNION_DEBUG
@@ -88,7 +89,7 @@ public:
 //   dereferencing pointer ‘<anonymous>’ does break strict-aliasing rules
 //
 template<class D> D 
-hack_reinterpret_cast (char *input)
+SFS_INLINE_VISIBILITY hack_reinterpret_cast (char *input)
 {
   D ret = NULL;
 
@@ -101,8 +102,8 @@ hack_reinterpret_cast (char *input)
   return ret;
 }
 
-template<class D> D 
-hack_reinterpret_const_cast (const char *input)
+template<class D> D
+SFS_INLINE_VISIBILITY hack_reinterpret_const_cast (const char *input)
 {
   return hack_reinterpret_cast<D> (const_cast<char *> (input));
 }
@@ -114,11 +115,11 @@ template<class T> class union_entry : public union_entry_base {
     char m[sizeof (T)];
   };
 
-  static const vtbl *getvptr () {
+  SFS_INLINE_VISIBILITY static const vtbl *getvptr () {
     static const vtbl vt = { &typeid (T), &destructor, &assignop, sizeof (T) };
     return &vt;
   }
-  static void destructor (union_entry_base *tb) {
+  SFS_INLINE_VISIBILITY static void destructor (union_entry_base *tb) {
     union_entry *te = static_cast<union_entry *> (tb);
     te->_addr ()->~T ();
   }
@@ -130,32 +131,35 @@ template<class T> class union_entry : public union_entry_base {
     (void) (*dst->_addr () = *src->_addr ()); // XXX - cast required by egcs
   }
 
-  T *_addr () { 
+  SFS_INLINE_VISIBILITY T *_addr () { 
     return hack_reinterpret_cast<T *> (m);
   }
-  const T *_addr () const { 
+  SFS_INLINE_VISIBILITY const T *_addr () const { 
     return hack_reinterpret_const_cast <const T *> (m);
   }
 
+  #if TUNION_DEBUG
   void verify () const {
-#if TUNION_DEBUG
     if (!vptr || *vptr->type != typeid (T))
       panic ("union_entry<%s>::verify: accessed when %s selected\n",
 	     typeid (T).name (), vptr ? vptr->type->name () : "NULL");
-#endif /* TUNION_DEBUG */
   }
+  #else
+  void SFS_INLINE_VISIBILITY verify () const {}
+  #endif /* TUNION_DEBUG */
+
 
 public:
-  T *addr () { verify (); return _addr (); }
-  const T *addr () const { verify (); return _addr (); }
-  T *operator-> () { return addr (); }
-  const T *operator-> () const { return addr (); }
-  T &operator *() { return *addr (); }
-  const T &operator *() const { return *addr (); }
-  operator T *() { return addr (); }
-  operator const T *() const { return addr (); }
+  SFS_INLINE_VISIBILITY T *addr () { verify (); return _addr (); }
+  SFS_INLINE_VISIBILITY const T *addr () const { verify (); return _addr (); }
+  SFS_INLINE_VISIBILITY T *operator-> () { return addr (); }
+  SFS_INLINE_VISIBILITY const T *operator-> () const { return addr (); }
+  SFS_INLINE_VISIBILITY T &operator *() { return *addr (); }
+  SFS_INLINE_VISIBILITY const T &operator *() const { return *addr (); }
+  SFS_INLINE_VISIBILITY operator T *() { return addr (); }
+  SFS_INLINE_VISIBILITY operator const T *() const { return addr (); }
 
-  void select () {
+  SFS_INLINE_VISIBILITY void select () {
     if (!vptr || *vptr->type != typeid (T)) {
       destroy ();
       vptr = getvptr ();
@@ -177,8 +181,8 @@ template<> class union_entry<void> : public union_entry_base {
     static const vtbl vt = { &typeid (void), &destructor, &assignop, 0 };
     return &vt;
   }
-  static void destructor (union_entry_base *tb) {}
-  static void assignop (union_entry_base *dstb,
+  SFS_INLINE_VISIBILITY static void destructor (union_entry_base *tb) {}
+  SFS_INLINE_VISIBILITY static void assignop (union_entry_base *dstb,
 			const union_entry_base *srcb) {
     union_entry *dst = static_cast<union_entry *> (dstb);
     dst->select ();

@@ -400,7 +400,7 @@ private:
 #endif
   }
 
-  inline void pth_init ()
+  SFS_INLINE_VISIBILITY inline void pth_init ()
   {
 #ifdef HAVE_TAME_PTH
     pth_mutex_init (&_mutex);

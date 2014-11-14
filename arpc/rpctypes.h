@@ -78,18 +78,19 @@ template<class T> class rpc_ptr {
   T *p;
 
 public:
-  rpc_ptr () { p = NULL; }
-  rpc_ptr (const rpc_ptr &rp) { p = rp ? New T (*rp) : NULL; }
-  ~rpc_ptr () { delete p; }
+  SFS_INLINE_VISIBILITY rpc_ptr () { p = NULL; }
+  SFS_INLINE_VISIBILITY rpc_ptr (const rpc_ptr &rp) { p = rp ? New T (*rp) :
+      NULL; }
+  SFS_INLINE_VISIBILITY ~rpc_ptr () { delete p; }
 
-  void clear () { delete p; p = NULL; }
-  rpc_ptr &alloc () { if (!p) p = New T; return *this; }
+  SFS_INLINE_VISIBILITY void clear () { delete p; p = NULL; }
+  SFS_INLINE_VISIBILITY rpc_ptr &alloc () { if (!p) p = New T; return *this; }
   rpc_ptr &assign (T *tp) { clear (); p = tp; return *this; }
   T *release () { T *r = p; p = NULL; return r; }
 
-  operator T *() const { return p; }
-  T *operator-> () const { return p; }
-  T &operator* () const { return *p; }
+  SFS_INLINE_VISIBILITY operator T *() const { return p; }
+  SFS_INLINE_VISIBILITY T *operator-> () const { return p; }
+  SFS_INLINE_VISIBILITY T &operator* () const { return *p; }
 
   rpc_ptr &operator= (const rpc_ptr &rp) {
     if (!rp.p)
@@ -126,8 +127,8 @@ public:
 protected:
   bool nofree;
 
-  void init () { nofree = false; super::init (); }
-  void del () { if (!nofree) super::del (); }
+  SFS_INLINE_VISIBILITY  void init () { nofree = false; super::init (); }
+  SFS_INLINE_VISIBILITY  void del () { if (!nofree) super::del (); }
 
   void copy (const elm_t *p, size_t n) {
     clear ();
@@ -152,29 +153,36 @@ protected:
       init ();
     super::operator= (v);
   }
-  void ensure (size_t m) { assert (!nofree); assert (size () + m <= maxsize); }
+  SFS_INLINE_VISIBILITY  void ensure (size_t m) {
+    assert (!nofree);
+    assert (size () + m <= maxsize);
+  }
 
 public:
-  rpc_vec () { init (); }
-  rpc_vec (const rpc_vec &v) { init (); copy (v); }
+  SFS_INLINE_VISIBILITY  rpc_vec () { init (); }
+  SFS_INLINE_VISIBILITY  rpc_vec (const rpc_vec &v) { init (); copy (v); }
 
   #ifdef __GXX_EXPERIMENTAL_CXX0X__
-  explicit rpc_vec(std::initializer_list<T> l) : rpc_vec() {
+  SFS_INLINE_VISIBILITY  explicit rpc_vec(std::initializer_list<T> l) : rpc_vec() {
     reserve(l.size());
     for (auto v:l) { push_back(v); }
   }
   #endif
 
-  template<size_t m> rpc_vec (const rpc_vec<T, m> &v) { init (); copy (v); }
-  ~rpc_vec () { if (nofree) super::init (); }
-  void clear () { del (); init (); }
+  template<size_t m>
+  SFS_INLINE_VISIBILITY  rpc_vec (const rpc_vec<T, m> &v) { init (); copy (v); }
+  SFS_INLINE_VISIBILITY  ~rpc_vec () { if (nofree) super::init (); }
+  SFS_INLINE_VISIBILITY  void clear () { del (); init (); }
 
   rpc_vec &operator= (const rpc_vec &v) { copy (v); return *this; }
-  template<size_t m> rpc_vec &operator= (const rpc_vec<T, m> &v)
+  template<size_t m>
+  SFS_INLINE_VISIBILITY rpc_vec &operator= (const rpc_vec<T, m> &v)
     { copy (v); return *this; }
-  template<size_t m> rpc_vec &operator= (const ::vec<T, m> &v)
+  template<size_t m>
+  SFS_INLINE_VISIBILITY rpc_vec &operator= (const ::vec<T, m> &v)
     { copy (v.base (), v.size ()); return *this; }
-  template<size_t m> rpc_vec &operator= (const array<T, m> &v)
+  template<size_t m>
+  SFS_INLINE_VISIBILITY rpc_vec &operator= (const array<T, m> &v)
     { switch (0) case 0: case m <= max:; copy (v.base (), m); return *this; }
 
   void swap (rpc_vec &v) {
@@ -196,7 +204,10 @@ public:
   template<size_t m> rpc_vec &set (const ::vec<T, m> &v)
     { set (v.base (), v.size ()); return *this; }
 
-  void reserve (size_t m) { ensure (m); super::reserve (m); }
+  SFS_INLINE_VISIBILITY  void reserve (size_t m) {
+    ensure (m);
+    super::reserve (m);
+  }
 
   void setsize (size_t n) {
     assert (!nofree);
@@ -204,17 +215,21 @@ public:
     super::setsize (n);
   }
 
-  size_t size () const { return super::size (); }
-  bool empty () const { return super::empty (); }
+  SFS_INLINE_VISIBILITY size_t size () const { return super::size (); }
+  SFS_INLINE_VISIBILITY bool empty () const { return super::empty (); }
 
-  elm_t *base () { return super::base (); }
-  const elm_t *base () const { return super::base (); }
+  SFS_INLINE_VISIBILITY elm_t *base () { return super::base (); }
+  SFS_INLINE_VISIBILITY const elm_t *base () const { return super::base (); }
 
-  elm_t *lim () { return super::lim (); }
-  const elm_t *lim () const { return super::lim (); }
+  SFS_INLINE_VISIBILITY  elm_t *lim () { return super::lim (); }
+  SFS_INLINE_VISIBILITY  const elm_t *lim () const { return super::lim (); }
 
-  elm_t &operator[] (size_t i) { return super::operator[] (i); }
-  const elm_t &operator[] (size_t i) const { return super::operator[] (i); }
+  SFS_INLINE_VISIBILITY  elm_t &operator[] (size_t i) {
+    return super::operator[] (i);
+  }
+  SFS_INLINE_VISIBILITY  const elm_t &operator[] (size_t i) const {
+    return super::operator[] (i);
+  }
   elm_t &at (size_t i) { return (*this)[i]; }
   const elm_t &at (size_t i) const { return (*this)[i]; }
 
@@ -241,11 +256,11 @@ do {								\
 
 #undef append
 
-  elm_t &push_back () {
+  SFS_INLINE_VISIBILITY elm_t &push_back () {
     ensure (1);
     return super::push_back ();
   }
-  elm_t &push_back (const elm_t &e) {
+  SFS_INLINE_VISIBILITY elm_t &push_back (const elm_t &e) {
     ensure (1);
     return super::push_back (e);
   }
@@ -639,50 +654,50 @@ extern struct rpc_wipe_t _rpcwipe;
 #define RPC_FIELD const char *field = NULL
 
 inline bool
-rpc_traverse (rpc_clear_t &, u_int32_t &obj, RPC_FIELD)
+SFS_INLINE_VISIBILITY rpc_traverse (rpc_clear_t &, u_int32_t &obj, RPC_FIELD)
 {
   obj = 0;
   return true;
 }
 template<size_t n> inline bool
-rpc_traverse (rpc_clear_t &, rpc_opaque<n> &obj, RPC_FIELD)
+SFS_INLINE_VISIBILITY rpc_traverse (rpc_clear_t &, rpc_opaque<n> &obj, RPC_FIELD)
 {
   bzero (obj.base (), obj.size ());
   return true;
 }
 template<size_t n> inline bool
-rpc_traverse (rpc_wipe_t &, rpc_opaque<n> &obj, RPC_FIELD)
+SFS_INLINE_VISIBILITY rpc_traverse (rpc_wipe_t &, rpc_opaque<n> &obj, RPC_FIELD)
 {
   bzero (obj.base (), obj.size ());
   return true;
 }
 template<size_t n> inline bool
-rpc_traverse (rpc_clear_t &, rpc_bytes<n> &obj, RPC_FIELD)
+SFS_INLINE_VISIBILITY rpc_traverse (rpc_clear_t &, rpc_bytes<n> &obj, RPC_FIELD)
 {
   obj.setsize (0);
   return true;
 }
 template<size_t n> inline bool
-rpc_traverse (rpc_wipe_t &, rpc_bytes<n> &obj, RPC_FIELD)
+SFS_INLINE_VISIBILITY rpc_traverse (rpc_wipe_t &, rpc_bytes<n> &obj, RPC_FIELD)
 {
   bzero (obj.base (), obj.size ());
   obj.setsize (0);
   return true;
 }
 template<size_t n> inline bool
-rpc_traverse (rpc_clear_t &, rpc_str<n> &obj, RPC_FIELD)
+SFS_INLINE_VISIBILITY rpc_traverse (rpc_clear_t &, rpc_str<n> &obj, RPC_FIELD)
 {
   obj = "";
   return true;
 }
 template<class T> inline bool
-rpc_traverse (rpc_clear_t &, rpc_ptr<T> &obj, RPC_FIELD)
+SFS_INLINE_VISIBILITY rpc_traverse (rpc_clear_t &, rpc_ptr<T> &obj, RPC_FIELD)
 {
   obj.clear ();
   return true;
 }
 template<class T> inline bool
-rpc_traverse (rpc_wipe_t &t, rpc_ptr<T> &obj, RPC_FIELD)
+SFS_INLINE_VISIBILITY rpc_traverse (rpc_wipe_t &t, rpc_ptr<T> &obj, RPC_FIELD)
 {
   if (obj)
     rpc_traverse (t, *obj);
@@ -690,7 +705,7 @@ rpc_traverse (rpc_wipe_t &t, rpc_ptr<T> &obj, RPC_FIELD)
   return true;
 }
 template<class T, size_t n> inline bool
-rpc_traverse (rpc_clear_t &, rpc_vec<T, n> &obj, RPC_FIELD)
+SFS_INLINE_VISIBILITY rpc_traverse (rpc_clear_t &, rpc_vec<T, n> &obj, RPC_FIELD)
 {
   obj.setsize (0);
   return true;

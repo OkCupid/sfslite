@@ -29,7 +29,7 @@
 #include "tame_event.h"
 #include "tame_run.h"
 #include "tame_weakref.h"
-
+#include "sfs_attr.h"
 
 // All closures are numbered serially so that our accounting does not
 // get confused.
@@ -115,13 +115,13 @@ private:
 typedef ptr<closure_t> closure_ptr_t;
 
 template<class C>
-class closure_action 
+class SFS_HIDDEN closure_action 
 #ifdef TAME_DETEMPLATIZE
   : public tame_action 
 #endif 
 {
 public:
-  closure_action (ptr<C> c) : _closure (c) {}
+  SFS_INLINE_VISIBILITY closure_action (ptr<C> c) : _closure (c) {}
 
   //
   // One would like to assert (!_closure) in the destructor,
@@ -130,7 +130,7 @@ public:
   // _closure field aside from just passing it onto other 
   // closure_actions
   //
-  ~closure_action () {}
+  SFS_INLINE_VISIBILITY ~closure_action () {}
 
   bool perform (_event_cancel_base *event, const char *loc, bool _reuse)
   {
@@ -178,16 +178,16 @@ private:
  * of _mkevent.
  */
 template<class C>
-class closure_wrapper {
+class SFS_HIDDEN closure_wrapper {
 public:
-  closure_wrapper (const ptr<C> &c) : _closure (c) {}
-  const ptr<C> &closure () const { return _closure; }
+  SFS_INLINE_VISIBILITY closure_wrapper (const ptr<C> &c) : _closure (c) {}
+  SFS_INLINE_VISIBILITY const ptr<C> &closure () const { return _closure; }
 private:
   const ptr<C> &_closure;
 };
 
 template<class C, class T1, class T2, class T3>
-typename event<T1,T2,T3>::ptr
+SFS_HIDDEN typename event<T1,T2,T3>::ptr
 _mkevent_implicit_rv (const ptr<C> &c, 
 		      const char *loc,
 		      const _tame_slot_set<T1,T2,T3> &rs)
@@ -207,7 +207,7 @@ _mkevent_implicit_rv (const ptr<C> &c,
   return ret;
 }
 
-template<class T> void use_reference (T &i) {}
+template<class T> SFS_INLINE_VISIBILITY void use_reference (T &i) {}
 
 void start_rendezvous_collection ();
 void collect_rendezvous (weakref<rendezvous_base_t> r);
@@ -220,8 +220,9 @@ extern const char *__cls_type;
 // Make an event in a twait{} block based upon a given result slotset.
 // Useful in some connectors...
 template<class C, class T1, class T2, class T3>
-typename event<T1,T2,T3>::ref
-_mkevent_rs (const closure_wrapper<C> &c, const char *loc, const char *ctn,
+SFS_HIDDEN typename event<T1,T2,T3>::ref
+_mkevent_rs (const closure_wrapper<C> &c, const char *loc,
+                                   const char *ctn,
 	     const _tame_slot_set<T1,T2,T3> &ss)
 {
   typename event<T1,T2,T3>::ref ret = 

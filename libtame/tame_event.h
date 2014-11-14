@@ -12,6 +12,7 @@
 #include "list.h"
 #include "tame_slotset.h"
 #include "tame_run.h"
+#include "sfs_attr.h"
 
 // Specify 1 extra argument, that way we can do template specialization
 // elsewhere.  We should never have an instatiated event class with
@@ -21,7 +22,7 @@ class _event;
 
 class _event_cancel_base : public virtual refcount {
 public:
-  _event_cancel_base (const char *loc) :
+  SFS_INLINE_VISIBILITY _event_cancel_base (const char *loc) :
     _loc (loc), 
     _cancelled (false),
     _cleared (false),
@@ -29,7 +30,7 @@ public:
     _performing (false)
   { g_stats->did_mkevent (); }
 
-  ~_event_cancel_base () {}
+  SFS_INLINE_VISIBILITY ~_event_cancel_base () {}
 
   void set_cancel_notifier (ptr<_event<> > e) { _cancel_notifier = e; }
   void cancel ();

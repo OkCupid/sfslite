@@ -50,8 +50,11 @@ template<class K, class V> struct qhash_slot {
   ihash_entry<qhash_slot> link;
   const K key;
   V value;
-  qhash_slot (const K &k, typename CREF (V) v) : key (k), value (v) {}
-  qhash_slot (const K &k, typename NCREF (V) v) : key (k), value (v) {}
+  SFS_INLINE_VISIBILITY qhash_slot (const K &k, typename CREF (V) v) :
+    key (k), value (v) {}
+  SFS_INLINE_VISIBILITY qhash_slot (const K &k, typename NCREF (V) v) :
+    key (k), value (v) {}
+  SFS_INLINE_VISIBILITY ~qhash_slot() = default;
 };
 
 template<class K, class V, class H, class E>
@@ -93,7 +96,9 @@ protected:
     { (*cb) (s->key, R::ret (&s->value)); }
 
 public:
+  SFS_INLINE_VISIBILITY
   qhash () : eq (E ()), hash (H ()) {}
+
   qhash (const qhash<K,V,H,E,R> &in)
   {
     in.core::traverse (wrap (this, &qhash::copyslot));
@@ -101,10 +106,14 @@ public:
   explicit qhash(std::initializer_list<slot> l) {
       for (const auto &v : l) { core::insert_val(New slot(v), hash(v.key)); }
   }
+
+  SFS_INLINE_VISIBILITY
   void clear () {
     core::traverse (wrap (this, &qhash::delslot));
     core::clear ();
   }
+
+  SFS_INLINE_VISIBILITY
   ~qhash () { clear (); }
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
   qhash(qhash<K,V,H,E,R>&& q) = delete;
@@ -142,10 +151,14 @@ public:
     else
       core::insert_val (New slot (k, v), hash (k));
   }
+
+  SFS_INLINE_VISIBILITY
   void remove (const K &k) {
     if (slot *s = getslot (k))
       delslot (s);
   }
+
+  SFS_INLINE_VISIBILITY
   bool lookup(const K &k, typename R::type v) {
       auto _v = (*this)[k];
       if (_v) {
@@ -154,6 +167,8 @@ public:
       }
       return false;
   }
+
+  SFS_INLINE_VISIBILITY
   typename R::type operator[] (const K &k) {
     if (slot *s = getslot (k))
       return R::ret (&s->value);
@@ -161,6 +176,7 @@ public:
       return R::ret (NULL);
   }
 
+  SFS_INLINE_VISIBILITY
   bool remove (const K &k, V *v) {
     if (slot *s = getslot (k)) {
       *v = s->value;
@@ -171,6 +187,7 @@ public:
     }
   }
 
+  SFS_INLINE_VISIBILITY
   typename R::const_type operator[] (const K &k) const {
     if (slot *s = getslot (k))
       return R::const_ret (&s->value);
@@ -178,19 +195,21 @@ public:
       return R::const_ret (NULL);
   }
 
-  qhash_const_iterator_t<K,V,H,E> begin () const { 
+  SFS_INLINE_VISIBILITY qhash_const_iterator_t<K,V,H,E> begin () const { 
     return qhash_const_iterator_t<K,V,H,E>(*this);
   };
-  qhash_iterator_t<K,V,H,E> begin () { 
+
+  SFS_INLINE_VISIBILITY qhash_iterator_t<K,V,H,E> begin () { 
     return qhash_iterator_t<K,V,H,E>(*this);
   };
 
-  qhash_const_iterator_t<K,V,H,E> end () const { 
+  SFS_INLINE_VISIBILITY qhash_const_iterator_t<K,V,H,E> end () const { 
     qhash_const_iterator_t<K,V,H,E> itr(*this);
     itr._i = NULL;
     return itr;
   };
-  qhash_iterator_t<K,V,H,E> end () { 
+
+  SFS_INLINE_VISIBILITY qhash_iterator_t<K,V,H,E> end () { 
     qhash_iterator_t<K,V,H,E> itr(*this);
     itr._i = NULL;
     return itr;
@@ -201,7 +220,8 @@ public:
 template<class K> struct qhash_slot<K, void> {
   ihash_entry<qhash_slot> link;
   const K key;
-  qhash_slot (const K &k) : key (k) {}
+  SFS_INLINE_VISIBILITY qhash_slot (const K &k) : key (k) {}
+  SFS_INLINE_VISIBILITY ~qhash_slot() = default;
 };
 
 template<class K, class H = hashfn<K>, class E = equals<K>,
@@ -235,9 +255,9 @@ protected:
     { (*cb) (s->key); }
 
 public:
-  bhash () {}
-  void clear () { this->deleteall (); }
-  ~bhash () { clear (); }
+  SFS_INLINE_VISIBILITY bhash () {}
+  SFS_INLINE_VISIBILITY void clear () { this->deleteall (); }
+  SFS_INLINE_VISIBILITY ~bhash () { clear (); }
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
   bhash(bhash<K,H,E>&& b) = delete;
 #endif

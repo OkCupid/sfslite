@@ -33,6 +33,7 @@
 #include <utility>
 #include <initializer_list>
 #endif
+#include "sfs_attr.h"
 
 size_t vec_resize_fn (u_int nwanted, u_int nalloc, int objid);
 class vec_resizer_t {
@@ -45,8 +46,8 @@ void set_vec_resizer (vec_resizer_t *v);
 template<class T>
 struct vec_obj_id_t 
 {
-  vec_obj_id_t () {}
-  int operator() (void) const { return 0; }
+  SFS_INLINE_VISIBILITY vec_obj_id_t () {}
+  SFS_INLINE_VISIBILITY int operator() (void) const { return 0; }
 };
 
 template<class T, size_t N> struct vec_base {
@@ -74,9 +75,9 @@ protected:
   elm_t *lastp; 
   elm_t *limp;
 
-  elm_t *def_basep () { return NULL; }
-  elm_t *def_limp () { return NULL; }
-  void bfree (T *t) { xfree (t); }
+  SFS_INLINE_VISIBILITY elm_t *def_basep () { return NULL; }
+  SFS_INLINE_VISIBILITY elm_t *def_limp () { return NULL; }
+  SFS_INLINE_VISIBILITY void bfree (T *t) { xfree (t); }
 
 public:
 #define doswap(x) tmp = x; x = v.x; v.x = tmp
@@ -103,7 +104,7 @@ protected:
 
   vec_obj_id_t<T> _vec_obj_id;
 
-  void move (elm_t *dst) {
+  SFS_INLINE_VISIBILITY void move (elm_t *dst) {
     if (dst == firstp)
       return;
     assert (dst < firstp || dst >= lastp);
@@ -118,21 +119,28 @@ protected:
     lastp = firstp + n_elem;
   }
 
-  static elm_t &construct (elm_t &e)
+  SFS_INLINE_VISIBILITY static elm_t &construct (elm_t &e)
     { return *new (implicit_cast<void *> (&e)) elm_t; }
-  static elm_t &cconstruct (elm_t &e, const elm_t &v)
+  SFS_INLINE_VISIBILITY static elm_t &cconstruct (elm_t &e, const elm_t &v)
     { return *new (implicit_cast<void *> (&e)) elm_t (v); }
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
   template<typename... Params>
-  static elm_t &vconstruct(elm_t& e, Params&&... p) { 
+  SFS_INLINE_VISIBILITY static elm_t &vconstruct(elm_t& e, Params&&... p) { 
       return *new(implicit_cast<void *>(&e)) elm_t(std::forward<Params>(p)...); 
   }
 #endif
 
-  static void destroy (elm_t &e) { e.~elm_t (); }
+  SFS_INLINE_VISIBILITY static void destroy (elm_t &e) { e.~elm_t (); }
 
-  void init () { lastp = firstp = basep = def_basep (); limp = def_limp (); }
-  void del () { while (firstp < lastp) firstp++->~elm_t (); this->bfree (basep); }
+  SFS_INLINE_VISIBILITY void init () {
+    lastp = firstp = basep = def_basep ();
+    limp = def_limp ();
+  }
+
+  SFS_INLINE_VISIBILITY void del () {
+    while (firstp < lastp) firstp++->~elm_t ();
+    this->bfree (basep);
+  }
 
 #define append(v)						\
 do {								\
@@ -152,8 +160,8 @@ do {								\
 #endif /* !CHECK_BOUNDS */
 
 public:
-  vec () { init (); }
-  vec (const vec &v) { init (); append (v); }
+  SFS_INLINE_VISIBILITY vec () { init (); }
+  SFS_INLINE_VISIBILITY vec (const vec &v) { init (); append (v); }
 
   #ifdef __GXX_EXPERIMENTAL_CXX0X__
   explicit vec(std::initializer_list<T> l) : vec() {
@@ -162,9 +170,13 @@ public:
   }
   #endif
 
-  template<size_t NN> vec (const vec<T, NN> &v) { init (); append (v); }
-  ~vec () { del (); }
-  void clear () { del (); init (); }
+  template<size_t NN>
+  SFS_INLINE_VISIBILITY vec (const vec<T, NN> &v) {
+    init ();
+    append (v);
+  }
+  SFS_INLINE_VISIBILITY ~vec () { del (); }
+  SFS_INLINE_VISIBILITY void clear () { del (); init (); }
 
   vec &operator= (const vec &v)
     { if (this != &v) { clear (); append (v); } return *this; }
@@ -201,28 +213,42 @@ public:
     }
   }
 
-  elm_t *base () { return firstp; }
-  const elm_t *base () const { return firstp; }
-  elm_t *lim () { return lastp; }
-  const elm_t *lim () const { return lastp; }
-  elm_t *begin () { return firstp; }
-  const elm_t *begin () const { return firstp; }
-  elm_t *end () { return lastp; }
-  const elm_t *end () const { return lastp; }
+  SFS_INLINE_VISIBILITY elm_t *base () { return firstp; }
+  SFS_INLINE_VISIBILITY const elm_t *base () const { return firstp; }
+  SFS_INLINE_VISIBILITY elm_t *lim () { return lastp; }
+  SFS_INLINE_VISIBILITY const elm_t *lim () const { return lastp; }
+  SFS_INLINE_VISIBILITY elm_t *begin () { return firstp; }
+  SFS_INLINE_VISIBILITY const elm_t *begin () const { return firstp; }
+  SFS_INLINE_VISIBILITY elm_t *end () { return lastp; }
+  SFS_INLINE_VISIBILITY const elm_t *end () const { return lastp; }
 
-  size_t size () const { return lastp - firstp; }
-  bool empty () const { return lastp == firstp; }
+  SFS_INLINE_VISIBILITY size_t size () const { return lastp - firstp; }
+  SFS_INLINE_VISIBILITY bool empty () const { return lastp == firstp; }
 
-  elm_t &front () { zcheck (); return *firstp; }
-  const elm_t &front () const { zcheck (); return *firstp; }
-  elm_t &back () { zcheck (); return lastp[-1]; }
-  const elm_t &back () const { zcheck (); return lastp[-1]; }
+  SFS_INLINE_VISIBILITY elm_t &front () { zcheck (); return *firstp; }
+  SFS_INLINE_VISIBILITY const elm_t &front () const { zcheck ();
+    return *firstp;
+  }
+  SFS_INLINE_VISIBILITY elm_t &back () { zcheck (); return lastp[-1]; }
+  SFS_INLINE_VISIBILITY const elm_t &back () const {
+    zcheck ();
+    return lastp[-1];
+  }
   
-  elm_t &operator[] (ptrdiff_t i) { bcheck (i); return firstp[i]; }
-  const elm_t &operator[] (ptrdiff_t i) const { bcheck (i); return firstp[i]; }
+  SFS_INLINE_VISIBILITY elm_t &operator[] (ptrdiff_t i) {
+    bcheck (i);
+    return firstp[i];
+  }
+  SFS_INLINE_VISIBILITY const elm_t &operator[] (ptrdiff_t i) const {
+    bcheck (i);
+    return firstp[i];
+  }
 
-  elm_t &push_back () { reserve (1); return construct (*lastp++); }
-  elm_t &push_back (const elm_t &e)
+  SFS_INLINE_VISIBILITY elm_t &push_back () {
+    reserve (1);
+    return construct (*lastp++);
+  }
+  SFS_INLINE_VISIBILITY elm_t &push_back (const elm_t &e)
     { reserve (1); return cconstruct (*lastp++, e); }
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
