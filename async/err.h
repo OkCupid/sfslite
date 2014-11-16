@@ -121,18 +121,14 @@ operator<< (const traceobj &sb, const str &s)
 template<class T> inline const warnobj &
 operator<< (const warnobj &sb, const T &a)
 {
-  if (&a) {
-      strbuf_cat (sb, a);
-  } else {
-      sb << "(null)";
-  }
+  strbuf_cat (sb, a);
   return sb;
 }
 
 inline const warnobj &
 operator<< (const warnobj &sb, const str &s)
 {
-  if (&s && s)
+  if (s)
     suio_print (sb.tosuio (), s);
   else {
     sb << "(null)";

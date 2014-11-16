@@ -91,7 +91,6 @@ template<class D> D
 hack_reinterpret_cast (char *input)
 {
   D ret = NULL;
-  typedef char VerifySizesAreEqual[sizeof(input) == sizeof(ret) ? 1 : -1];
 
   // It would be nice to use memcpy, but actually, GCC is too 'smart' for 
   // that! So we'll have to roll out own.  
