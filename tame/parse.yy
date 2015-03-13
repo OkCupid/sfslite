@@ -231,16 +231,16 @@ return_statement: T_RETURN passthrough ';'
 block_body: '{' 
 	{
 	  tame_fn_t *fn = state->function ();
-	  tame_block_t *bb;
-	  if (fn) {
- 	    bb = New tame_block_ev_t (fn, yyget_lineno ());
+      if (!fn) {
+		yyerror ("Twait cannot be used in a non-tamed functions");
+      } else {
+	    tame_block_t *bb;
+	    bb = New tame_block_ev_t (fn, yyget_lineno ());
 	    fn->add_env (bb);
 	    fn->hit_tame_block ();
-	  } else {
-	    bb = New tame_block_thr_t (yyget_lineno ());
-	  }
-	  state->new_block (bb);
-	  state->push_list (bb);
+	    state->new_block (bb);
+	    state->push_list (bb);
+      }
 	}
 	fn_statements '}'
 	{

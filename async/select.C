@@ -2,10 +2,6 @@
 #include "sfs_select.h"
 #include "fdlim.h"
 
-
-
-void sfs_add_new_cb () {}
-
 //-----------------------------------------------------------------------
 //
 // Different select(2) options for core loop

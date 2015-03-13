@@ -71,7 +71,6 @@ namespace sfs_core {
     _fdcbs[op][fd] = cb;
     if (cb) {
       _src_locs[op][fd].set (f, l);
-      sfs_add_new_cb ();
       if (fd >= _nselfd)
 	_nselfd = fd + 1;
       FD_SET (fd, _fdsp[op]);
@@ -134,7 +133,7 @@ namespace sfs_core {
       memset (selwait, 0, sizeof (*selwait));
     }
     
-    int n = SFS_SELECT (_nselfd, _fdspt[0], _fdspt[1], NULL, selwait);
+    int n = select (_nselfd, _fdspt[0], _fdspt[1], NULL, selwait);
 
     // warn << "select exit rc=" << n << "\n";
     if (n < 0 && errno != EINTR) {

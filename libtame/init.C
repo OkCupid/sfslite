@@ -6,7 +6,6 @@
 #include "tame_event.h"
 #include "tame_closure.h"
 #include "tame_rendezvous.h"
-#include "tame_thread.h"
 
 int tame_options;
 
@@ -33,8 +32,6 @@ tame_init::start ()
   __cls_type = NULL;
   null_closure = NULL;
   g_stats = New tame_stats_t ();
-
-  tame_thread_init ();
 
   tame_options = 0;
 

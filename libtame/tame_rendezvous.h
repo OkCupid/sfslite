@@ -46,8 +46,7 @@ struct value_set_t {
 };
 
 typedef enum { JOIN_NONE = 0,
-	       JOIN_EVENTS = 1,
-	       JOIN_THREADS = 2 } join_method_t;
+	       JOIN_EVENTS = 1 } join_method_t;
 
 /*
  * An "action" is a type of activity to take internally to a "trigger".
@@ -167,18 +166,14 @@ public:
       _join_method (JOIN_NONE),
       _n_events (0),
       _is_cancelling (false)
-  {
-    pth_init ();
-  }
+  {}
 
   rendezvous_t (const char *loc = NULL)
     : rendezvous_base_t (loc),
       _join_method (JOIN_NONE),
       _n_events (0),
       _is_cancelling (false)
-  {
-    pth_init ();
-  }
+  {}
   
   ~rendezvous_t () { cleanup(); }
 
@@ -203,30 +198,6 @@ public:
   u_int n_events_out () const { return _n_events; }
   u_int n_triggers_left () const { return n_events_out () + n_pending (); }
   bool need_wait () const { return n_triggers_left () > 0; }
-
-  //-----------------------------------------------------------------------
-  // Threaded interface
-
-  void wait (W1 &r1 = sfs::g_nil, W2 &r2 = sfs::g_nil, W3 &r3 = sfs::g_nil)
-  { 
-    bool rls = thread_lock_acquire ();
-    while (!_ti_next_trigger (r1, r2, r3))
-      threadwait (); 
-    thread_lock_release (rls);
-  }
-
-  void waitall () 
-  { 
-    bool rls = thread_lock_acquire ();
-    while (n_events_out () > 0) {
-      while (!_ti_next_trigger ()) {
-	threadwait ();
-      }
-    }
-    thread_lock_release (rls);
-  }
-  // End threaded interface
-  //-----------------------------------------------------------------------
 
   // End Public Interface
   //=======================================================================
@@ -332,25 +303,6 @@ public:
   //=======================================================================
 
 private:
-
-  inline bool thread_lock_acquire ()
-  {
-    bool rls = false;
-    return rls;
-  }
-
-  inline void thread_lock_release (bool rls)
-  {
-  }
-
-  void threadwait ()
-  {
-    panic ("no PTH available...\n");
-  }
-
-  inline void pth_init ()
-  {
-  }
 
   void cleanup ()
   {

@@ -27,13 +27,6 @@
 
 #include "amisc.h"
 
-//-----------------------------------------------------------------------
-//
-
-void sfs_add_new_cb ();
-
-# define SFS_SELECT select
-
 //
 // end select(2) stuff
 //

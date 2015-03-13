@@ -26,10 +26,6 @@ Tame Core:
    this file implements recycling.
  - tame_run.h, run.C, init.C: runtime initialization and error 
    checking routines for tame.
- - tame_thread.h, thread.C: runtime support for threading (via the PTH
-   library).
- - tame_tfork.h, mktfork_ag.pl, tfork.C: support for the tfork-style
-   of launching new threads from within Tame.
  - tame_event_green.h, event_green.C: experimental support for 
    recyclable (i.e., "green") events, that doesn't make performance
    much faster on Linux and therefore might be phased out eventually.

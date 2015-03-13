@@ -363,46 +363,6 @@ sub do_mkevent_block ($)
     print("}\n\n");
 }
 
-#
-# do a makeevent on a thread-implicit-rendezvous
-#
-# Right now not being used.
-#
-sub do_mkevent_tir ($)
-{
-    my ($t) = @_;
-    my $tlist = "<" . arglist (["class T%", $t]) . ">";
-    print "template${tlist}\n";
-
-    my $rtyp = "";
-    if ($t > 0) {
-	$rtyp .= "typename ";
-    }
-    $rtyp .= "${WCN}${tlist}::ref";
-    print("${rtyp}\n",
-	   "${MKEV} (",
-	   arglist ("thread_implicit_rendezvous_t *r",
-		    "const char *loc",
-		    "const char *ctn",
-		    [ "T% &t%", $t] ),
-	   ")\n");
-    if ($t > 0) {
-	print("{\n",
-	       "   $rtyp ret = _mkevent (",
-	       arglist ("r->closure ()",
-			"loc",
-			"*r",
-			[ "t%", $t ]),
-	       ");\n");
-	print("  ret->set_gdb_info (ctn, r->closure ());\n",
-	       "  return ret;\n");
-	print("}");
-    } else {
-	print ";";
-    }
-    print "\n\n";
-}
-
 print <<EOF;
 // -*-c++-*-
 //
