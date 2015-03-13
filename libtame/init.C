@@ -26,10 +26,6 @@ tame_init::start ()
     panic ("tame_init called twice\n");
   initialized = true;
 
-#ifdef HAVE_TAME_PTH
-  pth_init ();
-#endif
-
   tame_options = 0;
   closure_serial_number = 0;
   tame_collect_rv_flag = false;

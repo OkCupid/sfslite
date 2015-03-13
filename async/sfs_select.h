@@ -29,26 +29,10 @@
 
 //-----------------------------------------------------------------------
 //
-//  Deal with select(2) call, especially if in the case of PTH threads
-//  and wanted to use PTH's select loop instead of the standard libc 
-//  variety.
-//
 
 void sfs_add_new_cb ();
 
-#ifdef HAVE_TAME_PTH
-
-# include <pth.h>
-# define SFS_SELECT sfs_pth_core_select
-
-int sfs_pth_core_select (int nfds, fd_set *rfds, fd_set *wfds,
-			 fd_set *efds, struct timeval *timeout);
-
-#else /* HAVE_TAME_PTH */
-
 # define SFS_SELECT select
-
-#endif /* HAVE_TAME_PTH */
 
 //
 // end select(2) stuff
