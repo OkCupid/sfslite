@@ -3,7 +3,7 @@
 
 sfslib_LTLIBRARIES = libasync.la
 LIBASYNC = libasync.la
-sfsexec_PROGRAMS = aiod mmcd
+sfsexec_PROGRAMS = aiod
 
 libasync_la_SOURCES = \
 arandom.c clock_gettime.c flock.c rwfd.c stktrace.c suidprotect.c \
@@ -31,17 +31,6 @@ corebench.h qtailq.h sfs_select.h rclist.h dynenum.h         \
 rctailq.h rctree.h sfs_bundle.h alog2.h sfs_profiler.h wide_str.h 	\
 sfs_const.h sfs_assert.h weak_template.h
 
-#
-# begin sfslite changes
-#
-mmcd_SOURCES = mmcd.c
-mmcd_LDADD = 
-mmcd_DEPENDENCIES = 
-
-
-#
-# end sfslite changes
-#
 
 noinst_HEADERS = pyenv.mk env.mk
 

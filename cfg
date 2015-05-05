@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 #
 # CFG ORIGINAL FILE -- do not delete this line
@@ -50,4 +50,4 @@ fi
 CONFIGURE=`echo $0 | sed 's/cfg/configure/' `
 echo "$CONFIGURE $*" >> $CFG
 chmod u+x $CFG
-sh -x $CFG
+bash -x $CFG
