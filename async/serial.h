@@ -115,6 +115,9 @@ str armor32 (const void *, size_t);
 size_t armor32len (const u_char *s);
 str dearmor32 (const char *, ssize_t len = -1);
 
+str armor32_rfc(const void*, size_t);
+str dearmor32_rfc (const char *, ssize_t len = -1);
+size_t armor32len_rfc (const u_char *s);
 
 /*
  * Alternate Base-64 encoding, suitable for file names.  Uses '-'
@@ -173,7 +176,7 @@ armor32 (str bin)
 {
   return armor32 (bin.cstr (), bin.len ());
 }
-
+ 
 inline str
 dearmor32 (str asc)
 {
@@ -181,6 +184,20 @@ dearmor32 (str asc)
       != asc.len ())
     return NULL;
   return dearmor32 (asc.cstr (), asc.len ());
+}
+
+inline str
+armor32_rfc(str bin) {
+    return armor32_rfc(bin.cstr(), bin.len());
+}
+
+inline str
+dearmor32_rfc (str asc)
+{
+  if (armor32len_rfc (reinterpret_cast<const u_char *> (asc.cstr ()))
+      != asc.len ())
+    return NULL;
+  return dearmor32_rfc (asc.cstr (), asc.len ());
 }
 
 /*

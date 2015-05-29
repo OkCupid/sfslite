@@ -30,6 +30,13 @@ static const char b2a32[32] = {
   '2', '3', '4', '5', '6', '7', '8', '9',
 };
 
+static const char b2a32_rfc[32] = {
+  'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
+  'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 
+  'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 
+  'y', 'z', '2', '3', '4', '5', '6', '7',
+};
+
 static const signed char a2b32[256] = {
   -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
   -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
@@ -39,6 +46,25 @@ static const signed char a2b32[256] = {
   -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
   -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, -1, 11, 12, -1,
   13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, -1, -1, -1, -1, -1,
+  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+};
+
+static const signed char a2b32_rfc[256] = {
+  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, -1, 26, 27, 28, 29, 30, 31, -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+  15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, -1, -1, -1, -1, -1,
   -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
   -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
   -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
@@ -60,8 +86,8 @@ static const int a2b32rem[8] = {0, -1, 1, -1, 2, 3, -1, 4};
      * 4             3 5
      */
 
-str
-armor32 (const void *dp, size_t dl)
+static str
+_armor32 (const void *dp, size_t dl, const char* tab)
 {
   const u_char *p = static_cast<const u_char *> (dp);
   int rem = dl % 5;
@@ -70,47 +96,47 @@ armor32 (const void *dp, size_t dl)
   char *d = res;
 
   while (p < e) {
-    d[0] = b2a32[p[0] >> 3];
-    d[1] = b2a32[(p[0] & 0x7) << 2 | p[1] >> 6];
-    d[2] = b2a32[p[1] >> 1 & 0x1f];
-    d[3] = b2a32[(p[1] & 0x1) << 4 | p[2] >> 4];
-    d[4] = b2a32[(p[2] & 0xf) << 1 | p[3] >> 7];
-    d[5] = b2a32[p[3] >> 2 & 0x1f];
-    d[6] = b2a32[(p[3] & 0x3) << 3 | p[4] >> 5];
-    d[7] = b2a32[p[4] & 0x1f];
+    d[0] = tab[p[0] >> 3];
+    d[1] = tab[(p[0] & 0x7) << 2 | p[1] >> 6];
+    d[2] = tab[p[1] >> 1 & 0x1f];
+    d[3] = tab[(p[1] & 0x1) << 4 | p[2] >> 4];
+    d[4] = tab[(p[2] & 0xf) << 1 | p[3] >> 7];
+    d[5] = tab[p[3] >> 2 & 0x1f];
+    d[6] = tab[(p[3] & 0x3) << 3 | p[4] >> 5];
+    d[7] = tab[p[4] & 0x1f];
     p += 5;
     d += 8;
   }
 
   switch (rem) {
   case 4:
-    d[6] = b2a32[(p[3] & 0x3) << 3];
-    d[5] = b2a32[p[3] >> 2 & 0x1f];
-    d[4] = b2a32[(p[2] & 0xf) << 1 | p[3] >> 7];
-    d[3] = b2a32[(p[1] & 0x1) << 4 | p[2] >> 4];
-    d[2] = b2a32[p[1] >> 1 & 0x1f];
-    d[1] = b2a32[(p[0] & 0x7) << 2 | p[1] >> 6];
-    d[0] = b2a32[p[0] >> 3];
+    d[6] = tab[(p[3] & 0x3) << 3];
+    d[5] = tab[p[3] >> 2 & 0x1f];
+    d[4] = tab[(p[2] & 0xf) << 1 | p[3] >> 7];
+    d[3] = tab[(p[1] & 0x1) << 4 | p[2] >> 4];
+    d[2] = tab[p[1] >> 1 & 0x1f];
+    d[1] = tab[(p[0] & 0x7) << 2 | p[1] >> 6];
+    d[0] = tab[p[0] >> 3];
     d += 7;
     break;
   case 3:
-    d[4] = b2a32[(p[2] & 0xf) << 1];
-    d[3] = b2a32[(p[1] & 0x1) << 4 | p[2] >> 4];
-    d[2] = b2a32[p[1] >> 1 & 0x1f];
-    d[1] = b2a32[(p[0] & 0x7) << 2 | p[1] >> 6];
-    d[0] = b2a32[p[0] >> 3];
+    d[4] = tab[(p[2] & 0xf) << 1];
+    d[3] = tab[(p[1] & 0x1) << 4 | p[2] >> 4];
+    d[2] = tab[p[1] >> 1 & 0x1f];
+    d[1] = tab[(p[0] & 0x7) << 2 | p[1] >> 6];
+    d[0] = tab[p[0] >> 3];
     d += 5;
     break;
   case 2:
-    d[3] = b2a32[(p[1] & 0x1) << 4];
-    d[2] = b2a32[p[1] >> 1 & 0x1f];
-    d[1] = b2a32[(p[0] & 0x7) << 2 | p[1] >> 6];
-    d[0] = b2a32[p[0] >> 3];
+    d[3] = tab[(p[1] & 0x1) << 4];
+    d[2] = tab[p[1] >> 1 & 0x1f];
+    d[1] = tab[(p[0] & 0x7) << 2 | p[1] >> 6];
+    d[0] = tab[p[0] >> 3];
     d += 4;
     break;
   case 1:
-    d[1] = b2a32[(p[0] & 0x7) << 2];
-    d[0] = b2a32[p[0] >> 3];
+    d[1] = tab[(p[0] & 0x7) << 2];
+    d[0] = tab[p[0] >> 3];
     d += 2;
     break;
   }
@@ -119,17 +145,17 @@ armor32 (const void *dp, size_t dl)
   return res;
 }
 
-size_t
-armor32len (const u_char *s)
+static size_t
+_armor32len (const u_char *s, const signed char* tab)
 {
   const u_char *p = s;
-  while (a2b32[*p] >= 0)
+  while (tab[*p] >= 0)
     p++;
   return p - s;
 }
 
-str
-dearmor32 (const char *_s, ssize_t len)
+static str
+_dearmor32 (const char *_s, ssize_t len, const signed char* tab)
 {
   const u_char *s = reinterpret_cast<const u_char *> (_s);
 
@@ -146,35 +172,35 @@ dearmor32 (const char *_s, ssize_t len)
   int c0, c1, c2, c3, c4, c5, c6, c7;
 
   for (const u_char *e = s + (len & ~7); s < e; s += 8, d += 5) {
-    c0 = a2b32[s[0]];
-    c1 = a2b32[s[1]];
+    c0 = tab[s[0]];
+    c1 = tab[s[1]];
     d[0] = c0 << 3 | c1 >> 2;
-    c2 = a2b32[s[2]];
-    c3 = a2b32[s[3]];
+    c2 = tab[s[2]];
+    c3 = tab[s[3]];
     d[1] = c1 << 6 | c2 << 1 | c3 >> 4;
-    c4 = a2b32[s[4]];
+    c4 = tab[s[4]];
     d[2] = c3 << 4 | c4 >> 1;
-    c5 = a2b32[s[5]];
-    c6 = a2b32[s[6]];
+    c5 = tab[s[5]];
+    c6 = tab[s[6]];
     d[3] = c4 << 7 | c5 << 2 | c6 >> 3;
-    c7 = a2b32[s[7]];
+    c7 = tab[s[7]];
     d[4] = c6 << 5 | c7;
   }
 
   if (rem >= 1) {
-    c0 = a2b32[s[0]];
-    c1 = a2b32[s[1]];
+    c0 = tab[s[0]];
+    c1 = tab[s[1]];
     *d++ = c0 << 3 | c1 >> 2;
     if (rem >= 2) {
-      c2 = a2b32[s[2]];
-      c3 = a2b32[s[3]];
+      c2 = tab[s[2]];
+      c3 = tab[s[3]];
       *d++ = c1 << 6 | c2 << 1 | c3 >> 4;
       if (rem >= 3) {
-	c4 = a2b32[s[4]];
+	c4 = tab[s[4]];
 	*d++ = c3 << 4 | c4 >> 1;
 	if (rem >= 4) {
-	  c5 = a2b32[s[5]];
-	  c6 = a2b32[s[6]];
+	  c5 = tab[s[5]];
+	  c6 = tab[s[6]];
 	  *d++ = c4 << 7 | c5 << 2 | c6 >> 3;
 	}
       }
@@ -183,6 +209,30 @@ dearmor32 (const char *_s, ssize_t len)
 
   assert (d == bin + bin.len ());
   return bin;
+}
+
+str armor32(const void* dp, size_t dl) {
+    return _armor32(dp, dl, b2a32);
+}
+
+size_t armor32len(const u_char* s) {
+    return _armor32len(s, a2b32);
+}
+
+str dearmor32(const char* _s, ssize_t len) {
+    return _dearmor32(_s, len, a2b32);
+}
+
+str armor32_rfc(const void* dp, size_t dl) {
+    return _armor32(dp, dl, b2a32_rfc);
+}
+
+size_t armor32len_rfc(const u_char* s) {
+    return _armor32len(s, a2b32_rfc);
+}
+
+str dearmor32_rfc(const char* _s, ssize_t len) {
+    return _dearmor32(_s, len, a2b32_rfc);
 }
 
 static const char b2a64[64] = {
