@@ -26,6 +26,7 @@
 #ifndef _ARPC_XDRMISC_H_
 #define _ARPC_XDRMISC_H_ 1
 
+#include <stdint.h>
 #include "sysconf.h"
 #include "sfs_profiler.h"
 #include "wmstr.h"
@@ -90,7 +91,7 @@ namespace sfs {
 
 #ifdef XDROPS_KNRPROTO
 #undef xdrlong_t
-#define xdrlong_t long
+#define xdrlong_t int32_t
 
 #undef XDR_GETLONG
 #define XDR_GETLONG(xdrs, longp)					\
