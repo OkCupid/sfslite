@@ -26,7 +26,6 @@
 #ifndef _ARPC_XDRMISC_H_
 #define _ARPC_XDRMISC_H_ 1
 
-#include <stdint.h>
 #include "sysconf.h"
 #include "sfs_profiler.h"
 #include "wmstr.h"
