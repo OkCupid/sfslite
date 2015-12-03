@@ -71,6 +71,8 @@ ihash_entry : _ihash_entry {
   template<class U, ihash_entry<U> U::*field> friend class ihash_core;
   // template<ihash_entry<T> T::*field> friend class ihash_core<T, field>;
 #endif /* NO_TEMPLATE_FRIENDS */
+public:
+  SFS_INLINE_VISIBILITY ihash_entry() = default;
 };
 
 struct _ihash_table {
@@ -84,12 +86,12 @@ class ihash_core {
   _ihash_table t;
 
 protected:
-  void init () {
+  SFS_INLINE_VISIBILITY void init () {
     t.buckets = t.entries = 0;
     t.tab = NULL;
     _grow ();
   }
-  ihash_core () { init (); }
+  SFS_INLINE_VISIBILITY  ihash_core () { init (); }
 
   bool present (T *elm) {
     for (T *e = this->lookup_val ((elm->*field).val); e; e = this->next_val (e))
@@ -97,8 +99,8 @@ protected:
 	return true;
     return false;
   }
-  void _check () {
 #if IHASH_DEBUG
+  void _check () {
     if (ihash_do_debug ()) {
       size_t s = 0;
       for (size_t n = 0; n < t.buckets; n++)
@@ -110,8 +112,10 @@ protected:
 	}
       assert (s == t.entries);
     }
-#endif /* IHASH_DEBUG */
   }
+#else
+  SFS_INLINE_VISIBILITY void _check() {}
+#endif /* IHASH_DEBUG */
 
   bool insert_val (T *elm, hash_t hval) {
 #if IHASH_DEBUG
@@ -145,21 +149,21 @@ protected:
     return elm;
   }
 
-  static T *next_val (T *elm) {
+  SFS_INLINE_VISIBILITY static T *next_val (T *elm) {
     hash_t hval = (elm->*field).val;
     while ((elm = (T *) (elm->*field).next) && (elm->*field).val != hval)
       ;
     return elm;
   }
 
-  void _grow (size_t sz = 0)
+  SFS_INLINE_VISIBILITY void _grow (size_t sz = 0)
   {
     _ihash_grow (&t, (size_t) (_ihash_entry *) &(((T *) 0)->*field), sz);
   }
 
 public:
-  void clear () { delete[] t.tab; init (); }
-  ~ihash_core () { delete[] t.tab; }
+  SFS_INLINE_VISIBILITY void clear () { delete[] t.tab; init (); }
+  SFS_INLINE_VISIBILITY ~ihash_core () { delete[] t.tab; }
   void deleteall () {
     for (size_t i = 0; i < t.buckets; i++)
       for (T *n = (T *) t.tab[i], *nn; n; n = nn) {
@@ -168,17 +172,17 @@ public:
       }
     clear ();
   }
-  size_t size () const { return t.entries; }
-  size_t buckets() const { return t.buckets; }
-  bool constructed () const { return t.buckets > 0; }
+  SFS_INLINE_VISIBILITY size_t size () const { return t.entries; }
+  SFS_INLINE_VISIBILITY size_t buckets() const { return t.buckets; }
+  SFS_INLINE_VISIBILITY bool constructed () const { return t.buckets > 0; }
 
-  bool has_room () const { return t.entries < t.buckets; }
-  ssize_t room () const { return t.buckets - t.entries; }
+  SFS_INLINE_VISIBILITY bool has_room () const { return t.entries < t.buckets; }
+  SFS_INLINE_VISIBILITY ssize_t room () const { return t.buckets - t.entries; }
 
-  void reserve (size_t sz) { _grow (sz); }
-  void grow () { _grow (); }
+  SFS_INLINE_VISIBILITY void reserve (size_t sz) { _grow (sz); }
+  SFS_INLINE_VISIBILITY void grow () { _grow (); }
 
-  void remove (T *elm) {
+  SFS_INLINE_VISIBILITY void remove (T *elm) {
 #if IHASH_DEBUG
     if (ihash_do_debug () && !present (elm))
       panic ("ihash_core(%s)::remove: element not in hash table\n",
@@ -220,7 +224,7 @@ public:
     return NULL;
   }
 
-  void traverse (typename callback<void, T *>::ref cb) {
+  SFS_INLINE_VISIBILITY void traverse (typename callback<void, T *>::ref cb) {
     for (size_t i = 0; i < t.buckets; i++)
       for (T *n = (T *) t.tab[i], *nn; n; n = nn) {
 	nn = (T *) (n->*field).next;
@@ -228,7 +232,8 @@ public:
       }
   }
 
-  void traverse (typename callback<void, const T&>::ref cb) const {
+  SFS_INLINE_VISIBILITY void traverse
+  (typename callback<void, const T&>::ref cb) const {
     for (size_t i = 0; i < t.buckets; i++)
       for (T *n = (T *) t.tab[i], *nn; n; n = nn) {
 	nn = (T *) (n->*field).next;
@@ -236,7 +241,7 @@ public:
       }
   }
 
-  void traverse (void (T::*fn) ()) {
+  SFS_INLINE_VISIBILITY void traverse (void (T::*fn) ()) {
     for (size_t i = 0; i < t.buckets; i++)
       for (T *n = (T *) t.tab[i], *nn; n; n = nn) {
 	nn = (T *) (n->*field).next;
@@ -259,10 +264,14 @@ class ihash
   const H hash;
 
 public:
-  ihash () : eq (E ()), hash (H ()) {}
-  ihash (const E &e, const H &h) : eq (e), hash (h) {}
+  SFS_INLINE_VISIBILITY ihash () : eq (E ()), hash (H ()) {}
+  SFS_INLINE_VISIBILITY ihash (const E &e, const H &h) : eq (e), hash (h) {}
 
-  bool insert (V *elm) { return this->insert_val (elm, hash (elm->*key)); }
+  SFS_INLINE_VISIBILITY bool insert (V *elm) {
+    return this->insert_val (elm, hash (elm->*key));
+  }
+
+  SFS_INLINE_VISIBILITY ~ihash() {}
 
 #if 0
   template<class T> V *operator[] (const T &k) const {
@@ -300,8 +309,8 @@ public:
   ihash2 (const E1 &e1, const E2 &e2, const H &h)
     : eq1 (e1), eq2 (e2), hash (h) {}
 
-  void insert (V *elm)
-    { this->insert_val (elm, hash (elm->*key1, elm->*key2)); }
+  SFS_INLINE_VISIBILITY void insert (V *elm)
+  { this->insert_val (elm, hash (elm->*key1, elm->*key2)); }
 
   V *operator() (const K1 &k1, const K2 &k2) const {
     V *v;

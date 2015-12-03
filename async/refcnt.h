@@ -133,6 +133,8 @@
 #ifndef _REFCNT_H_INCLUDED_
 #define _REFCNT_H_INCLUDED_ 1
 
+#include "sfs_attr.h"
+
 #if VERBOSE_REFCNT
 #include <typeinfo>
 void refcnt_warn (const char *op, const type_info &type, void *addr, int cnt);
@@ -204,25 +206,39 @@ private:
 protected:
 #endif /* NO_TEMPLATE_FRIENDS */
 
+  SFS_INLINE_VISIBILITY
   static void rdec (refcount *c) { c->refcount_dec (); }
-  static void rinc (refcount *c) { c->refcount_inc (); }
-  template<class T> static void rinc (const ::ref<T> &r) { r.inc (); }
-  template<class T> static void rinc (const ::ptr<T> &r) { r.inc (); }
-  template<class T, reftype v> static void rinc (refcounted<T, v> *pp)
-    { pp->refcount_inc (); }
-  template<class T> static T *rp (const ::ref<T> &r) { return r.p; }
-  template<class T> static T *rp (const ::ptr<T> &r) { return r.p; }
-  template<class T, reftype v> static T *rp (refcounted<T, v> *pp)
-    { return *pp; }
-  static refcount *rc (refcount *c) { return c; } // Make gcc happy ???
-  template<class T> static refcount *rc (const ::ref<T> &r) { return r.c; }
-  template<class T> static refcount *rc (const ::ptr<T> &r) { return r.c; }
-  template<class T, reftype v> static refcount *rc (refcounted<T, v> *pp)
+
+  SFS_INLINE_VISIBILITY static void rinc (refcount *c) { c->refcount_inc (); }
+  template<class T>
+  SFS_INLINE_VISIBILITY static void rinc (const ::ref<T> &r) { r.inc (); }
+  template<class T>
+  SFS_INLINE_VISIBILITY static void rinc (const ::ptr<T> &r) { r.inc (); }
+  template<class T, reftype v>
+  SFS_INLINE_VISIBILITY
+  static void rinc (refcounted<T, v> *pp) { pp->refcount_inc (); }
+  template<class T>
+  SFS_INLINE_VISIBILITY static T *rp (const ::ref<T> &r) { return r.p; }
+  template<class T>
+  SFS_INLINE_VISIBILITY static T *rp (const ::ptr<T> &r) { return r.p; }
+  template<class T, reftype v>
+  SFS_INLINE_VISIBILITY static T *rp (refcounted<T, v> *pp) { return *pp; }
+
+  SFS_INLINE_VISIBILITY static refcount
+  *rc (refcount *c) { return c; } // Make gcc happy ???
+
+  template<class T>
+  SFS_INLINE_VISIBILITY static refcount *rc (const ::ref<T> &r) { return r.c; }
+  template<class T>
+  SFS_INLINE_VISIBILITY static refcount *rc (const ::ptr<T> &r) { return r.c; }
+  template<class T, reftype v>
+  SFS_INLINE_VISIBILITY static refcount *rc (refcounted<T, v> *pp)
     { return pp; }
 
   refcount *c;
-  explicit refpriv (refcount *cc) : c (cc) {}
-  refpriv () {}
+  SFS_INLINE_VISIBILITY explicit
+  refpriv (refcount *cc) : c (cc) {}
+  SFS_INLINE_VISIBILITY refpriv () {}
 
 public:
 #if 0
@@ -246,15 +262,15 @@ public:
 template<class T> struct type2struct {
   typedef T type;
 };
-#define TYPE2STRUCT(t, T)			\
-template<t> struct type2struct<T> {		\
-  struct type {					\
-    T v;					\
-    operator T &() { return v; }		\
-    operator const T &() const { return v; }	\
-    type () {}					\
-    type (const T &vv) : v (vv) {}		\
-  };						\
+#define TYPE2STRUCT(t, T)                                               \
+  template<t> struct type2struct<T> {                                   \
+  struct type {                                                         \
+    T v;                                                                \
+    SFS_INLINE_VISIBILITY operator T &() { return v; }                  \
+    SFS_INLINE_VISIBILITY operator const T &() const { return v; }	\
+    SFS_INLINE_VISIBILITY type () {}					\
+    SFS_INLINE_VISIBILITY type (const T &vv) : v (vv) {}		\
+  };                                                                    \
 }
 TYPE2STRUCT(, bool);
 TYPE2STRUCT(, char);
@@ -272,9 +288,7 @@ class refcounted<T, scalar>
 {
   friend class refpriv;
 
-  virtual void XXX_gcc_repo_workaround () {} // XXX - egcs bug
-
-  operator T *() { return &static_cast<T &> (*this); }
+  SFS_INLINE_VISIBILITY operator T *() { return &static_cast<T &> (*this); }
   /* When the reference count on an object goes to 0, the object is
    * deleted by default.  However, some classes may not wish to
    * deallocate their memory at the time the reference count goes to
@@ -319,7 +333,7 @@ class refcounted<T, scalar>
    * The common case will probably be that a class with a finalize
    * method always expects to be refcounted.  This scheme makes it
    * hard to violate the requirement accidentally. */
-  void refcount_call_finalize () {
+  SFS_INLINE_VISIBILITY void refcount_call_finalize () {
     /* An error on the following line probably means you forgot to
      * give T a virtual base class of refcount.  Alternatively, T
      * already has a method called finalize unrelated to the reference
@@ -328,7 +342,7 @@ class refcounted<T, scalar>
     finalize ();
   }
 
-  ~refcounted () {}
+  SFS_INLINE_VISIBILITY ~refcounted () {}
 
 public:
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
@@ -348,16 +362,15 @@ class refcounted<T, vbase>
   typedef typename type2struct<T>::type obj_t;
   obj_t obj;
 
-  // virtual void XXX_gcc_repo_workaround () {} // XXX - egcs bug
-
-  operator T *() { return &static_cast<T &> (obj); }
-  void refcount_call_finalize () { delete this; }
-  ~refcounted () {}
+  SFS_INLINE_VISIBILITY operator T *() { return &static_cast<T &> (obj); }
+  SFS_INLINE_VISIBILITY void refcount_call_finalize () { delete this; }
+  SFS_INLINE_VISIBILITY ~refcounted () {}
 
 public:
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
   template <typename... Params>
-  explicit refcounted(Params&&...args) : obj(std::forward<Params>(args)...) {}
+  SFS_INLINE_VISIBILITY explicit refcounted(Params&&...args) :
+    obj(std::forward<Params>(args)...) {}
 #else
   VA_TEMPLATE (explicit refcounted, : obj, {})
 #endif
@@ -371,34 +384,32 @@ class refcounted<T, vsize>
   friend class refpriv;
   typedef refcounted<T, vsize> rc_t;
 
-  virtual void XXX_gcc_repo_workaround () {} // XXX - egcs bug
-
-  operator T *() { return tptr (this); }
-  refcounted () { new ((void *) tptr (this)) T; }
-  void refcount_call_finalize () {
+  SFS_INLINE_VISIBILITY operator T *() { return tptr (this); }
+  SFS_INLINE_VISIBILITY refcounted () { new ((void *) tptr (this)) T; }
+  SFS_INLINE_VISIBILITY void refcount_call_finalize () {
     tptr (this)->~T ();
     delete this;
   }
   
-  ~refcounted () {}
+  SFS_INLINE_VISIBILITY ~refcounted () {}
 
 public:
-  static rc_t *alloc (size_t n)
+  SFS_INLINE_VISIBILITY static rc_t *alloc (size_t n)
     { return new (opnew (n + (size_t) tptr (NULL))) rc_t; }
-  static T *tptr (rc_t *rcp)
+  SFS_INLINE_VISIBILITY static T *tptr (rc_t *rcp)
     { return (T *) ((char *) rcp + ((sizeof (*rcp) + 7) & ~7)); }
 };
 
-#define REFOPS_DEFAULT(T)			\
-protected:					\
-  T *p;						\
-  refops () {}					\
-						\
-public:						\
-  T *get () const { return p; }			\
-  operator T *() const { return p; }		\
-  T *operator-> () const { return p; }		\
-  T &operator* () const { return *p; }
+#define REFOPS_DEFAULT(T)                                       \
+  protected:                                                    \
+  T *p;                                                         \
+  SFS_INLINE_VISIBILITY refops () {}                            \
+                                                                \
+public:                                                         \
+ SFS_INLINE_VISIBILITY T *get () const { return p; }            \
+ SFS_INLINE_VISIBILITY operator T *() const { return p; }       \
+ SFS_INLINE_VISIBILITY T *operator-> () const { return p; }     \
+ SFS_INLINE_VISIBILITY T &operator* () const { return *p; }
 
 template<class T>
 class refops {
@@ -409,11 +420,11 @@ template<>
 class refops<void> {
 protected:
   void *p;
-  refops () {}
+  SFS_INLINE_VISIBILITY refops () {}
 
 public:
-  operator void *() const { return p; }
-  void *get () const { return p; }
+  SFS_INLINE_VISIBILITY operator void *() const { return p; }
+  SFS_INLINE_VISIBILITY void *get () const { return p; }
 };
 
 template<class T> class mkcref;
@@ -425,52 +436,57 @@ class ref : public refpriv, public refops<T> {
 
   friend ref<T> mkref<T> (T *);
   friend class mkcref<T>;
-  ref (T *pp, refcount *cc) : refpriv (cc) { p = pp; inc (); }
+  SFS_INLINE_VISIBILITY ref (T *pp, refcount *cc) : refpriv (cc) {
+    p = pp; inc ();
+  }
 
-  void inc () const { rinc (c); }
-  void dec () const { rdec (c); }
+  SFS_INLINE_VISIBILITY void inc () const { rinc (c); }
+  SFS_INLINE_VISIBILITY void dec () const { rdec (c); }
 
 public:
   typedef T type;
   typedef struct ptr<T> ptr;
 
   template<class U, reftype v>
-  ref (refcounted<U, v> *pp)
+  SFS_INLINE_VISIBILITY ref (refcounted<U, v> *pp)
     : refpriv (rc (pp)) { p = refpriv::rp (pp); inc (); }
   /* At least with gcc, the copy constructor must be explicitly
    * defined (though it would appear to be redundant given the
    * template constructor bellow). */
-  ref (const ref<T> &r) : refpriv (r.c) { p = r.p; inc (); }
+  SFS_INLINE_VISIBILITY ref (const ref<T> &r) : refpriv (r.c) { p = r.p; inc (); }
   template<class U>
-  ref (const ref<U> &r)
+  SFS_INLINE_VISIBILITY ref (const ref<U> &r)
     : refpriv (rc (r)) { p = refpriv::rp (r); inc (); }
   template<class U>
-  ref (const ::ptr<U> &r)
+  SFS_INLINE_VISIBILITY ref (const ::ptr<U> &r)
     : refpriv (rc (r)) { p = refpriv::rp (r); inc (); }
 
   // MM: in case the compiler really wants move semantics, force them
   // to the copy constructor
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
-  ref (ref<T>&& src) : ref<T>(src) { }
+  SFS_INLINE_VISIBILITY ref (ref<T>&& src) : ref<T>(src) { }
   template<class U>
-  ref (ref<U>&& src) : ref<T>(src) { }
+  SFS_INLINE_VISIBILITY ref (ref<U>&& src) : ref<T>(src) { }
   template<class U>
-  ref (::ptr<U>&& src) : ref<T>(src) { }
+  SFS_INLINE_VISIBILITY ref (::ptr<U>&& src) : ref<T>(src) { }
 #endif
 
-  ~ref () { dec (); }
+  SFS_INLINE_VISIBILITY ~ref () { dec (); }
 
-  template<class U, reftype v> ref<T> &operator= (refcounted<U, v> *pp)
+  template<class U, reftype v>
+  SFS_INLINE_VISIBILITY ref<T> &operator= (refcounted<U, v> *pp)
     { rinc (pp); dec (); p = refpriv::rp (pp); c = rc (pp); return *this; }
 
   /* The copy assignment operator must also explicitly be defined,
    * despite a redundant template. */
-  ref<T> &operator= (const ref<T> &r)
+  SFS_INLINE_VISIBILITY ref<T> &operator= (const ref<T> &r)
     { r.inc (); dec (); p = r.p; c = r.c; return *this; }
-  template<class U> ref<T> &operator= (const ref<U> &r)
+  template<class U>
+  SFS_INLINE_VISIBILITY ref<T> &operator= (const ref<U> &r)
     { rinc (r); dec (); p = refpriv::rp (r); c = rc (r); return *this; }
   /* Self asignment not possible.  Use ref::inc to cause segfauls on NULL. */
-  template<class U> ref<T> &operator= (const ::ptr<U> &r)
+  template<class U>
+  SFS_INLINE_VISIBILITY ref<T> &operator= (const ::ptr<U> &r)
     { dec (); p = refpriv::rp (r); c = rc (r); inc (); return *this; }
 };
 
@@ -482,11 +498,11 @@ class ptr : public refpriv, public refops <T> {
   friend class refpriv;
   using refops<T>::p;
 
-  void inc () const { if (c) (rinc (c)); }
-  void dec () const { if (c) (rdec (c)); }
+  SFS_INLINE_VISIBILITY void inc () const { if (c) (rinc (c)); }
+  SFS_INLINE_VISIBILITY void dec () const { if (c) (rdec (c)); }
 
   template<class U, reftype v>
-  void set (refcounted<U, v> *pp, bool decme) {
+  SFS_INLINE_VISIBILITY void set (refcounted<U, v> *pp, bool decme) {
     if (pp) {
       rinc (pp);
       if (decme)
@@ -506,45 +522,48 @@ public:
   typedef T type;
   typedef struct ref<T> ref;
 
-  explicit ptr (__bss_init) {}
-  ptr () : refpriv (NULL) { p = NULL; }
-  ptr (privtype *) : refpriv (NULL) { p = NULL; }
+  SFS_INLINE_VISIBILITY explicit ptr (__bss_init) {}
+  SFS_INLINE_VISIBILITY ptr () : refpriv (NULL) { p = NULL; }
+  SFS_INLINE_VISIBILITY ptr (privtype *) : refpriv (NULL) { p = NULL; }
   template<class U, reftype v>
-  ptr (refcounted<U, v> *pp) { set (pp, false); }
-  ptr (const ptr<T> &r) : refpriv (r.c) { p = r.p; inc (); }
+  SFS_INLINE_VISIBILITY ptr (refcounted<U, v> *pp) { set (pp, false); }
+  SFS_INLINE_VISIBILITY ptr (const ptr<T> &r) : refpriv (r.c) { p = r.p; inc (); }
   template<class U>
-  ptr (const ptr<U> &r)
+  SFS_INLINE_VISIBILITY ptr (const ptr<U> &r)
     : refpriv (rc (r)) { p = refpriv::rp (r); inc (); }
   template<class U>
-  ptr (const ::ref<U> &r)
+  SFS_INLINE_VISIBILITY ptr (const ::ref<U> &r)
     : refpriv (rc (r)) { p = refpriv::rp (r); inc (); }
 
   // MM: in case the compiler really wants move semantics, force them
   // to the copy constructor
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
-  ptr (ptr<T>&& src) : ptr<T>(src) { }
+  SFS_INLINE_VISIBILITY ptr (ptr<T>&& src) : ptr<T>(src) { }
   template<class U>
-  ptr (ptr<U>&& src) : ptr<T>(src) { }
+  SFS_INLINE_VISIBILITY ptr (ptr<U>&& src) : ptr<T>(src) { }
   template<class U>
-  ptr (::ref<U>&& src) : ptr<T>(src) { }
+  SFS_INLINE_VISIBILITY ptr (::ref<U>&& src) : ptr<T>(src) { }
 #endif
 
-  ~ptr () { dec (); }
+  SFS_INLINE_VISIBILITY ~ptr () { dec (); }
 
-  ptr<T> &operator= (privtype *)
+  SFS_INLINE_VISIBILITY ptr<T> &operator= (privtype *)
     { dec (); p = NULL; c = NULL; return *this; }
-  template<class U, reftype v> ptr<T> &operator= (refcounted<U, v> *pp)
+  template<class U, reftype v>
+  SFS_INLINE_VISIBILITY ptr<T> &operator= (refcounted<U, v> *pp)
     { set (pp, true); return *this; }
 
-  ptr<T> &operator= (const ptr<T> &r)
+  SFS_INLINE_VISIBILITY ptr<T> &operator= (const ptr<T> &r)
     { r.inc (); dec (); p = r.p; c = r.c; return *this; }
-  template<class U> ptr<T> &operator= (const ptr<U> &r)
+  template<class U>
+  SFS_INLINE_VISIBILITY ptr<T> &operator= (const ptr<U> &r)
     { rinc (r); dec (); p = refpriv::rp (r); c = rc (r); return *this; }
-  template<class U> ptr<T> &operator= (const ::ref<U> &r)
+  template<class U>
+  SFS_INLINE_VISIBILITY ptr<T> &operator= (const ::ref<U> &r)
     { rinc (r); dec (); p = refpriv::rp (r); c = rc (r); return *this; }
 
   template <typename... Params>
-  void alloc(Params&&... args) {
+  SFS_INLINE_VISIBILITY void alloc(Params&&... args) {
       set(New refcounted<T>(std::forward<Params>(args)...), true);
   }
 
@@ -565,7 +584,7 @@ struct bssptr : ptr<T> {
 };
 
 template<class T> inline ref<T>
-mkref (T *p)
+SFS_INLINE_VISIBILITY mkref (T *p)
 {
   return ref<T> (p, p);
 }
@@ -579,7 +598,7 @@ struct mkcref {
 };
 
 template<class T> ref<const T>
-mkref (const T *p)
+SFS_INLINE_VISIBILITY mkref (const T *p)
 {
   return mkcref<const T>::mkref (p);
 }

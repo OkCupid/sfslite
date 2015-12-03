@@ -95,7 +95,7 @@ struct tailq {
   T *first;
   T **plast;
 
-  tailq () {first = NULL; plast = &first;}
+  SFS_INLINE_VISIBILITY tailq () {first = NULL; plast = &first;}
 
   void insert_head (T *elm) {
     if (((elm->*field).next = first))
@@ -122,7 +122,7 @@ struct tailq {
     return elm;
   }
 
-  static T *next (T *elm) {
+  static SFS_INLINE_VISIBILITY T *next (T *elm) {
     return (elm->*field).next;
   }
 

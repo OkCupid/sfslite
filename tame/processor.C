@@ -538,7 +538,8 @@ tame_fn_t::output_set_method_pointer (my_strbuf_t &b)
     b << " const";
   b << ";\n";
 
-  b << "  void set_method_pointer (method_type_t m) { _method = m; }\n\n";
+  b << "  void set_method_pointer (method_type_t m) "
+    "{ _method = m; }\n\n";
     
 }
 
@@ -571,7 +572,7 @@ tame_fn_t::output_closure (outputter_t *o)
     slfargs = _args;
   }
 
-  b << "class " << _closure.type ().base_type () 
+  b << "class SFS_HIDDEN " << _closure.type ().base_type () 
     << " : public closure_t "
     << "{\n"
     << "public:\n"
@@ -610,7 +611,7 @@ tame_fn_t::output_closure (outputter_t *o)
 
   // output the argument capture structure
   b << "\n"
-    << "  struct args_t {\n"
+    << "struct SFS_HIDDEN args_t {\n"
     << "    args_t (" ;
   if (_args && _args->size ()) 
     _args->paramlist (b, DECLARATIONS);
@@ -630,7 +631,7 @@ tame_fn_t::output_closure (outputter_t *o)
   b << "  args_t _args;\n" ;
 
   // output the stack structure
-  b << "  struct stack_t {\n"
+  b << "struct SFS_HIDDEN stack_t {\n"
     << "    stack_t (";
   if (slfargs) slfargs->paramlist (b, DECLARATIONS);
 

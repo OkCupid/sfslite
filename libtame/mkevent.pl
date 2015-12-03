@@ -67,7 +67,7 @@ sub do_trigger_funcs ($)
     my ($t) = @_;
 
 
-    print("  void trigger (",
+    print("  SFS_HIDDEN void trigger (",
 	   arglist (["const T% &t%", $t]), ")\n",
 	   "  {\n",
 	   "    if (can_trigger ()) {\n",
@@ -86,7 +86,7 @@ sub do_trigger_funcs ($)
 	   "    }\n",
 	   "  }\n");
 
-    print("  void operator() (",
+    print("    SFS_INLINE_VISIBILITY void operator() (",
 	   arglist (["T% t%", $t]), ")",
 	   " { trigger (", arglist(["t%", $t]), "); }\n");
 }
@@ -108,7 +108,7 @@ sub do_event_class ($)
     my $ctss = "const _tame_slot_set$tlist &";
 
     # print the classname
-    print("class ${CN}", $tlist, " :\n",
+    print("class SFS_HIDDEN ${CN}", $tlist, " :\n",
           "     public ${BASE},\n",
           "     public callback${vlist}\n",
           "{\n",
@@ -120,7 +120,7 @@ sub do_event_class ($)
     }
 
     # print the constructors
-    print("  ${CN} (const _tame_slot_set$tlist &rs, const char *loc)\n",
+    print("   SFS_INLINE_VISIBILITY ${CN} (const _tame_slot_set$tlist &rs, const char *loc)\n",
           "   : ${BASE} (loc),\n",
           "     callback${vlist} (CALLBACK_ARGS(loc))");
     if ($t) {
@@ -129,6 +129,9 @@ sub do_event_class ($)
     }
     print("\n",
           "    {}\n\n");
+
+    print("\n",
+          "SFS_INLINE_VISIBILITY ~${CN}() = default;\n\n");
 
     if ($t) {
         print("  ${ctss}slot_set() const\n",
@@ -201,12 +204,12 @@ sub do_event_impl_class ($$)
 
 
     # print the classname
-    print("class ${CNI}", $tlist2, " :\n",
+    print("class SFS_HIDDEN ${CNI}", $tlist2, " :\n",
 	   "     public ${CN}", $tlist , "\n",
 	   "{\n",
 	   "public:\n");
 
-    print("  ${CNI} (",
+    print("  SFS_INLINE_VISIBILITY ${CNI} (",
 	   arglist ("${typconst}action",
 		    "const _tame_slot_set$tlist &rs",
 		    "const char *loc"),
@@ -215,13 +218,13 @@ sub do_event_impl_class ($$)
 	   "      _action (action) {}\n\n");
 
     # print the destructor
-    print("  ~${CNI} () { if (!this->_cleared) clear_action (); ${del}}\n\n");
+    print("  SFS_INLINE_VISIBILITY ~${CNI} () { if (!this->_cleared) clear_action (); ${del}}\n\n");
 
 
     # print the action functions
-    print("  bool perform_action (${EVCB} *e, const char *loc, bool reuse)\n",
+    print("  SFS_INLINE_VISIBILITY bool perform_action (${EVCB} *e, const char *loc, bool reuse)\n",
 	   "  { return ${cthis}perform (e, loc, reuse); }\n");
-    print("  void clear_action () { ${cthis}clear (this); }\n\n");
+    print("  SFS_INLINE_VISIBILITY void clear_action () { ${cthis}clear (this); }\n\n");
 
     print("private:\n");
     print("  ${typ}_action;\n");
@@ -415,7 +418,8 @@ print <<EOF;
 #include "tame_event.h"
 #include "tame_closure.h"
 #include "tame_rendezvous.h"
-
+#include "sfs_attr.h"
+    
 EOF
 
 for (my $t = 0; $t <= $N_tv; $t++) {

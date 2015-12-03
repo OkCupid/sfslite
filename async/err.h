@@ -104,14 +104,14 @@ struct traceobj : public strbuf {
 };
 
 template<class T> inline const traceobj &
-operator<< (const traceobj &sb, const T &a)
+SFS_INLINE_VISIBILITY operator<< (const traceobj &sb, const T &a)
 {
   if (sb.doprint)
     strbuf_cat (sb, a);
   return sb;
 }
 inline const traceobj &
-operator<< (const traceobj &sb, const str &s)
+SFS_INLINE_VISIBILITY operator<< (const traceobj &sb, const str &s)
 {
   if (sb.doprint)
     suio_print (sb.tosuio (), s);
@@ -119,14 +119,14 @@ operator<< (const traceobj &sb, const str &s)
 }
 
 template<class T> inline const warnobj &
-operator<< (const warnobj &sb, const T &a)
+SFS_INLINE_VISIBILITY operator<< (const warnobj &sb, const T &a)
 {
   strbuf_cat (sb, a);
   return sb;
 }
 
 inline const warnobj &
-operator<< (const warnobj &sb, const str &s)
+SFS_INLINE_VISIBILITY operator<< (const warnobj &sb, const str &s)
 {
   if (s)
     suio_print (sb.tosuio (), s);

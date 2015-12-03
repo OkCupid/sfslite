@@ -192,9 +192,10 @@ public:
     : dest (df[0] == '&' ? df + 1 : df), src (f), line (l) {}
 $enddebug
   virtual R operator() ($cbdecl) = 0;
-  virtual void trigger ($cbdecl) { (void) (*this) ($cbargs); }
-  virtual ~callback () {}
-  callback () : _closure_type (NULL), _closure_void (NULL) {}
+  virtual SFS_INLINE_VISIBILITY void trigger ($cbdecl) { (void) (*this) ($cbargs); }
+  virtual SFS_INLINE_VISIBILITY ~callback () {}
+  SFS_INLINE_VISIBILITY callback () : _closure_type (NULL), _closure_void (NULL)
+  {}
   void set_gdb_info (const char *typ, const void *v)
     { _closure_type = typ; _closure_void = v; }
 };
@@ -256,10 +257,11 @@ class $type
   typedef R (*cb_t) ($ABlist);
   cb_t f;
 ${adecl}public:
-  $type (callback_line_param $aargs)
+  SFS_INLINE_VISIBILITY $type (callback_line_param $aargs)
     : callback_line_init (callback<$RBlist>) $ainit {}
-  R operator() ($bargs)
+  SFS_INLINE_VISIBILITY R operator() ($bargs)
     { return f ($ablist); }
+  SFS_INLINE_VISIBILITY ~$type() {}
 };
 EOF
 
@@ -277,10 +279,11 @@ class $type<$specargs>
   typedef void (*cb_t) ($ABlist);
   cb_t f;
 ${adecl}public:
-  $type (callback_line_param $aargs)
+  SFS_INLINE_VISIBILITY $type (callback_line_param $aargs)
     : callback_line_init (callback<$RBlist>) $ainit {}
-  void operator() ($bargs)
+  SFS_INLINE_VISIBILITY void operator() ($bargs)
     { f ($ablist); }
+  SFS_INLINE_VISIBILITY ~$type() {}
 };
 EOF
 }
@@ -324,10 +327,11 @@ public:
     }
 #else $bc !WRAP_USE_NODELETE $ec
 ${adecl}public:
-  $type (callback_line_param $aargs)
+  SFS_INLINE_VISIBILITY $type (callback_line_param $aargs)
     : callback_line_init (callback<$RBlist>) $ainit {}
-  R operator() ($bargs)
+  SFS_INLINE_VISIBILITY R operator() ($bargs)
     { return ((*c).*f) ($ablist); }
+  SFS_INLINE_VISIBILITY ~$type () {}
 #endif $bc !WRAP_USE_NODELETE $ec
 };
 EOF
@@ -348,10 +352,11 @@ class $type<$specargs>
   P c;
   cb_t f;
 ${adecl}public:
-  $type (callback_line_param $aargs)
+  SFS_INLINE_VISIBILITY $type (callback_line_param $aargs)
     : callback_line_init (callback<$RBlist>) $ainit {}
-  void operator() ($bargs)
+  SFS_INLINE_VISIBILITY void operator() ($bargs)
     { ((*c).*f) ($ablist); }
+  SFS_INLINE_VISIBILITY ~$type() {}
 };
 EOF
 }
@@ -369,7 +374,7 @@ sub pwrap_b_a ($$) {
     print <<"EOF";
 
 template<$tmpparam>
-static inline $rtype *
+static SFS_INLINE_VISIBILITY inline $rtype *
 wrap (wrap_line_param $fargs)
 {
   return wNew ($rtype) (wrap_line_arg $falist);
@@ -392,7 +397,7 @@ sub pwrap_c_b_a ($$$) {
     print <<"EOF";
 
 template<$tmpparam>
-static inline $rtype *
+static SFS_INLINE_VISIBILITY inline $rtype *
 wrap (wrap_line_param $fargs)
 {
   return wNew ($rtype) (wrap_c_line_arg $falist);
@@ -412,19 +417,19 @@ EOF
     print <<"EOF";
 
 template<$tmpparam>
-static inline $rtype *
+static SFS_INLINE_VISIBILITY inline $rtype *
 wrap (wrap_line_param $fargs)
 {
   return wNew ($rtype) (wrap_c_line_arg $falist);
 }
 template<$tmpparam>
-static inline $rtype *
+static SFS_INLINE_VISIBILITY inline $rtype *
 wrap (wrap_line_param $f2args)
 {
   return wNew ($rtype) (wrap_c_line_arg $falist);
 }
 template<$tmpparam>
-static inline $rtype *
+static SFS_INLINE_VISIBILITY inline $rtype *
 wrap (wrap_line_param $f3args)
 {
   return wNew ($rtype) (wrap_c_line_arg $falist);
@@ -704,9 +709,10 @@ public:
     : dest (df[0] == '&' ? df + 1 : df), src (f), line (l) {}
 #endif /* WRAP_DEBUG */
   virtual R operator() () = 0;
-  virtual void trigger () { (void) (*this) (); }
-  virtual ~callback () {}
-  callback () : _closure_type (NULL), _closure_void (NULL) {}
+  virtual SFS_INLINE_VISIBILITY void trigger () { (void) (*this) (); }
+  virtual SFS_INLINE_VISIBILITY ~callback () {}
+  SFS_INLINE_VISIBILITY callback () : _closure_type (NULL), _closure_void (NULL)
+  {}
   void set_gdb_info (const char *typ, const void *v)
     { _closure_type = typ; _closure_void = v; }
 };
@@ -718,14 +724,15 @@ class callback_0_0
   typedef R (*cb_t) ();
   cb_t f;
 public:
-  callback_0_0 (callback_line_param cb_t ff)
+  SFS_INLINE_VISIBILITY callback_0_0 (callback_line_param cb_t ff)
     : callback_line_init (callback<R>) f (ff) {}
-  R operator() ()
+  SFS_INLINE_VISIBILITY R operator() ()
     { return f (); }
+  SFS_INLINE_VISIBILITY ~callback_0_0() {}
 };
 
 template<class R>
-static inline refcounted<callback_0_0<R> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_0_0<R> > *
 wrap (wrap_line_param R (*f) ())
 {
   return wNew (refcounted<callback_0_0<R> >) (wrap_line_arg f);
@@ -754,10 +761,11 @@ public:
     }
 #else /* !WRAP_USE_NODELETE */
 public:
-  callback_c_0_0 (callback_line_param const P &cc, cb_t ff)
+  SFS_INLINE_VISIBILITY callback_c_0_0 (callback_line_param const P &cc, cb_t ff)
     : callback_line_init (callback<R>) c (cc), f (ff) {}
-  R operator() ()
+  SFS_INLINE_VISIBILITY R operator() ()
     { return ((*c).*f) (); }
+  SFS_INLINE_VISIBILITY ~callback_c_0_0 () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
@@ -784,60 +792,61 @@ public:
     }
 #else /* !WRAP_USE_NODELETE */
 public:
-  callback_c_0_0_const (callback_line_param const P &cc, cb_t ff)
+  SFS_INLINE_VISIBILITY callback_c_0_0_const (callback_line_param const P &cc, cb_t ff)
     : callback_line_init (callback<R>) c (cc), f (ff) {}
-  R operator() ()
+  SFS_INLINE_VISIBILITY R operator() ()
     { return ((*c).*f) (); }
+  SFS_INLINE_VISIBILITY ~callback_c_0_0_const () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
 template<class C, class R>
-static inline refcounted<callback_c_0_0< C *, C, R> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_0< C *, C, R> > *
 wrap (wrap_line_param  C *p, R (C::*f) () )
 {
   return wNew (refcounted<callback_c_0_0< C *, C, R> >) (wrap_c_line_arg p, f);
 }
 
 template<class C, class R>
-static inline refcounted<callback_c_0_0<ref< C>,  C, R> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_0<ref< C>,  C, R> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) () )
 {
   return wNew (refcounted<callback_c_0_0<ref< C>,  C, R> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R>
-static inline refcounted<callback_c_0_0<ref< C>,  C, R> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_0<ref< C>,  C, R> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) () )
 {
   return wNew (refcounted<callback_c_0_0<ref< C>,  C, R> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R>
-static inline refcounted<callback_c_0_0<ref< C>,  C, R> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_0<ref< C>,  C, R> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) () )
 {
   return wNew (refcounted<callback_c_0_0<ref< C>,  C, R> >) (wrap_c_line_arg p, f);
 }
 
 template<class C, class R>
-static inline refcounted<callback_c_0_0_const<const C *, C, R> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_0_const<const C *, C, R> > *
 wrap (wrap_line_param const C *p, R (C::*f) () const)
 {
   return wNew (refcounted<callback_c_0_0_const<const C *, C, R> >) (wrap_c_line_arg p, f);
 }
 
 template<class C, class R>
-static inline refcounted<callback_c_0_0_const<ref<const C>, const C, R> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_0_const<ref<const C>, const C, R> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) () const)
 {
   return wNew (refcounted<callback_c_0_0_const<ref<const C>, const C, R> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R>
-static inline refcounted<callback_c_0_0_const<ref<const C>, const C, R> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_0_const<ref<const C>, const C, R> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) () const)
 {
   return wNew (refcounted<callback_c_0_0_const<ref<const C>, const C, R> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R>
-static inline refcounted<callback_c_0_0_const<ref<const C>, const C, R> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_0_const<ref<const C>, const C, R> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) () const)
 {
   return wNew (refcounted<callback_c_0_0_const<ref<const C>, const C, R> >) (wrap_c_line_arg p, f);
@@ -850,14 +859,15 @@ class callback_0_1
   cb_t f;
   A1 a1;
 public:
-  callback_0_1 (callback_line_param cb_t ff, const A1 &aa1)
+  SFS_INLINE_VISIBILITY callback_0_1 (callback_line_param cb_t ff, const A1 &aa1)
     : callback_line_init (callback<R>) f (ff), a1 (aa1) {}
-  R operator() ()
+  SFS_INLINE_VISIBILITY R operator() ()
     { return f (a1); }
+  SFS_INLINE_VISIBILITY ~callback_0_1() {}
 };
 
 template<class R, class A1, class AA1>
-static inline refcounted<callback_0_1<R, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_0_1<R, A1> > *
 wrap (wrap_line_param R (*f) (A1), const AA1 &a1)
 {
   return wNew (refcounted<callback_0_1<R, A1> >) (wrap_line_arg f, a1);
@@ -888,10 +898,11 @@ public:
 #else /* !WRAP_USE_NODELETE */
   A1 a1;
 public:
-  callback_c_0_1 (callback_line_param const P &cc, cb_t ff, const A1 &aa1)
+  SFS_INLINE_VISIBILITY callback_c_0_1 (callback_line_param const P &cc, cb_t ff, const A1 &aa1)
     : callback_line_init (callback<R>) c (cc), f (ff), a1 (aa1) {}
-  R operator() ()
+  SFS_INLINE_VISIBILITY R operator() ()
     { return ((*c).*f) (a1); }
+  SFS_INLINE_VISIBILITY ~callback_c_0_1 () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
@@ -920,60 +931,61 @@ public:
 #else /* !WRAP_USE_NODELETE */
   A1 a1;
 public:
-  callback_c_0_1_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1)
+  SFS_INLINE_VISIBILITY callback_c_0_1_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1)
     : callback_line_init (callback<R>) c (cc), f (ff), a1 (aa1) {}
-  R operator() ()
+  SFS_INLINE_VISIBILITY R operator() ()
     { return ((*c).*f) (a1); }
+  SFS_INLINE_VISIBILITY ~callback_c_0_1_const () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
 template<class C, class R, class A1, class AA1>
-static inline refcounted<callback_c_0_1< C *, C, R, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_1< C *, C, R, A1> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1) , const AA1 &a1)
 {
   return wNew (refcounted<callback_c_0_1< C *, C, R, A1> >) (wrap_c_line_arg p, f, a1);
 }
 
 template<class C, class R, class A1, class AA1>
-static inline refcounted<callback_c_0_1<ref< C>,  C, R, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_1<ref< C>,  C, R, A1> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1) , const AA1 &a1)
 {
   return wNew (refcounted<callback_c_0_1<ref< C>,  C, R, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class A1, class AA1>
-static inline refcounted<callback_c_0_1<ref< C>,  C, R, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_1<ref< C>,  C, R, A1> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1) , const AA1 &a1)
 {
   return wNew (refcounted<callback_c_0_1<ref< C>,  C, R, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class A1, class AA1>
-static inline refcounted<callback_c_0_1<ref< C>,  C, R, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_1<ref< C>,  C, R, A1> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1) , const AA1 &a1)
 {
   return wNew (refcounted<callback_c_0_1<ref< C>,  C, R, A1> >) (wrap_c_line_arg p, f, a1);
 }
 
 template<class C, class R, class A1, class AA1>
-static inline refcounted<callback_c_0_1_const<const C *, C, R, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_1_const<const C *, C, R, A1> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1) const, const AA1 &a1)
 {
   return wNew (refcounted<callback_c_0_1_const<const C *, C, R, A1> >) (wrap_c_line_arg p, f, a1);
 }
 
 template<class C, class R, class A1, class AA1>
-static inline refcounted<callback_c_0_1_const<ref<const C>, const C, R, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_1_const<ref<const C>, const C, R, A1> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1) const, const AA1 &a1)
 {
   return wNew (refcounted<callback_c_0_1_const<ref<const C>, const C, R, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class A1, class AA1>
-static inline refcounted<callback_c_0_1_const<ref<const C>, const C, R, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_1_const<ref<const C>, const C, R, A1> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1) const, const AA1 &a1)
 {
   return wNew (refcounted<callback_c_0_1_const<ref<const C>, const C, R, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class A1, class AA1>
-static inline refcounted<callback_c_0_1_const<ref<const C>, const C, R, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_1_const<ref<const C>, const C, R, A1> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1) const, const AA1 &a1)
 {
   return wNew (refcounted<callback_c_0_1_const<ref<const C>, const C, R, A1> >) (wrap_c_line_arg p, f, a1);
@@ -987,14 +999,15 @@ class callback_0_2
   A1 a1;
   A2 a2;
 public:
-  callback_0_2 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2)
+  SFS_INLINE_VISIBILITY callback_0_2 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2)
     : callback_line_init (callback<R>) f (ff), a1 (aa1), a2 (aa2) {}
-  R operator() ()
+  SFS_INLINE_VISIBILITY R operator() ()
     { return f (a1, a2); }
+  SFS_INLINE_VISIBILITY ~callback_0_2() {}
 };
 
 template<class R, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_0_2<R, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_0_2<R, A1, A2> > *
 wrap (wrap_line_param R (*f) (A1, A2), const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_0_2<R, A1, A2> >) (wrap_line_arg f, a1, a2);
@@ -1027,10 +1040,11 @@ public:
   A1 a1;
   A2 a2;
 public:
-  callback_c_0_2 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2)
+  SFS_INLINE_VISIBILITY callback_c_0_2 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2)
     : callback_line_init (callback<R>) c (cc), f (ff), a1 (aa1), a2 (aa2) {}
-  R operator() ()
+  SFS_INLINE_VISIBILITY R operator() ()
     { return ((*c).*f) (a1, a2); }
+  SFS_INLINE_VISIBILITY ~callback_c_0_2 () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
@@ -1061,60 +1075,61 @@ public:
   A1 a1;
   A2 a2;
 public:
-  callback_c_0_2_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2)
+  SFS_INLINE_VISIBILITY callback_c_0_2_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2)
     : callback_line_init (callback<R>) c (cc), f (ff), a1 (aa1), a2 (aa2) {}
-  R operator() ()
+  SFS_INLINE_VISIBILITY R operator() ()
     { return ((*c).*f) (a1, a2); }
+  SFS_INLINE_VISIBILITY ~callback_c_0_2_const () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
 template<class C, class R, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_0_2< C *, C, R, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_2< C *, C, R, A1, A2> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2) , const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_0_2< C *, C, R, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 
 template<class C, class R, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_0_2<ref< C>,  C, R, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_2<ref< C>,  C, R, A1, A2> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2) , const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_0_2<ref< C>,  C, R, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_0_2<ref< C>,  C, R, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_2<ref< C>,  C, R, A1, A2> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2) , const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_0_2<ref< C>,  C, R, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_0_2<ref< C>,  C, R, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_2<ref< C>,  C, R, A1, A2> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2) , const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_0_2<ref< C>,  C, R, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 
 template<class C, class R, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_0_2_const<const C *, C, R, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_2_const<const C *, C, R, A1, A2> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2) const, const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_0_2_const<const C *, C, R, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 
 template<class C, class R, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_0_2_const<ref<const C>, const C, R, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_2_const<ref<const C>, const C, R, A1, A2> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2) const, const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_0_2_const<ref<const C>, const C, R, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_0_2_const<ref<const C>, const C, R, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_2_const<ref<const C>, const C, R, A1, A2> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2) const, const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_0_2_const<ref<const C>, const C, R, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_0_2_const<ref<const C>, const C, R, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_2_const<ref<const C>, const C, R, A1, A2> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2) const, const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_0_2_const<ref<const C>, const C, R, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
@@ -1129,14 +1144,15 @@ class callback_0_3
   A2 a2;
   A3 a3;
 public:
-  callback_0_3 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
+  SFS_INLINE_VISIBILITY callback_0_3 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
     : callback_line_init (callback<R>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3) {}
-  R operator() ()
+  SFS_INLINE_VISIBILITY R operator() ()
     { return f (a1, a2, a3); }
+  SFS_INLINE_VISIBILITY ~callback_0_3() {}
 };
 
 template<class R, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_0_3<R, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_0_3<R, A1, A2, A3> > *
 wrap (wrap_line_param R (*f) (A1, A2, A3), const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_0_3<R, A1, A2, A3> >) (wrap_line_arg f, a1, a2, a3);
@@ -1171,10 +1187,11 @@ public:
   A2 a2;
   A3 a3;
 public:
-  callback_c_0_3 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
+  SFS_INLINE_VISIBILITY callback_c_0_3 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
     : callback_line_init (callback<R>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3) {}
-  R operator() ()
+  SFS_INLINE_VISIBILITY R operator() ()
     { return ((*c).*f) (a1, a2, a3); }
+  SFS_INLINE_VISIBILITY ~callback_c_0_3 () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
@@ -1207,60 +1224,61 @@ public:
   A2 a2;
   A3 a3;
 public:
-  callback_c_0_3_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
+  SFS_INLINE_VISIBILITY callback_c_0_3_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
     : callback_line_init (callback<R>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3) {}
-  R operator() ()
+  SFS_INLINE_VISIBILITY R operator() ()
     { return ((*c).*f) (a1, a2, a3); }
+  SFS_INLINE_VISIBILITY ~callback_c_0_3_const () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_0_3< C *, C, R, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_3< C *, C, R, A1, A2, A3> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, A3) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_0_3< C *, C, R, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_0_3<ref< C>,  C, R, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_3<ref< C>,  C, R, A1, A2, A3> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, A3) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_0_3<ref< C>,  C, R, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_0_3<ref< C>,  C, R, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_3<ref< C>,  C, R, A1, A2, A3> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, A3) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_0_3<ref< C>,  C, R, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_0_3<ref< C>,  C, R, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_3<ref< C>,  C, R, A1, A2, A3> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, A3) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_0_3<ref< C>,  C, R, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_0_3_const<const C *, C, R, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_3_const<const C *, C, R, A1, A2, A3> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, A3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_0_3_const<const C *, C, R, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_0_3_const<ref<const C>, const C, R, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_3_const<ref<const C>, const C, R, A1, A2, A3> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, A3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_0_3_const<ref<const C>, const C, R, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_0_3_const<ref<const C>, const C, R, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_3_const<ref<const C>, const C, R, A1, A2, A3> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, A3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_0_3_const<ref<const C>, const C, R, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_0_3_const<ref<const C>, const C, R, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_3_const<ref<const C>, const C, R, A1, A2, A3> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_0_3_const<ref<const C>, const C, R, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
@@ -1277,14 +1295,15 @@ class callback_0_4
   A3 a3;
   A4 a4;
 public:
-  callback_0_4 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
+  SFS_INLINE_VISIBILITY callback_0_4 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
     : callback_line_init (callback<R>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4) {}
-  R operator() ()
+  SFS_INLINE_VISIBILITY R operator() ()
     { return f (a1, a2, a3, a4); }
+  SFS_INLINE_VISIBILITY ~callback_0_4() {}
 };
 
 template<class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_0_4<R, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_0_4<R, A1, A2, A3, A4> > *
 wrap (wrap_line_param R (*f) (A1, A2, A3, A4), const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_0_4<R, A1, A2, A3, A4> >) (wrap_line_arg f, a1, a2, a3, a4);
@@ -1321,10 +1340,11 @@ public:
   A3 a3;
   A4 a4;
 public:
-  callback_c_0_4 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
+  SFS_INLINE_VISIBILITY callback_c_0_4 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
     : callback_line_init (callback<R>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4) {}
-  R operator() ()
+  SFS_INLINE_VISIBILITY R operator() ()
     { return ((*c).*f) (a1, a2, a3, a4); }
+  SFS_INLINE_VISIBILITY ~callback_c_0_4 () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
@@ -1359,60 +1379,61 @@ public:
   A3 a3;
   A4 a4;
 public:
-  callback_c_0_4_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
+  SFS_INLINE_VISIBILITY callback_c_0_4_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
     : callback_line_init (callback<R>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4) {}
-  R operator() ()
+  SFS_INLINE_VISIBILITY R operator() ()
     { return ((*c).*f) (a1, a2, a3, a4); }
+  SFS_INLINE_VISIBILITY ~callback_c_0_4_const () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_0_4< C *, C, R, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_4< C *, C, R, A1, A2, A3, A4> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, A3, A4) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_0_4< C *, C, R, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_0_4<ref< C>,  C, R, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_4<ref< C>,  C, R, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, A3, A4) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_0_4<ref< C>,  C, R, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_0_4<ref< C>,  C, R, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_4<ref< C>,  C, R, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, A3, A4) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_0_4<ref< C>,  C, R, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_0_4<ref< C>,  C, R, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_4<ref< C>,  C, R, A1, A2, A3, A4> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, A3, A4) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_0_4<ref< C>,  C, R, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_0_4_const<const C *, C, R, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_4_const<const C *, C, R, A1, A2, A3, A4> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, A3, A4) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_0_4_const<const C *, C, R, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_0_4_const<ref<const C>, const C, R, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_4_const<ref<const C>, const C, R, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, A3, A4) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_0_4_const<ref<const C>, const C, R, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_0_4_const<ref<const C>, const C, R, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_4_const<ref<const C>, const C, R, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, A3, A4) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_0_4_const<ref<const C>, const C, R, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_0_4_const<ref<const C>, const C, R, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_4_const<ref<const C>, const C, R, A1, A2, A3, A4> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, A4) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_0_4_const<ref<const C>, const C, R, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
@@ -1432,14 +1453,15 @@ class callback_0_5
   A4 a4;
   A5 a5;
 public:
-  callback_0_5 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
+  SFS_INLINE_VISIBILITY callback_0_5 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
     : callback_line_init (callback<R>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5) {}
-  R operator() ()
+  SFS_INLINE_VISIBILITY R operator() ()
     { return f (a1, a2, a3, a4, a5); }
+  SFS_INLINE_VISIBILITY ~callback_0_5() {}
 };
 
 template<class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_0_5<R, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_0_5<R, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param R (*f) (A1, A2, A3, A4, A5), const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_0_5<R, A1, A2, A3, A4, A5> >) (wrap_line_arg f, a1, a2, a3, a4, a5);
@@ -1478,10 +1500,11 @@ public:
   A4 a4;
   A5 a5;
 public:
-  callback_c_0_5 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
+  SFS_INLINE_VISIBILITY callback_c_0_5 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
     : callback_line_init (callback<R>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5) {}
-  R operator() ()
+  SFS_INLINE_VISIBILITY R operator() ()
     { return ((*c).*f) (a1, a2, a3, a4, a5); }
+  SFS_INLINE_VISIBILITY ~callback_c_0_5 () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
@@ -1518,60 +1541,61 @@ public:
   A4 a4;
   A5 a5;
 public:
-  callback_c_0_5_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
+  SFS_INLINE_VISIBILITY callback_c_0_5_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
     : callback_line_init (callback<R>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5) {}
-  R operator() ()
+  SFS_INLINE_VISIBILITY R operator() ()
     { return ((*c).*f) (a1, a2, a3, a4, a5); }
+  SFS_INLINE_VISIBILITY ~callback_c_0_5_const () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_0_5< C *, C, R, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_5< C *, C, R, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, A3, A4, A5) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_0_5< C *, C, R, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_0_5<ref< C>,  C, R, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_5<ref< C>,  C, R, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, A3, A4, A5) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_0_5<ref< C>,  C, R, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_0_5<ref< C>,  C, R, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_5<ref< C>,  C, R, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, A3, A4, A5) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_0_5<ref< C>,  C, R, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_0_5<ref< C>,  C, R, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_5<ref< C>,  C, R, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, A3, A4, A5) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_0_5<ref< C>,  C, R, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_0_5_const<const C *, C, R, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_5_const<const C *, C, R, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, A3, A4, A5) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_0_5_const<const C *, C, R, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_0_5_const<ref<const C>, const C, R, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_5_const<ref<const C>, const C, R, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, A3, A4, A5) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_0_5_const<ref<const C>, const C, R, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_0_5_const<ref<const C>, const C, R, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_5_const<ref<const C>, const C, R, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, A3, A4, A5) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_0_5_const<ref<const C>, const C, R, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_0_5_const<ref<const C>, const C, R, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_0_5_const<ref<const C>, const C, R, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, A4, A5) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_0_5_const<ref<const C>, const C, R, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
@@ -1596,9 +1620,10 @@ public:
     : dest (df[0] == '&' ? df + 1 : df), src (f), line (l) {}
 #endif /* WRAP_DEBUG */
   virtual R operator() (B1 b1) = 0;
-  virtual void trigger (B1 b1) { (void) (*this) (b1); }
-  virtual ~callback () {}
-  callback () : _closure_type (NULL), _closure_void (NULL) {}
+  virtual SFS_INLINE_VISIBILITY void trigger (B1 b1) { (void) (*this) (b1); }
+  virtual SFS_INLINE_VISIBILITY ~callback () {}
+  SFS_INLINE_VISIBILITY callback () : _closure_type (NULL), _closure_void (NULL)
+  {}
   void set_gdb_info (const char *typ, const void *v)
     { _closure_type = typ; _closure_void = v; }
 };
@@ -1610,14 +1635,15 @@ class callback_1_0
   typedef R (*cb_t) (B1);
   cb_t f;
 public:
-  callback_1_0 (callback_line_param cb_t ff)
+  SFS_INLINE_VISIBILITY callback_1_0 (callback_line_param cb_t ff)
     : callback_line_init (callback<R, B1>) f (ff) {}
-  R operator() (B1 b1)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1)
     { return f (b1); }
+  SFS_INLINE_VISIBILITY ~callback_1_0() {}
 };
 
 template<class R, class B1>
-static inline refcounted<callback_1_0<R, B1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_1_0<R, B1> > *
 wrap (wrap_line_param R (*f) (B1))
 {
   return wNew (refcounted<callback_1_0<R, B1> >) (wrap_line_arg f);
@@ -1646,10 +1672,11 @@ public:
     }
 #else /* !WRAP_USE_NODELETE */
 public:
-  callback_c_1_0 (callback_line_param const P &cc, cb_t ff)
+  SFS_INLINE_VISIBILITY callback_c_1_0 (callback_line_param const P &cc, cb_t ff)
     : callback_line_init (callback<R, B1>) c (cc), f (ff) {}
-  R operator() (B1 b1)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1)
     { return ((*c).*f) (b1); }
+  SFS_INLINE_VISIBILITY ~callback_c_1_0 () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
@@ -1676,60 +1703,61 @@ public:
     }
 #else /* !WRAP_USE_NODELETE */
 public:
-  callback_c_1_0_const (callback_line_param const P &cc, cb_t ff)
+  SFS_INLINE_VISIBILITY callback_c_1_0_const (callback_line_param const P &cc, cb_t ff)
     : callback_line_init (callback<R, B1>) c (cc), f (ff) {}
-  R operator() (B1 b1)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1)
     { return ((*c).*f) (b1); }
+  SFS_INLINE_VISIBILITY ~callback_c_1_0_const () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
 template<class C, class R, class B1>
-static inline refcounted<callback_c_1_0< C *, C, R, B1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_0< C *, C, R, B1> > *
 wrap (wrap_line_param  C *p, R (C::*f) (B1) )
 {
   return wNew (refcounted<callback_c_1_0< C *, C, R, B1> >) (wrap_c_line_arg p, f);
 }
 
 template<class C, class R, class B1>
-static inline refcounted<callback_c_1_0<ref< C>,  C, R, B1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_0<ref< C>,  C, R, B1> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (B1) )
 {
   return wNew (refcounted<callback_c_1_0<ref< C>,  C, R, B1> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R, class B1>
-static inline refcounted<callback_c_1_0<ref< C>,  C, R, B1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_0<ref< C>,  C, R, B1> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (B1) )
 {
   return wNew (refcounted<callback_c_1_0<ref< C>,  C, R, B1> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R, class B1>
-static inline refcounted<callback_c_1_0<ref< C>,  C, R, B1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_0<ref< C>,  C, R, B1> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (B1) )
 {
   return wNew (refcounted<callback_c_1_0<ref< C>,  C, R, B1> >) (wrap_c_line_arg p, f);
 }
 
 template<class C, class R, class B1>
-static inline refcounted<callback_c_1_0_const<const C *, C, R, B1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_0_const<const C *, C, R, B1> > *
 wrap (wrap_line_param const C *p, R (C::*f) (B1) const)
 {
   return wNew (refcounted<callback_c_1_0_const<const C *, C, R, B1> >) (wrap_c_line_arg p, f);
 }
 
 template<class C, class R, class B1>
-static inline refcounted<callback_c_1_0_const<ref<const C>, const C, R, B1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_0_const<ref<const C>, const C, R, B1> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (B1) const)
 {
   return wNew (refcounted<callback_c_1_0_const<ref<const C>, const C, R, B1> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R, class B1>
-static inline refcounted<callback_c_1_0_const<ref<const C>, const C, R, B1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_0_const<ref<const C>, const C, R, B1> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (B1) const)
 {
   return wNew (refcounted<callback_c_1_0_const<ref<const C>, const C, R, B1> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R, class B1>
-static inline refcounted<callback_c_1_0_const<ref<const C>, const C, R, B1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_0_const<ref<const C>, const C, R, B1> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (B1) const)
 {
   return wNew (refcounted<callback_c_1_0_const<ref<const C>, const C, R, B1> >) (wrap_c_line_arg p, f);
@@ -1742,14 +1770,15 @@ class callback_1_1
   cb_t f;
   A1 a1;
 public:
-  callback_1_1 (callback_line_param cb_t ff, const A1 &aa1)
+  SFS_INLINE_VISIBILITY callback_1_1 (callback_line_param cb_t ff, const A1 &aa1)
     : callback_line_init (callback<R, B1>) f (ff), a1 (aa1) {}
-  R operator() (B1 b1)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1)
     { return f (a1, b1); }
+  SFS_INLINE_VISIBILITY ~callback_1_1() {}
 };
 
 template<class R, class B1, class A1, class AA1>
-static inline refcounted<callback_1_1<R, B1, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_1_1<R, B1, A1> > *
 wrap (wrap_line_param R (*f) (A1, B1), const AA1 &a1)
 {
   return wNew (refcounted<callback_1_1<R, B1, A1> >) (wrap_line_arg f, a1);
@@ -1780,10 +1809,11 @@ public:
 #else /* !WRAP_USE_NODELETE */
   A1 a1;
 public:
-  callback_c_1_1 (callback_line_param const P &cc, cb_t ff, const A1 &aa1)
+  SFS_INLINE_VISIBILITY callback_c_1_1 (callback_line_param const P &cc, cb_t ff, const A1 &aa1)
     : callback_line_init (callback<R, B1>) c (cc), f (ff), a1 (aa1) {}
-  R operator() (B1 b1)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1)
     { return ((*c).*f) (a1, b1); }
+  SFS_INLINE_VISIBILITY ~callback_c_1_1 () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
@@ -1812,60 +1842,61 @@ public:
 #else /* !WRAP_USE_NODELETE */
   A1 a1;
 public:
-  callback_c_1_1_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1)
+  SFS_INLINE_VISIBILITY callback_c_1_1_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1)
     : callback_line_init (callback<R, B1>) c (cc), f (ff), a1 (aa1) {}
-  R operator() (B1 b1)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1)
     { return ((*c).*f) (a1, b1); }
+  SFS_INLINE_VISIBILITY ~callback_c_1_1_const () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
 template<class C, class R, class B1, class A1, class AA1>
-static inline refcounted<callback_c_1_1< C *, C, R, B1, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_1< C *, C, R, B1, A1> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, B1) , const AA1 &a1)
 {
   return wNew (refcounted<callback_c_1_1< C *, C, R, B1, A1> >) (wrap_c_line_arg p, f, a1);
 }
 
 template<class C, class R, class B1, class A1, class AA1>
-static inline refcounted<callback_c_1_1<ref< C>,  C, R, B1, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_1<ref< C>,  C, R, B1, A1> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, B1) , const AA1 &a1)
 {
   return wNew (refcounted<callback_c_1_1<ref< C>,  C, R, B1, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class B1, class A1, class AA1>
-static inline refcounted<callback_c_1_1<ref< C>,  C, R, B1, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_1<ref< C>,  C, R, B1, A1> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, B1) , const AA1 &a1)
 {
   return wNew (refcounted<callback_c_1_1<ref< C>,  C, R, B1, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class B1, class A1, class AA1>
-static inline refcounted<callback_c_1_1<ref< C>,  C, R, B1, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_1<ref< C>,  C, R, B1, A1> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, B1) , const AA1 &a1)
 {
   return wNew (refcounted<callback_c_1_1<ref< C>,  C, R, B1, A1> >) (wrap_c_line_arg p, f, a1);
 }
 
 template<class C, class R, class B1, class A1, class AA1>
-static inline refcounted<callback_c_1_1_const<const C *, C, R, B1, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_1_const<const C *, C, R, B1, A1> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, B1) const, const AA1 &a1)
 {
   return wNew (refcounted<callback_c_1_1_const<const C *, C, R, B1, A1> >) (wrap_c_line_arg p, f, a1);
 }
 
 template<class C, class R, class B1, class A1, class AA1>
-static inline refcounted<callback_c_1_1_const<ref<const C>, const C, R, B1, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_1_const<ref<const C>, const C, R, B1, A1> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, B1) const, const AA1 &a1)
 {
   return wNew (refcounted<callback_c_1_1_const<ref<const C>, const C, R, B1, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class B1, class A1, class AA1>
-static inline refcounted<callback_c_1_1_const<ref<const C>, const C, R, B1, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_1_const<ref<const C>, const C, R, B1, A1> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, B1) const, const AA1 &a1)
 {
   return wNew (refcounted<callback_c_1_1_const<ref<const C>, const C, R, B1, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class B1, class A1, class AA1>
-static inline refcounted<callback_c_1_1_const<ref<const C>, const C, R, B1, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_1_const<ref<const C>, const C, R, B1, A1> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, B1) const, const AA1 &a1)
 {
   return wNew (refcounted<callback_c_1_1_const<ref<const C>, const C, R, B1, A1> >) (wrap_c_line_arg p, f, a1);
@@ -1879,14 +1910,15 @@ class callback_1_2
   A1 a1;
   A2 a2;
 public:
-  callback_1_2 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2)
+  SFS_INLINE_VISIBILITY callback_1_2 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2)
     : callback_line_init (callback<R, B1>) f (ff), a1 (aa1), a2 (aa2) {}
-  R operator() (B1 b1)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1)
     { return f (a1, a2, b1); }
+  SFS_INLINE_VISIBILITY ~callback_1_2() {}
 };
 
 template<class R, class B1, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_1_2<R, B1, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_1_2<R, B1, A1, A2> > *
 wrap (wrap_line_param R (*f) (A1, A2, B1), const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_1_2<R, B1, A1, A2> >) (wrap_line_arg f, a1, a2);
@@ -1919,10 +1951,11 @@ public:
   A1 a1;
   A2 a2;
 public:
-  callback_c_1_2 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2)
+  SFS_INLINE_VISIBILITY callback_c_1_2 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2)
     : callback_line_init (callback<R, B1>) c (cc), f (ff), a1 (aa1), a2 (aa2) {}
-  R operator() (B1 b1)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1)
     { return ((*c).*f) (a1, a2, b1); }
+  SFS_INLINE_VISIBILITY ~callback_c_1_2 () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
@@ -1953,60 +1986,61 @@ public:
   A1 a1;
   A2 a2;
 public:
-  callback_c_1_2_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2)
+  SFS_INLINE_VISIBILITY callback_c_1_2_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2)
     : callback_line_init (callback<R, B1>) c (cc), f (ff), a1 (aa1), a2 (aa2) {}
-  R operator() (B1 b1)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1)
     { return ((*c).*f) (a1, a2, b1); }
+  SFS_INLINE_VISIBILITY ~callback_c_1_2_const () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_1_2< C *, C, R, B1, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_2< C *, C, R, B1, A1, A2> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, B1) , const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_1_2< C *, C, R, B1, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_1_2<ref< C>,  C, R, B1, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_2<ref< C>,  C, R, B1, A1, A2> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, B1) , const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_1_2<ref< C>,  C, R, B1, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_1_2<ref< C>,  C, R, B1, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_2<ref< C>,  C, R, B1, A1, A2> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, B1) , const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_1_2<ref< C>,  C, R, B1, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_1_2<ref< C>,  C, R, B1, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_2<ref< C>,  C, R, B1, A1, A2> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, B1) , const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_1_2<ref< C>,  C, R, B1, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_1_2_const<const C *, C, R, B1, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_2_const<const C *, C, R, B1, A1, A2> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, B1) const, const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_1_2_const<const C *, C, R, B1, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_1_2_const<ref<const C>, const C, R, B1, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_2_const<ref<const C>, const C, R, B1, A1, A2> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, B1) const, const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_1_2_const<ref<const C>, const C, R, B1, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_1_2_const<ref<const C>, const C, R, B1, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_2_const<ref<const C>, const C, R, B1, A1, A2> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, B1) const, const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_1_2_const<ref<const C>, const C, R, B1, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_1_2_const<ref<const C>, const C, R, B1, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_2_const<ref<const C>, const C, R, B1, A1, A2> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, B1) const, const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_1_2_const<ref<const C>, const C, R, B1, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
@@ -2021,14 +2055,15 @@ class callback_1_3
   A2 a2;
   A3 a3;
 public:
-  callback_1_3 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
+  SFS_INLINE_VISIBILITY callback_1_3 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
     : callback_line_init (callback<R, B1>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3) {}
-  R operator() (B1 b1)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1)
     { return f (a1, a2, a3, b1); }
+  SFS_INLINE_VISIBILITY ~callback_1_3() {}
 };
 
 template<class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_1_3<R, B1, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_1_3<R, B1, A1, A2, A3> > *
 wrap (wrap_line_param R (*f) (A1, A2, A3, B1), const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_1_3<R, B1, A1, A2, A3> >) (wrap_line_arg f, a1, a2, a3);
@@ -2063,10 +2098,11 @@ public:
   A2 a2;
   A3 a3;
 public:
-  callback_c_1_3 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
+  SFS_INLINE_VISIBILITY callback_c_1_3 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
     : callback_line_init (callback<R, B1>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3) {}
-  R operator() (B1 b1)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1)
     { return ((*c).*f) (a1, a2, a3, b1); }
+  SFS_INLINE_VISIBILITY ~callback_c_1_3 () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
@@ -2099,60 +2135,61 @@ public:
   A2 a2;
   A3 a3;
 public:
-  callback_c_1_3_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
+  SFS_INLINE_VISIBILITY callback_c_1_3_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
     : callback_line_init (callback<R, B1>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3) {}
-  R operator() (B1 b1)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1)
     { return ((*c).*f) (a1, a2, a3, b1); }
+  SFS_INLINE_VISIBILITY ~callback_c_1_3_const () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_1_3< C *, C, R, B1, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_3< C *, C, R, B1, A1, A2, A3> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, A3, B1) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_1_3< C *, C, R, B1, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_1_3<ref< C>,  C, R, B1, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_3<ref< C>,  C, R, B1, A1, A2, A3> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, A3, B1) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_1_3<ref< C>,  C, R, B1, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_1_3<ref< C>,  C, R, B1, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_3<ref< C>,  C, R, B1, A1, A2, A3> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, A3, B1) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_1_3<ref< C>,  C, R, B1, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_1_3<ref< C>,  C, R, B1, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_3<ref< C>,  C, R, B1, A1, A2, A3> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, A3, B1) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_1_3<ref< C>,  C, R, B1, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_1_3_const<const C *, C, R, B1, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_3_const<const C *, C, R, B1, A1, A2, A3> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, A3, B1) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_1_3_const<const C *, C, R, B1, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_1_3_const<ref<const C>, const C, R, B1, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_3_const<ref<const C>, const C, R, B1, A1, A2, A3> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, A3, B1) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_1_3_const<ref<const C>, const C, R, B1, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_1_3_const<ref<const C>, const C, R, B1, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_3_const<ref<const C>, const C, R, B1, A1, A2, A3> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, A3, B1) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_1_3_const<ref<const C>, const C, R, B1, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_1_3_const<ref<const C>, const C, R, B1, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_3_const<ref<const C>, const C, R, B1, A1, A2, A3> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, B1) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_1_3_const<ref<const C>, const C, R, B1, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
@@ -2169,14 +2206,15 @@ class callback_1_4
   A3 a3;
   A4 a4;
 public:
-  callback_1_4 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
+  SFS_INLINE_VISIBILITY callback_1_4 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
     : callback_line_init (callback<R, B1>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4) {}
-  R operator() (B1 b1)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1)
     { return f (a1, a2, a3, a4, b1); }
+  SFS_INLINE_VISIBILITY ~callback_1_4() {}
 };
 
 template<class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_1_4<R, B1, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_1_4<R, B1, A1, A2, A3, A4> > *
 wrap (wrap_line_param R (*f) (A1, A2, A3, A4, B1), const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_1_4<R, B1, A1, A2, A3, A4> >) (wrap_line_arg f, a1, a2, a3, a4);
@@ -2213,10 +2251,11 @@ public:
   A3 a3;
   A4 a4;
 public:
-  callback_c_1_4 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
+  SFS_INLINE_VISIBILITY callback_c_1_4 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
     : callback_line_init (callback<R, B1>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4) {}
-  R operator() (B1 b1)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1)
     { return ((*c).*f) (a1, a2, a3, a4, b1); }
+  SFS_INLINE_VISIBILITY ~callback_c_1_4 () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
@@ -2251,60 +2290,61 @@ public:
   A3 a3;
   A4 a4;
 public:
-  callback_c_1_4_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
+  SFS_INLINE_VISIBILITY callback_c_1_4_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
     : callback_line_init (callback<R, B1>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4) {}
-  R operator() (B1 b1)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1)
     { return ((*c).*f) (a1, a2, a3, a4, b1); }
+  SFS_INLINE_VISIBILITY ~callback_c_1_4_const () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_1_4< C *, C, R, B1, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_4< C *, C, R, B1, A1, A2, A3, A4> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, A3, A4, B1) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_1_4< C *, C, R, B1, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_1_4<ref< C>,  C, R, B1, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_4<ref< C>,  C, R, B1, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, A3, A4, B1) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_1_4<ref< C>,  C, R, B1, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_1_4<ref< C>,  C, R, B1, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_4<ref< C>,  C, R, B1, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, A3, A4, B1) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_1_4<ref< C>,  C, R, B1, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_1_4<ref< C>,  C, R, B1, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_4<ref< C>,  C, R, B1, A1, A2, A3, A4> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, A3, A4, B1) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_1_4<ref< C>,  C, R, B1, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_1_4_const<const C *, C, R, B1, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_4_const<const C *, C, R, B1, A1, A2, A3, A4> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, A3, A4, B1) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_1_4_const<const C *, C, R, B1, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_1_4_const<ref<const C>, const C, R, B1, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_4_const<ref<const C>, const C, R, B1, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, A3, A4, B1) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_1_4_const<ref<const C>, const C, R, B1, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_1_4_const<ref<const C>, const C, R, B1, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_4_const<ref<const C>, const C, R, B1, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, A3, A4, B1) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_1_4_const<ref<const C>, const C, R, B1, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_1_4_const<ref<const C>, const C, R, B1, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_4_const<ref<const C>, const C, R, B1, A1, A2, A3, A4> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, A4, B1) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_1_4_const<ref<const C>, const C, R, B1, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
@@ -2324,14 +2364,15 @@ class callback_1_5
   A4 a4;
   A5 a5;
 public:
-  callback_1_5 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
+  SFS_INLINE_VISIBILITY callback_1_5 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
     : callback_line_init (callback<R, B1>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5) {}
-  R operator() (B1 b1)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1)
     { return f (a1, a2, a3, a4, a5, b1); }
+  SFS_INLINE_VISIBILITY ~callback_1_5() {}
 };
 
 template<class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_1_5<R, B1, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_1_5<R, B1, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param R (*f) (A1, A2, A3, A4, A5, B1), const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_1_5<R, B1, A1, A2, A3, A4, A5> >) (wrap_line_arg f, a1, a2, a3, a4, a5);
@@ -2370,10 +2411,11 @@ public:
   A4 a4;
   A5 a5;
 public:
-  callback_c_1_5 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
+  SFS_INLINE_VISIBILITY callback_c_1_5 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
     : callback_line_init (callback<R, B1>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5) {}
-  R operator() (B1 b1)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1)
     { return ((*c).*f) (a1, a2, a3, a4, a5, b1); }
+  SFS_INLINE_VISIBILITY ~callback_c_1_5 () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
@@ -2410,60 +2452,61 @@ public:
   A4 a4;
   A5 a5;
 public:
-  callback_c_1_5_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
+  SFS_INLINE_VISIBILITY callback_c_1_5_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
     : callback_line_init (callback<R, B1>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5) {}
-  R operator() (B1 b1)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1)
     { return ((*c).*f) (a1, a2, a3, a4, a5, b1); }
+  SFS_INLINE_VISIBILITY ~callback_c_1_5_const () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_1_5< C *, C, R, B1, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_5< C *, C, R, B1, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, A3, A4, A5, B1) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_1_5< C *, C, R, B1, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_1_5<ref< C>,  C, R, B1, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_5<ref< C>,  C, R, B1, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, A3, A4, A5, B1) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_1_5<ref< C>,  C, R, B1, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_1_5<ref< C>,  C, R, B1, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_5<ref< C>,  C, R, B1, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, A3, A4, A5, B1) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_1_5<ref< C>,  C, R, B1, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_1_5<ref< C>,  C, R, B1, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_5<ref< C>,  C, R, B1, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, A3, A4, A5, B1) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_1_5<ref< C>,  C, R, B1, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_1_5_const<const C *, C, R, B1, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_5_const<const C *, C, R, B1, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, A3, A4, A5, B1) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_1_5_const<const C *, C, R, B1, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_1_5_const<ref<const C>, const C, R, B1, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_5_const<ref<const C>, const C, R, B1, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, A3, A4, A5, B1) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_1_5_const<ref<const C>, const C, R, B1, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_1_5_const<ref<const C>, const C, R, B1, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_5_const<ref<const C>, const C, R, B1, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, A3, A4, A5, B1) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_1_5_const<ref<const C>, const C, R, B1, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class B1, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_1_5_const<ref<const C>, const C, R, B1, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_1_5_const<ref<const C>, const C, R, B1, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, A4, A5, B1) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_1_5_const<ref<const C>, const C, R, B1, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
@@ -2488,9 +2531,10 @@ public:
     : dest (df[0] == '&' ? df + 1 : df), src (f), line (l) {}
 #endif /* WRAP_DEBUG */
   virtual R operator() (B1 b1, B2 b2) = 0;
-  virtual void trigger (B1 b1, B2 b2) { (void) (*this) (b1, b2); }
-  virtual ~callback () {}
-  callback () : _closure_type (NULL), _closure_void (NULL) {}
+  virtual SFS_INLINE_VISIBILITY void trigger (B1 b1, B2 b2) { (void) (*this) (b1, b2); }
+  virtual SFS_INLINE_VISIBILITY ~callback () {}
+  SFS_INLINE_VISIBILITY callback () : _closure_type (NULL), _closure_void (NULL)
+  {}
   void set_gdb_info (const char *typ, const void *v)
     { _closure_type = typ; _closure_void = v; }
 };
@@ -2502,14 +2546,15 @@ class callback_2_0
   typedef R (*cb_t) (B1, B2);
   cb_t f;
 public:
-  callback_2_0 (callback_line_param cb_t ff)
+  SFS_INLINE_VISIBILITY callback_2_0 (callback_line_param cb_t ff)
     : callback_line_init (callback<R, B1, B2>) f (ff) {}
-  R operator() (B1 b1, B2 b2)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2)
     { return f (b1, b2); }
+  SFS_INLINE_VISIBILITY ~callback_2_0() {}
 };
 
 template<class R, class B1, class B2>
-static inline refcounted<callback_2_0<R, B1, B2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_2_0<R, B1, B2> > *
 wrap (wrap_line_param R (*f) (B1, B2))
 {
   return wNew (refcounted<callback_2_0<R, B1, B2> >) (wrap_line_arg f);
@@ -2538,10 +2583,11 @@ public:
     }
 #else /* !WRAP_USE_NODELETE */
 public:
-  callback_c_2_0 (callback_line_param const P &cc, cb_t ff)
+  SFS_INLINE_VISIBILITY callback_c_2_0 (callback_line_param const P &cc, cb_t ff)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff) {}
-  R operator() (B1 b1, B2 b2)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2)
     { return ((*c).*f) (b1, b2); }
+  SFS_INLINE_VISIBILITY ~callback_c_2_0 () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
@@ -2568,60 +2614,61 @@ public:
     }
 #else /* !WRAP_USE_NODELETE */
 public:
-  callback_c_2_0_const (callback_line_param const P &cc, cb_t ff)
+  SFS_INLINE_VISIBILITY callback_c_2_0_const (callback_line_param const P &cc, cb_t ff)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff) {}
-  R operator() (B1 b1, B2 b2)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2)
     { return ((*c).*f) (b1, b2); }
+  SFS_INLINE_VISIBILITY ~callback_c_2_0_const () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
 template<class C, class R, class B1, class B2>
-static inline refcounted<callback_c_2_0< C *, C, R, B1, B2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_0< C *, C, R, B1, B2> > *
 wrap (wrap_line_param  C *p, R (C::*f) (B1, B2) )
 {
   return wNew (refcounted<callback_c_2_0< C *, C, R, B1, B2> >) (wrap_c_line_arg p, f);
 }
 
 template<class C, class R, class B1, class B2>
-static inline refcounted<callback_c_2_0<ref< C>,  C, R, B1, B2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_0<ref< C>,  C, R, B1, B2> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (B1, B2) )
 {
   return wNew (refcounted<callback_c_2_0<ref< C>,  C, R, B1, B2> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R, class B1, class B2>
-static inline refcounted<callback_c_2_0<ref< C>,  C, R, B1, B2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_0<ref< C>,  C, R, B1, B2> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (B1, B2) )
 {
   return wNew (refcounted<callback_c_2_0<ref< C>,  C, R, B1, B2> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R, class B1, class B2>
-static inline refcounted<callback_c_2_0<ref< C>,  C, R, B1, B2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_0<ref< C>,  C, R, B1, B2> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (B1, B2) )
 {
   return wNew (refcounted<callback_c_2_0<ref< C>,  C, R, B1, B2> >) (wrap_c_line_arg p, f);
 }
 
 template<class C, class R, class B1, class B2>
-static inline refcounted<callback_c_2_0_const<const C *, C, R, B1, B2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_0_const<const C *, C, R, B1, B2> > *
 wrap (wrap_line_param const C *p, R (C::*f) (B1, B2) const)
 {
   return wNew (refcounted<callback_c_2_0_const<const C *, C, R, B1, B2> >) (wrap_c_line_arg p, f);
 }
 
 template<class C, class R, class B1, class B2>
-static inline refcounted<callback_c_2_0_const<ref<const C>, const C, R, B1, B2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_0_const<ref<const C>, const C, R, B1, B2> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (B1, B2) const)
 {
   return wNew (refcounted<callback_c_2_0_const<ref<const C>, const C, R, B1, B2> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R, class B1, class B2>
-static inline refcounted<callback_c_2_0_const<ref<const C>, const C, R, B1, B2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_0_const<ref<const C>, const C, R, B1, B2> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (B1, B2) const)
 {
   return wNew (refcounted<callback_c_2_0_const<ref<const C>, const C, R, B1, B2> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R, class B1, class B2>
-static inline refcounted<callback_c_2_0_const<ref<const C>, const C, R, B1, B2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_0_const<ref<const C>, const C, R, B1, B2> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (B1, B2) const)
 {
   return wNew (refcounted<callback_c_2_0_const<ref<const C>, const C, R, B1, B2> >) (wrap_c_line_arg p, f);
@@ -2634,14 +2681,15 @@ class callback_2_1
   cb_t f;
   A1 a1;
 public:
-  callback_2_1 (callback_line_param cb_t ff, const A1 &aa1)
+  SFS_INLINE_VISIBILITY callback_2_1 (callback_line_param cb_t ff, const A1 &aa1)
     : callback_line_init (callback<R, B1, B2>) f (ff), a1 (aa1) {}
-  R operator() (B1 b1, B2 b2)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2)
     { return f (a1, b1, b2); }
+  SFS_INLINE_VISIBILITY ~callback_2_1() {}
 };
 
 template<class R, class B1, class B2, class A1, class AA1>
-static inline refcounted<callback_2_1<R, B1, B2, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_2_1<R, B1, B2, A1> > *
 wrap (wrap_line_param R (*f) (A1, B1, B2), const AA1 &a1)
 {
   return wNew (refcounted<callback_2_1<R, B1, B2, A1> >) (wrap_line_arg f, a1);
@@ -2672,10 +2720,11 @@ public:
 #else /* !WRAP_USE_NODELETE */
   A1 a1;
 public:
-  callback_c_2_1 (callback_line_param const P &cc, cb_t ff, const A1 &aa1)
+  SFS_INLINE_VISIBILITY callback_c_2_1 (callback_line_param const P &cc, cb_t ff, const A1 &aa1)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff), a1 (aa1) {}
-  R operator() (B1 b1, B2 b2)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2)
     { return ((*c).*f) (a1, b1, b2); }
+  SFS_INLINE_VISIBILITY ~callback_c_2_1 () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
@@ -2704,60 +2753,61 @@ public:
 #else /* !WRAP_USE_NODELETE */
   A1 a1;
 public:
-  callback_c_2_1_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1)
+  SFS_INLINE_VISIBILITY callback_c_2_1_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff), a1 (aa1) {}
-  R operator() (B1 b1, B2 b2)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2)
     { return ((*c).*f) (a1, b1, b2); }
+  SFS_INLINE_VISIBILITY ~callback_c_2_1_const () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
 template<class C, class R, class B1, class B2, class A1, class AA1>
-static inline refcounted<callback_c_2_1< C *, C, R, B1, B2, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_1< C *, C, R, B1, B2, A1> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, B1, B2) , const AA1 &a1)
 {
   return wNew (refcounted<callback_c_2_1< C *, C, R, B1, B2, A1> >) (wrap_c_line_arg p, f, a1);
 }
 
 template<class C, class R, class B1, class B2, class A1, class AA1>
-static inline refcounted<callback_c_2_1<ref< C>,  C, R, B1, B2, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_1<ref< C>,  C, R, B1, B2, A1> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, B1, B2) , const AA1 &a1)
 {
   return wNew (refcounted<callback_c_2_1<ref< C>,  C, R, B1, B2, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1>
-static inline refcounted<callback_c_2_1<ref< C>,  C, R, B1, B2, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_1<ref< C>,  C, R, B1, B2, A1> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, B1, B2) , const AA1 &a1)
 {
   return wNew (refcounted<callback_c_2_1<ref< C>,  C, R, B1, B2, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1>
-static inline refcounted<callback_c_2_1<ref< C>,  C, R, B1, B2, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_1<ref< C>,  C, R, B1, B2, A1> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, B1, B2) , const AA1 &a1)
 {
   return wNew (refcounted<callback_c_2_1<ref< C>,  C, R, B1, B2, A1> >) (wrap_c_line_arg p, f, a1);
 }
 
 template<class C, class R, class B1, class B2, class A1, class AA1>
-static inline refcounted<callback_c_2_1_const<const C *, C, R, B1, B2, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_1_const<const C *, C, R, B1, B2, A1> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, B1, B2) const, const AA1 &a1)
 {
   return wNew (refcounted<callback_c_2_1_const<const C *, C, R, B1, B2, A1> >) (wrap_c_line_arg p, f, a1);
 }
 
 template<class C, class R, class B1, class B2, class A1, class AA1>
-static inline refcounted<callback_c_2_1_const<ref<const C>, const C, R, B1, B2, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_1_const<ref<const C>, const C, R, B1, B2, A1> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, B1, B2) const, const AA1 &a1)
 {
   return wNew (refcounted<callback_c_2_1_const<ref<const C>, const C, R, B1, B2, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1>
-static inline refcounted<callback_c_2_1_const<ref<const C>, const C, R, B1, B2, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_1_const<ref<const C>, const C, R, B1, B2, A1> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, B1, B2) const, const AA1 &a1)
 {
   return wNew (refcounted<callback_c_2_1_const<ref<const C>, const C, R, B1, B2, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1>
-static inline refcounted<callback_c_2_1_const<ref<const C>, const C, R, B1, B2, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_1_const<ref<const C>, const C, R, B1, B2, A1> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, B1, B2) const, const AA1 &a1)
 {
   return wNew (refcounted<callback_c_2_1_const<ref<const C>, const C, R, B1, B2, A1> >) (wrap_c_line_arg p, f, a1);
@@ -2771,14 +2821,15 @@ class callback_2_2
   A1 a1;
   A2 a2;
 public:
-  callback_2_2 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2)
+  SFS_INLINE_VISIBILITY callback_2_2 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2)
     : callback_line_init (callback<R, B1, B2>) f (ff), a1 (aa1), a2 (aa2) {}
-  R operator() (B1 b1, B2 b2)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2)
     { return f (a1, a2, b1, b2); }
+  SFS_INLINE_VISIBILITY ~callback_2_2() {}
 };
 
 template<class R, class B1, class B2, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_2_2<R, B1, B2, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_2_2<R, B1, B2, A1, A2> > *
 wrap (wrap_line_param R (*f) (A1, A2, B1, B2), const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_2_2<R, B1, B2, A1, A2> >) (wrap_line_arg f, a1, a2);
@@ -2811,10 +2862,11 @@ public:
   A1 a1;
   A2 a2;
 public:
-  callback_c_2_2 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2)
+  SFS_INLINE_VISIBILITY callback_c_2_2 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff), a1 (aa1), a2 (aa2) {}
-  R operator() (B1 b1, B2 b2)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2)
     { return ((*c).*f) (a1, a2, b1, b2); }
+  SFS_INLINE_VISIBILITY ~callback_c_2_2 () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
@@ -2845,60 +2897,61 @@ public:
   A1 a1;
   A2 a2;
 public:
-  callback_c_2_2_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2)
+  SFS_INLINE_VISIBILITY callback_c_2_2_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff), a1 (aa1), a2 (aa2) {}
-  R operator() (B1 b1, B2 b2)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2)
     { return ((*c).*f) (a1, a2, b1, b2); }
+  SFS_INLINE_VISIBILITY ~callback_c_2_2_const () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_2_2< C *, C, R, B1, B2, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_2< C *, C, R, B1, B2, A1, A2> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, B1, B2) , const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_2_2< C *, C, R, B1, B2, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_2_2<ref< C>,  C, R, B1, B2, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_2<ref< C>,  C, R, B1, B2, A1, A2> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, B1, B2) , const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_2_2<ref< C>,  C, R, B1, B2, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_2_2<ref< C>,  C, R, B1, B2, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_2<ref< C>,  C, R, B1, B2, A1, A2> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, B1, B2) , const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_2_2<ref< C>,  C, R, B1, B2, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_2_2<ref< C>,  C, R, B1, B2, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_2<ref< C>,  C, R, B1, B2, A1, A2> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, B1, B2) , const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_2_2<ref< C>,  C, R, B1, B2, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_2_2_const<const C *, C, R, B1, B2, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_2_const<const C *, C, R, B1, B2, A1, A2> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, B1, B2) const, const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_2_2_const<const C *, C, R, B1, B2, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_2_2_const<ref<const C>, const C, R, B1, B2, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_2_const<ref<const C>, const C, R, B1, B2, A1, A2> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, B1, B2) const, const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_2_2_const<ref<const C>, const C, R, B1, B2, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_2_2_const<ref<const C>, const C, R, B1, B2, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_2_const<ref<const C>, const C, R, B1, B2, A1, A2> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, B1, B2) const, const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_2_2_const<ref<const C>, const C, R, B1, B2, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_2_2_const<ref<const C>, const C, R, B1, B2, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_2_const<ref<const C>, const C, R, B1, B2, A1, A2> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, B1, B2) const, const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_2_2_const<ref<const C>, const C, R, B1, B2, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
@@ -2913,14 +2966,15 @@ class callback_2_3
   A2 a2;
   A3 a3;
 public:
-  callback_2_3 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
+  SFS_INLINE_VISIBILITY callback_2_3 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
     : callback_line_init (callback<R, B1, B2>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3) {}
-  R operator() (B1 b1, B2 b2)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2)
     { return f (a1, a2, a3, b1, b2); }
+  SFS_INLINE_VISIBILITY ~callback_2_3() {}
 };
 
 template<class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_2_3<R, B1, B2, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_2_3<R, B1, B2, A1, A2, A3> > *
 wrap (wrap_line_param R (*f) (A1, A2, A3, B1, B2), const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_2_3<R, B1, B2, A1, A2, A3> >) (wrap_line_arg f, a1, a2, a3);
@@ -2955,10 +3009,11 @@ public:
   A2 a2;
   A3 a3;
 public:
-  callback_c_2_3 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
+  SFS_INLINE_VISIBILITY callback_c_2_3 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3) {}
-  R operator() (B1 b1, B2 b2)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2)
     { return ((*c).*f) (a1, a2, a3, b1, b2); }
+  SFS_INLINE_VISIBILITY ~callback_c_2_3 () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
@@ -2991,60 +3046,61 @@ public:
   A2 a2;
   A3 a3;
 public:
-  callback_c_2_3_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
+  SFS_INLINE_VISIBILITY callback_c_2_3_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3) {}
-  R operator() (B1 b1, B2 b2)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2)
     { return ((*c).*f) (a1, a2, a3, b1, b2); }
+  SFS_INLINE_VISIBILITY ~callback_c_2_3_const () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_2_3< C *, C, R, B1, B2, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_3< C *, C, R, B1, B2, A1, A2, A3> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, A3, B1, B2) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_2_3< C *, C, R, B1, B2, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_2_3<ref< C>,  C, R, B1, B2, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_3<ref< C>,  C, R, B1, B2, A1, A2, A3> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, A3, B1, B2) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_2_3<ref< C>,  C, R, B1, B2, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_2_3<ref< C>,  C, R, B1, B2, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_3<ref< C>,  C, R, B1, B2, A1, A2, A3> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, A3, B1, B2) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_2_3<ref< C>,  C, R, B1, B2, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_2_3<ref< C>,  C, R, B1, B2, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_3<ref< C>,  C, R, B1, B2, A1, A2, A3> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, A3, B1, B2) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_2_3<ref< C>,  C, R, B1, B2, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_2_3_const<const C *, C, R, B1, B2, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_3_const<const C *, C, R, B1, B2, A1, A2, A3> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, A3, B1, B2) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_2_3_const<const C *, C, R, B1, B2, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_2_3_const<ref<const C>, const C, R, B1, B2, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_3_const<ref<const C>, const C, R, B1, B2, A1, A2, A3> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, A3, B1, B2) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_2_3_const<ref<const C>, const C, R, B1, B2, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_2_3_const<ref<const C>, const C, R, B1, B2, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_3_const<ref<const C>, const C, R, B1, B2, A1, A2, A3> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, A3, B1, B2) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_2_3_const<ref<const C>, const C, R, B1, B2, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_2_3_const<ref<const C>, const C, R, B1, B2, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_3_const<ref<const C>, const C, R, B1, B2, A1, A2, A3> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, B1, B2) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_2_3_const<ref<const C>, const C, R, B1, B2, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
@@ -3061,14 +3117,15 @@ class callback_2_4
   A3 a3;
   A4 a4;
 public:
-  callback_2_4 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
+  SFS_INLINE_VISIBILITY callback_2_4 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
     : callback_line_init (callback<R, B1, B2>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4) {}
-  R operator() (B1 b1, B2 b2)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2)
     { return f (a1, a2, a3, a4, b1, b2); }
+  SFS_INLINE_VISIBILITY ~callback_2_4() {}
 };
 
 template<class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_2_4<R, B1, B2, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_2_4<R, B1, B2, A1, A2, A3, A4> > *
 wrap (wrap_line_param R (*f) (A1, A2, A3, A4, B1, B2), const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_2_4<R, B1, B2, A1, A2, A3, A4> >) (wrap_line_arg f, a1, a2, a3, a4);
@@ -3105,10 +3162,11 @@ public:
   A3 a3;
   A4 a4;
 public:
-  callback_c_2_4 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
+  SFS_INLINE_VISIBILITY callback_c_2_4 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4) {}
-  R operator() (B1 b1, B2 b2)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2)
     { return ((*c).*f) (a1, a2, a3, a4, b1, b2); }
+  SFS_INLINE_VISIBILITY ~callback_c_2_4 () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
@@ -3143,60 +3201,61 @@ public:
   A3 a3;
   A4 a4;
 public:
-  callback_c_2_4_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
+  SFS_INLINE_VISIBILITY callback_c_2_4_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4) {}
-  R operator() (B1 b1, B2 b2)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2)
     { return ((*c).*f) (a1, a2, a3, a4, b1, b2); }
+  SFS_INLINE_VISIBILITY ~callback_c_2_4_const () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_2_4< C *, C, R, B1, B2, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_4< C *, C, R, B1, B2, A1, A2, A3, A4> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, A3, A4, B1, B2) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_2_4< C *, C, R, B1, B2, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_2_4<ref< C>,  C, R, B1, B2, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_4<ref< C>,  C, R, B1, B2, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, A3, A4, B1, B2) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_2_4<ref< C>,  C, R, B1, B2, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_2_4<ref< C>,  C, R, B1, B2, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_4<ref< C>,  C, R, B1, B2, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, A3, A4, B1, B2) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_2_4<ref< C>,  C, R, B1, B2, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_2_4<ref< C>,  C, R, B1, B2, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_4<ref< C>,  C, R, B1, B2, A1, A2, A3, A4> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, A3, A4, B1, B2) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_2_4<ref< C>,  C, R, B1, B2, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_2_4_const<const C *, C, R, B1, B2, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_4_const<const C *, C, R, B1, B2, A1, A2, A3, A4> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, A3, A4, B1, B2) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_2_4_const<const C *, C, R, B1, B2, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_2_4_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_4_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, A3, A4, B1, B2) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_2_4_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_2_4_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_4_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, A3, A4, B1, B2) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_2_4_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_2_4_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_4_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, A4, B1, B2) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_2_4_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
@@ -3216,14 +3275,15 @@ class callback_2_5
   A4 a4;
   A5 a5;
 public:
-  callback_2_5 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
+  SFS_INLINE_VISIBILITY callback_2_5 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
     : callback_line_init (callback<R, B1, B2>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5) {}
-  R operator() (B1 b1, B2 b2)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2)
     { return f (a1, a2, a3, a4, a5, b1, b2); }
+  SFS_INLINE_VISIBILITY ~callback_2_5() {}
 };
 
 template<class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_2_5<R, B1, B2, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_2_5<R, B1, B2, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param R (*f) (A1, A2, A3, A4, A5, B1, B2), const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_2_5<R, B1, B2, A1, A2, A3, A4, A5> >) (wrap_line_arg f, a1, a2, a3, a4, a5);
@@ -3262,10 +3322,11 @@ public:
   A4 a4;
   A5 a5;
 public:
-  callback_c_2_5 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
+  SFS_INLINE_VISIBILITY callback_c_2_5 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5) {}
-  R operator() (B1 b1, B2 b2)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2)
     { return ((*c).*f) (a1, a2, a3, a4, a5, b1, b2); }
+  SFS_INLINE_VISIBILITY ~callback_c_2_5 () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
@@ -3302,60 +3363,61 @@ public:
   A4 a4;
   A5 a5;
 public:
-  callback_c_2_5_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
+  SFS_INLINE_VISIBILITY callback_c_2_5_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
     : callback_line_init (callback<R, B1, B2>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5) {}
-  R operator() (B1 b1, B2 b2)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2)
     { return ((*c).*f) (a1, a2, a3, a4, a5, b1, b2); }
+  SFS_INLINE_VISIBILITY ~callback_c_2_5_const () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_2_5< C *, C, R, B1, B2, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_5< C *, C, R, B1, B2, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_2_5< C *, C, R, B1, B2, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_2_5<ref< C>,  C, R, B1, B2, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_5<ref< C>,  C, R, B1, B2, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_2_5<ref< C>,  C, R, B1, B2, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_2_5<ref< C>,  C, R, B1, B2, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_5<ref< C>,  C, R, B1, B2, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_2_5<ref< C>,  C, R, B1, B2, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_2_5<ref< C>,  C, R, B1, B2, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_5<ref< C>,  C, R, B1, B2, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_2_5<ref< C>,  C, R, B1, B2, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_2_5_const<const C *, C, R, B1, B2, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_5_const<const C *, C, R, B1, B2, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_2_5_const<const C *, C, R, B1, B2, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_2_5_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_5_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_2_5_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_2_5_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_5_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_2_5_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class B1, class B2, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_2_5_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_2_5_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_2_5_const<ref<const C>, const C, R, B1, B2, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
@@ -3380,11 +3442,10 @@ public:
     : dest (df[0] == '&' ? df + 1 : df), src (f), line (l) {}
 #endif /* WRAP_DEBUG */
   virtual R operator() (B1 b1, B2 b2, B3 b3) = 0;
-  virtual void trigger (B1 b1, B2 b2, B3 b3) { 
-      (void) (*this) (b1, b2, b3); 
-  }
-  virtual ~callback () {}
-  callback () : _closure_type (NULL), _closure_void (NULL) {}
+  virtual SFS_INLINE_VISIBILITY void trigger (B1 b1, B2 b2, B3 b3) { (void) (*this) (b1, b2, b3); }
+  virtual SFS_INLINE_VISIBILITY ~callback () {}
+  SFS_INLINE_VISIBILITY callback () : _closure_type (NULL), _closure_void (NULL)
+  {}
   void set_gdb_info (const char *typ, const void *v)
     { _closure_type = typ; _closure_void = v; }
 };
@@ -3396,14 +3457,15 @@ class callback_3_0
   typedef R (*cb_t) (B1, B2, B3);
   cb_t f;
 public:
-  callback_3_0 (callback_line_param cb_t ff)
+  SFS_INLINE_VISIBILITY callback_3_0 (callback_line_param cb_t ff)
     : callback_line_init (callback<R, B1, B2, B3>) f (ff) {}
-  R operator() (B1 b1, B2 b2, B3 b3)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2, B3 b3)
     { return f (b1, b2, b3); }
+  SFS_INLINE_VISIBILITY ~callback_3_0() {}
 };
 
 template<class R, class B1, class B2, class B3>
-static inline refcounted<callback_3_0<R, B1, B2, B3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_3_0<R, B1, B2, B3> > *
 wrap (wrap_line_param R (*f) (B1, B2, B3))
 {
   return wNew (refcounted<callback_3_0<R, B1, B2, B3> >) (wrap_line_arg f);
@@ -3432,10 +3494,11 @@ public:
     }
 #else /* !WRAP_USE_NODELETE */
 public:
-  callback_c_3_0 (callback_line_param const P &cc, cb_t ff)
+  SFS_INLINE_VISIBILITY callback_c_3_0 (callback_line_param const P &cc, cb_t ff)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff) {}
-  R operator() (B1 b1, B2 b2, B3 b3)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2, B3 b3)
     { return ((*c).*f) (b1, b2, b3); }
+  SFS_INLINE_VISIBILITY ~callback_c_3_0 () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
@@ -3462,60 +3525,61 @@ public:
     }
 #else /* !WRAP_USE_NODELETE */
 public:
-  callback_c_3_0_const (callback_line_param const P &cc, cb_t ff)
+  SFS_INLINE_VISIBILITY callback_c_3_0_const (callback_line_param const P &cc, cb_t ff)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff) {}
-  R operator() (B1 b1, B2 b2, B3 b3)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2, B3 b3)
     { return ((*c).*f) (b1, b2, b3); }
+  SFS_INLINE_VISIBILITY ~callback_c_3_0_const () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
 template<class C, class R, class B1, class B2, class B3>
-static inline refcounted<callback_c_3_0< C *, C, R, B1, B2, B3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_0< C *, C, R, B1, B2, B3> > *
 wrap (wrap_line_param  C *p, R (C::*f) (B1, B2, B3) )
 {
   return wNew (refcounted<callback_c_3_0< C *, C, R, B1, B2, B3> >) (wrap_c_line_arg p, f);
 }
 
 template<class C, class R, class B1, class B2, class B3>
-static inline refcounted<callback_c_3_0<ref< C>,  C, R, B1, B2, B3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_0<ref< C>,  C, R, B1, B2, B3> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (B1, B2, B3) )
 {
   return wNew (refcounted<callback_c_3_0<ref< C>,  C, R, B1, B2, B3> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R, class B1, class B2, class B3>
-static inline refcounted<callback_c_3_0<ref< C>,  C, R, B1, B2, B3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_0<ref< C>,  C, R, B1, B2, B3> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (B1, B2, B3) )
 {
   return wNew (refcounted<callback_c_3_0<ref< C>,  C, R, B1, B2, B3> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R, class B1, class B2, class B3>
-static inline refcounted<callback_c_3_0<ref< C>,  C, R, B1, B2, B3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_0<ref< C>,  C, R, B1, B2, B3> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (B1, B2, B3) )
 {
   return wNew (refcounted<callback_c_3_0<ref< C>,  C, R, B1, B2, B3> >) (wrap_c_line_arg p, f);
 }
 
 template<class C, class R, class B1, class B2, class B3>
-static inline refcounted<callback_c_3_0_const<const C *, C, R, B1, B2, B3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_0_const<const C *, C, R, B1, B2, B3> > *
 wrap (wrap_line_param const C *p, R (C::*f) (B1, B2, B3) const)
 {
   return wNew (refcounted<callback_c_3_0_const<const C *, C, R, B1, B2, B3> >) (wrap_c_line_arg p, f);
 }
 
 template<class C, class R, class B1, class B2, class B3>
-static inline refcounted<callback_c_3_0_const<ref<const C>, const C, R, B1, B2, B3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_0_const<ref<const C>, const C, R, B1, B2, B3> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (B1, B2, B3) const)
 {
   return wNew (refcounted<callback_c_3_0_const<ref<const C>, const C, R, B1, B2, B3> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R, class B1, class B2, class B3>
-static inline refcounted<callback_c_3_0_const<ref<const C>, const C, R, B1, B2, B3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_0_const<ref<const C>, const C, R, B1, B2, B3> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (B1, B2, B3) const)
 {
   return wNew (refcounted<callback_c_3_0_const<ref<const C>, const C, R, B1, B2, B3> >) (wrap_c_line_arg p, f);
 }
 template<class C, class R, class B1, class B2, class B3>
-static inline refcounted<callback_c_3_0_const<ref<const C>, const C, R, B1, B2, B3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_0_const<ref<const C>, const C, R, B1, B2, B3> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (B1, B2, B3) const)
 {
   return wNew (refcounted<callback_c_3_0_const<ref<const C>, const C, R, B1, B2, B3> >) (wrap_c_line_arg p, f);
@@ -3528,14 +3592,15 @@ class callback_3_1
   cb_t f;
   A1 a1;
 public:
-  callback_3_1 (callback_line_param cb_t ff, const A1 &aa1)
+  SFS_INLINE_VISIBILITY callback_3_1 (callback_line_param cb_t ff, const A1 &aa1)
     : callback_line_init (callback<R, B1, B2, B3>) f (ff), a1 (aa1) {}
-  R operator() (B1 b1, B2 b2, B3 b3)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2, B3 b3)
     { return f (a1, b1, b2, b3); }
+  SFS_INLINE_VISIBILITY ~callback_3_1() {}
 };
 
 template<class R, class B1, class B2, class B3, class A1, class AA1>
-static inline refcounted<callback_3_1<R, B1, B2, B3, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_3_1<R, B1, B2, B3, A1> > *
 wrap (wrap_line_param R (*f) (A1, B1, B2, B3), const AA1 &a1)
 {
   return wNew (refcounted<callback_3_1<R, B1, B2, B3, A1> >) (wrap_line_arg f, a1);
@@ -3566,10 +3631,11 @@ public:
 #else /* !WRAP_USE_NODELETE */
   A1 a1;
 public:
-  callback_c_3_1 (callback_line_param const P &cc, cb_t ff, const A1 &aa1)
+  SFS_INLINE_VISIBILITY callback_c_3_1 (callback_line_param const P &cc, cb_t ff, const A1 &aa1)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff), a1 (aa1) {}
-  R operator() (B1 b1, B2 b2, B3 b3)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2, B3 b3)
     { return ((*c).*f) (a1, b1, b2, b3); }
+  SFS_INLINE_VISIBILITY ~callback_c_3_1 () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
@@ -3598,60 +3664,61 @@ public:
 #else /* !WRAP_USE_NODELETE */
   A1 a1;
 public:
-  callback_c_3_1_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1)
+  SFS_INLINE_VISIBILITY callback_c_3_1_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff), a1 (aa1) {}
-  R operator() (B1 b1, B2 b2, B3 b3)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2, B3 b3)
     { return ((*c).*f) (a1, b1, b2, b3); }
+  SFS_INLINE_VISIBILITY ~callback_c_3_1_const () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1>
-static inline refcounted<callback_c_3_1< C *, C, R, B1, B2, B3, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_1< C *, C, R, B1, B2, B3, A1> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, B1, B2, B3) , const AA1 &a1)
 {
   return wNew (refcounted<callback_c_3_1< C *, C, R, B1, B2, B3, A1> >) (wrap_c_line_arg p, f, a1);
 }
 
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1>
-static inline refcounted<callback_c_3_1<ref< C>,  C, R, B1, B2, B3, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_1<ref< C>,  C, R, B1, B2, B3, A1> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, B1, B2, B3) , const AA1 &a1)
 {
   return wNew (refcounted<callback_c_3_1<ref< C>,  C, R, B1, B2, B3, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1>
-static inline refcounted<callback_c_3_1<ref< C>,  C, R, B1, B2, B3, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_1<ref< C>,  C, R, B1, B2, B3, A1> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, B1, B2, B3) , const AA1 &a1)
 {
   return wNew (refcounted<callback_c_3_1<ref< C>,  C, R, B1, B2, B3, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1>
-static inline refcounted<callback_c_3_1<ref< C>,  C, R, B1, B2, B3, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_1<ref< C>,  C, R, B1, B2, B3, A1> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, B1, B2, B3) , const AA1 &a1)
 {
   return wNew (refcounted<callback_c_3_1<ref< C>,  C, R, B1, B2, B3, A1> >) (wrap_c_line_arg p, f, a1);
 }
 
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1>
-static inline refcounted<callback_c_3_1_const<const C *, C, R, B1, B2, B3, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_1_const<const C *, C, R, B1, B2, B3, A1> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, B1, B2, B3) const, const AA1 &a1)
 {
   return wNew (refcounted<callback_c_3_1_const<const C *, C, R, B1, B2, B3, A1> >) (wrap_c_line_arg p, f, a1);
 }
 
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1>
-static inline refcounted<callback_c_3_1_const<ref<const C>, const C, R, B1, B2, B3, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_1_const<ref<const C>, const C, R, B1, B2, B3, A1> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, B1, B2, B3) const, const AA1 &a1)
 {
   return wNew (refcounted<callback_c_3_1_const<ref<const C>, const C, R, B1, B2, B3, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1>
-static inline refcounted<callback_c_3_1_const<ref<const C>, const C, R, B1, B2, B3, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_1_const<ref<const C>, const C, R, B1, B2, B3, A1> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, B1, B2, B3) const, const AA1 &a1)
 {
   return wNew (refcounted<callback_c_3_1_const<ref<const C>, const C, R, B1, B2, B3, A1> >) (wrap_c_line_arg p, f, a1);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1>
-static inline refcounted<callback_c_3_1_const<ref<const C>, const C, R, B1, B2, B3, A1> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_1_const<ref<const C>, const C, R, B1, B2, B3, A1> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, B1, B2, B3) const, const AA1 &a1)
 {
   return wNew (refcounted<callback_c_3_1_const<ref<const C>, const C, R, B1, B2, B3, A1> >) (wrap_c_line_arg p, f, a1);
@@ -3665,14 +3732,15 @@ class callback_3_2
   A1 a1;
   A2 a2;
 public:
-  callback_3_2 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2)
+  SFS_INLINE_VISIBILITY callback_3_2 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2)
     : callback_line_init (callback<R, B1, B2, B3>) f (ff), a1 (aa1), a2 (aa2) {}
-  R operator() (B1 b1, B2 b2, B3 b3)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2, B3 b3)
     { return f (a1, a2, b1, b2, b3); }
+  SFS_INLINE_VISIBILITY ~callback_3_2() {}
 };
 
 template<class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_3_2<R, B1, B2, B3, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_3_2<R, B1, B2, B3, A1, A2> > *
 wrap (wrap_line_param R (*f) (A1, A2, B1, B2, B3), const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_3_2<R, B1, B2, B3, A1, A2> >) (wrap_line_arg f, a1, a2);
@@ -3705,10 +3773,11 @@ public:
   A1 a1;
   A2 a2;
 public:
-  callback_c_3_2 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2)
+  SFS_INLINE_VISIBILITY callback_c_3_2 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff), a1 (aa1), a2 (aa2) {}
-  R operator() (B1 b1, B2 b2, B3 b3)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2, B3 b3)
     { return ((*c).*f) (a1, a2, b1, b2, b3); }
+  SFS_INLINE_VISIBILITY ~callback_c_3_2 () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
@@ -3739,60 +3808,61 @@ public:
   A1 a1;
   A2 a2;
 public:
-  callback_c_3_2_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2)
+  SFS_INLINE_VISIBILITY callback_c_3_2_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff), a1 (aa1), a2 (aa2) {}
-  R operator() (B1 b1, B2 b2, B3 b3)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2, B3 b3)
     { return ((*c).*f) (a1, a2, b1, b2, b3); }
+  SFS_INLINE_VISIBILITY ~callback_c_3_2_const () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_3_2< C *, C, R, B1, B2, B3, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_2< C *, C, R, B1, B2, B3, A1, A2> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, B1, B2, B3) , const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_3_2< C *, C, R, B1, B2, B3, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_3_2<ref< C>,  C, R, B1, B2, B3, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_2<ref< C>,  C, R, B1, B2, B3, A1, A2> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, B1, B2, B3) , const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_3_2<ref< C>,  C, R, B1, B2, B3, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_3_2<ref< C>,  C, R, B1, B2, B3, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_2<ref< C>,  C, R, B1, B2, B3, A1, A2> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, B1, B2, B3) , const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_3_2<ref< C>,  C, R, B1, B2, B3, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_3_2<ref< C>,  C, R, B1, B2, B3, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_2<ref< C>,  C, R, B1, B2, B3, A1, A2> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, B1, B2, B3) , const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_3_2<ref< C>,  C, R, B1, B2, B3, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_3_2_const<const C *, C, R, B1, B2, B3, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_2_const<const C *, C, R, B1, B2, B3, A1, A2> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, B1, B2, B3) const, const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_3_2_const<const C *, C, R, B1, B2, B3, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_3_2_const<ref<const C>, const C, R, B1, B2, B3, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_2_const<ref<const C>, const C, R, B1, B2, B3, A1, A2> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, B1, B2, B3) const, const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_3_2_const<ref<const C>, const C, R, B1, B2, B3, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_3_2_const<ref<const C>, const C, R, B1, B2, B3, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_2_const<ref<const C>, const C, R, B1, B2, B3, A1, A2> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, B1, B2, B3) const, const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_3_2_const<ref<const C>, const C, R, B1, B2, B3, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2>
-static inline refcounted<callback_c_3_2_const<ref<const C>, const C, R, B1, B2, B3, A1, A2> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_2_const<ref<const C>, const C, R, B1, B2, B3, A1, A2> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, B1, B2, B3) const, const AA1 &a1, const AA2 &a2)
 {
   return wNew (refcounted<callback_c_3_2_const<ref<const C>, const C, R, B1, B2, B3, A1, A2> >) (wrap_c_line_arg p, f, a1, a2);
@@ -3807,14 +3877,15 @@ class callback_3_3
   A2 a2;
   A3 a3;
 public:
-  callback_3_3 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
+  SFS_INLINE_VISIBILITY callback_3_3 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
     : callback_line_init (callback<R, B1, B2, B3>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3) {}
-  R operator() (B1 b1, B2 b2, B3 b3)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2, B3 b3)
     { return f (a1, a2, a3, b1, b2, b3); }
+  SFS_INLINE_VISIBILITY ~callback_3_3() {}
 };
 
 template<class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_3_3<R, B1, B2, B3, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_3_3<R, B1, B2, B3, A1, A2, A3> > *
 wrap (wrap_line_param R (*f) (A1, A2, A3, B1, B2, B3), const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_3_3<R, B1, B2, B3, A1, A2, A3> >) (wrap_line_arg f, a1, a2, a3);
@@ -3849,10 +3920,11 @@ public:
   A2 a2;
   A3 a3;
 public:
-  callback_c_3_3 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
+  SFS_INLINE_VISIBILITY callback_c_3_3 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3) {}
-  R operator() (B1 b1, B2 b2, B3 b3)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2, B3 b3)
     { return ((*c).*f) (a1, a2, a3, b1, b2, b3); }
+  SFS_INLINE_VISIBILITY ~callback_c_3_3 () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
@@ -3885,60 +3957,61 @@ public:
   A2 a2;
   A3 a3;
 public:
-  callback_c_3_3_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
+  SFS_INLINE_VISIBILITY callback_c_3_3_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3) {}
-  R operator() (B1 b1, B2 b2, B3 b3)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2, B3 b3)
     { return ((*c).*f) (a1, a2, a3, b1, b2, b3); }
+  SFS_INLINE_VISIBILITY ~callback_c_3_3_const () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_3_3< C *, C, R, B1, B2, B3, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_3< C *, C, R, B1, B2, B3, A1, A2, A3> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, A3, B1, B2, B3) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_3_3< C *, C, R, B1, B2, B3, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_3_3<ref< C>,  C, R, B1, B2, B3, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_3<ref< C>,  C, R, B1, B2, B3, A1, A2, A3> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, A3, B1, B2, B3) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_3_3<ref< C>,  C, R, B1, B2, B3, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_3_3<ref< C>,  C, R, B1, B2, B3, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_3<ref< C>,  C, R, B1, B2, B3, A1, A2, A3> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, A3, B1, B2, B3) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_3_3<ref< C>,  C, R, B1, B2, B3, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_3_3<ref< C>,  C, R, B1, B2, B3, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_3<ref< C>,  C, R, B1, B2, B3, A1, A2, A3> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, A3, B1, B2, B3) , const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_3_3<ref< C>,  C, R, B1, B2, B3, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_3_3_const<const C *, C, R, B1, B2, B3, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_3_const<const C *, C, R, B1, B2, B3, A1, A2, A3> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, A3, B1, B2, B3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_3_3_const<const C *, C, R, B1, B2, B3, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_3_3_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_3_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, A3, B1, B2, B3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_3_3_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_3_3_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_3_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, A3, B1, B2, B3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_3_3_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3>
-static inline refcounted<callback_c_3_3_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_3_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, B1, B2, B3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3)
 {
   return wNew (refcounted<callback_c_3_3_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3> >) (wrap_c_line_arg p, f, a1, a2, a3);
@@ -3955,14 +4028,15 @@ class callback_3_4
   A3 a3;
   A4 a4;
 public:
-  callback_3_4 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
+  SFS_INLINE_VISIBILITY callback_3_4 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
     : callback_line_init (callback<R, B1, B2, B3>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4) {}
-  R operator() (B1 b1, B2 b2, B3 b3)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2, B3 b3)
     { return f (a1, a2, a3, a4, b1, b2, b3); }
+  SFS_INLINE_VISIBILITY ~callback_3_4() {}
 };
 
 template<class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_3_4<R, B1, B2, B3, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_3_4<R, B1, B2, B3, A1, A2, A3, A4> > *
 wrap (wrap_line_param R (*f) (A1, A2, A3, A4, B1, B2, B3), const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_3_4<R, B1, B2, B3, A1, A2, A3, A4> >) (wrap_line_arg f, a1, a2, a3, a4);
@@ -3999,10 +4073,11 @@ public:
   A3 a3;
   A4 a4;
 public:
-  callback_c_3_4 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
+  SFS_INLINE_VISIBILITY callback_c_3_4 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4) {}
-  R operator() (B1 b1, B2 b2, B3 b3)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2, B3 b3)
     { return ((*c).*f) (a1, a2, a3, a4, b1, b2, b3); }
+  SFS_INLINE_VISIBILITY ~callback_c_3_4 () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
@@ -4037,60 +4112,61 @@ public:
   A3 a3;
   A4 a4;
 public:
-  callback_c_3_4_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
+  SFS_INLINE_VISIBILITY callback_c_3_4_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4) {}
-  R operator() (B1 b1, B2 b2, B3 b3)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2, B3 b3)
     { return ((*c).*f) (a1, a2, a3, a4, b1, b2, b3); }
+  SFS_INLINE_VISIBILITY ~callback_c_3_4_const () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_3_4< C *, C, R, B1, B2, B3, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_4< C *, C, R, B1, B2, B3, A1, A2, A3, A4> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, A3, A4, B1, B2, B3) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_3_4< C *, C, R, B1, B2, B3, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_3_4<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_4<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, A3, A4, B1, B2, B3) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_3_4<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_3_4<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_4<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, A3, A4, B1, B2, B3) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_3_4<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_3_4<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_4<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, A3, A4, B1, B2, B3) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_3_4<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_3_4_const<const C *, C, R, B1, B2, B3, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_4_const<const C *, C, R, B1, B2, B3, A1, A2, A3, A4> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, A3, A4, B1, B2, B3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_3_4_const<const C *, C, R, B1, B2, B3, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_3_4_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_4_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, A3, A4, B1, B2, B3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_3_4_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_3_4_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_4_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, A3, A4, B1, B2, B3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_3_4_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4>
-static inline refcounted<callback_c_3_4_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_4_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, A4, B1, B2, B3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4)
 {
   return wNew (refcounted<callback_c_3_4_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4> >) (wrap_c_line_arg p, f, a1, a2, a3, a4);
@@ -4110,14 +4186,15 @@ class callback_3_5
   A4 a4;
   A5 a5;
 public:
-  callback_3_5 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
+  SFS_INLINE_VISIBILITY callback_3_5 (callback_line_param cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
     : callback_line_init (callback<R, B1, B2, B3>) f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5) {}
-  R operator() (B1 b1, B2 b2, B3 b3)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2, B3 b3)
     { return f (a1, a2, a3, a4, a5, b1, b2, b3); }
+  SFS_INLINE_VISIBILITY ~callback_3_5() {}
 };
 
 template<class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_3_5<R, B1, B2, B3, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_3_5<R, B1, B2, B3, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param R (*f) (A1, A2, A3, A4, A5, B1, B2, B3), const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_3_5<R, B1, B2, B3, A1, A2, A3, A4, A5> >) (wrap_line_arg f, a1, a2, a3, a4, a5);
@@ -4156,10 +4233,11 @@ public:
   A4 a4;
   A5 a5;
 public:
-  callback_c_3_5 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
+  SFS_INLINE_VISIBILITY callback_c_3_5 (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5) {}
-  R operator() (B1 b1, B2 b2, B3 b3)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2, B3 b3)
     { return ((*c).*f) (a1, a2, a3, a4, a5, b1, b2, b3); }
+  SFS_INLINE_VISIBILITY ~callback_c_3_5 () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
@@ -4196,60 +4274,61 @@ public:
   A4 a4;
   A5 a5;
 public:
-  callback_c_3_5_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
+  SFS_INLINE_VISIBILITY callback_c_3_5_const (callback_line_param const P &cc, cb_t ff, const A1 &aa1, const A2 &aa2, const A3 &aa3, const A4 &aa4, const A5 &aa5)
     : callback_line_init (callback<R, B1, B2, B3>) c (cc), f (ff), a1 (aa1), a2 (aa2), a3 (aa3), a4 (aa4), a5 (aa5) {}
-  R operator() (B1 b1, B2 b2, B3 b3)
+  SFS_INLINE_VISIBILITY R operator() (B1 b1, B2 b2, B3 b3)
     { return ((*c).*f) (a1, a2, a3, a4, a5, b1, b2, b3); }
+  SFS_INLINE_VISIBILITY ~callback_c_3_5_const () {}
 #endif /* !WRAP_USE_NODELETE */
 };
 
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_3_5< C *, C, R, B1, B2, B3, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_5< C *, C, R, B1, B2, B3, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param  C *p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2, B3) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_3_5< C *, C, R, B1, B2, B3, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_3_5<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_5<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ref< C> &p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2, B3) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_3_5<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_3_5<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_5<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ptr< C> &p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2, B3) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_3_5<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_3_5<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_5<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const refcounted< C> *p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2, B3) , const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_3_5<ref< C>,  C, R, B1, B2, B3, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_3_5_const<const C *, C, R, B1, B2, B3, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_5_const<const C *, C, R, B1, B2, B3, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const C *p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2, B3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_3_5_const<const C *, C, R, B1, B2, B3, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_3_5_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_5_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ref<const C> &p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2, B3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_3_5_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_3_5_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_5_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const ptr<const C> &p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2, B3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_3_5_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
 }
 template<class C, class R, class B1, class B2, class B3, class A1, class AA1, class A2, class AA2, class A3, class AA3, class A4, class AA4, class A5, class AA5>
-static inline refcounted<callback_c_3_5_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4, A5> > *
+static SFS_INLINE_VISIBILITY inline refcounted<callback_c_3_5_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4, A5> > *
 wrap (wrap_line_param const refcounted<const C> *p, R (C::*f) (A1, A2, A3, A4, A5, B1, B2, B3) const, const AA1 &a1, const AA2 &a2, const AA3 &a3, const AA4 &a4, const AA5 &a5)
 {
   return wNew (refcounted<callback_c_3_5_const<ref<const C>, const C, R, B1, B2, B3, A1, A2, A3, A4, A5> >) (wrap_c_line_arg p, f, a1, a2, a3, a4, a5);
