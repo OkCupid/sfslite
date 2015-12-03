@@ -151,7 +151,7 @@ rxx::init (const char *pat, const char *opt)
 }
 
 bool
-rxx::_exec (const char *p, size_t len, int options)
+rxx::_exec (const char *p, size_t len, int options, int offset)
 {
   bool ok = true;
   subj = NULL;
@@ -159,7 +159,7 @@ rxx::_exec (const char *p, size_t len, int options)
 		
   if (!ovector)
     ovector = New int[ovecsize];
-  nsubpat = pcre_exec (re, extra, p, len, 0,
+  nsubpat = pcre_exec (re, extra, p, len, offset,
 		       options, ovector, ovecsize);
   if (nsubpat <= 0 && nsubpat != PCRE_ERROR_NOMATCH)  {
     _errcode = nsubpat;

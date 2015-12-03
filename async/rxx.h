@@ -73,7 +73,7 @@ protected:
 
 
 public:
-  bool _exec (const char *p, size_t len, int options);
+  bool _exec (const char *p, size_t len, int options = 0, int offset = 0);
   bool exec (str s, int options);
 
   class matchresult {
