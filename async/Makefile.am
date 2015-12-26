@@ -3,7 +3,7 @@
 
 sfslib_LTLIBRARIES = libasync.la
 LIBASYNC = libasync.la
-sfsexec_PROGRAMS = aiod mmcd
+sfsexec_PROGRAMS = aiod
 
 libasync_la_SOURCES = \
 arandom.c clock_gettime.c flock.c rwfd.c stktrace.c suidprotect.c \
@@ -18,30 +18,19 @@ vec.C bundle.C alog2.C leakcheck.C profiler.C wide_str.C const.C
 libasync_la_LDFLAGS = $(LIBTOOL_VERSION_INFO)
 
 aiod_SOURCES = aiod.C
-aiod_LDADD = $(LIBASYNC) $(LIBPY) $(LDADD_THR) $(LDADD_STD_ALL)
+aiod_LDADD = $(LIBASYNC) $(LIBPY) $(LDADD_STD_ALL)
 aiod_DEPENDENCIES = $(LIBASYNC)
 
 sfsinclude_HEADERS = \
 aiod.h aiod_prot.h aios.h amisc.h arena.h array.h async.h backoff.h	\
-bbuddy.h bitvec.h callback.h cbuf.h dns.h dnsimpl.h dnsparse.h err.h	\
-fdlim.h ihash.h init.h itree.h keyfunc.h list.h msb.h opnew.h		\
+bbuddy.h bitvec.h callback.h tuple_helper.h cbuf.h dns.h dnsimpl.h dnsparse.h \
+err.h fdlim.h ihash.h init.h itree.h keyfunc.h list.h msb.h opnew.h		\
 parseopt.h qhash.h refcnt.h rxx.h serial.h stllike.h str.h	\
-suio++.h sysconf.h union.h vatmpl.h vec.h rwfd.h litetime.h       	\
+suio++.h sysconf.h union.h vec.h rwfd.h litetime.h       	\
 corebench.h qtailq.h sfs_select.h rclist.h dynenum.h         \
 rctailq.h rctree.h sfs_bundle.h alog2.h sfs_profiler.h wide_str.h 	\
 sfs_const.h sfs_assert.h weak_template.h
 
-#
-# begin sfslite changes
-#
-mmcd_SOURCES = mmcd.c
-mmcd_LDADD = 
-mmcd_DEPENDENCIES = 
-
-
-#
-# end sfslite changes
-#
 
 noinst_HEADERS = pyenv.mk env.mk
 
@@ -82,7 +71,6 @@ pyenv.mk: Makefile
 env.mk: Makefile
 	@rm -f $@~
 	echo "# Makefile fragment generated " `date` > $@~
-	echo "LDADD_THR = $(LDADD_THR)" >> $@~
 	echo "LDADD_STD_ALL = $(LDADD_STD_ALL)" >> $@~	
 	echo "CFLAGS_PROFILE = $(CFLAGS_PROFILE)" >> $@~
 	echo "SFSLITE_ABI_VERSION = $(ABI_VERSION)" >> $@~

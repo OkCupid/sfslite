@@ -663,12 +663,6 @@ protected:
   int _lineno;
 };
 
-class tame_block_thr_t : public tame_block_t {
-public:
-  tame_block_thr_t (int l) : tame_block_t (l) {}
-  void output (outputter_t *o);
-};
-
 class tame_block_ev_t : public tame_block_t {
 public:
   tame_block_ev_t (tame_fn_t *f, int l) 

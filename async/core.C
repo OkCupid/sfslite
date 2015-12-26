@@ -287,7 +287,6 @@ fixup_timespec (timespec &ts)
 timecb_t *
 timecb (timespec ts, cbv cb)
 {
-  sfs_add_new_cb ();
   fixup_timespec (ts);
   timecb_t *to = New timecb_t (ts, cb);
   timecbs.insert (to);
@@ -454,7 +453,6 @@ sigcb (int sig, cbv::ptr cb, int flags)
 {
   sigset_t set;
 
-  sfs_add_new_cb ();
   if (!sigemptyset (&set) && !sigaddset (&set, sig))
     sigprocmask (SIG_UNBLOCK, &set, NULL);
 

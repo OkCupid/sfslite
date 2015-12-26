@@ -63,7 +63,8 @@
 
 ptr<axprt_stream> axprt_crypt_alloc_fn (size_t ps, int fd);
 const axprtalloc_fn axprt_crypt_alloc
-  = gwrap (axprt_crypt_alloc_fn, int (axprt_stream::defps));
+  = gwrap (axprt_crypt_alloc_fn,
+           static_cast<unsigned long>(axprt_stream::defps));
 
 ptr<axprt_stream>
 axprt_crypt_alloc_fn (size_t ps, int fd)

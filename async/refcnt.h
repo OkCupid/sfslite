@@ -139,11 +139,7 @@ void refcnt_warn (const char *op, const type_info &type, void *addr, int cnt);
 #endif /* VERBOSE_REFCNT */
 
 #include "opnew.h"
-#ifdef __GXX_EXPERIMENTAL_CXX0X__
 #include <utility>
-#else
-#include "vatmpl.h"
-#endif
 
 class __globaldestruction_t {
   static bool started;
@@ -331,13 +327,9 @@ class refcounted<T, scalar>
   ~refcounted () {}
 
 public:
-#ifdef __GXX_EXPERIMENTAL_CXX0X__
   template <typename... Params>
   explicit refcounted (Params&&... args) :
       type2struct<T>::type(std::forward<Params> (args)...) {}
-#else
-  VA_TEMPLATE (explicit refcounted, : type2struct<T>::type, {})
-#endif
 };
 
 template<class T>

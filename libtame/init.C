@@ -6,7 +6,6 @@
 #include "tame_event.h"
 #include "tame_closure.h"
 #include "tame_rendezvous.h"
-#include "tame_thread.h"
 
 int tame_options;
 
@@ -26,10 +25,6 @@ tame_init::start ()
     panic ("tame_init called twice\n");
   initialized = true;
 
-#ifdef HAVE_TAME_PTH
-  pth_init ();
-#endif
-
   tame_options = 0;
   closure_serial_number = 0;
   tame_collect_rv_flag = false;
@@ -37,8 +32,6 @@ tame_init::start ()
   __cls_type = NULL;
   null_closure = NULL;
   g_stats = New tame_stats_t ();
-
-  tame_thread_init ();
 
   tame_options = 0;
 

@@ -29,11 +29,6 @@
 #include "tame_closure.h"
 #include "sfs_bundle.h"
 
-#ifdef HAVE_TAME_PTH
-# include <pth.h>
-
-#endif /* HAVE_TAME_PTH */
-
 template<class T1=sfs::nil_t, class T2=sfs::nil_t, class T3=sfs::nil_t>
 struct value_set_t {
 
@@ -51,8 +46,7 @@ struct value_set_t {
 };
 
 typedef enum { JOIN_NONE = 0,
-	       JOIN_EVENTS = 1,
-	       JOIN_THREADS = 2 } join_method_t;
+	       JOIN_EVENTS = 1 } join_method_t;
 
 /*
  * An "action" is a type of activity to take internally to a "trigger".
@@ -172,18 +166,14 @@ public:
       _join_method (JOIN_NONE),
       _n_events (0),
       _is_cancelling (false)
-  {
-    pth_init ();
-  }
+  {}
 
   rendezvous_t (const char *loc = NULL)
     : rendezvous_base_t (loc),
       _join_method (JOIN_NONE),
       _n_events (0),
       _is_cancelling (false)
-  {
-    pth_init ();
-  }
+  {}
   
   ~rendezvous_t () { cleanup(); }
 
@@ -208,30 +198,6 @@ public:
   u_int n_events_out () const { return _n_events; }
   u_int n_triggers_left () const { return n_events_out () + n_pending (); }
   bool need_wait () const { return n_triggers_left () > 0; }
-
-  //-----------------------------------------------------------------------
-  // Threaded interface
-
-  void wait (W1 &r1 = sfs::g_nil, W2 &r2 = sfs::g_nil, W3 &r3 = sfs::g_nil)
-  { 
-    bool rls = thread_lock_acquire ();
-    while (!_ti_next_trigger (r1, r2, r3))
-      threadwait (); 
-    thread_lock_release (rls);
-  }
-
-  void waitall () 
-  { 
-    bool rls = thread_lock_acquire ();
-    while (n_events_out () > 0) {
-      while (!_ti_next_trigger ()) {
-	threadwait ();
-      }
-    }
-    thread_lock_release (rls);
-  }
-  // End threaded interface
-  //-----------------------------------------------------------------------
 
   // End Public Interface
   //=======================================================================
@@ -298,9 +264,6 @@ public:
   void _ti_join (const my_value_set_t &v, _event_cancel_base *e, bool clear)
   {
 
-#ifdef HAVE_TAME_PTH
-    bool rls = thread_lock_acquire ();
-#endif 
 
     _pending_values.push_back (v);
 
@@ -313,20 +276,9 @@ public:
       _join_cls = NULL;
       _join_method = JOIN_NONE;
       c->v_reenter ();
-    } else if (_join_method == JOIN_THREADS) {
-#ifdef HAVE_TAME_PTH
-      pth_cond_notify (&_cond, 0);
-#else
-      panic ("no PTH available\n");
-#endif
     } else {
       /* called join before a waiter; we can just queue */
     }
-
-#ifdef HAVE_TAME_PTH
-    thread_lock_release (rls);
-#endif
-
   }
 
   bool _ti_next_trigger (W1 &r1 = sfs::g_nil, 
@@ -334,10 +286,6 @@ public:
 			 W3 &r3 = sfs::g_nil)
   {
     bool ret = true;
-
-#ifdef HAVE_TAME_PTH
-    bool rls = thread_lock_acquire ();
-#endif
 
     value_set_t<W1,W2,W3> *v;
     if (pending (&v)) {
@@ -348,10 +296,6 @@ public:
     } else
       ret = false;
 
-#ifdef HAVE_TAME_PTH
-    thread_lock_release (rls);
-#endif
-
     return ret;
   }
 
@@ -359,55 +303,6 @@ public:
   //=======================================================================
 
 private:
-
-  inline bool thread_lock_acquire ()
-  {
-    bool rls = false;
-#ifdef HAVE_TAME_PTH
-    if (!_has_lock) {
-      pth_mutex_acquire (&_mutex, 0, NULL);
-      _has_lock = true;
-      rls = true;
-    }
-#else /* ! HAVE_TAME_PTH */
-    /* noop */
-#endif /* HAVE_TAME_PTH */
-    return rls;
-  }
-
-  inline void thread_lock_release (bool rls)
-  {
-#ifdef HAVE_TAME_PTH
-    if (rls) {
-      assert (_has_lock);
-      _has_lock = false;
-      pth_mutex_release (&_mutex);
-    }
-#else /* ! HAVE_TAME_PTH */
-    /* noop */
-#endif /* HAVE_TAME_PTH */
-  }
-
-  void threadwait ()
-  {
-#ifdef HAVE_TAME_PTH
-    assert (_has_lock);
-    _ti_set_join_method (JOIN_THREADS);
-    pth_cond_await (&_cond, &_mutex, NULL);
-    _ti_clear_join_method ();
-#else /* ! HAVE_TAME_PTH */
-    panic ("no PTH available...\n");
-#endif
-  }
-
-  inline void pth_init ()
-  {
-#ifdef HAVE_TAME_PTH
-    pth_mutex_init (&_mutex);
-    pth_cond_init (&_cond);
-    _has_lock = false;
-#endif /* HAVE_TAME_PTH */
-  }
 
   void cleanup ()
   {
@@ -466,13 +361,6 @@ private:
   ptr<closure_t> _join_cls;
   join_method_t _join_method;
   u_int _n_events;
-
-#ifdef HAVE_TAME_PTH
-  pth_cond_t _cond;
-  pth_mutex_t _mutex;
-  bool _has_lock;
-#endif /* HAVE_TAME_PTH */
-
   bool _is_cancelling;
 
 };

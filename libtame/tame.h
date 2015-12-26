@@ -10,8 +10,6 @@
 #include "tame_event_ag.h"
 #include "tame_closure.h"
 #include "tame_rendezvous.h"
-#include "tame_thread.h"
-#include "tame_tfork.h"
 #include "tame_trigger.h"
 #include "tame_typedefs.h"
 

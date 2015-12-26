@@ -205,35 +205,17 @@ bench1_twait_implicit (int niter, cbv done)
   (*done) ();
 }
 
-#ifdef HAVE_TAME_PTH
-static void noop () {}
-#endif
-
 static void
 bench1_twait_thr_implicit (int niter)
 {
-#ifdef HAVE_TAME_PTH
-  for (int i = 0; i < niter; i++) {
-    twait { tfork (wrap (noop)); }
-  }
-#else
   panic ("Cannot run testcase without PTH support\n");
-#endif
   return;
 }
 
 static void
 bench1_twait_thr_explicit (int niter)
 {
-#ifdef HAVE_TAME_PTH
-  rendezvous_t<> r;
-  for (int i = 0; i < niter; i++) {
-    tfork (r, wrap (noop));
-    r.wait ();
-  }
-#else
   panic ("Cannot run testcase without PTH support\n");
-#endif
 
   return;
 }
@@ -245,52 +227,10 @@ bench1_nulltame ()
   i++;
 }
 
-#ifdef HAVE_TAME_PTH
-static void *
-nullthreadfn (void *in)
-{
-  tame_thread_exit ();
-  return NULL;
-}
-
-static void benchmark_fork ()
-{
-  u_int64_t e, b, t;
-  pth_attr_t attr = pth_attr_new ();
-  pth_attr_set (attr, PTH_ATTR_STACK_SIZE, 0x10000);
-  pth_attr_set (attr, PTH_ATTR_JOINABLE, TRUE);
-  double runtime ;
-  t = 0;
-
-  REPORT({
-    for (int i = 0; i < niter; i++) {
-      b = corebench_get_time ();
-      pth_t thr = pth_spawn (attr, nullthreadfn, NULL);
-      e = corebench_get_time ();
-      so.raw_result (e - b);
-      t += (e-b);
-      pth_join (thr, NULL);
-    }
-    runtime = t / (double)niter;
-  });
-  pth_attr_destroy (attr);
-}
-#endif
 
 static void
 bench1_nullthr ()
 {
-#ifdef HAVE_TAME_PTH
-
-  pth_attr_t attr = pth_attr_new ();
-  pth_attr_set (attr, PTH_ATTR_NAME, __FL__);
-  pth_attr_set (attr, PTH_ATTR_STACK_SIZE, 0x10000);
-  pth_attr_set (attr, PTH_ATTR_JOINABLE, TRUE);
-  
-  pth_t t = pth_spawn (attr, nullthreadfn, NULL);
-  pth_join (t, NULL);
-  pth_attr_destroy (attr);
-#endif
 }
 
 static void
@@ -534,11 +474,7 @@ int main (int argc, char *argv[])
   case PTH_FORK:
     warn << "Benchmarking fork....\n";
 
-#ifdef HAVE_TAME_PTH
-    benchmark_fork ();
-#else
     warn << "Failed to benchmark ... no PTH support...\n";
-#endif
 
     exit (0);
     break;

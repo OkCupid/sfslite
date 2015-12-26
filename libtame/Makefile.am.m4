@@ -59,18 +59,11 @@ recycle.lo: tame_event_ag.h recycle.C
 mkevent.o:  tame_event_ag.h mkevent.C
 mkevent.lo: tame_event_ag.h mkevent.C
 
-tfork.o:    tame_event_ag.h tame_tfork_ag.h tfork.C
-tfork.lo:   tame_event_ag.h tame_tfork_ag.h tfork.C
-
 io.o: tame_connectors.h tame_nlock.h
 io.lo: tame_connectors.h tame_nlock.h
 
 tame_event_ag.h: $(srcdir)/mkevent.pl
 	$(PERL) $(srcdir)/mkevent.pl > $@ || (rm -f $@ && false)
-
-tame_tfork_ag.h: $(srcdir)/mktfork_ag.pl
-	$(PERL) $(srcdir)/mktfork_ag.pl > $@ || (rm -f $@ && false)
-
 
 libtame_la_SOURCES = \
 	recycle.C \
@@ -79,8 +72,6 @@ libtame_la_SOURCES = \
 	init.C \
 	run.C \
 	mkevent.C \
-	tfork.C \
-	thread.C \
 	trigger.C \
 	event.C \
 	profiler.C \
@@ -100,9 +91,6 @@ sfsinclude_HEADERS = \
 	tame_closure.h \
 	tame_rendezvous.h \
 	tame_event_ag.h \
-	tame_tfork.h \
-	tame_tfork_ag.h \
-	tame_thread.h \
 	tame_typedefs.h \
 	tame_slotset.h \
 	tame.h \
@@ -126,14 +114,14 @@ tameclean:
 
 clean:
 	rm -rf tame_out tame_out_h *.o *.lo .libs _libs core *.core *~ *.rpo \
-		tame_event_ag.h tame_tfork_ag.h *.la
+		tame_event_ag.h *.la
 
 dist-hook:
 	cd $(distdir) && rm -f tame_out
 
-EXTRA_DIST = .svnignore tame_in Makefile.am.m4 mkevent.pl mktfork_ag.pl  \
+EXTRA_DIST = .svnignore tame_in Makefile.am.m4 mkevent.pl  \
 	tame_in_h
-CLEANFILES = core *.core *~ *.rpo tame_event_ag.h tame_tfork_ag.h tame_out \
+CLEANFILES = core *.core *~ *.rpo tame_event_ag.h tame_out \
 	tame_out_h
 MAINTAINERCLEANFILES = Makefile.in Makefile.am
 
