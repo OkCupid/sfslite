@@ -1987,7 +1987,7 @@ makemodulename (str fname)
 
   if ((p = strrchr (fname.cstr(), '/')))
     p++;
-  else p = fname;
+  else p = fname.cstr();
 
   str r;
 
@@ -2164,7 +2164,7 @@ makehdrname (str fname)
     // old-style translation
     if ((p = strrchr (fname.cstr(), '/')))
       p++;
-    else p = fname;
+    else p = fname.cstr();
     
     hdr.buf (p, strlen (p) - 1);
     hdr.cat ("h");
@@ -2270,7 +2270,7 @@ makeguard (str fname)
 
   if ((p = strrchr (fname.cstr(), '/')))
     p++;
-  else p = fname;
+  else p = fname.cstr();
 
   guard << "__PY_RPCC_";
   while (char c = *p++) {

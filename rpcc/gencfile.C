@@ -153,7 +153,7 @@ make_csafe_filename (str fname)
 
   if ((fnp = strrchr (fname.cstr(), '/')))
     fnp++;
-  else fnp = fname;
+  else fnp = fname.cstr();
 
   // strip off the suffix ".h" or ".C"
   for (cp = fnp; *cp && *cp != '.' ; cp++ ) ;
@@ -451,7 +451,7 @@ makehdrname (str fname)
 
   if ((p = strrchr (fname.cstr(), '/')))
     p++;
-  else p = fname;
+  else p = fname.cstr();
 
   hdr.buf (p, strlen (p) - 1);
   hdr.cat ("h");
