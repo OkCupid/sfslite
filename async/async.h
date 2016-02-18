@@ -88,10 +88,6 @@ tcpconnect_t *tcpconnect_srv_retry (ref<srvlist> srvl, cbi cb, str *np = NULL);
 void tcpconnect_cancel (tcpconnect_t *tc);
 extern bool tcpconnect_debug;
 
-/* ident.C */
-void identptr (int fd, callback<void, str, ptr<hostent>, int>::ref);
-void ident (int fd, callback<void, str, int>::ref);
-
 /* pipe2str.C */
 void pipe2str (int fd, cbs cb, int *fdp = NULL, strbuf *sb = NULL);
 

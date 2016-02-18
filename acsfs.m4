@@ -1365,7 +1365,7 @@ AC_DEFUN([SFS_SIMPLE_LEAK_CHECKER],
 [
 AC_ARG_ENABLE(simple-leak-checker,
 --enable-simple-leak-checker       use a builtin simple leak checker)
-if test "${enable_simple_leak_checker+set}" = "set"
+if test "x${enable_simple_leak_checker}" = "xyes"
 then
 	AC_DEFINE(SIMPLE_LEAK_CHECKER, 1, Define to turn on a leak checker)
 fi
