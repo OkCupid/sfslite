@@ -35,6 +35,19 @@
 #include "list.h"
 #include "backoff.h"
 
+bool dns_debug = false;
+INITFN(init_env);
+static void
+init_env() {
+    if (char *p = safegetenv ("SFS_DNS_DEBUG"))
+        dns_debug = (bool) atoi (p);
+}
+
+#define DNS_DEBUG(s) \
+    if (dns_debug) { \
+        warn << "SFS: DNS_DEBUG: " << s << "\n"; \
+    }
+
 #define NSPORT NAMESERVER_PORT
 
 static resolv_conf *_resconf;
@@ -166,6 +179,7 @@ resolver::udpinit ()
     close (fd);
     return false;
   }
+
   udpsock = New refcounted<dnssock_udp> (fd, wrap (this, &resolver::pktready,
 						   false));
   return true;
@@ -183,9 +197,11 @@ resolver::tcpinit ()
   make_async (fd);
   close_on_exec (fd);
   if (connect (fd, addr, addrlen) < 0 && errno != EINPROGRESS) {
-    close (fd);
-    return false;
+      warn ("resolver::tcpsock: connect: %m\n");
+      close (fd);
+      return false;
   }
+
   tcpsock = New refcounted<dnssock_tcp> (fd, wrap (this, &resolver::pktready,
 						   true));
   return true;
@@ -195,6 +211,7 @@ void
 resolver::cantsend ()
 {
   ref<bool> d = destroyed;
+  DNS_DEBUG("cantsend(): unable to send, failing outstanding reqs");
   for (dnsreq *r = reqtab.first (), *nr; !*d && r; r = nr) {
     nr = reqtab.next (r);
     failreq (ARERR_CANTSEND, r);
@@ -204,21 +221,21 @@ resolver::cantsend ()
 bool
 resolver::resend (bool udp, bool tcp)
 {
-  ref<bool> d = destroyed;
-  for (dnsreq *r = reqtab.first (), *nr; !*d && r; r = nr) {
-    nr = reqtab.next (r);
-    if (r->usetcp) {
-      if (tcp && tcpsock)
-	sendreq (r);
-      else if (tcp)
-	failreq (ARERR_CANTSEND, r);
+    ref<bool> d = destroyed;
+    for (dnsreq *r = reqtab.first (), *nr; !*d && r; r = nr) {
+        nr = reqtab.next (r);
+        if (r->usetcp) {
+            if (tcp && tcpsock)
+                sendreq (r);
+            else if (tcp)
+                failreq (ARERR_CANTSEND, r);
+        }
+        else if (udp && udpsock) {
+            reqtoq.remove (r);
+            reqtoq.start (r);
+        }
     }
-    else if (udp && udpsock) {
-      reqtoq.remove (r);
-      reqtoq.start (r);
-    }
-  }
-  return !*d;
+    return !*d;
 }
 
 bool
@@ -230,8 +247,9 @@ resolver::setsock (bool failure)
   }
 
   do {
-    if ((failure || !addr) && !bumpsock (failure))
-      return false;
+    if ((failure || !addr) && !bumpsock (failure)) {
+        return false;
+    }
     failure = true;
     nbump++;
     last_resp = 0;
@@ -388,8 +406,10 @@ resolv_conf::~resolv_conf ()
 void
 resolv_conf::reload (bool failure)
 {
+
   if (reload_lock)
     return;
+  DNS_DEBUG("reloading resolv.conf");
   reload_lock = true;
   chldrun (wrap (&reload_dumpres),
 	   wrap (this, &resolv_conf::reload_cb, destroyed, failure));
