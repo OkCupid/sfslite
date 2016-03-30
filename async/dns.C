@@ -659,6 +659,7 @@ dns_hostbyname (str name, cbhent cb,
       return NULL;
     }
   }
+  DNS_DEBUG(strbuf("dns_hostbyname(): resolving: ") << name);
   return New dnsreq_a (resconf(), name, cb, search);
 }
 
