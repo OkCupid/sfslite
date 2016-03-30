@@ -129,8 +129,3 @@ strip_hostent (callback<void, str, int>::ref cb, str id, int err)
 {
   (*cb) (id, err);
 }
-void
-ident (int fd, callback<void, str, int>::ref cb)
-{
-  ident (fd, wrap (strip_hostent, cb));
-}

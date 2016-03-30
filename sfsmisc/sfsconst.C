@@ -341,7 +341,7 @@ sfsconst_init (bool lite_mode)
     sfsdir = buildtmpdir;
     sfssockdir = sfsdir;
     etc3dir = etc1dir;
-    etc1dir = sfsdir;
+    etc1dir = sfsdir.cstr();
     etc2dir = xstrdup (str (builddir << "/etc"));
   }
 #endif /* MAINTAINER */
