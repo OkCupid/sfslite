@@ -189,7 +189,7 @@ bool
 resolver::tcpinit ()
 {
   tcpsock = NULL;
-  int fd = socket (addr->sa_family, SOCK_STREAM, 0);
+  int fd = inetsocket(SOCK_STREAM);
   if (fd < 0) {
     warn ("resolver::tcpsock: socket: %m\n");
     return false;
