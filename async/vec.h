@@ -152,6 +152,10 @@ do {								\
 #endif /* !CHECK_BOUNDS */
 
 public:
+  typedef T value_type;
+  typedef elm_t *iterator;
+  typedef const elm_t *const_iterator;
+
   vec () { init (); }
   vec (const vec &v) { init (); append (v); }
 
