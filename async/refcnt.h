@@ -504,6 +504,7 @@ class ptr : public refpriv, public refops <T> {
 
 public:
   typedef T type;
+  typedef T element_type;
   typedef struct ref<T> ref;
 
   explicit ptr (__bss_init) {}
