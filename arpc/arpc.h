@@ -70,10 +70,10 @@ struct cxx_auth_ops {
 class auto_auth {
   AUTH *auth;
 
-  auto_auth (const auto_auth &);
-  auto_auth &operator= (const auto_auth &);
   void destroy () { if (auth) AUTH_DESTROY (auth); }
 public:
+  auto_auth (const auto_auth &);
+  auto_auth &operator= (const auto_auth &);
   auto_auth (AUTH *a = NULL) : auth (a) {}
   auto_auth (auto_auth &a) : auth (a.auth) { a.auth = NULL; }
   ~auto_auth () { destroy (); }

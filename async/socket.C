@@ -36,6 +36,10 @@ int bindresvport (int, struct sockaddr_in *);
 #include <netinet/ip.h>
 }
 
+#ifdef __APPLE__
+#define s6_addr32 __u6_addr.__u6_addr32
+#endif
+
 #ifdef SFS_ALLOW_LARGE_BUFFER
 enum { maxsobufsize = 0x11000 }; /* 64K + header */
 #else /* !SFS_ALLOW_LARGE_BUFFER */
