@@ -445,7 +445,7 @@ xdr_virtual_version (XDR *x)
   u_int32_t rpcvers = RPC_MSG_VERSION;
   if (v_XDR_dispatch) {
     u_int32_t pos = xdr_getpos (x);
-    int32_t *buf = XDR_INLINE (x, 3*4);
+    int32_t *buf = (int32_t*)XDR_INLINE (x, 3*4);
     if (buf) {
       rpcvers = htonl (buf[2]);
       if (rpcvers != RPC_MSG_VERSION) {

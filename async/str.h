@@ -148,7 +148,6 @@ public:
   size_t len () const { return b->len; }
   const char *cstr () const { return b ? b->dat () : NULL; }
   operator const char *() const
-  DEPRECATED("use cstr instead.")
   {
     return cstr ();
   }
