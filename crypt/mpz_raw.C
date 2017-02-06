@@ -30,15 +30,6 @@
 #undef min
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 
-static inline void
-assert_limb_size ()
-{
-  switch (0) case 0: case GMP_LIMB_SIZE == sizeof (mp_limb_t):;
-#if GMP_LIMB_SIZE != 2 && GMP_LIMB_SIZE != 4 && GMP_LIMB_SIZE != 8
-# error Cannot handle size of GMP limbs
-#endif /* GMP_LIMB_SIZE not 2, 4 or 8 */
-}
-
 #define COPYLIMB_BYTE(dst, src, SW, n) \
   ((char *) (dst))[n] = ((char *) (src))[SW (n)]
 
