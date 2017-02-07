@@ -105,7 +105,7 @@ public:
     core::traverse (wrap (this, &qhash::delslot));
     core::clear ();
   }
-  ~qhash () { clear (); }
+  virtual ~qhash () { clear (); }
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
   qhash(qhash<K,V,H,E,R>&& q) = delete;
 #endif
