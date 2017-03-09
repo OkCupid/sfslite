@@ -178,6 +178,46 @@ public:
     return ret;
   }
 
+  template<class A1, class A2>
+  T *lower_bound_impl(int (*cb) (const A1 *, const A2 *, const T*),
+	     const A1 *a1, const A2 *a2) const {
+    T* n = root();
+    T* ret = nullptr;
+
+    while (n) {
+        int srchres = (*cb)(a1, a2, n);
+
+        if (srchres <= 0) {
+            ret = n;
+            n = left(n);
+        } else { // srchres > 0
+            n = right(n);
+        }
+    }
+
+    return ret;
+  }
+
+  template<class A1, class A2>
+  T *upper_bound_impl(int (*cb) (const A1 *, const A2 *, const T*),
+	     const A1 *a1, const A2 *a2) const {
+    T* n = root();
+    T* ret = nullptr;
+
+    while (n) {
+        int srchres = (*cb)(a1, a2, n);
+
+        if (srchres >= 0) {
+            ret = n;
+            n = right(n);
+        } else { // srchres > 0
+            n = left(n);
+        }
+    }
+
+    return ret;
+  }
+
   // XXX - template search to work around egcs 1.2 bug
   template<class A1, class A2>
   T *search (int (*cb) (const A1 *, const A2 *, const T*),
@@ -252,6 +292,20 @@ public:
     // return search (wrap (this, &kvcmp, &k));
     return this->search (skvcmp, &kcmp, &k);
   }
+
+  const V *operator[] (const K &k) const {
+    // return search (wrap (this, &kvcmp, &k));
+    return this->search (skvcmp, &kcmp, &k);
+  }
+
+  V *lower_bound(const K &k) const {
+    return this->lower_bound_impl(skvcmp, &kcmp, &k);
+  }
+
+  V *upper_bound(const K &k) const {
+    return this->upper_bound_impl(skvcmp, &kcmp, &k);
+  }
+
 #endif
 };
 
