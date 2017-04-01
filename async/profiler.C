@@ -889,7 +889,7 @@ sfs_profiler_obj_t::lookup_pc (my_intptr_t pc)
     ret = _sites.lookup (f, pc, base);
   }
 #else
-  ret = _sites.lookup (progname, pc, 0x0);
+  ret = _sites.lookup (progname.cstr(), pc, 0x0);
 #endif
 
   return ret;
