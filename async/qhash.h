@@ -303,6 +303,8 @@ public:
     return r;
   }
 
+  const qhash_slot<K,V> *getslot() { return _i; }
+
   typedef qhash_const_iterator_t<K,V,H,E> my_type;
   bool operator==(const my_type& other) const { return _i == other._i; }
   bool operator!=(const my_type& other) const { return !(*this == other); }
@@ -391,6 +393,8 @@ public:
     }
     return r;
   }
+
+  qhash_slot<K,V> *getslot() { return _i; }
 
   typedef qhash_iterator_t<K,V,H,E> my_type;
   bool operator==(const my_type& other) const { return _i == other._i; }
