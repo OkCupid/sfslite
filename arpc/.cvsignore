@@ -1,9 +1,0 @@
-*.la
-*.lo
-.deps
-.libs
-Makefile
-Makefile.in
-pmap_prot.C
-pmap_prot.h
-stamp-arpc-repo
