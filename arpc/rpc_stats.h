@@ -40,8 +40,8 @@ class svccb;
 namespace rpc_stats {
 
   struct rpc_stats_t {
-    void init(u_int64_t time_delta); 
-    
+    void init(u_int64_t time_delta);
+
     u_int32_t count;
     u_int64_t time_sum;
     u_int64_t time_squared_sum;
@@ -58,7 +58,7 @@ namespace rpc_stats {
     u_int32_t vers;
     u_int32_t proc;
   };
-  
+
 }
 
 typedef rpc_stats::rpc_proc_t rpc_stat_proc_t;
@@ -80,31 +80,31 @@ template<> struct equals<rpc_stat_proc_t> {
 
 namespace rpc_stats {
 
-/** Collects time to process and call frequency for RPC handling code. The 
+/** Collects time to process and call frequency for RPC handling code. The
  * data is printed out periodically in a machine parseable format. The point is
  * to identify RPCs which take too long or are called to often. */
   class rpc_stat_collector_t
   {
   public:
     rpc_stat_collector_t ();
-    
-    void print_info();
+
+    void print_info(bool is_oneline = false);
 
     /** Reset stats and m_last_print */
     void reset();
-    
-    rpc_stat_collector_t &set_active(bool active) 
+
+    rpc_stat_collector_t &set_active(bool active)
     { m_active = active; return (*this); }
 
-    rpc_stat_collector_t &set_interval(u_int32_t secs) 
+    rpc_stat_collector_t &set_interval(u_int32_t secs)
     { m_interval = secs; return (*this); }
 
     rpc_stat_collector_t &set_n_per_line (size_t n)
     { m_n_per_line = n; return (*this); }
-    
+
     /** Call this at the end of an RPC handler */
     void end_call(svccb *call_obj, const timespec &strt);
-    void end_call(uint32_t prog, uint32_t vers, uint32_t proc, 
+    void end_call(uint32_t prog, uint32_t vers, uint32_t proc,
                   const timespec &strt);
 
   protected:
@@ -116,7 +116,7 @@ namespace rpc_stats {
 
     void output_line (size_t i, const strbuf &p, strbuf &l, bool frc);
   };
-  
+
 } // namespace rpc_stats
 
 // Access the singleton stats object
