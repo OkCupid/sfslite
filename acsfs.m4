@@ -1504,15 +1504,15 @@ test "${CXXDEBUG+set}" || CXXDEBUG="$CXXFLAGS"
 export CXXDEBUG
 case $host_os in
     openbsd*)
-	sfs_gnu_WFLAGS="-Wall -Wsign-compare -Wchar-subscripts -Werror"
+	sfs_gnu_WFLAGS="-Wall -Wsign-compare -Wchar-subscripts"
 	sfs_gnu_CXXWFLAGS="$sfs_gnu_WFLAGS"
 	;;
     linux*)
-	sfs_gnu_WFLAGS="-Wall -Werror"
+	sfs_gnu_WFLAGS="-Wall"
 	sfs_gnu_CXXWFLAGS="$sfs_gnu_WFLAGS -Wno-mismatched-tags -Wno-overloaded-virtual -Wno-unused-private-field"
 	;;
     freebsd*)
-	sfs_gnu_WFLAGS="-Wall -Werror"
+	sfs_gnu_WFLAGS="-Wall"
 	sfs_gnu_CXXWFLAGS="$sfs_gnu_WFLAGS"
 	;;
     *)
