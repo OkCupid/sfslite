@@ -90,7 +90,7 @@ namespace sfs {
 
 #ifdef XDROPS_KNRPROTO
 #undef xdrlong_t
-#define xdrlong_t long
+#define xdrlong_t int32_t
 
 #undef XDR_GETLONG
 #define XDR_GETLONG(xdrs, longp)					\

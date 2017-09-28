@@ -31,6 +31,12 @@ extern "C" {
 int bindresvport (int, struct sockaddr_in *);
 # endif /* NEED_BINDRESVPORT_DECL */
 #endif /* HAVE_BINDRESVPORT */
+
+// you probably have a more elegant way of doing this...
+#ifdef __APPLE__
+#define s6_addr32 s6_addr
+#endif
+
 #include <netinet/in_systm.h>
 #include <netinet/tcp.h>
 #include <netinet/ip.h>
